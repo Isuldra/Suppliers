@@ -22,7 +22,8 @@
     "dist:msi": "electron-vite build && electron-builder --win msi",
     "dist:nsis": "electron-vite build && electron-builder --win nsis",
     "portable": "node scripts/create-portable.js",
-    "distributions": "node scripts/create-all-distributions.js"
+    "distributions": "node scripts/create-all-distributions.js",
+    "release": "electron-vite build && electron-builder --win --publish always"
   },
   "build": {
     "appId": "com.onemed.supplierreminderpro",
@@ -37,6 +38,13 @@
       "buildResources": "resources",
       "output": "release"
     },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "Isuldra",
+        "repo": "Suppliers"
+      }
+    ],
     "win": {
       "target": [
         {
@@ -70,12 +78,10 @@
       "artifactName": "${productName}-${version}-Setup.msi",
       "oneClick": false,
       "perMachine": false,
-      "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "Supplier Reminder Pro",
-      "installerIcon": "resources/icon.ico",
-      "uninstallerIcon": "resources/icon.ico"
+      "upgradeCode": "7C04A11D-9FAA-4B83-85FF-79D2AABFD84E"
     },
     "nsis": {
       "oneClick": false,
@@ -149,6 +155,7 @@
     "@types/xlsx": "^0.0.35",
     "better-sqlite3": "^11.9.1",
     "electron-log": "^5.3.3",
+    "electron-updater": "^6.1.7",
     "handlebars": "^4.7.8",
     "nodemailer": "^6.10.1",
     "odbc": "^2.4.6",

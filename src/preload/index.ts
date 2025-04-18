@@ -47,6 +47,13 @@ interface ElectronAPI {
     supplier: string,
     orderNumber: string | null
   ) => Promise<boolean>;
+
+  // Auto-updater methods
+  checkForUpdates: () => Promise<void>;
+  onUpdateAvailable: (callback: (info: any) => void) => () => void;
+  onUpdateDownloaded: (callback: (info: any) => void) => () => void;
+  onUpdateError: (callback: (error: any) => void) => () => void;
+  installUpdate: () => Promise<void>;
 }
 
 // Whitelist of valid channels
@@ -71,6 +78,12 @@ const validChannels = [
   "db:getOrdersDueWithinDays",
   "db:markOrderAsConfirmed",
   "db:deleteOrder",
+  // Auto-updater channels
+  "update:check",
+  "update:available",
+  "update:downloaded",
+  "update:error",
+  "update:install",
 ];
 
 // Expose the API to the renderer process
@@ -177,5 +190,37 @@ contextBridge.exposeInMainWorld("electron", {
   },
   deleteOrder: async (supplier: string, orderNumber: string | null) => {
     return await ipcRenderer.invoke("db:deleteOrder", supplier, orderNumber);
+  },
+
+  // Auto-updater methods
+  checkForUpdates: async () => {
+    return await ipcRenderer.invoke("update:check");
+  },
+  onUpdateAvailable: (callback: (info: any) => void) => {
+    const subscription = (_event: Electron.IpcRendererEvent, info: any) =>
+      callback(info);
+    ipcRenderer.on("update:available", subscription);
+    return () => {
+      ipcRenderer.removeListener("update:available", subscription);
+    };
+  },
+  onUpdateDownloaded: (callback: (info: any) => void) => {
+    const subscription = (_event: Electron.IpcRendererEvent, info: any) =>
+      callback(info);
+    ipcRenderer.on("update:downloaded", subscription);
+    return () => {
+      ipcRenderer.removeListener("update:downloaded", subscription);
+    };
+  },
+  onUpdateError: (callback: (error: any) => void) => {
+    const subscription = (_event: Electron.IpcRendererEvent, error: any) =>
+      callback(error);
+    ipcRenderer.on("update:error", subscription);
+    return () => {
+      ipcRenderer.removeListener("update:error", subscription);
+    };
+  },
+  installUpdate: async () => {
+    return await ipcRenderer.invoke("update:install");
   },
 } as ElectronAPI);
