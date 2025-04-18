@@ -64,19 +64,37 @@ async function createPortableVersion() {
     console.log("Building Electron application...");
     execSync("npm run build", { stdio: "inherit" });
 
-    // Package the application without an installer
+    // Package the application without an installer (using portable target)
     console.log("Packaging portable application...");
-    execSync("electron-builder --dir --win portable", { stdio: "inherit" });
+    execSync("electron-builder --win portable", { stdio: "inherit" });
 
-    // The output will be in release/win-unpacked
-    const unpackedDir = path.join(releaseDir, "win-unpacked");
+    // The output will be in release/Supplier-Reminder-Pro-Portable.exe
+    const portableExe = path.join(
+      releaseDir,
+      "Supplier-Reminder-Pro-Portable.exe"
+    );
 
-    if (!fs.existsSync(unpackedDir)) {
-      throw new Error(`Unpacked directory not found: ${unpackedDir}`);
+    if (!fs.existsSync(portableExe)) {
+      throw new Error(`Portable executable not found: ${portableExe}`);
     }
 
+    // Create a directory for the portable app
+    const portableAppDir = path.join(
+      portableDir,
+      "Supplier-Reminder-Pro-Portable"
+    );
+    if (!fs.existsSync(portableAppDir)) {
+      fs.mkdirSync(portableAppDir, { recursive: true });
+    }
+
+    // Copy the portable exe to the portable directory
+    fs.copyFileSync(
+      portableExe,
+      path.join(portableAppDir, "Supplier Reminder Pro.exe")
+    );
+
     // Create data directory in the portable app
-    const portableDataDir = path.join(unpackedDir, "data");
+    const portableDataDir = path.join(portableAppDir, "data");
     fs.mkdirSync(portableDataDir, { recursive: true });
 
     // Create a README for the portable version
@@ -106,7 +124,7 @@ IMPORTANT NOTES:
 =================================
 `;
 
-    fs.writeFileSync(path.join(unpackedDir, "README.txt"), readmeContent);
+    fs.writeFileSync(path.join(portableAppDir, "README.txt"), readmeContent);
 
     // Create a launch script for the portable version
     console.log("Creating launch script...");
@@ -116,7 +134,7 @@ start "" "%~dp0Supplier Reminder Pro.exe"
 `;
 
     fs.writeFileSync(
-      path.join(unpackedDir, "Run-Supplier-Reminder-Pro.bat"),
+      path.join(portableAppDir, "Run-Supplier-Reminder-Pro.bat"),
       launchScriptContent
     );
 
@@ -133,7 +151,7 @@ start "" "%~dp0Supplier Reminder Pro.exe"
     // Use 7z if available (usually pre-installed on Windows)
     try {
       execSync(
-        `cd "${releaseDir}" && 7z a -tzip "${zipFilePath}" "win-unpacked"/*`,
+        `cd "${portableDir}" && 7z a -tzip "${zipFilePath}" "Supplier-Reminder-Pro-Portable"/*`,
         { stdio: "inherit" }
       );
     } catch (e) {
@@ -141,7 +159,7 @@ start "" "%~dp0Supplier Reminder Pro.exe"
         "7z not available, using native compression (may be slower)..."
       );
       // Copy files manually if 7z is not available
-      fs.cpSync(unpackedDir, portableDir, { recursive: true });
+      fs.cpSync(portableAppDir, portableDir, { recursive: true });
       console.log(`Files copied to: ${portableDir}`);
       console.log(
         "Please manually zip the contents of the portable directory."
