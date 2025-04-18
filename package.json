@@ -1,8 +1,9 @@
 {
-  "name": "onemed-supplychain",
+  "name": "one-med-supplychain-app",
   "version": "1.0.0",
   "description": "Desktop application for managing OneMed supply chain and vendor relations",
   "main": "dist/main/main.js",
+  "private": true,
   "type": "module",
   "scripts": {
     "dev": "cross-env NODE_ENV=development electron-vite dev",
