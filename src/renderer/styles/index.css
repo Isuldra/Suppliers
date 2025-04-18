@@ -1,0 +1,148 @@
+@import url("https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600&family=Open+Sans:wght@400;500;600&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* These CSS variables are for non-Tailwind contexts or direct CSS usage */
+    --color-primary: #497886;
+    --color-primary-light: #6a99a7;
+    --color-primary-dark: #366573;
+    --color-accent: #e63946;
+    --color-text-primary: #333333;
+    --color-text-secondary: #666666;
+    --color-background-light: #f5f5f5;
+    --color-white: #ffffff;
+
+    --font-primary: "Roboto", sans-serif;
+    --font-secondary: "Open Sans", sans-serif;
+    --font-size-base: 16px;
+    --font-weight-normal: 400;
+    --font-weight-medium: 500;
+    --font-weight-bold: 600;
+
+    --spacing-unit: 8px;
+    --spacing-small: 8px;
+    --spacing-medium: 16px;
+    --spacing-large: 24px;
+    --spacing-xl: 32px;
+    --spacing-xxl: 48px;
+
+    --border-radius-small: 4px;
+    --border-radius-medium: 8px;
+    --border-radius-large: 12px;
+
+    --shadow-small: 0 2px 4px rgba(0, 0, 0, 0.1);
+    --shadow-medium: 0 4px 8px rgba(0, 0, 0, 0.1);
+    --shadow-large: 0 8px 16px rgba(0, 0, 0, 0.15);
+
+    --transition-default: 0.2s ease-in-out;
+  }
+
+  /* Base styling */
+  html {
+    font-family: var(--font-primary);
+    font-size: var(--font-size-base);
+    color: var(--color-text-primary);
+  }
+
+  body {
+    background-color: var(--color-background-light);
+    margin: 0;
+    padding: 0;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: var(--font-primary);
+    font-weight: var(--font-weight-bold);
+    margin-top: 0;
+  }
+
+  h1 {
+    font-size: 32px;
+  }
+
+  h2 {
+    font-size: 24px;
+  }
+
+  h3 {
+    font-size: 20px;
+  }
+
+  h4 {
+    font-size: 18px;
+  }
+}
+
+@layer components {
+  /* Button styles */
+  .btn {
+    @apply inline-flex items-center justify-center px-4 py-2 rounded-sm font-medium transition-all duration-200 ease-in-out;
+  }
+
+  .btn-primary {
+    @apply bg-primary text-neutral-white hover:bg-primary-dark hover:scale-[1.02];
+  }
+
+  .btn-secondary {
+    @apply bg-neutral-white text-primary border border-primary hover:bg-primary-light hover:text-neutral-white hover:scale-[1.02];
+  }
+
+  .btn-accent {
+    @apply bg-accent text-neutral-white hover:opacity-90 hover:scale-[1.02];
+  }
+
+  /* Card styles */
+  .card {
+    @apply bg-neutral-white rounded-md shadow-md p-6 overflow-hidden;
+  }
+
+  .card-header {
+    @apply mb-4;
+  }
+
+  .card-body {
+    @apply text-neutral;
+  }
+
+  /* Form styles */
+  .form-group {
+    @apply mb-4;
+  }
+
+  .form-label {
+    @apply block mb-2 text-neutral;
+  }
+
+  .form-control {
+    @apply w-full px-3 py-2 border border-[#CCCCCC] rounded-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary;
+  }
+
+  /* Navigation styles */
+  .nav-item {
+    @apply px-4 py-2 text-neutral hover:text-primary transition-colors duration-200;
+  }
+
+  .nav-item-active {
+    @apply text-primary border-b-2 border-primary;
+  }
+
+  /* Utility styles */
+  .container-app {
+    @apply max-w-[1200px] mx-auto px-6;
+  }
+}
+
+@layer utilities {
+  .transition-default {
+    @apply transition-all duration-200 ease-in-out;
+  }
+}

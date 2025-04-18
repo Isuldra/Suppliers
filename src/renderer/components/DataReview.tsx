@@ -1,0 +1,697 @@
+import React, { useMemo, useState, useEffect } from "react";
+import {
+  createColumnHelper,
+  flexRender,
+  getCoreRowModel,
+  getSortedRowModel,
+  getPaginationRowModel,
+  SortingState,
+  useReactTable,
+  ColumnDef,
+  FilterFn,
+} from "@tanstack/react-table";
+import { ExcelData, ExcelRow } from "../types/ExcelData";
+import knownSuppliersData from "../data/suppliers.json";
+import DateFilter, { DateFilterSettings } from "./DateFilter";
+
+interface DataReviewProps {
+  excelData?: ExcelData;
+  selectedSupplier?: string;
+  selectedWeekday?: string;
+  onNext: () => void;
+  onPrevious: () => void;
+}
+
+const columnHelper = createColumnHelper<ExcelRow>();
+
+const DataReview: React.FC<DataReviewProps> = ({
+  excelData,
+  selectedSupplier,
+  selectedWeekday,
+  onNext,
+  onPrevious,
+}) => {
+  // Enhanced sorting state to support multiple columns
+  const [sorting, setSorting] = React.useState<SortingState>([
+    { id: "status", desc: true }, // Primary sort by status
+    { id: "dueDate", desc: false }, // Secondary sort by due date
+    { id: "outstandingQty", desc: true }, // Tertiary sort by quantity
+  ]);
+
+  // Create a set of known suppliers for faster lookup
+  const knownSuppliers = useMemo(
+    () => new Set(knownSuppliersData.knownSuppliers),
+    []
+  );
+
+  // State for pagination
+  const [pageIndex, setPageIndex] = useState(0);
+  const [pageSize, setPageSize] = useState(10);
+
+  // Date filtering settings
+  const [dateFilterSettings, setDateFilterSettings] =
+    useState<DateFilterSettings>({
+      selectAll: true,
+      selectedValues: [],
+      searchText: "",
+      sortOrder: null,
+      isActive: false,
+    });
+
+  const [filteredRows, setFilteredRows] = useState<ExcelRow[]>([]);
+  const [activeFilter, setActiveFilter] = useState<string>("all");
+
+  // Helper to check if a string looks like an article number
+  const isArticleNumber = useMemo(
+    () =>
+      (str: string): boolean => {
+        // Article numbers often contain dashes and digits
+        return (
+          /^\d{3}-[A-Z0-9]+$/.test(str) || // Format like 011-MC100
+          str.startsWith("011-") || // Format specifically for ICU Medical
+          /^\d{10,}$/.test(str)
+        );
+      },
+    []
+  );
+
+  // Date filtering function
+  const applyDateFilter = (data: ExcelRow[]) => {
+    // If no filters are active (selectAll is true), return all data
+    if (
+      dateFilterSettings.selectAll ||
+      dateFilterSettings.selectedValues.length === 0
+    ) {
+      return data;
+    }
+
+    return data.filter((row) => {
+      const date = row.date;
+      if (!(date instanceof Date) || isNaN(date.getTime())) {
+        return false; // Skip rows without valid date
+      }
+
+      const year = date.getFullYear().toString();
+      const month = date.toLocaleString("no-NO", { month: "long" });
+
+      // Check if the year is selected
+      if (dateFilterSettings.selectedValues.includes(year)) {
+        return true;
+      }
+
+      // Check if the month is selected
+      if (dateFilterSettings.selectedValues.includes(month)) {
+        return true;
+      }
+
+      return false;
+    });
+  };
+
+  // Apply sorting based on dateFilterSettings.sortOrder
+  const applySortToData = (data: ExcelRow[]) => {
+    if (!dateFilterSettings.sortOrder) return data;
+
+    return [...data].sort((a, b) => {
+      const dateA = a.date instanceof Date ? a.date.getTime() : 0;
+      const dateB = b.date instanceof Date ? b.date.getTime() : 0;
+
+      if (dateFilterSettings.sortOrder === "asc") {
+        return dateA - dateB; // Oldest to newest
+      } else {
+        return dateB - dateA; // Newest to oldest
+      }
+    });
+  };
+
+  const handleApplyDateFilter = () => {
+    // Apply both filtering and sorting
+    const filtered = applyDateFilter(filteredData);
+    const sorted = applySortToData(filtered);
+    setFilteredRows(sorted);
+  };
+
+  // Get date value from a row
+  const getDateFromRow = (row: ExcelRow): Date | null => {
+    const date = row.date;
+    return date instanceof Date && !isNaN(date.getTime()) ? date : null;
+  };
+
+  // Add status computation
+  const getOrderStatus = (row: ExcelRow): "critical" | "overdue" | "normal" => {
+    const dueDate =
+      row.dueDate instanceof Date
+        ? row.dueDate
+        : new Date(row.dueDate || row.date);
+    const today = new Date();
+    const daysDiff = Math.floor(
+      (dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
+    );
+
+    if (daysDiff < 0) return "overdue";
+    if (daysDiff < 7) return "critical";
+    return "normal";
+  };
+
+  const columns = useMemo<ColumnDef<ExcelRow, any>[]>(
+    () => [
+      // Status column (new)
+      columnHelper.accessor((row) => getOrderStatus(row), {
+        id: "status",
+        header: "Status",
+        size: 100,
+        cell: (info) => (
+          <div
+            className={`px-2 py-1 rounded text-center ${
+              info.getValue() === "critical"
+                ? "bg-red-100 text-red-800"
+                : info.getValue() === "overdue"
+                ? "bg-orange-100 text-orange-800"
+                : "bg-green-100 text-green-800"
+            }`}
+          >
+            {info.getValue() === "critical"
+              ? "Kritisk"
+              : info.getValue() === "overdue"
+              ? "Forfalt"
+              : "Normal"}
+          </div>
+        ),
+      }),
+
+      // Due Date column (enhanced)
+      columnHelper.accessor((row) => row.dueDate || row.date, {
+        id: "dueDate",
+        header: "Forfallsdato",
+        size: 120,
+        cell: (info) => {
+          const date = info.getValue();
+          return date instanceof Date ? date.toLocaleDateString("no-NO") : "-";
+        },
+      }),
+
+      columnHelper.accessor("poNumber", {
+        header: "PO-nummer",
+        size: 100,
+        cell: (info) => info.getValue() || "-",
+      }),
+      columnHelper.accessor("itemNo", {
+        header: "Varenummer",
+        size: 120,
+        cell: (info) => info.getValue() || "-",
+      }),
+      columnHelper.accessor("description", {
+        header: "Beskrivelse",
+        size: 200,
+        cell: (info) => (
+          <div className="max-w-xs truncate" title={info.getValue() || "-"}>
+            {info.getValue() || "-"}
+          </div>
+        ),
+      }),
+      columnHelper.accessor("specification", {
+        header: "Spesifikasjon",
+        size: 150,
+        cell: (info) => (
+          <div className="max-w-xs truncate" title={info.getValue() || "-"}>
+            {info.getValue() || "-"}
+          </div>
+        ),
+      }),
+      columnHelper.accessor("orderQty", {
+        header: "Ordre antall",
+        size: 100,
+        cell: (info) => (
+          <div className="text-right font-medium">
+            {info.getValue() ? info.getValue().toLocaleString() : "0"}
+          </div>
+        ),
+      }),
+      columnHelper.accessor("receivedQty", {
+        header: "Mottatt antall",
+        size: 100,
+        cell: (info) => (
+          <div className="text-right font-medium">
+            {info.getValue() ? info.getValue().toLocaleString() : "0"}
+          </div>
+        ),
+      }),
+      columnHelper.accessor((row) => row.orderQty - row.receivedQty, {
+        id: "outstandingQty",
+        header: "Utestående",
+        size: 100,
+        cell: (info) => (
+          <div
+            className={`text-right font-medium ${
+              Number(info.getValue()) > 0 ? "text-accent font-bold" : ""
+            }`}
+          >
+            {info.getValue() ? info.getValue().toLocaleString() : "0"}
+          </div>
+        ),
+      }),
+      columnHelper.accessor("date", {
+        header: () => (
+          <div className="flex items-center justify-between">
+            <span>Dato</span>
+            <DateFilter
+              columnId="date"
+              data={filteredData}
+              dateFilterSettings={dateFilterSettings}
+              setDateFilterSettings={setDateFilterSettings}
+              onApplyFilter={handleApplyDateFilter}
+              getDateValue={getDateFromRow}
+            />
+          </div>
+        ),
+        size: 100,
+        cell: (info) => {
+          const date = info.getValue();
+          if (date instanceof Date && !isNaN(date.getTime())) {
+            return date.toLocaleDateString();
+          }
+          return "-";
+        },
+      }),
+      columnHelper.accessor("key", {
+        header: "Nøkkel",
+        size: 150,
+        cell: (info) => (
+          <div className="truncate max-w-[150px]" title={info.getValue()}>
+            {info.getValue()}
+          </div>
+        ),
+      }),
+    ],
+    [dateFilterSettings]
+  );
+
+  const filteredData = useMemo(() => {
+    if (!excelData?.hovedliste || !selectedSupplier) return [];
+
+    console.log("Filtering data for supplier:", selectedSupplier);
+    console.log("Total rows in hovedliste:", excelData.hovedliste.length);
+
+    // Determine if the selected supplier is a known supplier name or an article number
+    const isSupplierAnArticleNumber = isArticleNumber(selectedSupplier);
+    const isKnownSupplier = knownSuppliers.has(selectedSupplier);
+
+    // Create a case-insensitive version of the supplier for matching
+    const supplierLower = selectedSupplier.toLowerCase();
+
+    return excelData.hovedliste.filter((row) => {
+      // If the selected supplier is an article number, match against itemNo
+      if (isSupplierAnArticleNumber) {
+        // Direct match with item number
+        return row.itemNo === selectedSupplier;
+      }
+
+      // If it's a known supplier name, match against the supplier column
+      if (isKnownSupplier) {
+        // Return only rows where the supplier name matches
+        return row.supplier?.toLowerCase() === supplierLower;
+      }
+
+      // If we don't know if it's an article or supplier name, try to match against both
+      return (
+        row.supplier?.toLowerCase() === supplierLower ||
+        row.itemNo === selectedSupplier
+      );
+    });
+  }, [excelData, selectedSupplier, isArticleNumber, knownSuppliers]);
+
+  // Quick filter presets
+  const filterPresets = useMemo(
+    () => ({
+      all: () => {
+        setFilteredRows(filteredData);
+        setActiveFilter("all");
+      },
+      critical: () => {
+        setFilteredRows(
+          filteredData.filter((row) => getOrderStatus(row) === "critical")
+        );
+        setActiveFilter("critical");
+      },
+      overdue: () => {
+        setFilteredRows(
+          filteredData.filter((row) => getOrderStatus(row) === "overdue")
+        );
+        setActiveFilter("overdue");
+      },
+      thisWeek: () => {
+        const today = new Date();
+        const endOfWeek = new Date(today);
+        endOfWeek.setDate(today.getDate() + (7 - today.getDay()));
+
+        setFilteredRows(
+          filteredData.filter((row) => {
+            const dueDate =
+              row.dueDate instanceof Date
+                ? row.dueDate
+                : new Date(row.dueDate || row.date);
+            return dueDate <= endOfWeek;
+          })
+        );
+        setActiveFilter("thisWeek");
+      },
+      outstanding: () => {
+        setFilteredRows(
+          filteredData.filter((row) => row.orderQty - row.receivedQty > 0)
+        );
+        setActiveFilter("outstanding");
+      },
+    }),
+    [filteredData, getOrderStatus]
+  );
+
+  // Effect to reset filtered rows when filteredData changes
+  useEffect(() => {
+    // Apply initial date filtering
+    const filtered = applyDateFilter(filteredData);
+    const sorted = applySortToData(filtered);
+    setFilteredRows(sorted);
+    setActiveFilter("all"); // Reset active filter when data changes
+  }, [filteredData, applyDateFilter, applySortToData]);
+
+  // Table instance
+  const table = useReactTable({
+    data: filteredRows,
+    columns,
+    state: {
+      sorting,
+      pagination: {
+        pageIndex,
+        pageSize,
+      },
+    },
+    enableSorting: true,
+    onSortingChange: setSorting,
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    onPaginationChange: (updater) => {
+      if (typeof updater === "function") {
+        const newState = updater({
+          pageIndex,
+          pageSize,
+        });
+        setPageIndex(newState.pageIndex);
+        setPageSize(newState.pageSize);
+      } else {
+        setPageIndex(updater.pageIndex);
+        setPageSize(updater.pageSize);
+      }
+    },
+  });
+
+  const totalItems = filteredRows.length;
+  const outstandingCount = filteredRows.filter(
+    (row) => row.orderQty - row.receivedQty > 0
+  ).length;
+
+  if (!excelData || !selectedSupplier) {
+    return (
+      <div className="p-6 bg-neutral-light border border-accent rounded-md shadow-sm">
+        <p className="text-neutral">
+          Ingen data tilgjengelig. Vennligst velg en leverandør først.
+        </p>
+        <button onClick={onPrevious} className="btn btn-secondary mt-4">
+          Tilbake
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="w-full">
+      <h2
+        className="text-xl font-bold mb-4 text-neutral"
+        id="data-review-heading"
+      >
+        Gjennomgang av utestående ordre for {selectedSupplier}
+      </h2>
+
+      <div className="bg-neutral-white p-4 rounded-md shadow-sm mb-6 border border-neutral-light">
+        <div className="flex flex-wrap justify-between items-center mb-4">
+          <div>
+            <p className="text-neutral">
+              <span className="font-medium">Leverandør:</span>{" "}
+              {selectedSupplier}
+            </p>
+            <p className="text-neutral mt-1">
+              <span className="font-medium">Ukedag:</span> {selectedWeekday}
+            </p>
+          </div>
+          <div className="mt-2 sm:mt-0">
+            <p className="text-neutral">
+              <span className="font-medium">Totalt antall:</span>{" "}
+              <span className="font-bold">{totalItems}</span>
+            </p>
+            <p className="text-neutral mt-1">
+              <span className="font-medium">Utestående ordre:</span>{" "}
+              <span className="font-bold text-accent">{outstandingCount}</span>
+            </p>
+          </div>
+        </div>
+
+        {/* Quick Filter Buttons */}
+        <div className="flex flex-wrap gap-2 mb-2">
+          <button
+            onClick={filterPresets.all}
+            className={`btn btn-sm ${
+              activeFilter === "all" ? "btn-primary" : "btn-secondary"
+            }`}
+          >
+            Alle ordrer
+          </button>
+          <button
+            onClick={filterPresets.outstanding}
+            className={`btn btn-sm ${
+              activeFilter === "outstanding" ? "btn-primary" : "btn-secondary"
+            }`}
+          >
+            Utestående
+          </button>
+          <button
+            onClick={filterPresets.critical}
+            className={`btn btn-sm ${
+              activeFilter === "critical" ? "btn-primary" : "btn-accent"
+            }`}
+          >
+            Kritiske
+          </button>
+          <button
+            onClick={filterPresets.overdue}
+            className={`btn btn-sm ${
+              activeFilter === "overdue" ? "btn-primary" : "btn-error"
+            }`}
+          >
+            Forfalt
+          </button>
+          <button
+            onClick={filterPresets.thisWeek}
+            className={`btn btn-sm ${
+              activeFilter === "thisWeek" ? "btn-primary" : "btn-secondary"
+            }`}
+          >
+            Denne uken
+          </button>
+        </div>
+      </div>
+
+      <div className="overflow-hidden shadow-sm rounded-lg border border-neutral-light mb-6">
+        <div className="overflow-x-auto">
+          <table
+            className="min-w-full divide-y divide-neutral-light"
+            aria-labelledby="data-review-heading"
+            role="grid"
+          >
+            <thead className="bg-neutral-light">
+              <tr>
+                {table.getHeaderGroups().map((headerGroup) =>
+                  headerGroup.headers.map((header) => (
+                    <th
+                      key={header.id}
+                      colSpan={header.colSpan}
+                      scope="col"
+                      className="px-3 py-3 text-left text-xs font-medium text-neutral uppercase tracking-wider whitespace-nowrap"
+                      style={{ width: `${header.getSize()}px` }}
+                    >
+                      {header.isPlaceholder ? null : (
+                        <div
+                          {...{
+                            className: header.column.getCanSort()
+                              ? "cursor-pointer select-none flex items-center"
+                              : "",
+                            onClick: header.column.getToggleSortingHandler(),
+                            role: header.column.getCanSort()
+                              ? "button"
+                              : undefined,
+                            "aria-label": header.column.getCanSort()
+                              ? `Sort by ${header.column.columnDef.header}${
+                                  header.column.getIsSorted()
+                                    ? header.column.getIsSorted() === "asc"
+                                      ? ", currently sorted ascending"
+                                      : ", currently sorted descending"
+                                    : ""
+                                }`
+                              : undefined,
+                            tabIndex: header.column.getCanSort()
+                              ? 0
+                              : undefined,
+                            onKeyDown: header.column.getCanSort()
+                              ? (e) => {
+                                  if (e.key === "Enter" || e.key === " ") {
+                                    e.preventDefault();
+                                    header.column.getToggleSortingHandler()?.(
+                                      e
+                                    );
+                                  }
+                                }
+                              : undefined,
+                          }}
+                        >
+                          {flexRender(
+                            header.column.columnDef.header,
+                            header.getContext()
+                          )}
+                          {header.column.getCanSort() && (
+                            <span className="ml-1">
+                              {{
+                                asc: " 🔼",
+                                desc: " 🔽",
+                              }[header.column.getIsSorted() as string] ?? " ⬍"}
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </th>
+                  ))
+                )}
+              </tr>
+            </thead>
+            <tbody className="bg-neutral-white divide-y divide-neutral-light">
+              {table.getRowModel().rows.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={table.getAllColumns().length}
+                    className="px-3 py-4 text-center text-neutral"
+                  >
+                    Ingen data tilgjengelig
+                  </td>
+                </tr>
+              ) : (
+                table.getRowModel().rows.map((row) => (
+                  <tr
+                    key={row.id}
+                    className="hover:bg-neutral-light transition-colors"
+                    role="row"
+                  >
+                    {row.getVisibleCells().map((cell) => (
+                      <td
+                        key={cell.id}
+                        className="px-3 py-2 whitespace-nowrap text-neutral"
+                        role="gridcell"
+                      >
+                        {flexRender(
+                          cell.column.columnDef.cell,
+                          cell.getContext()
+                        )}
+                      </td>
+                    ))}
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Pagination controls */}
+      <div className="flex items-center justify-between p-4 border border-neutral-light rounded-md bg-neutral-light">
+        <div className="flex items-center space-x-2">
+          <span className="text-sm text-neutral">Vis</span>
+          <select
+            value={table.getState().pagination.pageSize}
+            onChange={(e) => {
+              table.setPageSize(Number(e.target.value));
+            }}
+            className="form-control py-1 px-2 text-sm"
+            aria-label="Antall rader per side"
+          >
+            {[10, 25, 50, 100].map((pageSize) => (
+              <option key={pageSize} value={pageSize}>
+                {pageSize}
+              </option>
+            ))}
+          </select>
+          <span className="text-sm text-neutral">per side</span>
+        </div>
+        <div className="flex items-center space-x-2">
+          <button
+            onClick={() => table.setPageIndex(0)}
+            disabled={!table.getCanPreviousPage()}
+            className="px-2 py-1 border border-neutral rounded-sm disabled:opacity-50 disabled:cursor-not-allowed text-neutral"
+            aria-label="Gå til første side"
+            aria-disabled={!table.getCanPreviousPage()}
+          >
+            {"<<"}
+          </button>
+          <button
+            onClick={() => table.previousPage()}
+            disabled={!table.getCanPreviousPage()}
+            className="px-2 py-1 border border-neutral rounded-sm disabled:opacity-50 disabled:cursor-not-allowed text-neutral"
+            aria-label="Gå til forrige side"
+            aria-disabled={!table.getCanPreviousPage()}
+          >
+            {"<"}
+          </button>
+          <span className="text-sm text-neutral">
+            <span className="font-medium">
+              {table.getState().pagination.pageIndex + 1}
+            </span>{" "}
+            av <span className="font-medium">{table.getPageCount()}</span>
+          </span>
+          <button
+            onClick={() => table.nextPage()}
+            disabled={!table.getCanNextPage()}
+            className="px-2 py-1 border border-neutral rounded-sm disabled:opacity-50 disabled:cursor-not-allowed text-neutral"
+            aria-label="Gå til neste side"
+            aria-disabled={!table.getCanNextPage()}
+          >
+            {">"}
+          </button>
+          <button
+            onClick={() => table.setPageIndex(table.getPageCount() - 1)}
+            disabled={!table.getCanNextPage()}
+            className="px-2 py-1 border border-neutral rounded-sm disabled:opacity-50 disabled:cursor-not-allowed text-neutral"
+            aria-label="Gå til siste side"
+            aria-disabled={!table.getCanNextPage()}
+          >
+            {">>"}
+          </button>
+        </div>
+      </div>
+
+      <div className="flex justify-between mt-6">
+        <button
+          onClick={onPrevious}
+          className="btn btn-secondary"
+          aria-label="Gå tilbake til leverandørvalg"
+        >
+          Tilbake
+        </button>
+        <button
+          onClick={onNext}
+          className="btn btn-primary"
+          aria-label="Gå videre til e-post"
+        >
+          Send e-post
+        </button>
+      </div>
+    </div>
+  );
+};
+
+export default DataReview;
