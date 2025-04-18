@@ -1,7 +1,7 @@
 {
-  "name": "supplier-reminder-pro",
+  "name": "onemed-supplychain",
   "version": "1.0.0",
-  "description": "Desktop application for managing supplier reminders",
+  "description": "Desktop application for managing OneMed supply chain and vendor relations",
   "main": "dist/main/main.js",
   "type": "module",
   "scripts": {
@@ -26,8 +26,8 @@
     "release": "electron-vite build && electron-builder --win --publish always"
   },
   "build": {
-    "appId": "com.onemed.supplierreminderpro",
-    "productName": "Supplier Reminder Pro",
+    "appId": "com.onemed.supplychain",
+    "productName": "OneMed SupplyChain",
     "copyright": "Copyright © 2024 OneMed",
     "asar": true,
     "files": [
@@ -80,7 +80,7 @@
       "perMachine": false,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "Supplier Reminder Pro",
+      "shortcutName": "OneMed SupplyChain",
       "upgradeCode": "7C04A11D-9FAA-4B83-85FF-79D2AABFD84E"
     },
     "nsis": {
@@ -93,7 +93,7 @@
       "installerHeaderIcon": "resources/icon.ico",
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "Supplier Reminder Pro",
+      "shortcutName": "OneMed SupplyChain",
       "deleteAppDataOnUninstall": false,
       "displayLanguageSelector": false,
       "installerSidebar": "resources/sidebar.bmp",
@@ -155,7 +155,7 @@
     "@types/xlsx": "^0.0.35",
     "better-sqlite3": "^11.9.1",
     "electron-log": "^5.3.3",
-    "electron-updater": "^6.1.7",
+    "electron-updater": "^6.6.2",
     "handlebars": "^4.7.8",
     "nodemailer": "^6.10.1",
     "odbc": "^2.4.6",

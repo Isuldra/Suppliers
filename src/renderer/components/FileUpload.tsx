@@ -18,15 +18,19 @@ declare global {
       saveOrdersToDatabase: (
         data: ExcelData
       ) => Promise<{ success: boolean; message?: string; error?: string }>;
+      openExternalLink: (
+        url: string
+      ) => Promise<{ success: boolean; error?: string }>;
     };
   }
 }
 
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useState, useEffect, useRef } from "react";
 import { useDropzone } from "react-dropzone";
 import { ExcelData, ValidationError, ExcelRow } from "../types/ExcelData";
 import toast from "react-hot-toast";
 import * as XLSX from "xlsx";
+import { QuestionMarkCircleIcon, XMarkIcon } from "@heroicons/react/24/outline";
 
 interface FileUploadProps {
   onDataParsed: (data: ExcelData) => void;
@@ -41,6 +45,75 @@ const FileUpload: React.FC<FileUploadProps> = ({
   const [isValidating, setIsValidating] = useState(false);
   const [progress, setProgress] = useState(0);
   const [processingStage, setProcessingStage] = useState("");
+  const [helpMenuOpen, setHelpMenuOpen] = useState(false);
+  const helpMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        helpMenuRef.current &&
+        !helpMenuRef.current.contains(event.target as Node)
+      ) {
+        setHelpMenuOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+  const handleHelpOptionClick = (option: string) => {
+    console.log(`Help option clicked: ${option}`);
+    switch (option) {
+      case "docs":
+        window.electron
+          .openExternalLink("https://github.com/Isuldra/Suppliers/wiki")
+          .then((result) => {
+            if (!result.success) {
+              console.error("Failed to open documentation:", result.error);
+              toast.error("Kunne ikke åpne dokumentasjonen");
+            }
+          })
+          .catch((err) => {
+            console.error("Error opening documentation:", err);
+            toast.error("Feil ved åpning av dokumentasjon");
+          });
+        break;
+
+      case "check-updates":
+        console.log("Sending check-for-updates request");
+        window.electron.send("check-for-updates", {});
+        break;
+
+      case "contact-support":
+        window.electron
+          .openExternalLink(
+            "mailto:andreas.elvethun@onemed.com?subject=Supplier%20Reminder%20Pro%20Support"
+          )
+          .then((result) => {
+            if (!result.success) {
+              console.error("Failed to open email client:", result.error);
+              toast.error("Kunne ikke åpne e-postklient");
+            }
+          })
+          .catch((err) => {
+            console.error("Error opening email client:", err);
+            toast.error("Feil ved åpning av e-postklient");
+          });
+        break;
+
+      case "about":
+        console.log("Sending show-about-dialog request");
+        window.electron.send("show-about-dialog", {});
+        break;
+
+      default:
+        break;
+    }
+    setHelpMenuOpen(false);
+  };
 
   const validateExcelData = (workbook: XLSX.WorkBook): ValidationError[] => {
     const errors: ValidationError[] = [];
@@ -769,9 +842,62 @@ const FileUpload: React.FC<FileUploadProps> = ({
 
   return (
     <div className="p-6">
-      <h2 className="text-xl font-bold mb-4 text-neutral">
-        Last opp Excel-fil
-      </h2>
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-xl font-bold text-neutral">Last opp Excel-fil</h2>
+
+        <div className="relative" ref={helpMenuRef}>
+          <button
+            onClick={() => setHelpMenuOpen(!helpMenuOpen)}
+            className="flex items-center text-neutral-dark hover:text-primary transition-colors"
+            aria-label="Hjelp"
+          >
+            <QuestionMarkCircleIcon className="h-6 w-6 mr-1" />
+            <span>Hjelp</span>
+          </button>
+
+          {helpMenuOpen && (
+            <div className="absolute right-0 mt-2 w-64 bg-white rounded-md shadow-lg z-10 border border-gray-200">
+              <div className="flex justify-between items-center p-3 border-b border-gray-200">
+                <h3 className="font-medium text-neutral">Hjelp og ressurser</h3>
+                <button
+                  onClick={() => setHelpMenuOpen(false)}
+                  className="text-gray-400 hover:text-gray-500"
+                >
+                  <XMarkIcon className="h-5 w-5" />
+                </button>
+              </div>
+
+              <div className="py-1">
+                <button
+                  onClick={() => handleHelpOptionClick("docs")}
+                  className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                >
+                  Dokumentasjon
+                </button>
+                <button
+                  onClick={() => handleHelpOptionClick("check-updates")}
+                  className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                >
+                  Sjekk for oppdateringer
+                </button>
+                <button
+                  onClick={() => handleHelpOptionClick("contact-support")}
+                  className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                >
+                  Kontakt support
+                </button>
+                <div className="border-t border-gray-200 my-1"></div>
+                <button
+                  onClick={() => handleHelpOptionClick("about")}
+                  className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                >
+                  Om OneMed SupplyChain
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
 
       {isLoading || isValidating ? (
         <div className="mb-6">

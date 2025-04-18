@@ -207,9 +207,16 @@ const App: React.FC = () => {
   return (
     <div className="min-h-screen flex flex-col bg-neutral-light">
       <div className="p-4 bg-primary text-neutral-white shadow-md">
-        <div className="container-app flex items-center">
-          <img src={onemedLogo} alt="OneMed Logo" className="h-10 mr-3" />
-          <h1 className="text-2xl font-bold">Supplier Reminder Pro</h1>
+        <div className="container-app flex items-center justify-between">
+          <div>
+            <img src={onemedLogo} alt="OneMed Logo" className="h-10" />
+          </div>
+          <div className="flex-grow text-center">
+            <h1 className="text-2xl font-bold">OneMed SupplyChain</h1>
+          </div>
+          <div className="w-10">
+            {/* Tomt element for å balansere layouten */}
+          </div>
         </div>
       </div>
 
