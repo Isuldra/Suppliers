@@ -1,11 +1,17 @@
 import { app, BrowserWindow, session } from "electron";
 import { join } from "path";
+import { setupAutoUpdater } from "./auto-updater";
+import log from "electron-log";
 
 let mainWindow: BrowserWindow | null = null;
 let securityHeadersListener: any = null;
 let cspListener: any = null;
 
 const isDevelopment = process.env.NODE_ENV === "development";
+
+// Configure logging
+log.transports.file.level = "info";
+log.transports.console.level = isDevelopment ? "debug" : "info";
 
 // Define Content Security Policy
 const cspPolicy = {
@@ -73,24 +79,24 @@ async function createWindow() {
     try {
       const port = process.argv[2] || 5173;
       const url = `http://localhost:${port}`;
-      console.log(`Loading URL: ${url}`);
+      log.info(`Loading URL: ${url}`);
 
       await mainWindow.loadURL(url);
       mainWindow.webContents.openDevTools();
 
       // Enable hot reload
       mainWindow.webContents.on("did-fail-load", () => {
-        console.log("Page failed to load, retrying...");
+        log.info("Page failed to load, retrying...");
         setTimeout(async () => {
           try {
             await mainWindow?.loadURL(url);
           } catch (err) {
-            console.error("Failed to reload:", err);
+            log.error("Failed to reload:", err);
           }
         }, 1000);
       });
     } catch (err) {
-      console.error("Failed to load development URL:", err);
+      log.error("Failed to load development URL:", err);
     }
   } else {
     await mainWindow.loadFile(join(__dirname, "../renderer/index.html"));
@@ -120,6 +126,10 @@ app.whenReady().then(() => {
     );
   }
 
+  // Initialiser auto-updater
+  setupAutoUpdater();
+  log.info("App version:", app.getVersion());
+
   createWindow();
 
   app.on("activate", () => {
@@ -131,7 +141,7 @@ app.whenReady().then(() => {
 
 // Create a single handler for app cleanup
 function cleanupApp() {
-  console.log("Cleaning up application resources...");
+  log.info("Cleaning up application resources...");
 
   // We don't need to call app.quit() here since it will be handled by will-quit
   // Just let the natural process continue
@@ -143,7 +153,7 @@ function cleanupApp() {
     // Instead of calling quit directly, we'll set a short timeout
     // This helps prevent multiple quit attempts happening simultaneously
     setTimeout(() => {
-      console.log("Platform is not macOS, exiting app...");
+      log.info("Platform is not macOS, exiting app...");
       app.quit();
     }, 100);
   }
@@ -154,6 +164,6 @@ app.on("window-all-closed", cleanupApp);
 
 // Also handle app before-quit event to ensure cleanup
 app.on("before-quit", () => {
-  console.log("Application is about to quit, performing cleanup...");
+  log.info("Application is about to quit, performing cleanup...");
   // Clear any global listeners or resources here if needed
 });
