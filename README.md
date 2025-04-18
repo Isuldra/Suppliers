@@ -13,6 +13,7 @@ This project is a desktop application implementing OneMed's design system, built
 - [Electron Integration](#electron-integration)
 - [Development Tools](#development-tools)
 - [Security](#security)
+- [Deployment & Installation](#deployment--installation)
 
 ## Design System
 
@@ -339,3 +340,58 @@ To maintain security, ensure you always:
 2. Test thoroughly after any security-related changes
 3. Follow the principle of least privilege when adding features
 4. Regularly back up the database file
+
+## Deployment & Installation
+
+The application can be built and deployed as a standalone desktop application for Windows, macOS, and Linux.
+
+### Building the Application
+
+To build the application for distribution:
+
+```bash
+# Build for all platforms
+npm run dist
+
+# Build only for Windows
+npm run dist:win
+```
+
+### Windows Silent Installation
+
+The Windows installer supports silent installation, which is ideal for enterprise deployment. This allows IT administrators to deploy the application without user interaction.
+
+For detailed deployment instructions, see the [Deployment Guide](resources/DEPLOYMENT.md).
+
+#### Quick Silent Installation Commands
+
+Using PowerShell:
+
+```powershell
+# Install silently with default options
+Start-Process -Wait -FilePath "Supplier-Reminder-Pro-1.0.0-setup.exe" -ArgumentList "/S"
+
+# Install to a custom directory
+Start-Process -Wait -FilePath "Supplier-Reminder-Pro-1.0.0-setup.exe" -ArgumentList "/S /D=D:\CustomPath"
+```
+
+Using the provided deployment scripts:
+
+```powershell
+# Using the PowerShell script
+.\resources\silent-install.ps1 -InstallerPath "path\to\installer.exe"
+
+# Using the batch wrapper (automatically handles elevation)
+.\resources\silent-install.bat -installer "path\to\installer.exe"
+```
+
+### Enterprise Deployment
+
+For enterprise environments, the application supports:
+
+1. **Group Policy Deployment** - Deploy via GPO using the silent installation options
+2. **Remote Installation** - Deploy remotely using PowerShell remoting
+3. **Installation Verification** - Scripts to verify successful installation
+4. **Customizable Installation** - Modify installation parameters as needed
+
+For more details on enterprise deployment scenarios, refer to the [Deployment Guide](resources/DEPLOYMENT.md).
