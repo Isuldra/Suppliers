@@ -1,10 +1,11 @@
-import { app, BrowserWindow, ipcMain } from "electron";
+import { app, BrowserWindow, ipcMain, shell } from "electron";
 import path from "path";
 import { ExcelData, ValidationResult } from "../renderer/types/ExcelData";
 import log from "electron-log";
 import { databaseService } from "../services/databaseService";
 import { startOfWeek } from "../utils/dateUtils"; // We'll create this file later
 import { setupDatabaseHandlers, closeDatabaseConnection } from "./database";
+import { checkForUpdatesManually } from "./auto-updater";
 
 // Declare the odbc module interface instead of importing directly
 let odbcModule: any = null;
@@ -438,3 +439,43 @@ ipcMain.handle(
     }
   }
 );
+
+// Add IPC handler for manual update check
+ipcMain.handle("update:check", async () => {
+  try {
+    return await checkForUpdatesManually();
+  } catch (error) {
+    log.error("Error checking for updates:", error);
+    return {
+      updateAvailable: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+    };
+  }
+});
+
+// Add IPC handler for installing updates
+ipcMain.handle("update:install", async () => {
+  try {
+    // This will only work if an update has been downloaded
+    const { autoUpdater } = require("electron-updater");
+    autoUpdater.quitAndInstall(false, true);
+    return { success: true };
+  } catch (error) {
+    log.error("Error installing update:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+    };
+  }
+});
+
+// Åpne eksterne lenker (brukes for support-epost)
+ipcMain.handle("openExternalLink", async (_, url: string) => {
+  try {
+    await shell.openExternal(url);
+    return { success: true };
+  } catch (error) {
+    console.error("Failed to open external link:", error);
+    return { success: false, error: (error as Error).message };
+  }
+});

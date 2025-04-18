@@ -1,5 +1,7 @@
 import { app, dialog } from "electron";
-import { autoUpdater, UpdateInfo, ProgressInfo } from "electron-updater";
+import pkg from "electron-updater";
+const { autoUpdater } = pkg;
+import type { UpdateInfo, ProgressInfo } from "electron-updater";
 import log from "electron-log";
 
 // Konfigurer logger
@@ -39,7 +41,7 @@ export function setupAutoUpdater() {
     dialog.showMessageBox({
       type: "info",
       title: "Oppdatering tilgjengelig",
-      message: `En ny versjon (${info.version}) av Supplier Reminder Pro er tilgjengelig`,
+      message: `En ny versjon (${info.version}) av OneMed SupplyChain er tilgjengelig`,
       detail: "Oppdateringen lastes ned og installeres automatisk...",
       buttons: ["OK"],
     });

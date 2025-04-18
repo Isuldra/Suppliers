@@ -23,6 +23,7 @@ export default defineConfig({
           "odbc",
           "sqlite3",
           "better-sqlite3",
+          "electron-updater",
         ],
         plugins: [
           // Add the externalize dependencies plugin
@@ -65,6 +66,7 @@ export default defineConfig({
         "odbc",
         "sqlite3",
         "better-sqlite3",
+        "electron-updater",
       ],
     },
     resolve: {
@@ -79,6 +81,10 @@ export default defineConfig({
           __dirname,
           "src/main/shims/better-sqlite3-shim.js"
         ),
+        "electron-updater": path.resolve(
+          __dirname,
+          "src/main/shims/electron-updater-shim.js"
+        ),
       },
     },
   },
@@ -89,12 +95,24 @@ export default defineConfig({
         input: {
           index: path.resolve(__dirname, "src/preload/index.ts"),
         },
-        external: [/\.test\./, "odbc", "sqlite3", "better-sqlite3"],
+        external: [
+          /\.test\./,
+          "odbc",
+          "sqlite3",
+          "better-sqlite3",
+          "electron-updater",
+        ],
         plugins: [
           externalizeDepsPlugin(),
           // Fix: rollup-plugin-ignore expects string array
           // After looking at the source: https://github.com/jackmellis/rollup-plugin-ignore/blob/master/src/index.js
-          ignore(["mock-aws-s3", "odbc", "sqlite3", "better-sqlite3"]),
+          ignore([
+            "mock-aws-s3",
+            "odbc",
+            "sqlite3",
+            "better-sqlite3",
+            "electron-updater",
+          ]),
         ],
         output: {
           format: "cjs",
@@ -113,6 +131,10 @@ export default defineConfig({
           __dirname,
           "src/main/shims/better-sqlite3-shim.js"
         ),
+        "electron-updater": path.resolve(
+          __dirname,
+          "src/main/shims/electron-updater-shim.js"
+        ),
       },
     },
   },
@@ -121,7 +143,13 @@ export default defineConfig({
     build: {
       outDir: path.resolve(__dirname, "dist/renderer"),
       rollupOptions: {
-        external: [/\.test\./, "odbc", "sqlite3", "better-sqlite3"],
+        external: [
+          /\.test\./,
+          "odbc",
+          "sqlite3",
+          "better-sqlite3",
+          "electron-updater",
+        ],
       },
     },
     server: {
@@ -139,6 +167,10 @@ export default defineConfig({
         "better-sqlite3": path.resolve(
           __dirname,
           "src/main/shims/better-sqlite3-shim.js"
+        ),
+        "electron-updater": path.resolve(
+          __dirname,
+          "src/main/shims/electron-updater-shim.js"
         ),
       },
     },

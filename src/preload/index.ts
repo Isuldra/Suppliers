@@ -54,10 +54,15 @@ interface ElectronAPI {
   onUpdateDownloaded: (callback: (info: any) => void) => () => void;
   onUpdateError: (callback: (error: any) => void) => () => void;
   installUpdate: () => Promise<void>;
+
+  // New API methods
+  openExternalLink: (
+    url: string
+  ) => Promise<{ success: boolean; error?: string }>;
 }
 
-// Whitelist of valid channels
-const validChannels = [
+// Valid send channels for IPC communication
+const validSendChannels = [
   "toMain",
   "fromMain",
   "error",
@@ -84,27 +89,68 @@ const validChannels = [
   "update:downloaded",
   "update:error",
   "update:install",
-];
+  // New API channels
+  "openExternalLink",
+  "check-for-updates",
+  "show-about-dialog",
+] as const;
+
+// Valid receive channels for IPC communication
+const validReceiveChannels = [
+  "toMain",
+  "fromMain",
+  "error",
+  "excel:parse",
+  "excel:validate",
+  "excel:error",
+  "validateData",
+  "sendEmail",
+  "getSuppliers",
+  "saveOrdersToDatabase",
+  "getOutstandingOrders",
+  "recordEmailSent",
+  // New database API channels
+  "db:insertOrUpdateOrder",
+  "db:insertOrUpdateOrders",
+  "db:getOrdersBySupplier",
+  "db:getAllOrders",
+  "db:getOrdersDueWithinDays",
+  "db:markOrderAsConfirmed",
+  "db:deleteOrder",
+  // Auto-updater channels
+  "update:check",
+  "update:available",
+  "update:downloaded",
+  "update:error",
+  "update:install",
+  // New API channels
+  "openExternalLink",
+  "check-for-updates",
+  "show-about-dialog",
+] as const;
 
 // Expose the API to the renderer process
 contextBridge.exposeInMainWorld("electron", {
-  send: (channel: string, data: unknown) => {
-    if (validChannels.includes(channel)) {
+  send: (channel: (typeof validSendChannels)[number], data: unknown) => {
+    if (validSendChannels.includes(channel)) {
       ipcRenderer.send(channel, data);
     }
   },
-  receive: (channel: string, func: (...args: unknown[]) => void) => {
-    if (validChannels.includes(channel)) {
+  receive: (
+    channel: (typeof validReceiveChannels)[number],
+    func: (...args: unknown[]) => void
+  ) => {
+    if (validReceiveChannels.includes(channel)) {
       const subscription = (
         _event: Electron.IpcRendererEvent,
         ...args: unknown[]
       ) => func(...args);
       ipcRenderer.on(channel, subscription);
-
-      return () => {
-        ipcRenderer.removeListener(channel, subscription);
-      };
+      return () => ipcRenderer.removeListener(channel, subscription);
     }
+    return () => {
+      /* Do nothing for invalid channels */
+    };
   },
   // Add error handling
   handleError: (error: Error) => {
@@ -222,5 +268,10 @@ contextBridge.exposeInMainWorld("electron", {
   },
   installUpdate: async () => {
     return await ipcRenderer.invoke("update:install");
+  },
+
+  // New API methods
+  openExternalLink: async (url: string) => {
+    return await ipcRenderer.invoke("openExternalLink", url);
   },
 } as ElectronAPI);
