@@ -17,7 +17,8 @@
     "test:coverage": "vitest run --coverage",
     "pack": "electron-builder --dir",
     "dist": "electron-vite build && electron-builder",
-    "dist:win": "electron-vite build && electron-builder --win"
+    "dist:win": "electron-vite build && electron-builder --win",
+    "portable": "node scripts/create-portable.js"
   },
   "build": {
     "appId": "com.onemed.supplierreminderpro",
@@ -43,6 +44,10 @@
       ],
       "icon": "resources/icon.ico",
       "artifactName": "${productName}-${version}-setup.${ext}"
+    },
+    "portable": {
+      "target": "portable",
+      "artifactName": "${productName}-Portable.exe"
     },
     "nsis": {
       "oneClick": false,
@@ -98,9 +103,11 @@
     "electron-builder": "^24.9.1",
     "electron-vite": "^2.0.0",
     "jsdom": "^24.0.0",
+    "png-to-ico": "^2.1.8",
     "postcss": "^8.4.35",
     "rollup-plugin-copy": "^3.5.0",
     "rollup-plugin-ignore": "^1.0.10",
+    "sharp": "^0.34.1",
     "tailwindcss": "^3.4.1",
     "typescript": "^5.3.3",
     "vite": "^5.1.4",
