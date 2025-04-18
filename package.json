@@ -18,7 +18,11 @@
     "pack": "electron-builder --dir",
     "dist": "electron-vite build && electron-builder",
     "dist:win": "electron-vite build && electron-builder --win",
-    "portable": "node scripts/create-portable.js"
+    "dist:portable": "electron-vite build && electron-builder --win portable",
+    "dist:msi": "electron-vite build && electron-builder --win msi",
+    "dist:nsis": "electron-vite build && electron-builder --win nsis",
+    "portable": "node scripts/create-portable.js",
+    "distributions": "node scripts/create-all-distributions.js"
   },
   "build": {
     "appId": "com.onemed.supplierreminderpro",
@@ -46,13 +50,32 @@
           "arch": [
             "x64"
           ]
+        },
+        {
+          "target": "msi",
+          "arch": [
+            "x64"
+          ]
         }
       ],
       "icon": "resources/icon.ico",
+      "publisherName": "OneMed",
       "artifactName": "${productName}-${version}-setup.${ext}"
     },
     "portable": {
-      "artifactName": "${productName}-Portable.exe"
+      "artifactName": "${productName}-Portable.exe",
+      "requestExecutionLevel": "user"
+    },
+    "msi": {
+      "artifactName": "${productName}-${version}-Setup.msi",
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Supplier Reminder Pro",
+      "installerIcon": "resources/icon.ico",
+      "uninstallerIcon": "resources/icon.ico"
     },
     "nsis": {
       "oneClick": false,
