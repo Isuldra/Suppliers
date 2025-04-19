@@ -59,6 +59,14 @@ interface ElectronAPI {
   openExternalLink: (
     url: string
   ) => Promise<{ success: boolean; error?: string }>;
+
+  // Logging functions
+  getLogs: () => Promise<{
+    success: boolean;
+    logs?: string;
+    path?: string;
+    error?: string;
+  }>;
 }
 
 // Valid send channels for IPC communication
@@ -273,5 +281,18 @@ contextBridge.exposeInMainWorld("electron", {
   // New API methods
   openExternalLink: async (url: string) => {
     return await ipcRenderer.invoke("openExternalLink", url);
+  },
+
+  // Logging functions
+  getLogs: async () => {
+    try {
+      return await ipcRenderer.invoke("get-logs");
+    } catch (error) {
+      console.error("Error getting logs:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+      };
+    }
   },
 } as ElectronAPI);

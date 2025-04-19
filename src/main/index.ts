@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, shell } from "electron";
+import { app, BrowserWindow, ipcMain, shell, dialog } from "electron";
 import path from "path";
 import { ExcelData, ValidationResult } from "../renderer/types/ExcelData";
 import log from "electron-log";
@@ -6,6 +6,81 @@ import { databaseService } from "../services/databaseService";
 import { startOfWeek } from "../utils/dateUtils"; // We'll create this file later
 import { setupDatabaseHandlers, closeDatabaseConnection } from "./database";
 import { checkForUpdatesManually } from "./auto-updater";
+import { fileURLToPath } from "url";
+import fs from "fs";
+
+// Configure detailed logging for troubleshooting
+log.transports.file.level = "debug"; // Set to debug for maximum logging
+log.transports.console.level = "debug";
+
+// Set log file size and rotation
+log.transports.file.maxSize = 10 * 1024 * 1024; // 10MB
+log.transports.file.format = "[{y}-{m}-{d} {h}:{i}:{s}.{ms}] [{level}] {text}";
+
+// Create logs directory in userData if it doesn't exist
+const logsDir = path.join(app.getPath("userData"), "logs");
+try {
+  if (!fs.existsSync(logsDir)) {
+    fs.mkdirSync(logsDir, { recursive: true });
+  }
+
+  // Set a custom log file path for easier identification
+  const logFilePath = path.join(logsDir, "supplier-reminder-app.log");
+  log.transports.file.resolvePath = () => logFilePath;
+
+  log.info("Log file location:", logFilePath);
+} catch (err) {
+  console.error("Failed to set up logging directory:", err);
+}
+
+// Add a global error handler for uncaught exceptions
+process.on("uncaughtException", (error) => {
+  log.error("Uncaught Exception:", error);
+
+  // Show dialog to user in development mode
+  if (process.env.NODE_ENV === "development") {
+    dialog.showErrorBox(
+      "Uncaught Exception",
+      `En uventet feil oppstod: ${
+        error.message
+      }\n\nDetaljer er logget til: ${log.transports.file.getFile()}`
+    );
+  }
+});
+
+// Log startup information
+log.info("Application starting...");
+log.info("App version:", app.getVersion());
+log.info("Electron version:", process.versions.electron);
+log.info("Chrome version:", process.versions.chrome);
+log.info("Node version:", process.versions.node);
+log.info(
+  "OS:",
+  process.platform,
+  process.arch,
+  process.getSystemVersion?.() || ""
+);
+log.info("User data path:", app.getPath("userData"));
+
+// Add IPC handler for retrieving logs
+ipcMain.handle("get-logs", async () => {
+  try {
+    const logFile = log.transports.file.getFile();
+    if (logFile) {
+      const logFilePath = String(logFile);
+      if (fs.existsSync(logFilePath)) {
+        // Read last 1000 lines or so
+        const fileContent = fs.readFileSync(logFilePath, "utf8");
+        const lines = fileContent.split("\n").slice(-1000).join("\n");
+        return { success: true, logs: lines, path: logFilePath };
+      }
+    }
+    return { success: false, error: "Log file not found" };
+  } catch (error) {
+    log.error("Error reading logs:", error);
+    return { success: false, error: String(error) };
+  }
+});
 
 // Declare the odbc module interface instead of importing directly
 let odbcModule: any = null;
@@ -472,10 +547,92 @@ ipcMain.handle("update:install", async () => {
 // Åpne eksterne lenker (brukes for support-epost)
 ipcMain.handle("openExternalLink", async (_, url: string) => {
   try {
-    await shell.openExternal(url);
+    log.info(`Forsøker å åpne ekstern lenke: ${url}`);
+
+    // Sikre at URL er trygg og riktig formatert
+    if (!url || typeof url !== "string") {
+      throw new Error(`Ugyldig URL format: ${url}`);
+    }
+
+    // Legg til mer detaljert logging og plattformspesifikk håndtering
+    const platform = process.platform;
+    log.info(`Plattform: ${platform}, URL: ${url}`);
+
+    // For mailto-lenker på Windows, legg til ekstra feilhåndtering
+    if (url.startsWith("mailto:") && platform === "win32") {
+      log.info("Håndterer mailto-lenke på Windows");
+
+      // Ekstra sikring for Windows - bruk shell.openExternal med ekstra alternativer
+      await shell.openExternal(url, {
+        activate: true,
+        workingDirectory: process.cwd(),
+      });
+    } else {
+      // Standard måte å åpne lenker på
+      await shell.openExternal(url);
+    }
+
+    log.info(`Åpnet ekstern lenke: ${url} vellykket`);
     return { success: true };
   } catch (error) {
-    console.error("Failed to open external link:", error);
-    return { success: false, error: (error as Error).message };
+    log.error(`Feil ved åpning av ekstern lenke: ${url}`, error);
+    // Send mer detaljert feilmelding tilbake til UI
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Ukjent feil",
+      platform: process.platform,
+      url,
+    };
   }
+});
+
+// Handle show-about request from renderer
+ipcMain.on("show-about-dialog", () => {
+  dialog.showMessageBox({
+    type: "info",
+    title: "Om OneMed SupplyChain",
+    message: "OneMed SupplyChain",
+    detail: `Versjon: ${app.getVersion()}\nElectron: ${
+      process.versions.electron
+    }\nNode: ${process.versions.node}\nChrome: ${
+      process.versions.chrome
+    }\n\n© ${new Date().getFullYear()} OneMed AS`,
+    buttons: ["OK"],
+    icon: path.join(process.resourcesPath, "icon.png"),
+  });
+});
+
+// Handle show-logs request from renderer
+ipcMain.on("show-logs", () => {
+  log.info("Opening logs window");
+
+  // Create a new window for logs
+  let logsWindow: BrowserWindow | undefined = new BrowserWindow({
+    width: 900,
+    height: 700,
+    parent: mainWindow,
+    modal: true,
+    show: false,
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+      preload: path.join(__dirname, "../preload/index.cjs"),
+    },
+  });
+
+  // Load the same app URL but with a logs query parameter
+  const isDevEnv = process.env.NODE_ENV === "development";
+  const url = isDevEnv
+    ? `http://localhost:5173/#/logs`
+    : `file://${path.join(__dirname, "../renderer/index.html")}#/logs`;
+
+  logsWindow.loadURL(url);
+
+  logsWindow.once("ready-to-show", () => {
+    logsWindow?.show();
+  });
+
+  logsWindow.on("closed", () => {
+    logsWindow = undefined;
+  });
 });

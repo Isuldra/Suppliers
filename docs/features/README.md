@@ -17,6 +17,7 @@ This section provides detailed documentation for all features in Supplier Remind
 - [Offline Mode](offline-mode.md) - Working without an internet connection
 - [Data Export](data-export.md) - Exporting data to various formats
 - [Security Features](security-features.md) - Security measures in the application
+- [External Links](external-links.md) - Secure handling of external web and email links
 
 ## User Interface Features
 

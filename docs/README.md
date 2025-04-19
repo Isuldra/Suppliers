@@ -20,6 +20,7 @@ Welcome to the complete documentation for Supplier Reminder Pro, the OneMed appl
 - [Getting Started for Users](usage/getting-started.md)
 - [Database Schema](architecture/database-schema.md)
 - [Auto-Update System](features/auto-updates.md)
+- [External Links Handling](features/external-links.md)
 - [Common Issues](troubleshooting/common-issues.md)
 - [Developer Setup](development/setup.md)
 - [Building and Releasing](development/building-and-releasing.md)

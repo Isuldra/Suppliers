@@ -109,6 +109,11 @@ const FileUpload: React.FC<FileUploadProps> = ({
         window.electron.send("show-about-dialog", {});
         break;
 
+      case "show-logs":
+        console.log("Opening logs view");
+        window.electron.send("show-logs", {});
+        break;
+
       default:
         break;
     }
@@ -276,13 +281,150 @@ const FileUpload: React.FC<FileUploadProps> = ({
         }
       };
 
+      reader.onerror = (error) => {
+        console.error("FileReader error:", error);
+        toast.error(`Feil ved lesing av fil: ${error.toString()}`);
+        reject(new Error(`FileReader error: ${error.toString()}`));
+      };
+
       reader.onload = (e) => {
         try {
           setProcessingStage("Prosesserer Excel-fil...");
           console.log("File loaded, parsing Excel data...");
-          const data = new Uint8Array(e.target?.result as ArrayBuffer);
-          const workbook = XLSX.read(data, { type: "array" });
-          console.log("Workbook loaded, sheets:", workbook.SheetNames);
+          console.log("File info:", file.name, file.type, file.size + " bytes");
+
+          if (!e.target?.result) {
+            throw new Error("Fil-data mangler");
+          }
+
+          // Try-catch for each step to pinpoint errors
+          let data;
+          try {
+            data = new Uint8Array(e.target.result as ArrayBuffer);
+            console.log(
+              "Array buffer created successfully, size:",
+              data.length
+            );
+          } catch (bufferError: unknown) {
+            console.error("Buffer error:", bufferError);
+            toast.error("Feil ved konvertering av fil-data");
+            reject(
+              new Error(
+                `Buffer error: ${
+                  bufferError instanceof Error
+                    ? bufferError.message
+                    : String(bufferError)
+                }`
+              )
+            );
+            return;
+          }
+
+          let workbook;
+          try {
+            console.log("Attempting to read Excel data with XLSX...");
+
+            // Legg til mer granulert debugging og platform-spesifikk håndtering
+            const options = {
+              type: "array" as const,
+              cellDates: true,
+              dateNF: "yyyy-mm-dd",
+              cellNF: false,
+              WTF: process.env.NODE_ENV === "development", // Slå på work-the-fuck-around i dev-modus
+              codepage: 65001, // UTF-8 koding for bedre støtte på tvers av plattformer
+              raw: false, // Konverter verdier til passende typer
+            };
+
+            console.log("XLSX read options:", JSON.stringify(options));
+            console.log("Platform:", navigator.platform);
+
+            // Windows-spesifikk håndtering og logging
+            if (navigator.platform.indexOf("Win") > -1) {
+              console.log(
+                "Windows plattform oppdaget - bruker spesifikk Excel-håndtering"
+              );
+
+              // Sjekker filstørrelse før lesing (Windows har noen begrensninger)
+              if (file.size > 10 * 1024 * 1024) {
+                // 10MB
+                console.warn(
+                  "Stor fil oppdaget på Windows - kan forårsake minneproblemer"
+                );
+              }
+            }
+
+            workbook = XLSX.read(data, options);
+
+            console.log("Workbook loaded successfully");
+            console.log("Sheets found:", workbook.SheetNames.join(", "));
+            console.log(
+              "First sheet ref:",
+              workbook.Sheets[workbook.SheetNames[0]]?.["!ref"]
+            );
+          } catch (xlsxError) {
+            console.error("XLSX parsing error:", xlsxError);
+
+            // Spesifikk feilmelding og feilsøkingshjelp
+            const errorDetail =
+              xlsxError instanceof Error
+                ? xlsxError.message
+                : String(xlsxError);
+            const errorInfo = `
+              Detaljer: ${errorDetail}
+              Filtype: ${file.type}
+              Filstørrelse: ${file.size} bytes
+              Platform: ${navigator.platform}
+              Browser: ${navigator.userAgent}
+            `;
+            console.error("Excel parse error details:", errorInfo);
+
+            // Send feildetaljer til hovedprosessen for logging
+            window.electron.send("log-error", {
+              type: "excel-parse-error",
+              details: errorInfo,
+              fileName: file.name,
+            });
+
+            // Vise en mer hjelpsom feilmelding basert på plattform
+            if (navigator.platform.indexOf("Win") > -1) {
+              toast.error(
+                <div>
+                  <p>Feil ved parsing av Excel-fil i Windows.</p>
+                  <p>
+                    Kontroller at filen er i riktig XLSX-format og ikke er låst
+                    av andre programmer.
+                  </p>
+                  <p className="text-xs mt-1">
+                    Tips: Lukk Excel hvis filen er åpen der, og prøv igjen.
+                  </p>
+                  <button
+                    className="underline text-sm text-blue-600 mt-2"
+                    onClick={() => window.electron.send("show-logs", {})}
+                  >
+                    Vis logger
+                  </button>
+                </div>
+              );
+            } else {
+              toast.error(
+                <div>
+                  <p>Feil ved parsing av Excel-fil.</p>
+                  <p>
+                    Kontroller at filen er i riktig XLSX-format og ikke er
+                    skadet.
+                  </p>
+                  <button
+                    className="underline text-sm text-blue-600 mt-2"
+                    onClick={() => window.electron.send("show-logs", {})}
+                  >
+                    Vis logger
+                  </button>
+                </div>
+              );
+            }
+            reject(new Error(`XLSX error: ${errorDetail}`));
+            return;
+          }
 
           const errors = validateExcelData(workbook);
           if (errors.length > 0) {
@@ -540,12 +682,6 @@ const FileUpload: React.FC<FileUploadProps> = ({
         }
       };
 
-      reader.onerror = (error) => {
-        console.error("FileReader error:", error);
-        toast.error("Kunne ikke lese filen. Vennligst prøv igjen.");
-        reject(error);
-      };
-
       reader.readAsArrayBuffer(file);
     });
   };
@@ -711,10 +847,20 @@ const FileUpload: React.FC<FileUploadProps> = ({
 
       const file = acceptedFiles[0];
       console.log("File dropped:", file.name);
+
+      // Logg detaljert info om filen
+      console.log("File details:", {
+        name: file.name,
+        size: file.size,
+        type: file.type,
+        lastModified: new Date(file.lastModified).toISOString(),
+      });
+
       if (
         file.type !==
         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
       ) {
+        console.error("Invalid file type:", file.type);
         toast.error("Vennligst last opp en Excel-fil (.xlsx)");
         return;
       }
@@ -724,19 +870,27 @@ const FileUpload: React.FC<FileUploadProps> = ({
       setProcessingStage("Leser fil...");
 
       try {
+        console.log("Starting Excel parsing process...");
         const parsedData = await parseExcelData(file);
-        console.log("Excel data parsed successfully");
+        console.log("Excel data parsed successfully", {
+          hovedlisteRows: parsedData.hovedliste.length,
+          bpRows: parsedData.bp.length,
+          sjekklisteRows: parsedData.sjekkliste?.length || 0,
+        });
 
         setProcessingStage("Validerer data mot database...");
         setIsValidating(true);
 
         try {
+          console.log("Starting data validation...");
           // Simulate/perform ODBC validation
           const validationResult = await window.electron.validateData(
             parsedData
           );
+          console.log("Validation result:", validationResult);
 
           if (!validationResult.success) {
+            console.error("Validation failed:", validationResult.error);
             toast.error(`Valideringsfeil: ${validationResult.error}`);
             setIsLoading(false);
             setIsValidating(false);
@@ -754,10 +908,12 @@ const FileUpload: React.FC<FileUploadProps> = ({
 
           // Add this after successful ODBC validation
           try {
+            console.log("Saving to database...");
             // Save to database if validation was successful
             const dbResult = await window.electron.saveOrdersToDatabase(
               parsedData
             );
+            console.log("Database save result:", dbResult);
 
             if (!dbResult.success) {
               console.warn("Database save warning:", dbResult.error);
@@ -777,6 +933,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
             toast.error("Data validated but not saved to local database");
           }
 
+          console.log("Processing complete, calling onDataParsed");
           // Always call onDataParsed when data is successfully parsed
           onDataParsed(parsedData);
         } catch (error) {
@@ -886,12 +1043,18 @@ const FileUpload: React.FC<FileUploadProps> = ({
                 >
                   Kontakt support
                 </button>
-                <div className="border-t border-gray-200 my-1"></div>
                 <button
                   onClick={() => handleHelpOptionClick("about")}
                   className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                 >
                   Om OneMed SupplyChain
+                </button>
+                <div className="border-t border-gray-200 my-1"></div>
+                <button
+                  onClick={() => handleHelpOptionClick("show-logs")}
+                  className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                >
+                  Vis logger (feilsøking)
                 </button>
               </div>
             </div>
