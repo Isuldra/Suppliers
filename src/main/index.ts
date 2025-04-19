@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, shell, dialog } from "electron";
+import { app, BrowserWindow, ipcMain, shell, dialog, Menu } from "electron";
 import path from "path";
 import { ExcelData, ValidationResult } from "../renderer/types/ExcelData";
 import log from "electron-log";
@@ -183,6 +183,79 @@ app.whenReady().then(async () => {
     log.info("Creating main window...");
     createWindow();
     log.info("Main window created.");
+
+    // --- Added: Create Menu with "Open Log File" only ---
+    try {
+      const logFilePath = log.transports.file.getFile().path;
+      // Determine the folder containing the logs
+      const logsFolder = require("path").dirname(logFilePath);
+
+      const template: Electron.MenuItemConstructorOptions[] = [
+        { role: "fileMenu" }, // standard File menu
+        { role: "editMenu" }, // standard Edit menu
+        { role: "viewMenu" }, // standard View menu
+        {
+          label: "Help",
+          submenu: [
+            {
+              label: "Open Log Folder",
+              click: () => {
+                log.info(`Opening log folder: ${logsFolder}`);
+                // On Windows, this will open Explorer at that folder.
+                shell.openPath(logsFolder).catch((err) => {
+                  log.error("Failed to open log folder:", err);
+                  dialog.showErrorBox(
+                    "Error Opening Log Folder",
+                    `Could not open the log folder:\n${logsFolder}\n\nError: ${err.message}`
+                  );
+                });
+              },
+            },
+            // Re-add other Help items if they were removed in the paste
+            {
+              label: "Check for Updates...",
+              click: () => {
+                log.info("Manual update check triggered from menu.");
+                checkForUpdatesManually();
+              },
+            },
+            {
+              label: "Learn More (Wiki)",
+              click: async () => {
+                const wikiUrl = "https://github.com/Isuldra/Suppliers/wiki";
+                log.info(`Attempting to open external link: ${wikiUrl}`);
+                await shell.openExternal(wikiUrl);
+              },
+            },
+          ],
+        },
+      ];
+
+      // On macOS, prepend the app name menu
+      if (process.platform === "darwin") {
+        template.unshift({
+          label: app.getName(),
+          submenu: [
+            { role: "about" },
+            { type: "separator" },
+            { role: "services" },
+            { type: "separator" },
+            { role: "hide" },
+            { role: "hideOthers" },
+            { role: "unhide" },
+            { type: "separator" },
+            { role: "quit" },
+          ],
+        });
+      }
+
+      const menu = Menu.buildFromTemplate(template);
+      Menu.setApplicationMenu(menu);
+      log.info("Application menu with 'Open Log Folder' created.");
+    } catch (err) {
+      log.error("Failed to create application menu:", err);
+    }
+    // --- End Added Section ---
   } catch (error: any) {
     // Catch errors during the critical startup sequence
     log.error("FATAL STARTUP ERROR:", error);

@@ -6,8 +6,19 @@ import log from "electron-log";
 // Import the already initialized singleton databaseService
 import { databaseService } from "../services/databaseService"; // Adjust path/extension if build process changes this
 
+// Add guard flag
+let handlersInstalled = false;
+
 // Setup all database-related IPC handlers
 export function setupDatabaseHandlers() {
+  // Add check for the guard flag
+  if (handlersInstalled) {
+    log.warn(
+      "Attempted to call setupDatabaseHandlers more than once. Skipping."
+    );
+    return;
+  }
+
   if (!databaseService) {
     log.error(
       "setupDatabaseHandlers called, but databaseService is not available. This indicates an initialization error."
@@ -78,6 +89,7 @@ export function setupDatabaseHandlers() {
   });
 
   log.info("Database IPC handlers setup complete.");
+  handlersInstalled = true; // Set flag after handlers are registered
 }
 
 // Close database connection (now just calls the service's close method)
