@@ -53,7 +53,7 @@ jobs:
           echo "--- Listing dist directory contents --- "
           ls -R dist || echo "dist directory not found"
           echo "--- End listing dist directory --- "
-          npx electron-builder --mac --${{ matrix.arch }} # Call electron-builder directly
+          npx electron-builder --mac --${{ matrix.arch }} --publish never # Run builder
 
       # ADD DEBUG STEP: List ASAR contents if packaging failed but ASAR exists
       - name: List ASAR Contents on Failure (macOS)
@@ -95,8 +95,16 @@ jobs:
       # - name: Rebuild native modules (Windows x64)
       #   run: npx electron-rebuild -f -w better-sqlite3
       - name: Build Application (Windows x64)
-        # Use the existing dist:win script which calls electron-builder --win
-        run: npm run dist:win
+        # Modify dist:win script or add --publish never here if dist:win calls builder directly
+        # Assuming dist:win just runs 'electron-vite build && electron-builder --win'
+        # If dist:win doesn't directly call builder, adjust package.json instead.
+        # For now, assuming we modify the workflow step assuming dist:win is NOT used directly for builder args
+        # Assuming dist:win just runs 'electron-vite build && electron-builder --win'
+        # If dist:win doesn't directly call builder, adjust package.json instead.
+        # For now, assuming we modify the workflow step assuming dist:win is NOT used directly for builder args
+        run: |
+          npm run build
+          npx electron-builder --win --publish never
 
       # ADD DEBUG STEP: List ASAR contents if packaging failed but ASAR exists
       - name: List ASAR Contents on Failure (Windows)
