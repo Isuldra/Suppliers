@@ -8,7 +8,7 @@
   "scripts": {
     "dev": "cross-env NODE_ENV=development electron-vite dev",
     "dev:no-warnings": "cross-env NODE_NO_WARNINGS=1 NODE_ENV=development electron-vite dev",
-    "build": "electron-vite build && node scripts/ensure-database-modules.js",
+    "build": "electron-vite build",
     "preview": "electron-vite preview",
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
     "typecheck": "tsc --noEmit",

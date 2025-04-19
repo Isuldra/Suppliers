@@ -88,6 +88,10 @@ jobs:
         # Run npm install as a workaround for potential npm ci issues with optional deps on Windows
         run: npm install --ignore-scripts
 
+      # Explicitly install the missing optional Rollup native module for Windows
+      - name: Force install Rollup Windows native module
+        run: npm install --save-optional @rollup/rollup-win32-x64-msvc
+
       # Optional: Rebuild native modules specifically for Windows if needed
       # - name: Rebuild native modules (Windows x64)
       #   run: npx electron-rebuild -f -w better-sqlite3
