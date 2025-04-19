@@ -1,12 +1,12 @@
-# Oversikt: Supplier Reminder Pro Applikasjon
+# Oversikt: SupplyChain OneMed Applikasjon
 
 **Dato:** 21. april 2025
 
-**Til:** Ledelsen, OneMed
+**Til:** Den det måtte gjelde. 
 
-**Fra:** [Ditt Navn/Team Navn]
+**Fra:** [Andreas Elvethun / Kundeservice]
 
-**Emne:** Introduksjon til "Supplier Reminder Pro" - Verktøy for Leverandøroppfølging
+**Emne:** Introduksjon til "SupplyChain OneMed" - Verktøy for Leverandøroppfølging
 
 ---
 
@@ -44,6 +44,6 @@ Applikasjonen har et godt fundament og kan videreutvikles for å gi enda større
 
 ## Oppsummering
 
-Supplier Reminder Pro er et praktisk verktøy som allerede i dag kan effektivisere arbeidet med leverandøroppfølging i innkjøpsavdelingen. Ved å bygge videre på den nåværende funksjonaliteten, spesielt med tanke på systemintegrasjon og automatisering, har applikasjonen potensial til å bli en enda mer integrert og verdifull del av OneMeds operasjonelle verktøykasse.
+SupplyChain er et praktisk verktøy som allerede i dag kan effektivisere arbeidet med leverandøroppfølging i innkjøpsavdelingen. Ved å bygge videre på den nåværende funksjonaliteten, spesielt med tanke på systemintegrasjon og automatisering, har applikasjonen potensial til å bli en enda mer integrert og verdifull del av OneMeds operasjonelle verktøykasse.
 
 ---
