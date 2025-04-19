@@ -85,8 +85,8 @@ jobs:
         run: rm -rf node_modules
 
       - name: Install dependencies
-        # Run npm install as a workaround for potential npm ci issues with optional deps on Windows
-        run: npm install --ignore-scripts
+        # Run npm install, allowing scripts to run, hoping it fixes optional deps
+        run: npm install
 
       # Explicitly install the missing optional Rollup native module for Windows
       - name: Force install Rollup Windows native module

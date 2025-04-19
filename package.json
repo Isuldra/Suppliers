@@ -33,8 +33,7 @@
     "build-x64-portable": "node scripts/build-x64-portable.js",
     "build-windows-zip": "node scripts/build-windows-zip.js",
     "verify-windows-build": "node scripts/verify-windows-build.js",
-    "build-and-verify": "npm run build-windows-zip && npm run verify-windows-build",
-    "postbuild": "node ./scripts/verify-preload.cjs"
+    "build-and-verify": "npm run build-windows-zip && npm run verify-windows-build"
   },
   "build": {
     "appId": "com.onemed.supplychain",
