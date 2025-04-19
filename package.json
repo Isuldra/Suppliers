@@ -33,7 +33,8 @@
     "build-x64-portable": "node scripts/build-x64-portable.js",
     "build-windows-zip": "node scripts/build-windows-zip.js",
     "verify-windows-build": "node scripts/verify-windows-build.js",
-    "build-and-verify": "npm run build-windows-zip && npm run verify-windows-build"
+    "build-and-verify": "npm run build-windows-zip && npm run verify-windows-build",
+    "postinstall": "electron-builder install-app-deps"
   },
   "build": {
     "appId": "com.onemed.supplychain",
@@ -48,7 +49,7 @@
       "node_modules/sqlite3/**"
     ],
     "files": [
-      "dist/**/*",
+      "dist/",
       "package.json"
     ],
     "npmRebuild": false,

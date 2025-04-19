@@ -70,22 +70,14 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
 
-      - name: Cache node modules
-        uses: actions/cache@v4
-        id: cache-node-modules
-        with:
-          path: node_modules
-          key: ${{ runner.os }}-x64-node-${{ env.NODE_VERSION }}-${{ hashFiles('package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-x64-node-${{ env.NODE_VERSION }}-
-
-      # Add step to ensure clean state before install
-      - name: Clean node_modules
-        if: steps.cache-node-modules.outputs.cache-hit == 'true' # Only if cache was hit, otherwise it's clean
-        run: rm -rf node_modules
+      # Explicitly install potentially missing optional dependencies FIRST
+      - name: Preinstall Windows native modules
+        run: |
+          npm install --save-optional @rollup/rollup-win32-x64-msvc
+          npm install --save-optional @esbuild/win32-x64
 
       - name: Install dependencies
-        # Run npm install, allowing scripts to run, hoping it fixes optional deps
+        # Run npm install, allowing scripts to run (including postinstall)
         run: npm install
 
       # Optional: Rebuild native modules specifically for Windows if needed
