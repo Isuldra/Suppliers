@@ -13,6 +13,7 @@ This project is a desktop application implementing OneMed's design system, built
 - [Electron Integration](#electron-integration)
 - [Development Tools](#development-tools)
 - [Security](#security)
+- [External Link Handling](#external-link-handling)
 - [Deployment & Installation](#deployment--installation)
 - [Automatic Updates](#automatic-updates)
 
@@ -341,6 +342,48 @@ To maintain security, ensure you always:
 2. Test thoroughly after any security-related changes
 3. Follow the principle of least privilege when adding features
 4. Regularly back up the database file
+
+## External Link Handling
+
+The application includes a secure system for opening external links, which is particularly important for:
+
+- Opening documentation links in the user's default browser
+- Launching email clients with pre-filled support request templates
+- Ensuring platform-specific compatibility
+
+### Security Features
+
+- **URL Validation**: All URLs are validated before opening
+- **Platform-Specific Handling**: Special handling for Windows when dealing with mailto: links
+- **Comprehensive Error Handling**: Detailed error messages for troubleshooting
+- **Fallback Mechanisms**: UI provides alternatives when links cannot be opened
+
+### Usage in UI Components
+
+The external link handler is used in several UI components:
+
+- Help menus for documentation access
+- Support buttons for contacting support
+- File upload components for accessing documentation
+
+### Implementation
+
+The functionality is implemented through a secure IPC channel between the renderer and main processes:
+
+```typescript
+// From renderer (React component)
+window.electron.openExternalLink("https://example.com").then((result) => {
+  if (!result.success) {
+    // Handle error
+  }
+});
+
+// In main process (Electron)
+ipcMain.handle("openExternalLink", async (_, url: string) => {
+  // Validation and security checks
+  await shell.openExternal(url);
+});
+```
 
 ## Deployment & Installation
 
