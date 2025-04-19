@@ -1,53 +1,27 @@
-import { execSync } from "child_process";
-import fs from "fs";
+#!/usr/bin/env node
+
+// This script cleans the build environment by removing
+// node_modules, dist, and release directories
+
+import { exec } from "child_process";
 import path from "path";
+import { fileURLToPath } from "url";
 
-// Path to node_modules directory
-const nodeModulesPath = path.join(process.cwd(), "node_modules");
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const rootDir = path.join(__dirname, "..");
 
-console.log("Cleaning node_modules...");
-
-// Remove node_modules
-if (fs.existsSync(nodeModulesPath)) {
-  try {
-    // On Windows, sometimes removing large node_modules can be problematic
-    // Use rimraf which handles this better than fs.rmSync
-    execSync("npx rimraf node_modules", { stdio: "inherit" });
-  } catch (error) {
-    console.error("Error removing node_modules:", error);
-    process.exit(1);
+console.log("Cleaning build environment...");
+exec(
+  "rm -rf node_modules dist release",
+  { cwd: rootDir },
+  (error, stdout, stderr) => {
+    if (error) {
+      console.error(`Error: ${error.message}`);
+      console.error(stderr);
+      process.exit(1);
+    }
+    console.log(stdout || "Cleaned build environment successfully");
+    console.log("Now run: npm install");
   }
-}
-
-console.log("Installing dependencies...");
-try {
-  execSync("npm install --no-fund --no-package-lock --legacy-peer-deps", {
-    stdio: "inherit",
-  });
-} catch (error) {
-  console.error("Error installing dependencies:", error);
-  process.exit(1);
-}
-
-console.log("Building application...");
-try {
-  execSync("electron-vite build", { stdio: "inherit" });
-} catch (error) {
-  console.error("Error building application:", error);
-  process.exit(1);
-}
-
-console.log("Running electron-builder...");
-try {
-  // For Windows builds, add the --win flag
-  const isWindows = process.platform === "win32";
-  const buildCommand = isWindows
-    ? "electron-builder --win"
-    : "electron-builder";
-  execSync(buildCommand, { stdio: "inherit" });
-} catch (error) {
-  console.error("Error running electron-builder:", error);
-  process.exit(1);
-}
-
-console.log("Build completed successfully!");
+);

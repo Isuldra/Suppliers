@@ -67,6 +67,11 @@ interface ElectronAPI {
     path?: string;
     error?: string;
   }>;
+
+  sendLogsToSupport: () => Promise<{
+    success: boolean;
+    error?: string;
+  }>;
 }
 
 // Valid send channels for IPC communication
@@ -289,6 +294,17 @@ contextBridge.exposeInMainWorld("electron", {
       return await ipcRenderer.invoke("get-logs");
     } catch (error) {
       console.error("Error getting logs:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+      };
+    }
+  },
+
+  sendLogsToSupport: async () => {
+    try {
+      return await ipcRenderer.invoke("send-logs-to-support");
+    } catch (error) {
       return {
         success: false,
         error: error instanceof Error ? error.message : "Unknown error",
