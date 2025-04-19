@@ -83,6 +83,20 @@ npm run dev:no-warnings
 npm run build
 ```
 
+### First Run
+
+On the very first launch after installation, the application needs to initialize its local database. You will be prompted to select the master supplier data Excel file (.xlsx). This file is processed using `exceljs` (no external ODBC drivers needed) to populate the initial dataset.
+
+Ensure the Excel file is up-to-date before selecting it.
+
+### Development
+
+Start the development environment:
+
+```bash
+npm run dev
+```
+
 ## Component Usage
 
 ### Buttons
@@ -144,9 +158,10 @@ The application uses SQLite for local data persistence, implemented with the `be
 
 ### Database Architecture
 
-- **Location**: The database file (`supplier-reminder.db`) is stored in the application's user data directory
-- **Schema**: Uses a single `orders` table to store supplier order information with appropriate indexes
-- **Connection Mode**: Uses Write-Ahead Logging (WAL) mode for better performance and reliability
+- **Location**: The database file (`app.sqlite`) is stored in the application's user data directory (`app.getPath('userData')`).
+- **Schema**: Includes tables for orders (`orders`), weekly status (`weekly_status`), purchase orders (`purchase_order`), and audit logs (`audit_log`). See `src/services/databaseService.ts` for details.
+- **Initialization**: On first run, data is imported from a user-selected Excel file using `exceljs`.
+- **Connection Mode**: Uses Write-Ahead Logging (WAL) mode for better performance and reliability.
 
 ### Database Service
 

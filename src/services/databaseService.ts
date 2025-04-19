@@ -28,105 +28,70 @@ export interface OutstandingOrdersResult {
   orders: DbOrder[];
 }
 
-// Create a mock database implementation for development or error cases
-class MockDatabase {
-  private static isDevMode = process.env.NODE_ENV === "development";
-
-  constructor() {
-    log.info("Using mock database implementation");
-  }
-
-  prepare(sql: string) {
-    if (MockDatabase.isDevMode) log.debug("Mock SQL:", sql);
-    return {
-      run: (...args: any[]) => ({ changes: 0, lastInsertRowid: 1 }),
-      get: (...args: any[]) => null,
-      all: (...args: any[]) => [],
-    };
-  }
-
-  exec(sql: string) {
-    if (MockDatabase.isDevMode) log.debug("Mock SQL Exec:", sql);
-    return null;
-  }
-
-  pragma(statement: string) {
-    if (MockDatabase.isDevMode) log.debug("Mock PRAGMA:", statement);
-    return null;
-  }
-
-  close() {
-    log.info("Mock database closed");
-    return true;
-  }
-
-  backup(destination: string) {
-    log.info("Mock backup to:", destination);
-    return Promise.resolve(true);
-  }
-}
-
 export class DatabaseService {
-  private db: Database.Database | MockDatabase;
+  private db: Database.Database | null = null;
   private static instance: DatabaseService;
   private queryCounter: number = 0;
   private lastBackupTime: number = 0;
   private backupInterval: number = 24 * 60 * 60 * 1000; // 24 hours
   private backupIntervalId: NodeJS.Timeout | null = null;
   private isShuttingDown: boolean = false;
-  private useMock: boolean = false;
 
   private constructor() {
     this.isShuttingDown = false;
+  }
+
+  public connect(dbInstance: Database.Database): void {
+    if (this.db) {
+      log.warn(
+        "DatabaseService already connected. Ignoring new connection attempt."
+      );
+      return;
+    }
+    if (!dbInstance) {
+      log.error(
+        "Attempted to connect DatabaseService with a null/undefined database instance."
+      );
+      throw new Error("Invalid database instance provided for connection.");
+    }
+
+    log.info("Connecting DatabaseService with provided instance...");
+    this.db = dbInstance;
 
     try {
-      const userDataPath = app.getPath("userData");
-      const dbPath = path.join(userDataPath, "supplier-reminder.db");
-      log.info("Database path:", dbPath);
+      // Improve performance and reliability - apply PRAGMAs
+      log.info(
+        "Applying PRAGMAs: WAL journal mode, NORMAL synchronous, foreign keys ON"
+      );
+      this.db.pragma("journal_mode = WAL");
+      this.db.pragma("synchronous = NORMAL");
+      this.db.pragma("foreign_keys = ON");
 
-      // Ensure directory exists
-      fs.mkdirSync(path.dirname(dbPath), { recursive: true });
+      // Initialize schema (create tables)
+      log.info("Initializing database schema...");
+      this.initialize(); // Call the existing initialize method
 
-      try {
-        // Attempt to load the native module
-        this.db = new Database(dbPath, {
-          verbose:
-            process.env.NODE_ENV === "development" ? log.info : undefined,
-        });
-
-        // Improve performance and reliability
-        this.db.pragma("journal_mode = WAL");
-        this.db.pragma("synchronous = NORMAL");
-        this.db.pragma("foreign_keys = ON");
-
-        this.useMock = false;
-        log.info("Using native SQLite database");
-      } catch (nativeError) {
-        // If native module fails, use a mock implementation
-        log.warn(
-          "Native SQLite module failed to load, using mock implementation:",
-          nativeError
-        );
-        this.db = new MockDatabase();
-        this.useMock = true;
-      }
-
-      this.initialize();
-
-      // Only set up backup schedule if not in shutdown process and using real DB
-      if (!this.isShuttingDown && !this.useMock) {
+      // Setup backup schedule only if not shutting down
+      if (!this.isShuttingDown) {
+        log.info("Setting up backup schedule...");
         this.setupBackupSchedule();
       }
+      log.info("DatabaseService connected and initialized successfully.");
     } catch (error) {
-      log.error("Error initializing database:", error);
-
-      // Create mock database as fallback
-      this.db = new MockDatabase();
-      this.useMock = true;
-      log.warn("Using mock database after initialization error");
-
-      // Don't throw error to allow app to continue functioning with mock DB
-      // throw new Error("Database initialization failed");
+      log.error(
+        "Error during DatabaseService connection/initialization:",
+        error
+      );
+      // Attempt to close the problematic connection if it was assigned
+      if (this.db) {
+        try {
+          this.db.close();
+        } catch (closeErr) {
+          /* Ignore close error */
+        }
+        this.db = null;
+      }
+      throw error; // Re-throw the error to signal failure
     }
   }
 
@@ -138,6 +103,10 @@ export class DatabaseService {
   }
 
   private initialize(): void {
+    if (!this.db) {
+      log.error("Initialize called but database is not connected.");
+      throw new Error("Database not connected during schema initialization.");
+    }
     try {
       // Create tables if they don't exist
       this.db.exec(`
@@ -154,12 +123,14 @@ export class DatabaseService {
           currency TEXT,
           confirmed INTEGER DEFAULT 0,
           createdAt TEXT DEFAULT CURRENT_TIMESTAMP,
-          updatedAt TEXT DEFAULT CURRENT_TIMESTAMP
+          updatedAt TEXT DEFAULT CURRENT_TIMESTAMP,
+          email_sent_at TEXT -- Added email sent tracking
         );
-        
+
         CREATE INDEX IF NOT EXISTS idx_supplier ON orders(supplier);
         CREATE INDEX IF NOT EXISTS idx_dueDate ON orders(dueDate);
-        
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_supplier_ordernum ON orders(supplier, orderNumber); -- Added uniqueness constraint
+
         -- Add audit log table
         CREATE TABLE IF NOT EXISTS audit_log (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -171,16 +142,49 @@ export class DatabaseService {
           timestamp TEXT DEFAULT CURRENT_TIMESTAMP,
           user_id TEXT
         );
-      `);
 
-      log.info("Database schema initialized successfully");
-    } catch (error) {
-      log.error("Failed to initialize database schema:", error);
-      throw error;
+        -- Add weekly status table from importer
+        CREATE TABLE IF NOT EXISTS weekly_status (
+          leverandor TEXT,
+          dag         TEXT,
+          uke         TEXT,
+          status      TEXT,
+          email       TEXT,
+          UNIQUE(leverandor, dag, uke) ON CONFLICT REPLACE
+        );
+        CREATE INDEX IF NOT EXISTS idx_weekly_status_leverandor ON weekly_status(leverandor);
+        CREATE INDEX IF NOT EXISTS idx_weekly_status_uke ON weekly_status(uke);
+
+        -- Add purchase order table from importer
+        CREATE TABLE IF NOT EXISTS purchase_order (
+          nøkkel      TEXT PRIMARY KEY,
+          ordreNr     TEXT,
+          itemNo      TEXT,
+          beskrivelse TEXT,
+          dato        TEXT,
+          ftgnavn     TEXT
+        );
+         CREATE INDEX IF NOT EXISTS idx_po_ordreNr ON purchase_order(ordreNr);
+         CREATE INDEX IF NOT EXISTS idx_po_ftgnavn ON purchase_order(ftgnavn);
+
+         -- Add potentially missing email_sent_at column to orders table
+         ALTER TABLE orders ADD COLUMN email_sent_at TEXT;
+      `);
+      log.info("Database schema initialization checked/updated successfully");
+    } catch (error: any) {
+      // Ignore "duplicate column name" error for ALTER TABLE
+      if (
+        error.message &&
+        error.message.includes("duplicate column name: email_sent_at")
+      ) {
+        log.info("Column 'email_sent_at' already exists in 'orders' table.");
+      } else {
+        log.error("Failed to initialize database schema:", error);
+        throw error;
+      }
     }
   }
 
-  // Helper to log database operations
   private logOperation(
     action: string,
     tableName: string,
@@ -188,10 +192,10 @@ export class DatabaseService {
     oldValue?: any,
     newValue?: any
   ): void {
-    if (this.isShuttingDown) return;
+    if (this.isShuttingDown || !this.db) return;
 
     try {
-      const stmt = this.db.prepare(`
+      const stmt = this.db!.prepare(`
         INSERT INTO audit_log (action, table_name, record_id, old_value, new_value)
         VALUES (?, ?, ?, ?, ?)
       `);
@@ -205,21 +209,17 @@ export class DatabaseService {
       );
     } catch (error) {
       log.error("Failed to log database operation:", error);
-      // Don't throw here to prevent disrupting main operations
     }
   }
 
-  // Set up regular database backups
   private setupBackupSchedule(): void {
-    // Clear any existing interval first
+    if (!this.db) return;
     this.clearBackupSchedule();
-
-    // Check and perform backup every hour if needed
     this.backupIntervalId = setInterval(() => {
       if (!this.isShuttingDown) {
         this.performBackupIfNeeded();
       }
-    }, 60 * 60 * 1000); // 1 hour
+    }, 60 * 60 * 1000);
   }
 
   private clearBackupSchedule(): void {
@@ -230,7 +230,7 @@ export class DatabaseService {
   }
 
   private performBackupIfNeeded(): void {
-    if (this.isShuttingDown) return;
+    if (this.isShuttingDown || !this.db) return;
 
     const now = Date.now();
 
@@ -249,9 +249,10 @@ export class DatabaseService {
           `supplier-reminder-${timestamp}.db`
         );
 
-        // Create backup
-        this.db
-          .backup(backupPath)
+        log.info(`Attempting to backup database to: ${backupPath}`);
+        const backupPromise = this.db!.backup(backupPath);
+
+        backupPromise
           .then(() => {
             if (!this.isShuttingDown) {
               log.info(`Database backed up to ${backupPath}`);
@@ -275,7 +276,7 @@ export class DatabaseService {
   }
 
   private cleanupOldBackups(backupDir: string, keepCount: number): void {
-    if (this.isShuttingDown) return;
+    if (!this.db) return;
 
     try {
       const files = fs
@@ -304,23 +305,22 @@ export class DatabaseService {
   }
 
   public insertOrUpdateOrder(order: ExcelRow): number {
+    if (!this.db) throw new Error("Database not connected.");
     try {
       // First check if the order exists
-      const existingOrder = this.db
-        .prepare(
-          `
+      const existingOrder = this.db!.prepare(
+        `
         SELECT id FROM orders 
         WHERE supplier = ? AND 
               (orderNumber = ? OR (orderNumber IS NULL AND ? IS NULL))
       `
-        )
-        .get(order.supplier, order.orderNumber, order.orderNumber) as
+      ).get(order.supplier, order.orderNumber, order.orderNumber) as
         | { id: number }
         | undefined;
 
       if (existingOrder) {
         // Update existing order
-        const stmt = this.db.prepare(`
+        const stmt = this.db!.prepare(`
           UPDATE orders SET
             reference = ?,
             orderDate = ?,
@@ -346,10 +346,11 @@ export class DatabaseService {
           existingOrder.id
         );
 
+        this.logOperation("update", "orders", existingOrder.id, null, order);
         return existingOrder.id;
       } else {
         // Insert new order
-        const stmt = this.db.prepare(`
+        const stmt = this.db!.prepare(`
           INSERT INTO orders (
             reference, supplier, orderNumber, orderDate, dueDate,
             category, description, value, currency, confirmed
@@ -369,17 +370,20 @@ export class DatabaseService {
           order.confirmed ? 1 : 0
         );
 
-        return info.lastInsertRowid as number;
+        const newId = info.lastInsertRowid as number;
+        this.logOperation("insert", "orders", newId, null, order);
+        return newId;
       }
     } catch (error) {
-      console.error("Error inserting or updating order:", error);
+      log.error("Error inserting or updating order:", error);
       throw error;
     }
   }
 
   public getOrdersBySupplier(supplier: string): ExcelRow[] {
+    if (!this.db) throw new Error("Database not connected.");
     try {
-      const stmt = this.db.prepare(`
+      const stmt = this.db!.prepare(`
         SELECT 
           id,
           reference,
@@ -399,6 +403,11 @@ export class DatabaseService {
 
       const rows = stmt.all(supplier) as any[];
 
+      this.queryCounter++;
+      log.debug(
+        `[Query #${this.queryCounter}] Fetched ${rows.length} orders for supplier: ${supplier}`
+      );
+
       return rows.map((row) => ({
         reference: row.reference,
         supplier: row.supplier,
@@ -412,14 +421,15 @@ export class DatabaseService {
         confirmed: !!row.confirmed,
       }));
     } catch (error) {
-      console.error("Error getting orders by supplier:", error);
+      log.error(`Error getting orders for supplier ${supplier}:`, error);
       throw error;
     }
   }
 
   public getAllOrders(): ExcelRow[] {
+    if (!this.db) throw new Error("Database not connected.");
     try {
-      const stmt = this.db.prepare(`
+      const stmt = this.db!.prepare(`
         SELECT 
           id,
           reference,
@@ -438,6 +448,11 @@ export class DatabaseService {
 
       const rows = stmt.all() as any[];
 
+      this.queryCounter++;
+      log.debug(
+        `[Query #${this.queryCounter}] Fetched all ${rows.length} orders`
+      );
+
       return rows.map((row) => ({
         reference: row.reference,
         supplier: row.supplier,
@@ -451,18 +466,19 @@ export class DatabaseService {
         confirmed: !!row.confirmed,
       }));
     } catch (error) {
-      console.error("Error getting all orders:", error);
+      log.error("Error getting all orders:", error);
       throw error;
     }
   }
 
   public getOrdersDueWithinDays(days: number): ExcelRow[] {
+    if (!this.db) throw new Error("Database not connected.");
     try {
       const today = new Date();
       const futureDate = new Date();
       futureDate.setDate(today.getDate() + days);
 
-      const stmt = this.db.prepare(`
+      const stmt = this.db!.prepare(`
         SELECT 
           id,
           reference,
@@ -486,6 +502,13 @@ export class DatabaseService {
         futureDate.toISOString()
       ) as any[];
 
+      this.queryCounter++;
+      log.debug(
+        `[Query #${this.queryCounter}] Fetched ${
+          rows.length
+        } orders due within ${days} days (from ${today.toISOString()} to ${futureDate.toISOString()})`
+      );
+
       return rows.map((row) => ({
         reference: row.reference,
         supplier: row.supplier,
@@ -499,39 +522,35 @@ export class DatabaseService {
         confirmed: !!row.confirmed,
       }));
     } catch (error) {
-      console.error("Error getting orders due within days:", error);
+      log.error(`Error getting orders due within ${days} days:`, error);
       throw error;
     }
   }
 
   public upsertOrders(orders: ExcelRow[]): number {
-    try {
-      // Start a transaction
-      this.db.prepare("BEGIN").run();
-
-      let insertedCount = 0;
-
-      for (const order of orders) {
-        // Use the existing insertOrUpdateOrder method for each order
+    if (!this.db) throw new Error("Database not connected.");
+    let updatedCount = 0;
+    const upsert = this.db!.transaction((orderBatch: ExcelRow[]) => {
+      for (const order of orderBatch) {
         this.insertOrUpdateOrder(order);
-        insertedCount++;
+        updatedCount++;
       }
+    });
 
-      // Commit the transaction
-      this.db.prepare("COMMIT").run();
-
-      return insertedCount;
+    try {
+      upsert(orders);
+      log.info(`Upserted ${updatedCount} orders successfully.`);
+      return updatedCount;
     } catch (error) {
-      // Rollback on error
-      this.db.prepare("ROLLBACK").run();
-      console.error("Error upserting orders:", error);
+      log.error("Error during batch upsert:", error);
       throw error;
     }
   }
 
   public getOutstandingOrders(supplier: string): DbOrder[] {
+    if (!this.db) throw new Error("Database not connected.");
     try {
-      const stmt = this.db.prepare(`
+      const stmt = this.db!.prepare(`
         SELECT 
           id,
           reference,
@@ -553,6 +572,11 @@ export class DatabaseService {
 
       const rows = stmt.all(supplier) as any[];
 
+      this.queryCounter++;
+      log.debug(
+        `[Query #${this.queryCounter}] Fetched ${rows.length} outstanding orders for supplier: ${supplier}`
+      );
+
       return rows.map((row) => ({
         id: row.id,
         reference: row.reference,
@@ -570,44 +594,51 @@ export class DatabaseService {
         email_sent_at: null, // Default value since it's not in the table yet
       }));
     } catch (error) {
-      console.error("Error getting outstanding orders:", error);
+      log.error("Error getting outstanding orders:", error);
       throw error;
     }
   }
 
   public recordEmailSent(orderIds: number[]): number {
+    if (!this.db) throw new Error("Database not connected.");
+    if (!orderIds || orderIds.length === 0) return 0;
+
     try {
       // First, add the email_sent_at column if it doesn't exist
       try {
-        this.db.exec(`ALTER TABLE orders ADD COLUMN email_sent_at TEXT;`);
+        this.db!.exec(`ALTER TABLE orders ADD COLUMN email_sent_at TEXT;`);
       } catch (e) {
         // Column might already exist, ignore the error
       }
 
-      // Start a transaction
-      this.db.prepare("BEGIN").run();
-
-      // Update each order
-      const stmt = this.db.prepare(`
+      const now = new Date().toISOString();
+      // Use non-null assertion: this.db!
+      const stmt = this.db!.prepare(`
         UPDATE orders
-        SET email_sent_at = CURRENT_TIMESTAMP
-        WHERE id = ?
+        SET email_sent_at = ?
+        WHERE id = ? AND email_sent_at IS NULL -- Only update if not already sent
       `);
 
       let updatedCount = 0;
-      for (const id of orderIds) {
-        const result = stmt.run(id);
-        updatedCount += result.changes;
-      }
+      const updateTx = this.db!.transaction((ids: number[]) => {
+        for (const id of ids) {
+          const result = stmt.run(now, id);
+          if (result.changes > 0) {
+            updatedCount++;
+            this.logOperation("update", "orders", id, null, {
+              email_sent_at: now,
+            });
+          }
+        }
+      });
 
-      // Commit the transaction
-      this.db.prepare("COMMIT").run();
-
+      updateTx(orderIds);
+      log.info(
+        `Recorded email sent for ${updatedCount} orders (out of ${orderIds.length})`
+      );
       return updatedCount;
     } catch (error) {
-      // Rollback on error
-      this.db.prepare("ROLLBACK").run();
-      console.error("Error recording email sent:", error);
+      log.error("Error recording email sent:", error);
       throw error;
     }
   }
@@ -616,8 +647,10 @@ export class DatabaseService {
     supplier: string,
     orderNumber: string | null
   ): boolean {
+    if (!this.db) throw new Error("Database not connected.");
     try {
-      const stmt = this.db.prepare(`
+      // Use non-null assertion: this.db!
+      const stmt = this.db!.prepare(`
         UPDATE orders
         SET confirmed = 1,
             updatedAt = CURRENT_TIMESTAMP
@@ -626,41 +659,74 @@ export class DatabaseService {
       `);
 
       const info = stmt.run(supplier, orderNumber, orderNumber);
-      return info.changes > 0;
+      const success = info.changes > 0;
+      if (success) {
+        log.info(
+          `Marked order as confirmed for supplier: ${supplier}, orderNumber: ${
+            orderNumber || "NULL"
+          }`
+        );
+        this.logOperation("update", "orders", undefined, null, {
+          supplier,
+          orderNumber,
+          confirmed: 1,
+        });
+      }
+      return success;
     } catch (error) {
-      console.error("Error marking order as confirmed:", error);
+      log.error(
+        `Error marking order confirmed for supplier ${supplier}:`,
+        error
+      );
       throw error;
     }
   }
 
   public deleteOrder(supplier: string, orderNumber: string | null): boolean {
+    if (!this.db) throw new Error("Database not connected.");
     try {
-      const stmt = this.db.prepare(`
+      // Use non-null assertion: this.db!
+      const stmt = this.db!.prepare(`
         DELETE FROM orders
         WHERE supplier = ? AND 
               (orderNumber = ? OR (orderNumber IS NULL AND ? IS NULL))
       `);
 
       const info = stmt.run(supplier, orderNumber, orderNumber);
-      return info.changes > 0;
+      const success = info.changes > 0;
+      if (success) {
+        log.info(
+          `Deleted order for supplier: ${supplier}, orderNumber: ${
+            orderNumber || "NULL"
+          }`
+        );
+        this.logOperation(
+          "delete",
+          "orders",
+          undefined,
+          { supplier, orderNumber },
+          null
+        );
+      }
+      return success;
     } catch (error) {
-      console.error("Error deleting order:", error);
+      log.error(`Error deleting order for supplier ${supplier}:`, error);
       throw error;
     }
   }
 
   public close(): void {
     try {
-      // Mark as shutting down to prevent new operations
       this.isShuttingDown = true;
-
-      // Clear any active backup intervals
       this.clearBackupSchedule();
 
-      // Close database connection
+      // Only close if the db instance exists
       if (this.db) {
         this.db.close();
+        this.db = null; // Set to null after closing
         log.info("Database connection closed");
+      } else {
+        log.info("Database connection was already closed or not connected.");
       }
     } catch (error) {
       log.error("Error closing database:", error);
@@ -668,5 +734,5 @@ export class DatabaseService {
   }
 }
 
-// Export a singleton instance
+// Export a singleton instance - it will be initialized/connected later
 export const databaseService = DatabaseService.getInstance();
