@@ -2,7 +2,7 @@
   "name": "one-med-supplychain-app",
   "version": "1.0.0",
   "description": "Desktop application for managing OneMed supply chain and vendor relations",
-  "main": "main/main.cjs",
+  "main": "main/main.js",
   "private": true,
   "type": "module",
   "scripts": {
@@ -56,13 +56,7 @@
       "buildResources": "resources",
       "output": "release"
     },
-    "publish": [
-      {
-        "provider": "github",
-        "owner": "Isuldra",
-        "repo": "Suppliers"
-      }
-    ],
+    "publish": null,
     "win": {
       "target": [
         {
@@ -129,6 +123,7 @@
     "@rollup/plugin-commonjs": "^25.0.7",
     "@testing-library/jest-dom": "^6.4.2",
     "@testing-library/react": "^14.2.1",
+    "@types/exceljs": "^0.5.3",
     "@types/handlebars": "^4.0.40",
     "@types/jest": "^29.5.14",
     "@types/node": "^20.11.24",
@@ -164,6 +159,7 @@
     "better-sqlite3": "^11.9.1",
     "electron-log": "^5.3.3",
     "electron-updater": "^6.6.2",
+    "exceljs": "^4.4.0",
     "handlebars": "^4.7.8",
     "nodemailer": "^6.10.1",
     "odbc": "^2.4.6",
