@@ -74,6 +74,8 @@ Output: `portable/Supplier-Reminder-Pro-Portable.zip`
 3. Choose installation directory
 4. Complete the installation wizard
 
+**Note:** On the first launch after installation, you will be prompted to select the master Excel (.xlsx) file to initialize the application database.
+
 #### Silent Installation
 
 For automated deployment:
@@ -95,6 +97,8 @@ Setup.exe /S /D=C:\CustomPath
 
 1. Double-click the `Supplier-Reminder-Pro-[version]-Setup.msi` file
 2. Follow the installation wizard
+
+**Note:** On the first launch after installation, you will be prompted to select the master Excel (.xlsx) file to initialize the application database.
 
 #### Silent Installation
 
@@ -131,7 +135,8 @@ The MSI package can be deployed via Group Policy in domain environments:
 1. Extract the `Supplier-Reminder-Pro-Portable.zip` file to any location
 2. Open the extracted folder
 3. Run `Supplier Reminder Pro.exe` or the included batch file
-4. All data will be stored in the `data` folder next to the executable
+4. **First Run:** You will be prompted to select the master Excel (.xlsx) file to initialize the database. The database (`app.sqlite`) will be created in the `data` folder.
+5. Subsequent runs will use the existing database in the `data` folder.
 
 #### Notes
 

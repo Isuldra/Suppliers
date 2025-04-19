@@ -3,54 +3,20 @@
  */
 import { ipcMain } from "electron";
 import log from "electron-log";
-
-// Import database service with robust error handling
-let databaseService;
-try {
-  // Try importing with the .js extension first
-  const module = require("../services/databaseServiceAdapter.js");
-  databaseService = module.databaseService;
-  log.info("Database service adapter loaded successfully with .js extension");
-  if (databaseService && databaseService.dbPath) {
-    log.info(`Database file in use: ${databaseService.dbPath}`);
-  }
-} catch (error) {
-  log.error(
-    "Error loading database service adapter with .js extension:",
-    error
-  );
-  try {
-    // Try without extension as fallback (some bundlers may strip it)
-    const module = require("../services/databaseServiceAdapter");
-    databaseService = module.databaseService;
-    log.info("Database service adapter loaded successfully without extension");
-  } catch (innerError) {
-    log.error(
-      "Error loading database service adapter without extension:",
-      innerError
-    );
-    // Provide a mock service as fallback
-    databaseService = {
-      getOrdersBySupplier: () => [],
-      getAllOrders: () => [],
-      insertOrUpdateOrder: () => -1,
-      recordEmailSent: () => 0,
-      close: () => {},
-    };
-    log.warn("Using mock database service due to import errors");
-    // Proactive: Show a dialog if running in production with mock DB
-    if (process.env.NODE_ENV !== "development") {
-      const { dialog } = require("electron");
-      dialog.showErrorBox(
-        "Database Error",
-        "App is running with a mock database. Features will not work. Please contact support."
-      );
-    }
-  }
-}
+// Import the already initialized singleton databaseService
+import { databaseService } from "../services/databaseService"; // Adjust path/extension if build process changes this
 
 // Setup all database-related IPC handlers
 export function setupDatabaseHandlers() {
+  if (!databaseService) {
+    log.error(
+      "setupDatabaseHandlers called, but databaseService is not available. This indicates an initialization error."
+    );
+    // Optional: Throw an error or handle this case appropriately
+    return;
+  }
+  log.info("Setting up database IPC handlers...");
+
   // Handler for getting orders by supplier
   ipcMain.handle("getOrdersBySupplier", async (_, supplier) => {
     try {
@@ -111,17 +77,24 @@ export function setupDatabaseHandlers() {
     }
   });
 
-  log.info("Database IPC handlers setup complete");
+  log.info("Database IPC handlers setup complete.");
 }
 
-// Close database connection
+// Close database connection (now just calls the service's close method)
 export function closeDatabaseConnection() {
-  try {
-    log.info("Closing database connection");
-    databaseService.close();
-    log.info("Database connection closed");
-  } catch (error) {
-    log.error("Error closing database connection:", error);
-    throw error;
-  }
+  // REMOVED: This function is no longer needed here as closing is handled
+  //          by the databaseService itself via the 'will-quit' event in index.ts.
+  //          Keeping the export might be okay, but the call should likely be removed
+  //          from index.ts if it's still there. For safety, let's make it a no-op.
+  log.warn(
+    "closeDatabaseConnection in database.js called, but closing is handled by databaseService. This call should likely be removed."
+  );
+  // try {
+  //   log.info("Closing database connection via database.js (should not happen)");
+  //   // databaseService.close(); // The service handles its own closing
+  //   log.info("Database connection closed (via database.js - likely no-op)");
+  // } catch (error) {
+  //   log.error("Error closing database connection (via database.js):", error);
+  //   // throw error; // Avoid throwing here if possible
+  // }
 }

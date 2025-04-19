@@ -8,6 +8,8 @@ import { setupDatabaseHandlers, closeDatabaseConnection } from "./database";
 import { checkForUpdatesManually } from "./auto-updater";
 import { fileURLToPath } from "url";
 import fs from "fs";
+import Database from "better-sqlite3"; // Import better-sqlite3
+import { importAlleArk } from "./importer"; // Import the Excel importer
 
 // Configure detailed logging for troubleshooting
 log.transports.file.level = "debug"; // Set to debug for maximum logging
@@ -36,21 +38,20 @@ try {
 // Add a global error handler for uncaught exceptions
 process.on("uncaughtException", (error) => {
   log.error("Uncaught Exception:", error);
-
-  // Show dialog to user in development mode
-  if (process.env.NODE_ENV === "development") {
-    dialog.showErrorBox(
-      "Uncaught Exception",
-      `En uventet feil oppstod: ${
-        error.message
-      }\n\nDetaljer er logget til: ${log.transports.file.getFile()}`
-    );
-  }
+  dialog.showErrorBox(
+    "Fatal Application Error",
+    `An unexpected error occurred: ${error.message}\n\nDetails: ${
+      error.stack || "No stack trace"
+    }\n\nThe application will now close. Please report this issue.`
+  );
+  // Ensure app quits cleanly
+  app.quit();
 });
 
 // Add a global error handler for unhandled promise rejections
-process.on("unhandledRejection", (reason) => {
+process.on("unhandledRejection", (reason, promise) => {
   log.error("Unhandled Promise Rejection:", reason);
+  // Optionally show an error box here too, or just log
 });
 
 // Log startup information
@@ -146,81 +147,79 @@ function createWindow() {
     ? "http://localhost:5173"
     : `file://${path.join(__dirname, "../renderer/index.html")}`;
 
+  log.info(`Loading window URL: ${url}`);
   mainWindow.loadURL(url).catch((err) => {
-    log.error("Failed to load URL:", url, err);
-    throw err;
+    log.error("Failed to load main window URL:", url, err);
+    dialog.showErrorBox(
+      "Load Error",
+      `Could not load the application window. Please check logs.\nError: ${err.message}`
+    );
+    app.quit();
+  });
+
+  mainWindow.on("closed", () => {
+    mainWindow = null;
   });
 }
 
 // Initialize database when the app is ready
 app.whenReady().then(async () => {
+  log.info("App is ready. Initializing database and application...");
   try {
-    // Initialize database - the service is auto-initialized on singleton creation
-    log.info("Database initialized successfully");
+    // 1. Initialize or Load Database
+    const dbInstance = await createOrLoadDatabase();
 
-    // Setup IPC handlers for database operations
+    // 2. Connect the DatabaseService
+    log.info("Connecting Database Service...");
+    databaseService.connect(dbInstance); // Pass the obtained instance
+    log.info("Database Service connected.");
+
+    // 3. Setup IPC Handlers (which should now use the connected databaseService)
+    log.info("Setting up IPC Handlers...");
     setupDatabaseHandlers();
-    log.info("Database IPC handlers setup");
+    log.info("IPC Handlers setup complete.");
 
-    // Add this after the app is ready and before using the database
-    try {
-      // Dynamically resolve the path to the native binary
-      // This assumes better-sqlite3 is installed in node_modules
-      const betterSqlite3 = require.resolve("better-sqlite3");
-      const nodeBinary = path.join(
-        path.dirname(betterSqlite3),
-        "build",
-        "Release",
-        process.platform === "win32"
-          ? "better-sqlite3.node"
-          : "better_sqlite3.node"
-      );
-      log.info(`Resolved better-sqlite3 module: ${betterSqlite3}`);
-      log.info(`Checking for native binary at: ${nodeBinary}`);
-      if (fs.existsSync(nodeBinary)) {
-        log.info("better-sqlite3 native binary found.");
-      } else {
-        log.error(
-          "better-sqlite3 native binary NOT found! App may fail to start."
-        );
-      }
-    } catch (e) {
-      log.error("Error resolving better-sqlite3 native binary:", e);
-    }
-  } catch (error) {
-    log.error("Failed to initialize database:", error);
+    // 4. Create Main Window
+    log.info("Creating main window...");
+    createWindow();
+    log.info("Main window created.");
+  } catch (error: any) {
+    // Catch errors during the critical startup sequence
+    log.error("FATAL STARTUP ERROR:", error);
+    dialog.showErrorBox(
+      "Application Initialization Failed",
+      `Could not initialize the application due to a database error: ${error.message}\n\nPlease check the logs for more details. The application will now close.`
+    );
+    app.quit();
+    return; // Stop further execution in this callback
   }
 
-  createWindow();
-
+  // Activate logic remains the same
   app.on("activate", () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow();
+    if (BrowserWindow.getAllWindows().length === 0) {
+      log.info("App activated with no windows open, creating main window...");
+      createWindow();
+    }
   });
 });
 
 // Close database when app is about to quit
 app.on("will-quit", async (event) => {
-  // Prevent the app from quitting until we've closed the database
-  event.preventDefault();
+  log.info("'will-quit' event received. Attempting to close database...");
+  event.preventDefault(); // Prevent immediate quitting
 
   try {
-    // Close the database connection
-    closeDatabaseConnection();
-    log.info("Database closed successfully");
-
-    // Force exit after a short delay to ensure all resources are released
-    setTimeout(() => {
-      log.info("Forcefully exiting application");
-      app.exit(0); // Use exit instead of quit to avoid the event loop
-    }, 500);
+    // Use the refactored databaseService close method
+    databaseService.close();
+    log.info("Database closed successfully via databaseService.close()");
   } catch (error) {
-    log.error("Error closing database:", error);
-
-    // Force exit even on error
-    setTimeout(() => {
-      log.info("Forcefully exiting application after error");
-      app.exit(1); // Exit with error code
-    }, 500);
+    log.error("Error closing database via databaseService:", error);
+  } finally {
+    log.info("Proceeding with application exit.");
+    // Use process.exit instead of app.quit to force exit after cleanup attempt
+    process.exit(0);
+    // If you want to allow the default quit process after a delay:
+    // setTimeout(() => { app.quit(); }, 500);
   }
 });
 
@@ -581,41 +580,14 @@ ipcMain.handle("update:install", async () => {
 // Åpne eksterne lenker (brukes for support-epost)
 ipcMain.handle("openExternalLink", async (_, url: string) => {
   try {
-    log.info(`Forsøker å åpne ekstern lenke: ${url}`);
-
-    // Sikre at URL er trygg og riktig formatert
-    if (!url || typeof url !== "string") {
-      throw new Error(`Ugyldig URL format: ${url}`);
-    }
-
-    // Legg til mer detaljert logging og plattformspesifikk håndtering
-    const platform = process.platform;
-    log.info(`Plattform: ${platform}, URL: ${url}`);
-
-    // For mailto-lenker på Windows, legg til ekstra feilhåndtering
-    if (url.startsWith("mailto:") && platform === "win32") {
-      log.info("Håndterer mailto-lenke på Windows");
-
-      // Ekstra sikring for Windows - bruk shell.openExternal med ekstra alternativer
-      await shell.openExternal(url, {
-        activate: true,
-        workingDirectory: process.cwd(),
-      });
-    } else {
-      // Standard måte å åpne lenker på
-      await shell.openExternal(url);
-    }
-
-    log.info(`Åpnet ekstern lenke: ${url} vellykket`);
+    log.info(`Attempting to open external link: ${url}`);
+    await shell.openExternal(url);
     return { success: true };
   } catch (error) {
-    log.error(`Feil ved åpning av ekstern lenke: ${url}`, error);
-    // Send mer detaljert feilmelding tilbake til UI
+    log.error(`Error opening external link ${url}:`, error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Ukjent feil",
-      platform: process.platform,
-      url,
+      error: error instanceof Error ? error.message : "Unknown error",
     };
   }
 });
@@ -743,3 +715,134 @@ ipcMain.handle("send-logs-to-support", async () => {
     };
   }
 });
+
+// Function to create the main application window
+async function createOrLoadDatabase(): Promise<Database.Database> {
+  const userDataPath = app.getPath("userData");
+  const dbPath = path.join(userDataPath, "app.sqlite");
+  log.info(`Database path determined: ${dbPath}`);
+
+  // Ensure the user data directory exists
+  try {
+    if (!fs.existsSync(userDataPath)) {
+      log.info(`User data directory not found, creating: ${userDataPath}`);
+      fs.mkdirSync(userDataPath, { recursive: true });
+    }
+  } catch (err: any) {
+    log.error(`Failed to create user data directory ${userDataPath}:`, err);
+    throw new Error(
+      `Could not create application data directory: ${err.message}`
+    );
+  }
+
+  let db: Database.Database | null = null;
+  let needsImport = false;
+
+  if (fs.existsSync(dbPath)) {
+    log.info("Existing database file found. Attempting to open...");
+    try {
+      db = new Database(dbPath);
+      log.info("Successfully opened existing database.");
+      // Optional: Add a quick integrity check or version check here if needed
+    } catch (err: any) {
+      log.error(`Failed to open existing database file at ${dbPath}:`, err);
+      // Decide how to handle corruption - e.g., backup and delete?
+      const backupPath = `${dbPath}.corrupt.${Date.now()}`;
+      try {
+        log.warn(`Attempting to rename corrupt database to: ${backupPath}`);
+        fs.renameSync(dbPath, backupPath);
+        log.info("Corrupt database renamed.");
+      } catch (renameErr: any) {
+        log.error(`Failed to rename corrupt database ${dbPath}:`, renameErr);
+        // If renaming fails, we might be stuck. Throw a specific error.
+        throw new Error(
+          `Could not open or rename the existing database file. Please check permissions or delete the file manually at ${dbPath}. Error: ${renameErr.message}`
+        );
+      }
+      db = null; // Ensure db is null so we proceed to import
+      needsImport = true;
+    }
+  } else {
+    log.info("No existing database file found. Import needed.");
+    needsImport = true;
+  }
+
+  if (needsImport) {
+    log.info("Prompting user to select Excel file for initial import...");
+    const { canceled, filePaths } = await dialog.showOpenDialog({
+      title: "Select Master Excel File",
+      message:
+        "Please select the master Excel (.xlsx) file to initialize the database.",
+      filters: [{ name: "Excel Workbook", extensions: ["xlsx"] }],
+      properties: ["openFile"],
+    });
+
+    if (canceled || filePaths.length === 0) {
+      log.error("User canceled Excel file selection.");
+      throw new Error("Excel file selection is required for the first run.");
+    }
+
+    const xlsxPath = filePaths[0];
+    log.info(`User selected Excel file: ${xlsxPath}`);
+
+    try {
+      // Create the new database file *before* importing
+      log.info(`Creating new database file at: ${dbPath}`);
+      db = new Database(dbPath);
+      log.info("New database file created successfully.");
+
+      // Run the import process
+      const importSuccess = await importAlleArk(xlsxPath, db);
+
+      if (!importSuccess) {
+        log.error(`Excel import failed from file: ${xlsxPath}`);
+        if (db) {
+          try {
+            db.close();
+          } catch (e) {
+            /* ignore */
+          }
+        }
+        // Try to delete the partially created/empty DB file
+        try {
+          fs.unlinkSync(dbPath);
+        } catch (e) {
+          /* ignore */
+        }
+        throw new Error("Failed to import data from the selected Excel file.");
+      }
+
+      log.info("Excel import completed successfully.");
+    } catch (err: any) {
+      log.error("Error during database creation or initial import:", err);
+      if (db) {
+        try {
+          db.close();
+        } catch (e) {
+          /* ignore */
+        }
+      }
+      // Attempt cleanup of potentially empty db file
+      if (fs.existsSync(dbPath)) {
+        try {
+          fs.unlinkSync(dbPath);
+          log.info("Cleaned up potentially empty DB file after error.");
+        } catch (e) {
+          /* ignore */
+        }
+      }
+      throw new Error(`Database initialization failed: ${err.message}`);
+    }
+  }
+
+  // If we reach here, db should be a valid, open connection
+  if (!db) {
+    // This should theoretically not happen if logic above is correct
+    log.error(
+      "Database instance is null after initialization process. This indicates a logical error."
+    );
+    throw new Error("Failed to obtain a valid database connection.");
+  }
+
+  return db;
+}
