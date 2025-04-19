@@ -45,27 +45,20 @@
       "dist/main/database.js",
       "dist/main/databaseAdapter.js",
       "dist/services/databaseServiceAdapter.js",
-      "**/node_modules/better-sqlite3/build/Release/better*.node",
+      "node_modules/better-sqlite3/build/Release/better*.node",
       "node_modules/sqlite3/**"
     ],
     "files": [
-      "dist/**/*",
-      "node_modules/**/*"
+      "dist/main/**/*",
+      "dist/renderer/**/*",
+      "dist/preload/**/*",
+      "package.json"
     ],
     "npmRebuild": false,
     "directories": {
       "buildResources": "resources",
       "output": "release"
     },
-    "extraResources": [
-      {
-        "from": "node_modules/better-sqlite3/build/Release",
-        "to": "app/node_modules/better-sqlite3/build/Release",
-        "filter": [
-          "*.node"
-        ]
-      }
-    ],
     "publish": [
       {
         "provider": "github",
