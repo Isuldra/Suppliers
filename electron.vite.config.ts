@@ -15,6 +15,12 @@ export default defineConfig({
       rollupOptions: {
         input: {
           main: path.resolve(__dirname, "src/main/index.ts"),
+          "main-entry": path.resolve(__dirname, "src/main/main-entry.js"),
+          database: path.resolve(__dirname, "src/main/database.js"),
+          databaseAdapter: path.resolve(
+            __dirname,
+            "src/main/databaseAdapter.js"
+          ),
         },
         external: [
           // leave test patterns/external libs here if you like
@@ -46,11 +52,26 @@ export default defineConfig({
                 src: path.resolve(__dirname, "package.json"),
                 dest: path.resolve(__dirname, "dist"),
               },
+              {
+                src: path.resolve(
+                  __dirname,
+                  "src/services/databaseServiceAdapter.js"
+                ),
+                dest: path.resolve(__dirname, "dist/services"),
+              },
+              {
+                src: path.resolve(__dirname, "src/main/databaseAdapter.js"),
+                dest: path.resolve(__dirname, "dist/main"),
+              },
             ],
             // keep folder structure flat
             flatten: true,
           }),
         ],
+        output: {
+          format: "cjs",
+          entryFileNames: "[name].js",
+        },
       },
     },
     optimizeDeps: {
@@ -69,18 +90,15 @@ export default defineConfig({
         "electron-updater",
       ],
     },
+    // DO NOT alias 'better-sqlite3' in main process; only alias in preload/renderer
     resolve: {
       alias: {
         "mock-aws-s3": path.resolve(__dirname, "src/main/shims/mock-aws-s3.js"),
         "aws-sdk": path.resolve(__dirname, "src/main/shims/aws-sdk.js"),
         nock: path.resolve(__dirname, "src/main/shims/nock.js"),
-        // Add shims for native modules
+        // Do NOT alias 'better-sqlite3' here
         odbc: path.resolve(__dirname, "src/main/shims/odbc-shim.js"),
         sqlite3: path.resolve(__dirname, "src/main/shims/sqlite3-shim.js"),
-        "better-sqlite3": path.resolve(
-          __dirname,
-          "src/main/shims/better-sqlite3-shim.js"
-        ),
         "electron-updater": path.resolve(
           __dirname,
           "src/main/shims/electron-updater-shim.js"
