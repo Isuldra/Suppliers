@@ -24,6 +24,10 @@ export default defineConfig({
           "sqlite3",
           "better-sqlite3",
           "electron-updater",
+          "exceljs",
+          "electron",
+          "fs",
+          "path",
         ],
         plugins: [
           // Add the externalize dependencies plugin
@@ -64,9 +68,7 @@ export default defineConfig({
         ],
         output: {
           format: "cjs",
-          entryFileNames: (chunkInfo) => {
-            return chunkInfo.name === "main" ? "main.cjs" : "[name].js";
-          },
+          entryFileNames: "[name].js",
         },
       },
     },
