@@ -48,6 +48,11 @@ process.on("uncaughtException", (error) => {
   }
 });
 
+// Add a global error handler for unhandled promise rejections
+process.on("unhandledRejection", (reason) => {
+  log.error("Unhandled Promise Rejection:", reason);
+});
+
 // Log startup information
 log.info("Application starting...");
 log.info("App version:", app.getVersion());
@@ -61,6 +66,9 @@ log.info(
   process.getSystemVersion?.() || ""
 );
 log.info("User data path:", app.getPath("userData"));
+log.info(
+  "[Startup] Running main process from src/main/index.ts (dist/main/main.js)"
+);
 
 // Add IPC handler for retrieving logs
 ipcMain.handle("get-logs", async () => {
@@ -153,6 +161,32 @@ app.whenReady().then(async () => {
     // Setup IPC handlers for database operations
     setupDatabaseHandlers();
     log.info("Database IPC handlers setup");
+
+    // Add this after the app is ready and before using the database
+    try {
+      // Dynamically resolve the path to the native binary
+      // This assumes better-sqlite3 is installed in node_modules
+      const betterSqlite3 = require.resolve("better-sqlite3");
+      const nodeBinary = path.join(
+        path.dirname(betterSqlite3),
+        "build",
+        "Release",
+        process.platform === "win32"
+          ? "better-sqlite3.node"
+          : "better_sqlite3.node"
+      );
+      log.info(`Resolved better-sqlite3 module: ${betterSqlite3}`);
+      log.info(`Checking for native binary at: ${nodeBinary}`);
+      if (fs.existsSync(nodeBinary)) {
+        log.info("better-sqlite3 native binary found.");
+      } else {
+        log.error(
+          "better-sqlite3 native binary NOT found! App may fail to start."
+        );
+      }
+    } catch (e) {
+      log.error("Error resolving better-sqlite3 native binary:", e);
+    }
   } catch (error) {
     log.error("Failed to initialize database:", error);
   }
@@ -606,33 +640,106 @@ ipcMain.on("show-about-dialog", () => {
 ipcMain.on("show-logs", () => {
   log.info("Opening logs window");
 
-  // Create a new window for logs
-  let logsWindow: BrowserWindow | undefined = new BrowserWindow({
-    width: 900,
-    height: 700,
-    parent: mainWindow,
-    modal: true,
-    show: false,
-    webPreferences: {
-      nodeIntegration: false,
-      contextIsolation: true,
-      preload: path.join(__dirname, "../preload/index.cjs"),
-    },
-  });
+  try {
+    // Create a new window for logs
+    let logsWindow: BrowserWindow | undefined = new BrowserWindow({
+      width: 900,
+      height: 700,
+      parent: mainWindow || undefined,
+      modal: true,
+      show: false,
+      webPreferences: {
+        nodeIntegration: false,
+        contextIsolation: true,
+        preload: path.join(__dirname, "../preload/index.cjs"),
+      },
+    });
 
-  // Load the same app URL but with a logs query parameter
-  const isDevEnv = process.env.NODE_ENV === "development";
-  const url = isDevEnv
-    ? `http://localhost:5173/#/logs`
-    : `file://${path.join(__dirname, "../renderer/index.html")}#/logs`;
+    // Load the same app URL but with a logs query parameter
+    const isDevEnv = process.env.NODE_ENV === "development";
+    const url = isDevEnv
+      ? `http://localhost:5173/#/logs`
+      : `file://${path.join(__dirname, "../renderer/index.html")}#/logs`;
 
-  logsWindow.loadURL(url);
+    logsWindow.loadURL(url).catch((err: any) => {
+      log.error("Failed to load logs window URL:", url, err);
+      const { dialog } = require("electron");
+      dialog.showErrorBox(
+        "Logger Error",
+        `Could not open logs window.\n${err?.message || err}`
+      );
+    });
 
-  logsWindow.once("ready-to-show", () => {
-    logsWindow?.show();
-  });
+    logsWindow.once("ready-to-show", () => {
+      logsWindow?.show();
+    });
 
-  logsWindow.on("closed", () => {
-    logsWindow = undefined;
-  });
+    logsWindow.on("closed", () => {
+      logsWindow = undefined;
+    });
+  } catch (err: any) {
+    log.error("Failed to open logs window:", err);
+    const { dialog } = require("electron");
+    dialog.showErrorBox(
+      "Logger Error",
+      `Could not open logs window.\n${err?.message || err}`
+    );
+  }
+});
+
+// Add new IPC handler 'send-logs-to-support'
+ipcMain.handle("send-logs-to-support", async () => {
+  try {
+    const os = require("os");
+    const { shell } = require("electron");
+    const child_process = require("child_process");
+    const logFile = log.transports.file.getFile();
+    const supportEmail = "andreas.elvethun@onemed.com";
+    const subject = "Supplier Reminder Pro Support Logs";
+    const logFilePath = logFile ? String(logFile) : undefined;
+    if (logFilePath && fs.existsSync(logFilePath)) {
+      if (process.platform === "win32") {
+        // Try to open Outlook Desktop with attachment
+        const outlookPath = "outlook.exe";
+        try {
+          child_process.spawn(
+            "cmd",
+            ["/c", "start", "", outlookPath, "/a", logFilePath],
+            {
+              detached: true,
+              stdio: "ignore",
+            }
+          );
+          log.info("Opened Outlook with log attachment: " + logFilePath);
+          return { success: true };
+        } catch (err) {
+          log.error("Failed to open Outlook with attachment:", err);
+          // Fallback to mailto (no attachment)
+        }
+      }
+      // Fallback for non-Windows or if Outlook fails
+      const mailtoUrl = `mailto:${supportEmail}?subject=${encodeURIComponent(
+        subject
+      )}&body=${encodeURIComponent(
+        "Se vedlagt loggfil fra appen. (Vedlegg kunne ikke legges til automatisk, vennligst legg ved filen manuelt om mulig.) Loggfil: " +
+          logFilePath
+      )}`;
+      await shell.openExternal(mailtoUrl);
+      log.info("Opened mailto link for support logs (no attachment)");
+      return {
+        success: true,
+        error:
+          "Kunne ikke legge ved logg automatisk. Åpnet e-post uten vedlegg.",
+      };
+    } else {
+      log.error("Log file not found for support log sending.");
+      return { success: false, error: "Fant ikke loggfilen." };
+    }
+  } catch (error) {
+    log.error("Error in send-logs-to-support:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Ukjent feil",
+    };
+  }
 });

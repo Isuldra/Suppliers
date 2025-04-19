@@ -7,6 +7,7 @@ import EmailButton from "./components/EmailButton";
 import SupplierSelect from "./components/SupplierSelect";
 import WeekdaySelect from "./components/WeekdaySelect";
 import PlannerSelect from "./components/PlannerSelect";
+import LogViewer from "./components/LogViewer";
 import {
   ExcelData,
   ValidationError,
@@ -14,6 +15,12 @@ import {
   WizardState,
   ExcelRow,
 } from "./types/ExcelData";
+import {
+  HashRouter as Router,
+  Routes,
+  Route,
+  useLocation,
+} from "react-router-dom";
 
 // Import the OneMed logo
 import onemedLogo from "./assets/onemed-logo.webp";
@@ -27,7 +34,7 @@ const steps = [
   { id: "email" as WizardStep, label: "Send e-post" },
 ];
 
-const App: React.FC = () => {
+const MainApp: React.FC = () => {
   useEffect(() => {
     console.log("🟢 App.tsx mounted!");
   }, []);
@@ -235,6 +242,17 @@ const App: React.FC = () => {
       </div>
       <Toaster />
     </div>
+  );
+};
+
+const App: React.FC = () => {
+  return (
+    <Router>
+      <Routes>
+        <Route path="/" element={<MainApp />} />
+        <Route path="/logs" element={<LogViewer />} />
+      </Routes>
+    </Router>
   );
 };
 
