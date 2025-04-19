@@ -340,16 +340,16 @@ The application has been built with security best practices for Electron applica
 
 ### Error Handling and Monitoring
 
-- **Comprehensive Logging**: Uses electron-log for structured logging of operations and errors
-- **Graceful Shutdown**: Handles application termination safely to prevent data corruption
-- **Resource Cleanup**: Ensures all resources are released during app closure
+- **Comprehensive Logging**: Uses `electron-log` for structured logging of operations and errors to `supplier-reminder-app.log` located in the app\'s user data directory (`app.getPath(\'userData\')`/logs).\
+- **Accessing Logs**: \
+  - **Open Log Folder:** The application provides an option (e.g., via Help menu > \"Vis logger\") to directly open the log file directory in the system\'s file explorer (`shell.openPath`). This gives access to the current log (`supplier-reminder-app.log`), rotated logs (`.old`), and database backups.\
+  - **View Recent Logs In-App:** An IPC handler (`read-log-tail`) is available to retrieve the last N lines (default 200) of the current log file for display within the application UI (e.g., in a modal).\
+  - **Send Logs to Support:** Functionality exists to compose an email to support, attempting to attach the log file automatically (primarily on Windows with Outlook) or providing the path for manual attachment.\
+- **Graceful Shutdown**: Handles application termination safely to prevent data corruption.\
+- **Resource Cleanup**: Ensures all resources are released during app closure.\n\
+  \
 
-### Best Practices Implemented
-
-- **Memory Management**: Proper cleanup of event listeners and resources to prevent memory leaks
-- **Input Validation**: Client-side validation of user inputs before processing
-- **Secure Communication**: Uses secure IPC channels with defined message structures
-- **Defensive Programming**: Implements checks and safeguards throughout the codebase
+### Best Practices Implemented\n\
 
 To maintain security, ensure you always:
 
