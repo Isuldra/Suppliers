@@ -40,18 +40,17 @@ jobs:
             ${{ runner.os }}-${{ matrix.arch }}-node-${{ env.NODE_VERSION }}-
 
       - name: Install dependencies
-        # Only run install if cache wasn't restored
         if: steps.cache-node-modules.outputs.cache-hit != 'true'
-        run: npm ci --ignore-scripts # Use --ignore-scripts if electron-builder rebuilds later
+        run: npm ci --ignore-scripts
 
       # Optional: Rebuild native modules specifically for the target arch if needed
       # - name: Rebuild native modules (macOS ${{ matrix.arch }})
       #   run: npx electron-rebuild -f -w better-sqlite3 --arch ${{ matrix.arch }}
       - name: Build Application (macOS ${{ matrix.arch }})
-        # Pass arch to the build command. Ensure your 'dist' script handles this or call electron-builder directly
-        run: npm run dist -- --arch=${{ matrix.arch }}
-        # Alternative direct call:
-        # run: npx electron-builder --mac --${{ matrix.arch }}
+        # Run electron-vite build first, then electron-builder with specific arch flag
+        run: |
+          npm run build --if-present && node scripts/ensure-database-modules.js # Run the build part of your script
+          npx electron-builder --mac --${{ matrix.arch }} # Call electron-builder directly
 
       - name: Upload macOS Artifact
         uses: actions/upload-artifact@v4
@@ -80,19 +79,21 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-x64-node-${{ env.NODE_VERSION }}-
 
+      # Add step to ensure clean state before install
+      - name: Clean node_modules
+        if: steps.cache-node-modules.outputs.cache-hit == 'true' # Only if cache was hit, otherwise it's clean
+        run: rm -rf node_modules
+
       - name: Install dependencies
-        # Only run install if cache wasn't restored
-        if: steps.cache-node-modules.outputs.cache-hit != 'true'
-        run: npm ci --ignore-scripts # Use --ignore-scripts if electron-builder rebuilds later
+        # Run npm ci which should now work correctly after potential cleanup
+        run: npm ci --ignore-scripts
 
       # Optional: Rebuild native modules specifically for Windows if needed
       # - name: Rebuild native modules (Windows x64)
       #   run: npx electron-rebuild -f -w better-sqlite3
       - name: Build Application (Windows x64)
-        # Use your specific windows build script like dist:win (builds NSIS) or dist:portable
-        run: npm run dist:win # Assuming this builds NSIS by default
-        # To build portable:
-        # run: npm run dist:portable
+        # Use the existing dist:win script which calls electron-builder --win
+        run: npm run dist:win
 
       - name: Upload Windows Artifact
         uses: actions/upload-artifact@v4
