@@ -514,54 +514,75 @@ ipcMain.on("show-about-dialog", () => {
   });
 });
 
-// Handle show-logs request from renderer
-ipcMain.on("show-logs", () => {
-  log.info("Opening logs window");
+// Handle request to SHOW LOGS FOLDER
+ipcMain.handle("show-logs", async () => {
+  const logsDir = path.join(app.getPath("userData"), "logs");
+  log.info(`Request received to open logs directory: ${logsDir}`);
 
   try {
-    // Create a new window for logs
-    let logsWindow: BrowserWindow | undefined = new BrowserWindow({
-      width: 900,
-      height: 700,
-      parent: mainWindow || undefined,
-      modal: true,
-      show: false,
-      webPreferences: {
-        nodeIntegration: false,
-        contextIsolation: true,
-        preload: path.join(__dirname, "../preload/index.cjs"),
-      },
-    });
-
-    // Load the same app URL but with a logs query parameter
-    const isDevEnv = process.env.NODE_ENV === "development";
-    const url = isDevEnv
-      ? `http://localhost:5173/#/logs`
-      : `file://${path.join(__dirname, "../renderer/index.html")}#/logs`;
-
-    logsWindow.loadURL(url).catch((err: any) => {
-      log.error("Failed to load logs window URL:", url, err);
-      const { dialog } = require("electron");
-      dialog.showErrorBox(
-        "Logger Error",
-        `Could not open logs window.\n${err?.message || err}`
+    // Ensure the directory exists before trying to open it
+    if (!fs.existsSync(logsDir)) {
+      log.warn(
+        `Logs directory does not exist, attempting to create: ${logsDir}`
       );
-    });
+      fs.mkdirSync(logsDir, { recursive: true });
+    }
 
-    logsWindow.once("ready-to-show", () => {
-      logsWindow?.show();
-    });
-
-    logsWindow.on("closed", () => {
-      logsWindow = undefined;
-    });
+    // Open the directory in the default file explorer
+    // shell.openPath returns a promise resolving to a string
+    // containing an error message if it failed, or an empty string if successful.
+    const errorMsg = await shell.openPath(logsDir);
+    if (errorMsg) {
+      log.error(`shell.openPath failed to open ${logsDir}: ${errorMsg}`);
+      throw new Error(errorMsg); // Throw error to be caught below
+    }
+    log.info(`Successfully initiated opening of logs directory: ${logsDir}`);
+    return { success: true }; // Indicate success to renderer if needed
   } catch (err: any) {
-    log.error("Failed to open logs window:", err);
-    const { dialog } = require("electron");
+    log.error(`Failed to open logs directory ${logsDir}:`, err);
+    // Show dialog to the user in the main process
     dialog.showErrorBox(
-      "Logger Error",
-      `Could not open logs window.\n${err?.message || err}`
+      "Error Opening Logs",
+      `Could not open the logs directory.\nPath: ${logsDir}\nError: ${
+        err.message || err
+      }`
     );
+    // Return failure status to the renderer
+    return { success: false, error: err.message || String(err) };
+  }
+});
+
+// Add new IPC handler to READ LOG FILE TAIL
+ipcMain.handle("read-log-tail", async (_event, lineCount: number = 200) => {
+  const logFilePath = path.join(
+    app.getPath("userData"),
+    "logs",
+    "supplier-reminder-app.log"
+  );
+  log.info(
+    `Request received to read log tail (${lineCount} lines) from: ${logFilePath}`
+  );
+
+  try {
+    if (!fs.existsSync(logFilePath)) {
+      log.warn(`Log file not found at: ${logFilePath}`);
+      return { success: false, error: "Log file not found.", logs: "" };
+    }
+
+    const data = await fs.promises.readFile(logFilePath, "utf-8");
+    const lines = data.trim().split(/\r?\n/); // Split by newline, handling Windows/Unix
+    const tailLines = lines.slice(-lineCount); // Get the last N lines
+
+    log.info(`Returning last ${tailLines.length} lines from log file.`);
+    return { success: true, logs: tailLines.join("\n") };
+  } catch (err: any) {
+    log.error(`Failed to read log file tail ${logFilePath}:`, err);
+    // Don't show error box here, just return error to renderer
+    return {
+      success: false,
+      error: `Failed to read log file: ${err.message || err}`,
+      logs: "",
+    };
   }
 });
 
