@@ -42,11 +42,7 @@
     "copyright": "Copyright © 2024 OneMed",
     "asar": true,
     "asarUnpack": [
-      "dist/main/database.js",
-      "dist/main/databaseAdapter.js",
-      "dist/services/databaseServiceAdapter.js",
-      "node_modules/better-sqlite3/build/Release/better*.node",
-      "node_modules/sqlite3/**"
+      "node_modules/better-sqlite3/build/Release/better*.node"
     ],
     "files": [
       {

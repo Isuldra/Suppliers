@@ -15,12 +15,6 @@ export default defineConfig({
       rollupOptions: {
         input: {
           main: path.resolve(__dirname, "src/main/index.ts"),
-          "main-entry": path.resolve(__dirname, "src/main/main-entry.js"),
-          database: path.resolve(__dirname, "src/main/database.js"),
-          databaseAdapter: path.resolve(
-            __dirname,
-            "src/main/databaseAdapter.js"
-          ),
         },
         external: [
           // leave test patterns/external libs here if you like
