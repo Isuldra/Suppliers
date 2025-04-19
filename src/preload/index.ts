@@ -72,6 +72,14 @@ interface ElectronAPI {
     success: boolean;
     error?: string;
   }>;
+
+  // Add showLogs and readLogTail to the API definition
+  showLogs: () => Promise<{ success: boolean; error?: string }>;
+  readLogTail: (lineCount?: number) => Promise<{
+    success: boolean;
+    logs?: string;
+    error?: string;
+  }>;
 }
 
 // Valid send channels for IPC communication
@@ -106,6 +114,8 @@ const validSendChannels = [
   "openExternalLink",
   "check-for-updates",
   "show-about-dialog",
+  "show-logs",
+  "read-log-tail",
 ] as const;
 
 // Valid receive channels for IPC communication
@@ -140,6 +150,8 @@ const validReceiveChannels = [
   "openExternalLink",
   "check-for-updates",
   "show-about-dialog",
+  "show-logs",
+  "read-log-tail",
 ] as const;
 
 // Expose the API to the renderer process
@@ -310,5 +322,14 @@ contextBridge.exposeInMainWorld("electron", {
         error: error instanceof Error ? error.message : "Unknown error",
       };
     }
+  },
+
+  // Expose the new log methods
+  showLogs: async () => {
+    return await ipcRenderer.invoke("show-logs");
+  },
+  readLogTail: async (lineCount?: number) => {
+    // Pass lineCount to main process, defaulting if undefined
+    return await ipcRenderer.invoke("read-log-tail", lineCount);
   },
 } as ElectronAPI);
