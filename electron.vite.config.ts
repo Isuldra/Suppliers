@@ -68,7 +68,9 @@ export default defineConfig({
         ],
         output: {
           format: "cjs",
-          entryFileNames: "[name].js",
+          entryFileNames: (chunkInfo) => {
+            return chunkInfo.name === "main" ? "main.cjs" : "[name].js";
+          },
         },
       },
     },
