@@ -2,7 +2,7 @@
   "name": "one-med-supplychain-app",
   "version": "1.0.0",
   "description": "Desktop application for managing OneMed supply chain and vendor relations",
-  "main": "main/main.cjs",
+  "main": "dist/main/main.cjs",
   "private": true,
   "type": "module",
   "scripts": {
@@ -49,7 +49,10 @@
       "node_modules/sqlite3/**"
     ],
     "files": [
-      "dist/",
+      {
+        "from": "dist",
+        "to": "."
+      },
       "package.json"
     ],
     "npmRebuild": false,
