@@ -18,6 +18,7 @@
     "test:coverage": "vitest run --coverage",
     "pack": "electron-builder --dir",
     "dist": "electron-vite build && electron-builder",
+    "clean-dist": "node scripts/clean-build.js",
     "dist:win": "electron-vite build && electron-builder --win",
     "dist:portable": "electron-vite build && electron-builder --win portable",
     "dist:msi": "electron-vite build && electron-builder --win msi",
@@ -34,6 +35,10 @@
     "files": [
       "dist/**/*",
       "!**/node_modules/**/*"
+    ],
+    "npmRebuild": true,
+    "nodeModulesPath": [
+      "./node_modules"
     ],
     "directories": {
       "buildResources": "resources",
