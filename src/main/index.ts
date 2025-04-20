@@ -28,7 +28,7 @@ try {
 
   // Set a custom log file path for easier identification
   const logFilePath = path.join(logsDir, "supplier-reminder-app.log");
-  log.transports.file.resolvePath = () => logFilePath;
+  log.transports.file.resolvePathFn = () => logFilePath;
 
   log.info("Log file location:", logFilePath);
 } catch (err) {
