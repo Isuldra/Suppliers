@@ -1,223 +1,195 @@
 # Database Storage
 
-This document provides detailed information about the database storage functionality in Supplier Reminder Pro.
+This document provides detailed information about the database storage functionality in SupplyChain OneMed.
 
 ## Overview
 
-The database storage feature provides a reliable, local data persistence layer for the application. Using SQLite, it enables efficient storage and retrieval of supplier data, orders, and application settings without requiring external database servers.
+The database storage feature provides a reliable, local data persistence layer for the SupplyChain OneMed application. Using SQLite via the `better-sqlite3` library, it enables efficient storage and retrieval of application data without requiring external database servers.
+
+**Offline Access Note:** Because the primary data storage is local, core application data (like suppliers and orders previously loaded) can typically be viewed and modified even without an active internet connection. However, these changes remain local to the device and are **not** automatically synchronized with any central server or other users. Furthermore, any application feature requiring network access (e.g., sending emails, checking for application updates) will fail when offline.
 
 ## Technology Stack
 
 ### Database Engine
 
-Supplier Reminder Pro uses SQLite as its database engine:
+SupplyChain OneMed uses SQLite as its database engine:
 
-- **SQLite Version**: 3.35.0+
-- **Mode**: Write-Ahead Logging (WAL) for improved concurrency and reliability
-- **Encryption**: Optional database encryption for sensitive data (using SQLCipher)
+- **Mode**: Write-Ahead Logging (`PRAGMA journal_mode = WAL`) is enabled for improved concurrency.
+- **Encryption**: Database encryption is **not** currently implemented.
 
 ### Integration Libraries
 
-The application connects to SQLite through:
+The application connects to SQLite exclusively through:
 
-- **better-sqlite3**: High-performance, prepared statement-based synchronous API
-- **SQLite3 Node.js Bindings**: Used as a fallback on platforms where better-sqlite3 is unavailable
-- **Database Service**: Custom abstraction layer providing consistent API across the application
+- **better-sqlite3**: High-performance, synchronous API for Node.js.
+- **Database Service (`src/services/databaseService.ts`)**: A singleton service class that encapsulates all database interactions, providing a consistent API across the application.
 
 ## Database Location
 
-The database file is stored in the user's application data directory:
+The database file (`app.sqlite`) is stored in the user's application data directory:
 
-- **Windows**: `%APPDATA%\supplier-reminder-pro\supplier-reminder.db`
-- **macOS**: `~/Library/Application Support/supplier-reminder-pro/supplier-reminder.db`
-- **Linux**: `~/.config/supplier-reminder-pro/supplier-reminder.db`
+- **Windows**: `%APPDATA%\one-med-supplychain-app\app.sqlite` (Note: Actual parent folder name might be based on `name` in `package.json`)
+- **macOS**: `~/Library/Application Support/one-med-supplychain-app/app.sqlite`
+- **Linux**: `~/.config/one-med-supplychain-app/app.sqlite`
+
+_(The parent directory name `one-med-supplychain-app` is derived from the application name and might vary slightly)_
 
 ## Schema Design
 
-The database includes several key tables:
+The database schema is defined within the `initialize` method of the `DatabaseService`. The key tables created are:
 
-### Suppliers Table
+### `orders` Table
 
-```sql
-CREATE TABLE suppliers (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  name TEXT NOT NULL UNIQUE,
-  email TEXT,
-  phone TEXT,
-  address TEXT,
-  category TEXT,
-  active INTEGER DEFAULT 1,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-```
-
-### Orders Table
+Stores order information, likely imported from Excel.
 
 ```sql
-CREATE TABLE orders (
+CREATE TABLE IF NOT EXISTS orders (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   reference TEXT,
   supplier TEXT NOT NULL,
-  order_number TEXT,
-  order_date TIMESTAMP,
-  due_date TIMESTAMP,
+  orderNumber TEXT,
+  orderDate TEXT,
+  dueDate TEXT,
   category TEXT,
   description TEXT,
   value REAL,
   currency TEXT,
   confirmed INTEGER DEFAULT 0,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  email_sent_at TIMESTAMP,
-  FOREIGN KEY (supplier) REFERENCES suppliers(name)
+  createdAt TEXT DEFAULT CURRENT_TIMESTAMP,
+  updatedAt TEXT DEFAULT CURRENT_TIMESTAMP,
+  email_sent_at TEXT
 );
+CREATE INDEX IF NOT EXISTS idx_supplier ON orders(supplier);
+CREATE INDEX IF NOT EXISTS idx_dueDate ON orders(dueDate);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_supplier_ordernum ON orders(supplier, orderNumber);
 ```
 
-### Email Templates Table
+### `audit_log` Table
+
+Logs basic changes (insert, update, delete) made to certain tables via the `DatabaseService`.
 
 ```sql
-CREATE TABLE email_templates (
+CREATE TABLE IF NOT EXISTS audit_log (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  name TEXT NOT NULL UNIQUE,
-  content TEXT NOT NULL,
-  is_default INTEGER DEFAULT 0,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  action TEXT NOT NULL,
+  table_name TEXT NOT NULL,
+  record_id INTEGER,
+  old_value TEXT, -- Stores JSON string
+  new_value TEXT, -- Stores JSON string
+  timestamp TEXT DEFAULT CURRENT_TIMESTAMP,
+  user_id TEXT -- Note: user_id is not currently populated
 );
 ```
 
-### Email History Table
+### `weekly_status` Table
+
+Stores weekly status information, likely related to supplier planning.
 
 ```sql
-CREATE TABLE email_history (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  supplier TEXT NOT NULL,
-  recipient TEXT NOT NULL,
-  subject TEXT NOT NULL,
-  content TEXT,
-  sent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  order_count INTEGER DEFAULT 0,
-  FOREIGN KEY (supplier) REFERENCES suppliers(name)
+CREATE TABLE IF NOT EXISTS weekly_status (
+  leverandor TEXT,
+  dag TEXT,
+  uke TEXT,
+  status TEXT,
+  email TEXT,
+  UNIQUE(leverandor, dag, uke) ON CONFLICT REPLACE
 );
+CREATE INDEX IF NOT EXISTS idx_weekly_status_leverandor ON weekly_status(leverandor);
+CREATE INDEX IF NOT EXISTS idx_weekly_status_uke ON weekly_status(uke);
 ```
+
+### `purchase_order` Table
+
+Stores purchase order details, potentially related to cross-referencing imported data.
+
+```sql
+CREATE TABLE IF NOT EXISTS purchase_order (
+  nøkkel TEXT PRIMARY KEY,
+  ordreNr TEXT,
+  itemNo TEXT,
+  beskrivelse TEXT,
+  dato TEXT,
+  ftgnavn TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_po_ordreNr ON purchase_order(ordreNr);
+CREATE INDEX IF NOT EXISTS idx_po_ftgnavn ON purchase_order(ftgnavn);
+```
+
+**Note:** Tables for managing Suppliers directly or Email Templates, as previously documented, are **not** present in the current schema defined in `DatabaseService`.
 
 ## Database Operations
 
 ### Read Operations
 
-The application provides optimized read operations:
-
-- **Indexing**: Key columns are indexed for faster retrieval
-- **Query Optimization**: Queries use prepared statements with parameter binding
-- **Result Caching**: Frequently accessed data is cached to reduce database load
+- **Indexing**: Indexes are created on key columns (e.g., `orders.supplier`, `orders.dueDate`) for faster retrieval.
+- **Query Optimization**: Uses `better-sqlite3` prepared statements with parameter binding.
 
 ### Write Operations
 
-Data integrity is maintained through:
-
-- **Transactions**: Grouped operations are wrapped in transactions
-- **Constraints**: Foreign key and uniqueness constraints prevent invalid data
-- **Update Tracking**: Automatic update timestamp management
+- **Transactions**: Grouped operations (like batch upserts) are wrapped in transactions internally within `DatabaseService` methods (e.g., `upsertOrders`).
+- **Constraints**: Unique constraints (e.g., `orders(supplier, orderNumber)`) help maintain data integrity.
+- **Update Tracking**: `orders.updatedAt` timestamp is managed automatically by the `insertOrUpdateOrder` method.
+- **Audit Logging**: Basic insert/update/delete actions on orders are logged to `audit_log` via the internal `logOperation` method.
 
 ### Batch Operations
 
-For performance when handling multiple records:
-
-- **Bulk Insert**: Efficient batch insertion for importing large data sets
-- **Batch Update**: Optimized updates for multiple records
+- **`upsertOrders`**: Method exists for efficient batch insertion/updating of orders.
 
 ## Performance Considerations
 
 ### Optimizations
 
-- **Connection Pooling**: Reuse of database connections
-- **Prepared Statements**: Pre-compiled queries for improved performance
-- **Indexes**: Strategic indexing of frequently queried columns
-- **WAL Mode**: Write-ahead logging for improved concurrency
+- **Prepared Statements**: Used via `better-sqlite3`.
+- **Indexes**: Created on key query columns.
+- **WAL Mode**: Enabled for improved concurrency.
 
 ### Limits and Boundaries
 
-- **File Size**: Practical limit of several gigabytes for the database file
-- **Concurrent Access**: Multiple read operations with single write capability
-- **Query Complexity**: Complex queries are optimized to prevent performance issues
+- **File Size**: SQLite supports large databases, but practical limits depend on system resources.
+- **Concurrent Access**: WAL mode allows multiple readers concurrent with a single writer.
 
 ## Data Migration
 
-The application supports database schema evolution:
-
-- **Version Tracking**: Database schema version is tracked in a metadata table
-- **Migration Scripts**: Automatic migration between schema versions
-- **Data Preservation**: Updates maintain existing data when possible
+Database schema migration (handling changes between application versions) is **not currently implemented**. The `initialize` method only creates tables if they don't exist and includes a basic `ALTER TABLE` to add a potentially missing column, but it doesn't handle version tracking or complex schema changes.
 
 ## Backup and Recovery
 
 ### Automatic Backups
 
-- **Scheduled Backups**: Regular database backups at configurable intervals
-- **Pre-Update Backups**: Automatic backup before schema updates
-- **Retention Policy**: Configurable retention of backup files
+- **Mechanism**: The `DatabaseService` includes logic (`performBackupIfNeeded`) to create backups.
+- **Schedule**: Checks approximately hourly, but only performs a backup if 24 hours have passed since the last one.
+- **Location**: Backups are stored in a `backups` subdirectory within the application data directory.
+- **Naming**: Files are named `supplier-reminder-{timestamp}.db`.
+- **Retention**: Keeps the most recent 7 backup files, deleting older ones.
 
 ### Recovery Process
 
-- **Manual Restore**: User-initiated restoration from backup
-- **Corruption Recovery**: Automatic recovery attempts for corrupted databases
-- **Validation**: Database integrity validation after restoration
+- **Manual Restore**: **Not implemented** via the application UI or API.
+- **Corruption Handling**: If the main `app.sqlite` file cannot be opened, the service attempts to rename it to `app.sqlite.corrupt.{timestamp}`. The application will then likely prompt the user for the initial Excel import to create a new database.
 
 ## Usage in Code
 
 ### Database Service API
 
+The `DatabaseService` is a singleton instance imported and used throughout the application.
+
 ```typescript
 // Example of database service usage
 import { databaseService } from "../services/databaseService";
 
-// Retrieve all suppliers
-const suppliers = databaseService.getAllSuppliers();
+// Retrieve orders for a specific supplier
+const supplierOrders = databaseService.getOrdersBySupplier("Example Supplier");
 
 // Insert or update an order
 const orderId = databaseService.insertOrUpdateOrder({
-  supplier: "Acme Inc",
+  supplier: "Example Corp",
   orderNumber: "ORD-123",
-  orderDate: new Date(),
-  dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
-  value: 1250.0,
-  currency: "USD",
-  description: "Office supplies",
+  // ... other order properties
 });
 
-// Close database connection when application exits
+// Close database connection when application exits (handled in main process)
 app.on("will-quit", () => {
   databaseService.close();
-});
-```
-
-### Transaction Example
-
-```typescript
-// Example of using transactions
-import { databaseService } from "../services/databaseService";
-
-// Using a transaction for batch operations
-databaseService.transaction((db) => {
-  // All operations here are part of the same transaction
-  const supplierId = db.insertSupplier({
-    name: "New Supplier Ltd",
-    email: "contact@newsupplier.com",
-  });
-
-  // Multiple orders for the same supplier
-  orders.forEach((order) => {
-    db.insertOrder({
-      supplier: "New Supplier Ltd",
-      orderNumber: order.number,
-      description: order.description,
-      value: order.value,
-    });
-  });
-
-  // Transaction will be committed if no errors occur
-  // or rolled back if any operation fails
 });
 ```
 
@@ -233,14 +205,11 @@ databaseService.transaction((db) => {
 
 Common issues and their solutions:
 
-1. **Database Locked**: Ensure all connections are properly closed after use
-2. **Corruption**: Use the built-in integrity check and restore from backup if needed
-3. **Performance Issues**: Check for missing indexes or inefficient queries
-4. **Disk Space**: Monitor available disk space for database and backup files
-5. **Version Conflicts**: Ensure all application instances use compatible database versions
+1. **Database Locked**: Ensure long operations use transactions appropriately. `better-sqlite3` is synchronous, reducing typical locking issues compared to async libraries.
+2. **Corruption**: If the database file is corrupt, the application may attempt to rename it. Manual intervention (deleting the corrupt file, restoring a backup manually, re-importing from Excel) might be necessary.
+3. **Performance Issues**: Check for missing indexes or potentially inefficient queries, although `better-sqlite3` is generally fast.
+4. **Disk Space**: Monitor available disk space for the `app.sqlite` database and the `backups` directory.
 
 ## Related Features
 
-- [Data Export](data-export.md) - Exporting data from the database
-- [Backup and Restore](backup-restore.md) - Backing up and restoring the database
-- [ODBC Integration](odbc-integration.md) - Integration with external databases
+- [Backup and Restore](#backup-and-recovery) - Details on the implemented automatic backup.

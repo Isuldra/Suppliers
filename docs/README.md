@@ -1,36 +1,21 @@
-# Supplier Reminder Pro - Documentation
+# SupplyChain OneMed - Documentation Hub
 
-Welcome to the complete documentation for Supplier Reminder Pro, the OneMed application for managing supplier reminders efficiently.
+Welcome to the central documentation hub for SupplyChain OneMed. This file provides links to the key guides and resources for installing, using, and developing the application.
 
-## Documentation Sections
+## Key Documentation Areas
 
-- [Installation Guide](installation/README.md) - Guide for installing and deploying the application
-- [User Guide](usage/README.md) - Instructions for using the application
-- [Development Guide](development/README.md) - Guide for developers working on the application
-- [API Reference](api/README.md) - Reference for application APIs
-- [Architecture Overview](architecture/README.md) - Overview of application architecture
-- [Features](features/README.md) - Detailed description of application features
-- [Troubleshooting](troubleshooting/README.md) - Solutions for common issues
+- **[Installation Guide](installation/installation-guide.md)**: Detailed steps for installing the application, including system requirements.
+- **[Features Overview](features/README.md)**: Descriptions of the application's core features and functionalities.
+- **Development Guides**:
+  - [CI/CD Pipeline](development/ci-cd-pipeline.md): Information on the continuous integration and deployment setup.
+  - [Publishing Updates](development/publishing-updates.md): Details on how application updates are managed and published.
 
-## Quick Links
+## About SupplyChain OneMed
 
-- [Installation for End Users](installation/end-user-installation.md)
-- [Installation for IT Administrators](installation/admin-installation.md)
-- [Portable Installation](installation/portable-installation.md)
-- [Getting Started for Users](usage/getting-started.md)
-- [Database Schema](architecture/database-schema.md)
-- [Auto-Update System](features/auto-updates.md)
-- [External Links Handling](features/external-links.md)
-- [Common Issues](troubleshooting/common-issues.md)
-- [Developer Setup](development/setup.md)
-- [Building and Releasing](development/building-and-releasing.md)
-
-## About Supplier Reminder Pro
-
-Supplier Reminder Pro is a desktop application built for OneMed to efficiently manage supplier reminders. It provides:
+SupplyChain OneMed is a desktop application built for OneMed to efficiently manage supplier data and interactions. It provides:
 
 - Tracking of outstanding orders
-- Automated email reminders to suppliers
+- Automated email communications to suppliers
 - Excel file import and validation
 - Local database storage
 - Customizable email templates

@@ -1,80 +1,78 @@
 # Order Tracking
 
-This document provides detailed information about the order tracking functionality in Supplier Reminder Pro.
+This document provides detailed information about the order tracking functionality in SupplyChain OneMed.
 
 ## Overview
 
-Order tracking is a core feature that allows users to monitor the status of orders placed with suppliers. This functionality provides visibility into order progress, due dates, and helps identify orders requiring follow-up.
+Order tracking is a core feature within the SupplyChain OneMed application that allows users to monitor the status of orders placed with suppliers, primarily focusing on whether an order is confirmed and its due date relative to the current date.
 
-## Order Data Structure
+## Order Data Structure (`orders` Table)
 
-The application tracks the following information for each order:
+The application tracks the following information for each order in the `orders` table:
 
-- **Order Number**: Unique identifier for the order
-- **Supplier**: Associated supplier
-- **Order Date**: When the order was placed
-- **Due Date**: Expected delivery date
-- **Value**: Monetary value of the order
-- **Currency**: Currency of the order value
-- **Description**: Order details
-- **Status**: Current status of the order
-- **Confirmation Status**: Whether the order has been confirmed by the supplier
-- **Metadata**: Creation and update timestamps
+- `id`: Primary key
+- `reference`: Order reference (optional)
+- `supplier`: Supplier name (required)
+- `orderNumber`: Order number (optional, unique per supplier)
+- `orderDate`: Date order was placed (stored as text)
+- `dueDate`: Expected delivery date (stored as text)
+- `category`: Order category (optional)
+- `description`: Order description (optional)
+- `value`: Monetary value (optional)
+- `currency`: Currency code (optional)
+- `confirmed`: Flag indicating if the order is confirmed (0 = no, 1 = yes)
+- `createdAt`: Timestamp when the record was created
+- `updatedAt`: Timestamp when the record was last updated
+- `email_sent_at`: Timestamp when the last reminder email was sent for this order (or related batch)
 
-## Order Status Types
+## Order Status (Display Logic)
 
-Orders can have the following statuses:
+While the database primarily tracks confirmation via the `confirmed` flag, the UI (`DataReview` component) computes a display status based on the `dueDate` relative to the current date:
 
-1. **Pending**: Order placed but not yet confirmed
-2. **Confirmed**: Order confirmed by supplier
-3. **In Progress**: Order being processed by supplier
-4. **Shipped**: Order has been shipped
-5. **Delivered**: Order has been received
-6. **Delayed**: Order is confirmed but delayed
-7. **Canceled**: Order has been canceled
-8. **On Hold**: Order is temporarily on hold
+1.  **Overdue**: `dueDate` is in the past.
+2.  **Critical**: `dueDate` is within the next 7 days.
+3.  **Normal**: `dueDate` is more than 7 days away.
+
+The previously documented statuses (Pending, In Progress, Shipped, etc.) are **not** currently stored or used in the application logic.
 
 ## Key Features
 
-### Order List View
+### Order List View (`DataReview.tsx`)
 
-The application provides a comprehensive order list with:
+The application provides an order review table with:
 
-- Sortable and filterable columns
-- Status color coding for quick identification
-- Due date highlighting (green, orange, red)
-- Grouping by supplier or status
-- Bulk action capabilities
+- **Displayed Columns**: Computed Status, Due Date, PO Number, Item Number, Description, Specification, Order Qty, Received Qty, Outstanding Qty, Date, Key.
+- **Sorting**: Columns are sortable via header clicks (powered by `@tanstack/react-table`).
+- **Filtering**:
+  - Quick filter buttons for computed status (All, Outstanding, Critical, Overdue, This Week).
+  - Date filtering component for the 'Date' column.
+  - Filtering is implicitly done by Supplier/Weekday based on the preceding wizard steps.
+  - Filtering by value range or full-text search is **not** currently implemented.
+- **Highlighting**:
+  - Status column is color-coded (Red/Orange/Green).
+  - Outstanding Qty is highlighted if > 0.
+- **Grouping / Bulk Actions**: Grouping rows or performing bulk actions (e.g., mark multiple as confirmed) is **not** currently implemented.
 
 ### Order Detail View
 
-When viewing a specific order, users can see:
-
-- Complete order information
-- Status history and changes
-- Communication history related to the order
-- Notes and comments
-- Attached documents or files
+A dedicated view for showing the detailed history, notes, or attachments for a single order is **not** currently implemented.
 
 ### Order Filtering and Searching
 
-Advanced filtering options include:
+Filtering capabilities within the `DataReview` component include:
 
-- Filter by status
-- Filter by supplier
-- Filter by date range (order date or due date)
-- Filter by value range
-- Full-text search across order details
+- Filter by computed status (via quick filter buttons).
+- Filter by Date Range (via `DateFilter` component).
+- Filtering by supplier/weekday is determined by wizard context.
+- Filtering by value range or full-text search is **not** currently implemented.
 
 ### Order Management Actions
 
-Users can perform the following actions on orders:
+From the context of the order data, the primary action supported is:
 
-- Mark as confirmed
-- Update status
-- Add notes or comments
-- Send reminder emails
-- Generate reports
+- **Mark as Confirmed**: Updates the `confirmed` flag for an order in the database (via `window.electron.markOrderAsConfirmed` or similar IPC call).
+- **Send Reminder Emails**: This action is available _after_ the `DataReview` step in the wizard, using the filtered data, not as a direct action on a single order row typically.
+- Updating to other statuses or adding notes/attachments is **not** currently implemented.
 
 ## Integration with Other Features
 
@@ -89,19 +87,14 @@ Order tracking integrates with other application features:
 
 ### Validation Rules
 
-The application enforces the following validation rules for order data:
-
-1. Order number is required
-2. Supplier association is required
-3. Order date and due date must be valid dates
-4. Order value must be a valid number
+Database constraints enforce some rules (e.g., supplier required, supplier/orderNumber unique). Specific input validation for dates/values may occur during import or editing (if editing is implemented).
 
 ### Data Storage
 
 Order information is stored in the local SQLite database:
 
-- Primary table: `orders`
-- Related tables: `order_history`, `order_notes`
+- Primary table: `orders`.
+- Related tables like `order_history` or `order_notes` are **not** currently used.
 
 ## Usage Examples
 
@@ -148,14 +141,18 @@ const SupplierOrders = ({ supplierName }) => {
 ### Marking an Order as Confirmed
 
 ```jsx
+// Example React code snippet
 const confirmOrder = async (supplier, orderNumber) => {
   try {
+    // Assumes an API function exposed via preload, e.g.:
+    // window.electron.markOrderAsConfirmed(supplier, orderNumber)
     const result = await window.electron.markOrderAsConfirmed(
       supplier,
       orderNumber
     );
 
     if (result) {
+      // Assuming the API returns true on success
       toast.success("Order marked as confirmed");
       refreshOrders(); // Function to refresh the order list
     } else {
@@ -180,10 +177,10 @@ const confirmOrder = async (supplier, orderNumber) => {
 
 Common issues and their solutions:
 
-1. **Missing Orders**: Check import errors or filter settings
-2. **Incorrect Status**: Verify status update process and permissions
-3. **Duplicate Orders**: Use unique order numbers and check import settings
-4. **Performance Issues**: Optimize database queries for large order volumes
+1. **Missing Orders**: Check Excel import details or the filters applied in the `DataReview` component.
+2. **Incorrect Status**: The display status is calculated based on `dueDate`. Verify the `dueDate` is correct in the data. The `confirmed` flag (0 or 1) is the stored confirmation status.
+3. **Duplicate Orders**: The database has a unique constraint on `(supplier, orderNumber)`. Check the source data for duplicates if import fails.
+4. **Performance Issues**: Should be minimal with current implementation, but ensure database indexes are present.
 
 ## Related Features
 

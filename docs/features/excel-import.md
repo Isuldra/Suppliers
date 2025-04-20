@@ -1,111 +1,93 @@
 # Excel Import
 
-This document provides detailed information about the Excel import functionality in Supplier Reminder Pro.
+This document provides detailed information about the Excel import functionality in SupplyChain OneMed.
 
 ## Overview
 
-Excel import is a core feature that allows users to upload supplier data from Excel spreadsheets. This functionality enables seamless integration of existing supplier information into the application.
+Excel import is a core feature that allows users to upload order and supplier status data from specific Excel spreadsheets. This functionality enables the primary workflow of loading data into the SupplyChain OneMed application for review and generating email reminders.
 
-## Supported File Formats
+## Supported File Format
 
-The application supports the following file formats:
+The application currently supports importing data only from:
 
-- .xlsx (Excel 2007 and newer)
-- .xls (Excel 97-2003)
-- .csv (Comma Separated Values)
+- **.xlsx** (Excel 2007 and newer) files via the drag-and-drop interface.
+
+_(Support for `.xls` or `.csv` is not currently enabled in the UI.)_
 
 ## Required Sheets and Fields
 
-The Excel import expects specific sheets and fields to be present in the uploaded file:
+The Excel import expects specific sheets and fields to be present in the uploaded `.xlsx` file:
 
-### Required Sheets
+### Required Sheets Check
 
-1. **Hovedliste** - Contains the main order information
-2. **BP** - Contains business partner information
+The application validates the presence of the following sheets:
 
-### Key Fields in Hovedliste
+1.  **Hovedliste**: Contains the main order information used throughout the wizard.
+2.  **BP**: Required for the file to be accepted, but **its data is not currently processed or stored** by the application.
 
-- Key/ID/Nummer - Unique identifier for the order
-- Supplier/Leverandør - Name of the supplier
-- PO/Purchase Order/Ordre - Purchase order number
-- Order Date - Date when order was placed
-- Due Date - Expected delivery date
-- Value - Order value
-- Description - Order description
+### Processed Sheets & Data Usage
 
-## Import Process
+- **Hovedliste**: Data from this sheet is parsed and used in the main wizard flow (Data Review, Email). It is likely saved to the `orders` table in the database.
+  - **Key Mapped Fields**: The parser attempts to map columns to internal fields using flexible header names (e.g., `key` from 'Key'/'ID'/'Nøkkel'/'A', `supplier` from 'Supplier'/'Leverandør'/'I', `poNumber` from 'PO'/'B', `itemNo` from 'Item No.'/'E', `description` from 'Item description'/'J', `specification` from 'Specification'/'K', `orderQty` from 'OrdQtyPO'/'O').
+- **Sjekkliste Leverandører \***: Any sheets starting with this name are processed _during initial database creation only_. Data (supplier, day, week, status, email) is extracted and stored in the `weekly_status` table.
 
-1. **File Selection**: User selects or drags an Excel file into the application
-2. **Validation**: The system validates the file format, required sheets, and fields
-3. **Processing**: Data is parsed and transformed into the application's data model
-4. **Error Handling**: Any validation errors are displayed to the user
-5. **Confirmation**: User reviews and confirms the data before final import
-6. **Database Storage**: Data is saved to the local database
+## Import Process (Wizard Flow)
+
+The import process follows these steps within the application's main wizard:
+
+1.  **File Selection (`FileUpload.tsx`)**: User drags or selects an `.xlsx` file.
+2.  **Parsing & Initial Validation (`FileUpload.tsx`)**:
+    - The application parses the `.xlsx` file using the `xlsx` library.
+    - It validates the file format (`.xlsx` only).
+    - It validates the presence of `Hovedliste` and `BP` sheets.
+    - It validates the presence of key column headers (`key`, `supplier`, `poNumber`) in `Hovedliste` using flexible matching.
+    - If initial validation fails, errors are shown via toast notifications.
+3.  **Wizard Progression**: If parsing and initial validation succeed, the parsed data (primarily from `Hovedliste`) is passed to the next steps of the wizard (Planner Selection, Weekday Selection, Supplier Selection).
+4.  **Data Review (`DataReview.tsx`)**: User reviews the filtered order data from `Hovedliste` for the selected supplier.
+5.  **Email Preparation (`EmailButton.tsx`)**: User proceeds to prepare an email reminder based on the reviewed data.
+6.  **Database Storage**:
+    - _Initial Import_: If the database file (`app.sqlite`) doesn't exist when the application starts, the `importAlleArk` function is called, which parses the selected Excel file and populates the `weekly_status` and `purchase_order` tables.
+    - _Subsequent Imports_: The `FileUpload.tsx` component calls `window.electron.saveOrdersToDatabase` after successful parsing, likely intended to update the `orders` table (requires verification of the handler logic).
 
 ## Validation Rules
 
-The application performs the following validations:
+The application performs the following validations primarily within the `FileUpload.tsx` component during parsing:
 
-1. File format check
-2. Required sheets check
-3. Column header identification (flexible matching with alternatives)
-4. Data type validation for critical fields
-5. Business rule validation (dates, values, etc.)
+1.  **File Format**: Checks if the dropped file is `.xlsx`.
+2.  **Required Sheets**: Checks for the existence of `Hovedliste` and `BP` sheets.
+3.  **Column Headers**: Checks for the presence of essential column headers (`key`, `supplier`, `poNumber`) in `Hovedliste` using alternative names.
+4.  _(Note: The `window.electron.validateData` IPC call mentioned in previous examples performs an unrelated ODBC check and is not part of the core Excel file validation.)_
 
 ## Error Handling
 
-When validation errors occur, the application:
+When parsing or initial validation errors occur:
 
-1. Displays detailed error messages
-2. Highlights problematic areas in the data
-3. Provides guidance on how to fix the issues
-4. Allows partial imports when possible
+1.  Error messages are displayed using toast notifications.
+2.  Detailed console logs may provide more information for debugging.
+3.  Highlighting problematic data within the file or allowing partial imports is **not** currently supported.
 
 ## Usage Example
 
-```javascript
-// React component example for file upload
-const handleFileUpload = async (file) => {
-  try {
-    setIsLoading(true);
-    const data = await parseExcelData(file);
-
-    // Validate the data
-    const validationResult = await window.electron.validateData(data);
-
-    if (validationResult.errors.length > 0) {
-      onValidationErrors(validationResult.errors);
-    } else {
-      onDataParsed(data);
-    }
-  } catch (error) {
-    console.error("Error processing Excel file:", error);
-    toast.error("Kunne ikke prosessere Excel-filen");
-  } finally {
-    setIsLoading(false);
-  }
-};
-```
+_(The previous code example involving `window.electron.validateData` was misleading regarding file validation and has been removed. The core logic involves the `useDropzone` hook and the internal `parseExcelData` and `validateExcelData` functions within `FileUpload.tsx`.)_
 
 ## Best Practices
 
-1. **Prepare Your Data**: Ensure your Excel file has properly named sheets and columns
-2. **Use Templates**: Whenever possible, use the provided Excel templates
-3. **Data Cleaning**: Clean your data before import to avoid validation errors
-4. **Test Small Batches**: For large datasets, test with a small batch first
-5. **Backup**: Always backup your data before performing large imports
+1.  **Use `.xlsx` Format**: Ensure your file is saved in the `.xlsx` format.
+2.  **Correct Sheets**: Verify the file contains sheets named exactly `Hovedliste` and `BP`.
+3.  **Consistent Headers**: Use clear and consistent headers in `Hovedliste` that match one of the expected alternatives (e.g., 'Leverandør' or 'Supplier').
+4.  **Manual Update**: **Crucially, ensure the data within the Excel file is up-to-date before uploading.** The application reads the file as-is and does not connect to external sources to refresh it.
+5.  **Backup**: Keep backups of your original Excel files.
 
 ## Troubleshooting
 
 Common issues and their solutions:
 
-1. **File Not Recognized**: Ensure you're using a supported file format
-2. **Missing Sheets**: Check that your file contains the required sheets
-3. **Column Not Found**: Verify column headers match expected names or alternatives
-4. **Data Type Errors**: Check for incorrect data types (e.g., text in number fields)
-5. **Import Timeout**: For very large files, try splitting into smaller files
+1.  **File Not Recognized**: Ensure you're uploading an `.xlsx` file.
+2.  **Missing Sheets Error**: Check that sheets named `Hovedliste` and `BP` exist in your workbook.
+3.  **Column Not Found Error**: Verify essential column headers (Supplier, PO Number, Key/ID) are present in `Hovedliste`.
+4.  **Parsing Errors**: The file might be corrupted, password-protected, or have an unusual internal structure. Try resaving the file in Excel.
 
 ## Related Features
 
-- [Supplier Management](supplier-management.md) - Managing imported supplier data
-- [Order Tracking](order-tracking.md) - Tracking orders imported from Excel
+- [Order Tracking](order-tracking.md) - Displays data imported from the `Hovedliste` sheet.
+- [Database Storage](database-storage.md) - Describes where imported data is stored.
