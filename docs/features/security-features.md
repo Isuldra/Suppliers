@@ -1,63 +1,56 @@
 # Security Features
 
-This document provides detailed information about the security features implemented in Supplier Reminder Pro.
+This document provides detailed information about the security features implemented in SupplyChain OneMed.
 
 ## Overview
 
-Security is a fundamental aspect of Supplier Reminder Pro, ensuring that sensitive business data is protected while maintaining usability. The application implements multiple layers of security based on Electron security best practices and industry standards.
+Security is a fundamental aspect of SupplyChain OneMed, ensuring that sensitive business data is protected while maintaining usability. The application implements multiple layers of security based on Electron security best practices and industry standards, although some configurations deviate from default recommendations.
 
 ## Electron Security Measures
 
-### Context Isolation
+### Context Isolation & Node Integration
 
-The application implements strong context isolation between processes:
+The application implements key process isolation features:
 
-- **Main Process Isolation**: Core application logic runs in the isolated main process
-- **Renderer Process Isolation**: UI components run in a sandboxed renderer process
-- **Preload Scripts**: Controlled interface between processes with explicit API exposure
-- **Secure IPC Communication**: Validated message passing between processes
+- **Context Isolation (`contextIsolation: true`)**: Enabled in `webPreferences`, ensuring preload scripts run in a separate context from the renderer.
+- **Node Integration Disabled (`nodeIntegration: false`)**: Enabled in `webPreferences`, preventing the renderer process from directly accessing Node.js APIs.
+- **Preload Scripts & Context Bridge**: A preload script (`src/preload/index.ts`) uses `contextBridge` to securely expose a limited, well-defined API (`window.electron`) to the renderer process.
+- **Secure IPC Communication**: The preload script includes validation (`validSendChannels`, `validReceiveChannels`) to ensure only explicitly allowed IPC channels are used for communication between processes.
 
-### Node Integration Controls
+### Sandbox
 
-To prevent unauthorized script execution:
+- **Sandbox Disabled (`sandbox: false`)**: Note that the Electron sandbox is currently **disabled** in the `webPreferences`. While potentially necessary for certain integrations, this reduces the process isolation compared to the recommended default (`sandbox: true`) and increases the potential impact of a compromised renderer process. Enabling the sandbox is a recommended future enhancement (see `docs/planning/planned-features.md`).
 
-- **Node Integration Disabled**: Renderer process cannot directly access Node.js APIs
-- **Preload Context Bridge**: Exposes only whitelisted APIs to renderer
-- **IPC Channel Validation**: Only predefined channels are allowed for communication
-- **API Surface Minimization**: Limited, well-defined API for renderer process
+### Content Security Policy (CSP)
 
-### Content Security Policy
-
-The application enforces strict Content Security Policy (CSP) rules:
+A strict Content Security Policy (CSP) is defined in the main process (`src/main/main.ts`):
 
 ```javascript
+// Defined cspPolicy object
 const cspPolicy = {
   "default-src": ["'self'"],
   "script-src": ["'self'"],
-  "style-src": ["'self'", "'unsafe-inline'"],
-  "img-src": ["'self'", "data:"],
+  "style-src": ["'self'", "'unsafe-inline'"], // 'unsafe-inline' might be needed for some UI libraries
+  "img-src": ["'self'", "data:", "blob:"], // Added blob: for potential image operations
   "font-src": ["'self'"],
-  "connect-src": ["'self'"],
-  "worker-src": ["'self'"],
+  "connect-src": ["'self'"], // Restricts fetch/XHR/WebSockets
+  "worker-src": ["'self'", "blob:"], // Added blob: for potential worker usage
   "object-src": ["'none'"],
-  "frame-src": ["'none'"],
+  "frame-src": ["'none'"], // Disallows embedding frames
 };
 ```
 
-These policies prevent:
-
-- Cross-site scripting (XSS) attacks
-- Data injection attacks
-- Loading of remote resources
-- Execution of unsanctioned scripts
+**CSP Application Note:** The CSP header application currently occurs within the `createWindow` function (`cspListener`), separate from where other security headers are applied (`securityHeadersListener` in `app.whenReady`). This approach might lead to unexpected behavior or conflicts. Consolidating all security header application into a single `onHeadersReceived` listener is recommended (see `docs/planning/planned-features.md`).
 
 ### Secure Headers
 
-Additional HTTP security headers are implemented:
+Additional HTTP security headers are applied via `session.defaultSession.webRequest.onHeadersReceived` (`securityHeadersListener` in `src/main/main.ts`):
 
-- **X-Content-Type-Options**: `nosniff` to prevent MIME type sniffing
-- **X-Frame-Options**: `SAMEORIGIN` to prevent clickjacking
-- **X-XSS-Protection**: `1; mode=block` to enable browser XSS filters
+- **X-Content-Type-Options**: `nosniff`
+- **X-Frame-Options**: `SAMEORIGIN`
+- **X-XSS-Protection**: `1; mode=block`
+
+These headers provide additional protection against MIME type sniffing and clickjacking.
 
 ## Data Security
 
@@ -65,99 +58,64 @@ Additional HTTP security headers are implemented:
 
 Data stored locally is protected through:
 
-- **Database Encryption**: Optional database encryption using SQLCipher
-- **Secure Storage Location**: Application data stored in protected OS locations
-- **Permission Controls**: Appropriate file permissions for database files
-- **Data Minimization**: Only necessary data is stored locally
+- **Secure Storage Location**: Application data (including the SQLite database) is stored in standard protected OS user data directories.
+- **SQLite Database**: Uses `better-sqlite3` which operates on local files.
+- **Database Encryption**: Database encryption (e.g., via SQLCipher) is **not currently implemented**.
 
 ### Sensitive Data Handling
 
-- **Memory Management**: Sensitive data cleared from memory when no longer needed
-- **Input Validation**: All user inputs validated before processing
-- **Parameter Binding**: SQL query parameters properly bound to prevent injection
-- **Data Sanitization**: Input and output data sanitized to prevent injection attacks
-
-### External Communication
-
-- **URL Validation**: All external URLs validated before opening
-- **Email Content Sanitization**: Email content validated and sanitized
-- **Limited Network Access**: Only required network connections are allowed
-- **Open External Links**: Safely open links in the default browser
+- **Input Validation**: Basic validation occurs in places (e.g., IPC handlers), but comprehensive validation/sanitization should be reviewed.
+- **Parameter Binding**: SQL queries use `better-sqlite3` prepared statements, which correctly handle parameter binding to prevent SQL injection.
+- **External Communication URL Validation**: The `openExternalLink` handler currently does **not** perform explicit URL validation before passing to `shell.openExternal`.
 
 ## Application Integrity
 
 ### Code Signing
 
-- **Application Signing**: Executable files digitally signed for verification
-- **Certificate Validation**: Certificate chain validated during updates
-- **Tamper Protection**: Prevents modification of application files
+- **Configuration**: The `package.json` includes configuration for code signing (`build.win.publisherName`). Actual signing occurs during the build/release process.
 
 ### Update Security
 
-- **Secure Update Channel**: Updates delivered through secure HTTPS
-- **Update Verification**: Digital signatures verified before applying updates
-- **Staged Updates**: Updates downloaded and verified before installation
-- **Rollback Capability**: Ability to revert to previous versions if needed
+- **Mechanism**: Uses `electron-updater`.
+- **Verification**: `electron-updater` automatically verifies the digital signature of downloaded updates if the publisher information is correctly configured in the build.
+- **Channel Security**: Since updates are published manually, the security of the download channel depends on where the artifacts (`latest.yml`, installers) are hosted.
 
 ### Error and Exception Handling
 
-- **Graceful Degradation**: Application handles errors without exposing sensitive information
-- **Exception Catching**: Comprehensive try/catch blocks to prevent crashes
-- **Error Logging**: Errors logged without sensitive information
-- **User Feedback**: Clear error messages without exposing system details
+- **Basic Handling**: `try/catch` blocks are used in various places (e.g., IPC handlers, database service).
+- **Logging**: Errors are logged using `electron-log`.
 
 ## Audit and Logging
 
-### Comprehensive Logging
+### Logging Implementation
 
-- **Activity Logging**: Key user actions logged for audit purposes
-- **Log Rotation**: Logs rotated to prevent excessive disk usage
-- **Log Protection**: Logs stored in protected locations
-- **Sensitive Data Filtering**: Sensitive information redacted from logs
-
-### Monitoring Capabilities
-
-- **Error Monitoring**: Application errors tracked and categorized
-- **Performance Monitoring**: Resource usage monitored to detect anomalies
-- **Security Event Logging**: Security-related events specifically logged
-- **Threshold Alerts**: Configurable thresholds for security events
+- **General Logging**: Uses `electron-log` for application events and errors.
+- **Database Audit Log**: The `DatabaseService` includes a `logOperation` method that writes basic CRUD actions (insert, update, delete) on certain tables to an `audit_log` table within the SQLite database.
+- **Log Protection/Rotation**: Advanced features like automatic log rotation or redaction rely on `electron-log`'s capabilities and configuration (currently basic file logging is set up).
 
 ## Operational Security
 
 ### Installation and Deployment
 
-- **Silent Installation**: Support for silent installation in enterprise environments
-- **Deployment Options**: Multiple deployment options with varying security levels
-- **Minimal Permissions**: Application operates with minimal system permissions
-- **User Account Control**: Respects Windows UAC for privileged operations
-
-### Configuration Management
-
-- **Secure Defaults**: Security-focused default configuration
-- **Configuration Validation**: All configuration changes validated
-- **Tamper-Resistant Settings**: Critical security settings protected from modification
-- **Configuration Backup**: Secure backup and restore of configuration settings
+- **Build Targets**: Builds produce standard installers (MSI, NSIS - configured for current user), portable versions, and DMG (macOS).
+- **Permissions**: Application generally runs with standard user permissions.
 
 ## Implementation Details
 
 ### Secure IPC Example
 
-```typescript
-// In main process (secure IPC validation)
-ipcMain.handle("openExternalLink", async (event, url) => {
-  // Validate URL format and safety
-  if (!url || typeof url !== "string" || !isValidUrl(url)) {
-    return { success: false, error: "Invalid URL format" };
-  }
+The pattern used involves defining handlers in the main process and exposing limited functions via `contextBridge` in the preload script.
 
+```typescript
+// In main process (Example: Actual openExternalLink handler)
+ipcMain.handle("openExternalLink", async (_, url: string) => {
+  // Note: No explicit validation here in current code
   try {
-    // Open URL safely in default browser
-    await shell.openExternal(url, {
-      activate: true,
-      workingDirectory: process.cwd(),
-    });
+    await shell.openExternal(url);
     return { success: true };
   } catch (error) {
+    // Error handling exists
+    log.error(`Error opening external link ${url}:`, error);
     return {
       success: false,
       error: error instanceof Error ? error.message : "Unknown error",
@@ -167,32 +125,45 @@ ipcMain.handle("openExternalLink", async (event, url) => {
 
 // In preload script (context bridge implementation)
 contextBridge.exposeInMainWorld("electron", {
-  // Only expose specific functions
+  // Only expose specific functions checked against validSendChannels/validReceiveChannels
   openExternalLink: (url) => ipcRenderer.invoke("openExternalLink", url),
-  // Other safe APIs...
+  // Other safe APIs exposed...
 });
 ```
 
-### Content Security Policy Implementation
+### Content Security Policy & Headers Implementation
 
 ```typescript
-// In main process
-session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+// In main process (Simplified - showing the two separate listeners)
+
+// Listener in app.whenReady() for security headers
+securityHeadersListener = (details, callback) => {
   callback({
     responseHeaders: {
       ...details.responseHeaders,
-      "Content-Security-Policy": [
-        Object.entries(cspPolicy)
-          .map(([key, values]) => `${key} ${values.join(" ")}`)
-          .join("; "),
-      ],
       "X-Content-Type-Options": ["nosniff"],
       "X-Frame-Options": ["SAMEORIGIN"],
       "X-XSS-Protection": ["1; mode=block"],
     },
   });
-});
+};
+session.defaultSession.webRequest.onHeadersReceived(securityHeadersListener);
+
+// Listener in createWindow() for CSP
+cspListener = (details, callback) => {
+  callback({
+    responseHeaders: {
+      ...details.responseHeaders,
+      "Content-Security-Policy": [
+        /* Generated CSP string */
+      ],
+    },
+  });
+};
+session.defaultSession.webRequest.onHeadersReceived(cspListener);
 ```
+
+_Note: This separation is potentially problematic; consolidation is recommended._
 
 ## Best Practices for Users
 

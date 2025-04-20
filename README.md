@@ -1,6 +1,6 @@
-# Supplier Reminder Pro - OneMed Application
+# SupplyChain OneMed - OneMed Application
 
-This project is a desktop application implementing OneMed's design system, built for managing supplier reminders efficiently.
+This project is a desktop application implementing OneMed's design system, built for managing supplier data and interactions efficiently. It uses Electron, React, TypeScript, and Tailwind CSS.
 
 ## Contents
 
@@ -11,8 +11,8 @@ This project is a desktop application implementing OneMed's design system, built
 - [SQLite Database](#sqlite-database)
 - [Customization](#customization)
 - [Electron Integration](#electron-integration)
-- [Development Tools](#development-tools)
 - [Security](#security)
+- [Development Tools](#development-tools)
 - [External Link Handling](#external-link-handling)
 - [Deployment & Installation](#deployment--installation)
 - [Automatic Updates](#automatic-updates)
@@ -44,40 +44,34 @@ OneMed's design system is based on the following core principles:
 
 ## Implementation
 
-This project implements the design system using:
+This application implements the OneMed design system using:
 
 - **Tailwind CSS** with customized configuration
 - **React** for component-based UI
-- **Electron** for desktop application framework
+- **Electron** for the desktop application framework
 - **TypeScript** for type safety
 - **CSS variables** for consistent styling
 - **Component-based architecture** for reusability
-- **Responsive design** for different window sizes
+- **Responsive design** for adapting to different window sizes
 
 ## Getting Started
 
-To use this implementation in your environment:
+To set up the development environment for this application:
 
-1. Clone this repository
-2. Install dependencies:
+1. Clone this repository.
+2. Install dependencies using npm:
 
 ```bash
 npm install
 ```
 
-3. Start the development environment:
+3. Start the development server:
 
 ```bash
 npm run dev
 ```
 
-4. For development without Node.js warnings:
-
-```bash
-npm run dev:no-warnings
-```
-
-5. Build for production:
+4. Build the application for production:
 
 ```bash
 npm run build
@@ -87,17 +81,19 @@ npm run build
 
 On the very first launch after installation, the application needs to initialize its local database. You will be prompted to select the master supplier data Excel file (.xlsx). This file is processed using `exceljs` (no external ODBC drivers needed) to populate the initial dataset.
 
-Ensure the Excel file is up-to-date before selecting it.
+Ensure the Excel file is up-to-date before selecting it. The application expects specific column headers for correct data mapping.
 
 ### Development
 
-Start the development environment:
+Start the development environment using the following command:
 
 ```bash
 npm run dev
 ```
 
 ## Component Usage
+
+This section provides examples of common UI components based on the OneMed design system.
 
 ### Buttons
 
@@ -131,9 +127,9 @@ npm run dev
 
 ### Current Components
 
-The application includes specialized components for supplier reminder management:
+The application includes specialized React components for managing supplier interactions and data:
 
-- `DataReview` - For reviewing supplier data
+- `DataReview` - For reviewing imported supplier data.
 - `SupplierSelect` - For selecting suppliers
 - `WeekdaySelect` - For selecting weekdays for reminders
 - `PlannerSelect` - For selecting planners
@@ -141,27 +137,25 @@ The application includes specialized components for supplier reminder management
 - `EmailPreviewModal` - For previewing reminder emails
 - `EmailButton` - For email actions
 - `DateFilter` - For filtering by date
-- `FileUpload` - For importing supplier data
+- `FileUpload` - For importing supplier data from Excel files.
 
 ## Customization
 
-All styling variables are defined in:
+Application styling can be customized via:
 
-1. The Tailwind config file (`tailwind.config.js`) for Tailwind CSS usage
-2. CSS variables in `src/renderer/styles/index.css` for direct CSS usage
-
-You can easily change colors and other variables to customize the appearance of your application while maintaining consistency with OneMed's design system.
+1. The Tailwind config file (`tailwind.config.js`) for utility classes.
+2. CSS variables defined in `src/renderer/styles/index.css` for direct CSS usage.
 
 ## SQLite Database
 
-The application uses SQLite for local data persistence, implemented with the `better-sqlite3` library for high performance and reliability.
+The application utilizes SQLite for local data persistence, chosen for its simplicity and file-based nature suitable for desktop applications. It uses the `better-sqlite3` library for synchronous, high-performance database operations.
 
 ### Database Architecture
 
 - **Location**: The database file (`app.sqlite`) is stored in the application's user data directory (`app.getPath('userData')`).
-- **Schema**: Includes tables for orders (`orders`), weekly status (`weekly_status`), purchase orders (`purchase_order`), and audit logs (`audit_log`). See `src/services/databaseService.ts` for details.
-- **Initialization**: On first run, data is imported from a user-selected Excel file using `exceljs`.
-- **Connection Mode**: Uses Write-Ahead Logging (WAL) mode for better performance and reliability.
+- **Schema**: Includes tables for orders (`orders`), weekly status (`weekly_status`), purchase orders (`purchase_order`), and audit logs (`audit_log`). See `src/services/databaseService.ts` for the detailed schema definition.
+- **Initialization**: On the first application run, the database schema is created, and initial data is imported from a user-selected Excel file (`.xlsx`) using the `exceljs` library.
+- **Connection Mode**: Uses Write-Ahead Logging (WAL) mode (`PRAGMA journal_mode=WAL;`) for improved concurrency and performance, allowing reads and writes to occur simultaneously more effectively.
 
 ### Database Service
 
@@ -174,7 +168,7 @@ import { databaseService } from "../services/databaseService";
 
 ### Table Structure
 
-The database includes the following table:
+The core database table for managing order data is:
 
 **orders**
 
@@ -195,7 +189,7 @@ The database includes the following table:
 
 ### Available Methods
 
-The database service provides the following key methods:
+The `DatabaseService` class provides methods for interacting with the database:
 
 ```typescript
 // Insert or update a single order
@@ -214,19 +208,19 @@ const allOrders = databaseService.getAllOrders();
 const upcomingOrders = databaseService.getOrdersDueWithinDays(30);
 
 // Get outstanding (unconfirmed) orders for a supplier
-const outstandingOrders = databaseService.getOutstandingOrders("Supplier Name");
+const outstandingOrders = databaseService.getOutstandingOrders("Example Corp");
 
 // Mark an order as confirmed
 const success = databaseService.markOrderAsConfirmed(
-  "Supplier Name",
-  "OrderNumber"
+  "Example Corp",
+  "OrderNumber123" // Use a specific example order number
 );
 
 // Record email sent for specific orders
 const updatedCount = databaseService.recordEmailSent([orderId1, orderId2]);
 
 // Delete an order
-const deleted = databaseService.deleteOrder("Supplier Name", "OrderNumber");
+const deleted = databaseService.deleteOrder("Example Corp", "OrderNumber123"); // Use a specific example order number
 
 // Close database connection
 databaseService.close();
@@ -234,20 +228,26 @@ databaseService.close();
 
 ### Renderer Process API
 
-For accessing the database from the renderer process (React components), use the database API:
+To access database operations from the React frontend (renderer process), the application uses Electron's IPC (Inter-Process Communication) mechanism. Preload scripts expose a secure `databaseAPI` object:
 
 ```typescript
-import { databaseAPI } from "../renderer/api/database";
+import { databaseAPI } from "../renderer/api/database"; // Path depends on file location
 
-// Example usage in a React component
+// Example usage within a React component
 useEffect(() => {
   async function loadOrders() {
-    const orders = await databaseAPI.getOrdersBySupplier("Acme Inc");
-    setOrders(orders);
+    try {
+      // Make an asynchronous call to the main process via the exposed API
+      const orders = await databaseAPI.getOrdersBySupplier("Example Corp");
+      setOrders(orders); // Update component state
+    } catch (error) {
+      console.error("Failed to load orders:", error);
+      // Handle error appropriately in the UI
+    }
   }
 
   loadOrders();
-}, []);
+}, []); // Empty dependency array ensures this runs once on mount
 ```
 
 ### Database Integration with Main Process
@@ -273,244 +273,139 @@ app.whenReady().then(() => {
 
 ### Example Usage
 
-Example of using the database service in the main process:
+Here is a basic example of using the `DatabaseService` directly within the Electron main process:
 
 ```typescript
-// Import the service
-import { databaseService } from "../services/databaseService";
-import { ExcelRow } from "../types/ExcelRow";
+// ... existing code ...
+// Get orders for the specified supplier
+const orders = databaseService.getOrdersBySupplier("Example Corp");
+console.log(`Found ${orders.length} orders for Example Corp.`);
 
-// Example order data
-const order: ExcelRow = {
-  supplier: "Acme Inc",
-  orderNumber: "ORD-001",
-  orderDate: new Date("2023-05-15"),
-  dueDate: new Date("2023-06-15"),
-  description: "Office supplies",
-  value: 1200.5,
-  currency: "USD",
-  confirmed: false,
-};
-
-// Insert order into database
-const orderId = databaseService.insertOrUpdateOrder(order);
-
-// Get orders for supplier
-const orders = databaseService.getOrdersBySupplier("Acme Inc");
+// Remember to close the database connection when the application shuts down
+// This is typically handled in the main process cleanup logic
+// databaseService.close();
 ```
-
-For a complete example, see the `src/examples/databaseUsageExample.ts` file.
 
 ## Electron Integration
 
-The application is built as an Electron desktop app with:
+This application is packaged as a cross-platform desktop application using Electron. Key aspects include:
 
-- Cross-platform compatibility (macOS and Windows)
-- Native desktop functionality
-- File system integration
-- Email sending capabilities
-- Local database storage
-
-## Development Tools
-
-- **Testing**: Vitest for unit and component testing
-- **Linting**: ESLint for code quality
-- **Type Checking**: TypeScript for type safety
-- **Build**: Electron-Vite for optimized builds
+- **Cross-platform Compatibility**: Builds available for macOS and Windows.
+- **Native Features**: Access to file system, native menus, and notifications.
+- **Local Data**: Secure local storage using SQLite.
+- **Email**: Capability to interact with the default email client.
 
 ## Security
 
-The application has been built with security best practices for Electron applications:
+The application incorporates security best practices relevant to Electron development.
 
 ### Electron Security Measures
 
-- **Context Isolation**: Enabled to prevent direct access to Node.js APIs from the renderer process
-- **Node Integration**: Disabled to prevent malicious scripts from accessing Node.js
-- **Web Security**: Always enabled, even in development mode
-- **Content Security Policy (CSP)**: Implemented to restrict resource loading and script execution
-- **Secure Headers**: Added X-Content-Type-Options, X-Frame-Options, and X-XSS-Protection
+- **Context Isolation**: Enabled (`contextIsolation: true`) to separate preload scripts and the renderer process, preventing direct access to Node.js APIs.
+- **Node Integration**: Disabled (`nodeIntegration: false`).
+- **Web Security**: Enabled.
+- **Content Security Policy (CSP)**: Implemented via `session.defaultSession.webRequest.onHeadersReceived` to restrict resource loading and script execution.
+- **Secure Headers**: Includes `X-Content-Type-Options`, `X-Frame-Options`, etc.
+- **Permissions**: Use Electron's permission request handlers (`ses.setPermissionRequestHandler`) to explicitly grant/deny access to sensitive OS-level capabilities only when required.
+- **External Links**: Opened securely in the default browser via `shell.openExternal()`.
 
 ### Database Security
 
-- **SQLite WAL Mode**: Uses Write-Ahead Logging for better data integrity and crash recovery
-- **Prepared Statements**: All SQL queries use parameterized queries to prevent SQL injection
-- **Database Audit Logging**: Records all critical database operations
-- **Automatic Backups**: Configurable database backup system with retention policy
-- **Clean Shutdown**: Ensures database connections are properly closed when the app exits
+- **SQLite WAL Mode**: Enhances data integrity and crash recovery.
+- **Prepared Statements**: All database queries use parameterized statements (`better-sqlite3`) to prevent SQL injection.
+- **Database Audit Logging**: An `audit_log` table records critical operations.
 
 ### Error Handling and Monitoring
 
-- **Comprehensive Logging**: Uses `electron-log` for structured logging of operations and errors to `supplier-reminder-app.log` located in the app\'s user data directory (`app.getPath(\'userData\')`/logs).\
-- **Accessing Logs**: \
-  - **Open Log Folder:** The application provides an option (e.g., via Help menu > \"Vis logger\") to directly open the log file directory in the system\'s file explorer (`shell.openPath`). This gives access to the current log (`supplier-reminder-app.log`), rotated logs (`.old`), and database backups.\
-  - **View Recent Logs In-App:** An IPC handler (`read-log-tail`) is available to retrieve the last N lines (default 200) of the current log file for display within the application UI (e.g., in a modal).\
-  - **Send Logs to Support:** Functionality exists to compose an email to support, attempting to attach the log file automatically (primarily on Windows with Outlook) or providing the path for manual attachment.\
-- **Graceful Shutdown**: Handles application termination safely to prevent data corruption.\
-- **Resource Cleanup**: Ensures all resources are released during app closure.\n\
-  \
+- **Comprehensive Logging**: Uses `electron-log`. Logs stored in `app.getPath('userData')/logs` (e.g., `%APPDATA%\one-med-supplychain-app\logs`).
+- **Log Access**: Menu option to open log folder (`shell.openPath`); IPC handler to potentially view recent logs in-app.
+- **Graceful Shutdown**: Handles `before-quit` to close DB connections cleanly.
 
-### Best Practices Implemented\n\
+### Dependencies
 
-To maintain security, ensure you always:
+- Regularly audit project dependencies (`npm audit`) and keep them updated.
 
-1. Keep the application and its dependencies updated
-2. Test thoroughly after any security-related changes
-3. Follow the principle of least privilege when adding features
-4. Regularly back up the database file
+## Development Tools
+
+- **Testing**: Vitest for unit and component testing.
+- **Linting/Formatting**: ESLint / Prettier (`npm run lint`).
+- **Type Checking**: TypeScript (`npm run typecheck`).
+- **Build**: Electron-Vite (`npm run build`).
+- **Debugging**: Standard Electron & React DevTools.
 
 ## External Link Handling
 
-The application includes a secure system for opening external links, which is particularly important for:
-
-- Opening documentation links in the user's default browser
-- Launching email clients with pre-filled support request templates
-- Ensuring platform-specific compatibility
-
-### Security Features
-
-- **URL Validation**: All URLs are validated before opening
-- **Platform-Specific Handling**: Special handling for Windows when dealing with mailto: links
-- **Comprehensive Error Handling**: Detailed error messages for troubleshooting
-- **Fallback Mechanisms**: UI provides alternatives when links cannot be opened
-
-### Usage in UI Components
-
-The external link handler is used in several UI components:
-
-- Help menus for documentation access
-- Support buttons for contacting support
-- File upload components for accessing documentation
-
-### Implementation
-
-The functionality is implemented through a secure IPC channel between the renderer and main processes:
-
-```typescript
-// From renderer (React component)
-window.electron.openExternalLink("https://example.com").then((result) => {
-  if (!result.success) {
-    // Handle error
-  }
-});
-
-// In main process (Electron)
-ipcMain.handle("openExternalLink", async (_, url: string) => {
-  // Validation and security checks
-  await shell.openExternal(url);
-});
-```
+For security, all external web links clicked within the application are intercepted and opened using the operating system's default web browser via Electron's `shell.openExternal()` function. This prevents loading external web content directly within the application's windows.
 
 ## Deployment & Installation
 
-The application can be built and deployed as a standalone desktop application for Windows, macOS, and Linux.
+Refer to the following dedicated documents for detailed procedures:
 
-### Building the Application
+- `docs/installation/end-user-installation.md`: Instructions for end-users on installing the application.
+- `docs/development/ci-cd-pipeline.md`: Information on the Continuous Integration setup using GitHub Actions.
+- `docs/development/publishing-updates.md`: Details on how application updates are built and manually published.
 
-To build the application for distribution:
+### Windows Installer Examples
+
+To perform a silent installation on Windows:
+
+```powershell
+# Install for current user only (No Admin Rights Needed)
+.\"OneMed SupplyChain-1.0.1.exe" /S /CURRENTUSER
+
+# Install for all users (Requires Admin Rights & build config change)
+# .\"OneMed SupplyChain-1.0.1.exe" /S /ALLUSERS
+```
+
+_(Replace 1.0.1 with the specific application version number.)_
+
+### macOS Installation Example
+
+A standard `.dmg` disk image is typically provided.
 
 ```bash
-# Build for all platforms
-npm run dist
-
-# Build only for Windows
-npm run dist:win
+# Example manual command-line steps for installing from DMG
+hdiutil attach "OneMed SupplyChain-1.0.1.dmg"
+sudo cp -R "/Volumes/OneMed SupplyChain/OneMed SupplyChain.app" /Applications/
+hdiutil detach "/Volumes/OneMed SupplyChain"
 ```
 
-### Windows Silent Installation
-
-The Windows installer supports silent installation, which is ideal for enterprise deployment. This allows IT administrators to deploy the application without user interaction.
-
-For detailed deployment instructions, see the [Deployment Guide](resources/DEPLOYMENT.md).
-
-#### Quick Silent Installation Commands
-
-Using PowerShell:
-
-```powershell
-# Install silently with default options
-Start-Process -Wait -FilePath "Supplier-Reminder-Pro-1.0.0-setup.exe" -ArgumentList "/S"
-
-# Install to a custom directory
-Start-Process -Wait -FilePath "Supplier-Reminder-Pro-1.0.0-setup.exe" -ArgumentList "/S /D=D:\CustomPath"
-```
-
-Using the provided deployment scripts:
-
-```powershell
-# Using the PowerShell script
-.\resources\silent-install.ps1 -InstallerPath "path\to\installer.exe"
-
-# Using the batch wrapper (automatically handles elevation)
-.\resources\silent-install.bat -installer "path\to\installer.exe"
-```
-
-### Enterprise Deployment
-
-For enterprise environments, the application supports:
-
-1. **Group Policy Deployment** - Deploy via GPO using the silent installation options
-2. **Remote Installation** - Deploy remotely using PowerShell remoting
-3. **Installation Verification** - Scripts to verify successful installation
-4. **Customizable Installation** - Modify installation parameters as needed
-
-For more details on enterprise deployment scenarios, refer to the [Deployment Guide](resources/DEPLOYMENT.md).
+_(Replace 1.0.1 with the specific version. Silent deployment usually involves MDM.)_
 
 ## Automatic Updates
 
-Supplier Reminder Pro includes an automatic update system that allows users to receive updates without reinstalling the application. The update system works differently depending on how the application was installed.
+The application uses `electron-updater` to check for and download updates **once they have been manually published** to GitHub Releases (see `docs/development/publishing-updates.md`).
 
-### How Automatic Updates Work
+### Update Process
 
-1. **Update Detection**: The application checks for updates:
+1.  **Check**: Application checks for updates on startup and periodically (if configured).
+2.  **Download**: If a newer version is found on GitHub Releases, it's downloaded.
+3.  **Prompt**: User is prompted to restart to apply the update.
 
-   - At startup (after a 10-second delay)
-   - Every hour while the application is running
-   - When manually triggered by the user
+### Configuration (`package.json`)
 
-2. **Update Process**:
-
-   - When an update is available, users are notified
-   - Updates are downloaded automatically in the background
-   - Users can choose to install updates immediately or later
-
-3. **Installation Requirements**:
-   - **MSI Installation (User Level)**: Updates can be installed without administrator rights
-   - **NSIS Installation**: Updates may require administrator rights depending on installation type
-   - **Portable Version**: Updates can be installed without administrator rights
-
-### Update Configuration
-
-Updates are distributed through the GitHub repository configured in `package.json`:
+The `electron-builder` configuration within `package.json` influences the update process. While `build.publish` is set to `null` (disabling automatic publishing by the builder), `electron-updater` implicitly uses GitHub as the source when running from a packaged app built with appropriate repository information.
 
 ```json
-"publish": [
-  {
-    "provider": "github",
-    "owner": "Isuldra",
-    "repo": "Suppliers"
+{
+  // ... other package.json fields ...
+  "build": {
+    "appId": "com.onemed.supplychain",
+    "productName": "OneMed SupplyChain",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/your-org/your-repo.git" // Replace with actual repo URL
+    },
+    "publish": null // Correctly set for manual publishing
+    // ... other build configurations ...
   }
-]
+}
 ```
 
-### Creating Application Updates
+**Key Points for Manual Updates:**
 
-To release an update for users:
+- Ensure the `repository` field in `package.json` points to the correct GitHub repository where releases are manually created.
+- Manually upload the correct artifacts (installer `.exe`, `latest.yml`, portable `.exe`, etc.) to a new GitHub Release (as described in `publishing-updates.md`).
+- `electron-updater` will check the repository specified in `package.json` (via the `repository` field or other heuristics) for a `latest.yml` file on the Releases page to determine if an update is available.
 
-1. Increment the version number in `package.json`
-2. Build and test the application locally
-3. Run the release command to publish the update:
-
-```bash
-npm run release
-```
-
-This will:
-
-- Build the application
-- Create installers
-- Publish the release to GitHub
-- Tag the release with the version number
-
-### Manual Update Check
-
-Users can manually check for updates through the application's Help menu or Settings panel.
+**Security Note:** If the repository is private, `electron-updater` might require a `GITHUB_TOKEN` to access the release assets. This token should **never** be hardcoded but provided securely during the build process if needed (e.g., via environment variables in CI, though this is less relevant for purely manual publishing).

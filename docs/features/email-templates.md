@@ -1,566 +1,141 @@
-# Email Templates
+# Email Templates (Current Implementation)
 
-This document provides detailed information about the email templates functionality in Supplier Reminder Pro.
+This document describes the current, simplified email templating system used in SupplyChain OneMed for sending supplier reminder emails.
+
+**Note:** This implementation differs significantly from potentially planned future enhancements. For desired future features like a database-backed template editor, custom helpers, categories, etc., please refer to `docs/planning/planned-features.md`.
 
 ## Overview
 
-Email templates provide a flexible system for creating, customizing, and managing email content for supplier communications. This feature enables users to maintain consistent messaging while allowing for personalization and customization for different communication scenarios.
-
-## Template System
-
-### Template Structure
-
-Each email template consists of:
-
-- **Metadata**: Template name, description, creation date, and category
-- **Subject Line**: Customizable email subject with variable support
-- **HTML Body**: Rich text content with formatting and variable placeholders
-- **Plain Text Alternative**: Text-only version for email clients that don't support HTML
-- **Attachments**: Optional default attachments to include with emails
-
-### Variable Placeholders
-
-Templates support dynamic content through variable placeholders:
-
-- **Syntax**: Double curly braces format - `{{variableName}}`
-- **Conditional Sections**: Optional content blocks shown based on data availability
-- **Iteration Blocks**: Repeating sections for lists like orders or products
-- **Formatting Helpers**: Functions to format dates, currency, and numbers
-
-### Template Types
-
-The application includes several template categories:
-
-- **Standard Reminder**: For routine follow-up communications
-- **Urgent Reminder**: For critical or overdue items
-- **Confirmation Request**: For requesting order confirmations
-- **Weekly Summary**: For regular status updates
-- **Custom Templates**: User-defined templates for specific needs
-
-## Default Templates
-
-The application comes with pre-built templates:
-
-### Basic Reminder Template
-
-```html
-<!DOCTYPE html>
-<html>
-  <head>
-    <style>
-      body {
-        font-family: Arial, sans-serif;
-        line-height: 1.5;
-        color: #333;
-      }
-      .header {
-        background-color: #497886;
-        color: white;
-        padding: 20px;
-      }
-      .content {
-        padding: 20px;
-      }
-      .footer {
-        font-size: 12px;
-        color: #666;
-        padding: 20px;
-        border-top: 1px solid #eee;
-      }
-      table {
-        border-collapse: collapse;
-        width: 100%;
-      }
-      th,
-      td {
-        border: 1px solid #ddd;
-        padding: 8px;
-        text-align: left;
-      }
-      th {
-        background-color: #f2f2f2;
-      }
-    </style>
-  </head>
-  <body>
-    <div class="header">
-      <h2>Order Reminder</h2>
-    </div>
-    <div class="content">
-      <p>Dear {{supplierName}},</p>
-
-      <p>
-        We would like to follow up on the following order(s) that we have placed
-        with your company:
-      </p>
-
-      <table>
-        <thead>
-          <tr>
-            <th>Order #</th>
-            <th>Order Date</th>
-            <th>Due Date</th>
-            <th>Description</th>
-          </tr>
-        </thead>
-        <tbody>
-          {{#each orders}}
-          <tr>
-            <td>{{orderNumber}}</td>
-            <td>{{formatDate orderDate}}</td>
-            <td>{{formatDate dueDate}}</td>
-            <td>{{description}}</td>
-          </tr>
-          {{/each}}
-        </tbody>
-      </table>
-
-      <p>
-        Please confirm receipt of this email and provide an update on the status
-        of these orders.
-      </p>
-
-      <p>Thank you for your prompt attention to this matter.</p>
-
-      <p>
-        Best regards,<br />
-        {{contactPerson}}<br />
-        {{companyName}}
-      </p>
-    </div>
-    <div class="footer">
-      <p>
-        This is an automated message from OneMed SupplyChain. If you have any
-        questions, please contact {{contactEmail}}.
-      </p>
-    </div>
-  </body>
-</html>
-```
-
-### Urgent Reminder Template
-
-```html
-<!DOCTYPE html>
-<html>
-  <head>
-    <style>
-      body {
-        font-family: Arial, sans-serif;
-        line-height: 1.5;
-        color: #333;
-      }
-      .header {
-        background-color: #e63946;
-        color: white;
-        padding: 20px;
-      }
-      .content {
-        padding: 20px;
-      }
-      .urgent {
-        color: #e63946;
-        font-weight: bold;
-      }
-      .footer {
-        font-size: 12px;
-        color: #666;
-        padding: 20px;
-        border-top: 1px solid #eee;
-      }
-      table {
-        border-collapse: collapse;
-        width: 100%;
-      }
-      th,
-      td {
-        border: 1px solid #ddd;
-        padding: 8px;
-        text-align: left;
-      }
-      th {
-        background-color: #f2f2f2;
-      }
-    </style>
-  </head>
-  <body>
-    <div class="header">
-      <h2>URGENT Order Reminder</h2>
-    </div>
-    <div class="content">
-      <p>Dear {{supplierName}},</p>
-
-      <p class="urgent">
-        URGENT: We require immediate attention to the following orders that are
-        past due or approaching their deadline:
-      </p>
-
-      <table>
-        <thead>
-          <tr>
-            <th>Order #</th>
-            <th>Order Date</th>
-            <th>Due Date</th>
-            <th>Days Overdue</th>
-            <th>Description</th>
-          </tr>
-        </thead>
-        <tbody>
-          {{#each orders}}
-          <tr>
-            <td>{{orderNumber}}</td>
-            <td>{{formatDate orderDate}}</td>
-            <td>{{formatDate dueDate}}</td>
-            <td>{{daysOverdue}}</td>
-            <td>{{description}}</td>
-          </tr>
-          {{/each}}
-        </tbody>
-      </table>
-
-      <p>
-        Please provide an immediate update on these orders as they are critical
-        to our operations.
-      </p>
-
-      <p>
-        If there are any issues preventing fulfillment, please contact us
-        immediately.
-      </p>
-
-      <p>
-        Best regards,<br />
-        {{contactPerson}}<br />
-        {{companyName}}<br />
-        {{contactEmail}}<br />
-        {{contactPhone}}
-      </p>
-    </div>
-    <div class="footer">
-      <p>
-        This is an automated message from OneMed SupplyChain. If you have any
-        questions, please contact {{contactEmail}}.
-      </p>
-    </div>
-  </body>
-</html>
-```
-
-## Template Management
-
-### Creation and Editing
-
-Users can create and edit templates through the template editor:
-
-- **Rich Text Editor**: WYSIWYG interface for formatting
-- **HTML Editor**: Direct HTML editing for advanced users
-- **Variable Insertion**: UI for inserting available variables
-- **Preview Mode**: Live preview with sample data
-- **Version History**: Track changes with ability to revert
-
-### Storage and Retrieval
-
-Templates are stored in the application database:
-
-- **Templates Table**: Stores template metadata and content
-- **Template Categories**: Organizes templates by purpose
-- **Search and Filter**: Quick access to relevant templates
-- **Import/Export**: Share templates between installations
-
-## Template Variables
-
-### Standard Variables
-
-The following standard variables are available in all templates:
-
-| Variable            | Description           | Example               |
-| ------------------- | --------------------- | --------------------- |
-| `{{supplierName}}`  | Name of the supplier  | "Acme Supplies, Inc." |
-| `{{companyName}}`   | Your company name     | "OneMed AS"           |
-| `{{contactPerson}}` | Your contact person   | "John Doe"            |
-| `{{contactEmail}}`  | Contact email address | "john.doe@onemed.com" |
-| `{{contactPhone}}`  | Contact phone number  | "+47 12345678"        |
-| `{{today}}`         | Current date          | "2023-05-15"          |
-
-### Order Variables
-
-When including order information:
-
-| Variable          | Description                          | Example            |
-| ----------------- | ------------------------------------ | ------------------ |
-| `{{orders}}`      | Collection of orders (for iteration) | -                  |
-| `{{orderNumber}}` | Order reference number               | "PO-12345"         |
-| `{{orderDate}}`   | Date order was placed                | "2023-04-01"       |
-| `{{dueDate}}`     | Expected delivery date               | "2023-05-15"       |
-| `{{description}}` | Order description                    | "Medical supplies" |
-| `{{value}}`       | Order value                          | 1250.50            |
-| `{{currency}}`    | Currency code                        | "NOK"              |
-| `{{daysOverdue}}` | Days past due date                   | 5                  |
-
-### Helper Functions
-
-Format data with helper functions:
-
-| Function                              | Description     | Example                 |
-| ------------------------------------- | --------------- | ----------------------- |
-| `{{formatDate date}}`                 | Format date     | "15.05.2023"            |
-| `{{formatCurrency amount currency}}`  | Format currency | "kr 1,250.50"           |
-| `{{pluralize count singular plural}}` | Pluralization   | "1 order" or "5 orders" |
+The application uses a basic templating approach to generate reminder emails for suppliers regarding outstanding orders. It utilizes hardcoded HTML templates with Handlebars syntax for inserting dynamic data.
 
 ## Implementation Details
 
-### Template Engine
+The core logic resides in `src/renderer/services/emailService.ts`.
 
-The application uses Handlebars.js for template processing:
+### Templates
 
-```typescript
-// Example of template rendering implementation
-import Handlebars from "handlebars";
-import { format } from "date-fns";
+- **Two Hardcoded Templates:** The service contains two hardcoded HTML templates: one for Norwegian (`no`) and one for English (`en`).
+- **Selection:** The language ('no' or 'en') passed in the data determines which template is used. Defaults to Norwegian if unspecified.
+- **Handlebars:** The templates use [Handlebars.js](https://handlebarsjs.com/) syntax for variable substitution (`{{variableName}}`), iterating over orders (`{{#each orders}}...{{/each}}`), and basic conditional logic (`{{#if (gt outstandingQty 0)}}...{{/if}}`).
 
-// Register helper functions
-Handlebars.registerHelper("formatDate", function (date) {
-  if (!date) return "";
-  return format(new Date(date), "dd.MM.yyyy");
-});
+### Template Content (Simplified Structure)
 
-Handlebars.registerHelper("formatCurrency", function (value, currency) {
-  if (value === undefined || value === null) return "";
+**Norwegian Template (`noTemplate` variable):**
 
-  return new Intl.NumberFormat("nb-NO", {
-    style: "currency",
-    currency: currency || "NOK",
-  }).format(value);
-});
-
-Handlebars.registerHelper("pluralize", function (count, singular, plural) {
-  return count === 1 ? singular : plural;
-});
-
-// Template rendering function
-export function renderEmailTemplate(
-  templateHtml: string,
-  data: Record<string, any>
-) {
-  try {
-    // Compile the template
-    const template = Handlebars.compile(templateHtml);
-
-    // Render with data
-    return template(data);
-  } catch (error) {
-    console.error("Template rendering error:", error);
-    throw new Error(`Failed to render email template: ${error.message}`);
-  }
-}
+```html
+<!DOCTYPE html>
+<html>
+  <head>
+    <style>
+      ...
+    </style>
+  </head>
+  <body>
+    <h2>Purring på manglende leveranser</h2>
+    <p>Hei {{supplier}},</p>
+    <p>Dette er en påminnelse om følgende manglende leveranser:</p>
+    <table>
+      <thead>
+        ...
+        <th>Utestående antall</th>
+        ...
+      </thead>
+      <tbody>
+        {{#each orders}}
+        <tr class="{{#if (gt outstandingQty 0)}}urgent{{/if}}">
+          <td>{{poNumber}}</td>
+          <td>{{itemNo}}</td>
+          <td>{{description}}</td>
+          <td>{{orderQty}}</td>
+          <td>{{receivedQty}}</td>
+          <td>{{outstandingQty}}</td>
+        </tr>
+        {{/each}}
+      </tbody>
+    </table>
+    <p>
+      Vennligst bekreft mottak av denne meldingen og oppdater leveringsstatus.
+    </p>
+    <p>Med vennlig hilsen,<br />OneMed Norge AS</p>
+  </body>
+</html>
 ```
 
-### Template Editor Component
+**English Template (`enTemplate` variable):**
 
-```jsx
-// React component example for template editor
-const TemplateEditor = ({ template, onSave }) => {
-  const [name, setName] = useState(template?.name || "");
-  const [subject, setSubject] = useState(template?.subject || "");
-  const [htmlContent, setHtmlContent] = useState(template?.htmlContent || "");
-  const [previewData, setPreviewData] = useState(null);
-  const [previewMode, setPreviewMode] = useState(false);
-
-  // Load sample data for preview
-  useEffect(() => {
-    const loadSampleData = async () => {
-      try {
-        const result = await window.electron.getSampleTemplateData();
-        if (result.success) {
-          setPreviewData(result.data);
-        }
-      } catch (error) {
-        console.error("Failed to load sample data:", error);
-        toast.error("Could not load sample data for preview");
-      }
-    };
-
-    loadSampleData();
-  }, []);
-
-  const handleSave = async () => {
-    try {
-      const result = await window.electron.saveEmailTemplate({
-        id: template?.id,
-        name,
-        subject,
-        htmlContent,
-        plainTextContent: convertToPlainText(htmlContent),
-        updatedAt: new Date().toISOString(),
-      });
-
-      if (result.success) {
-        toast.success("Template saved successfully");
-        onSave(result.data);
-      } else {
-        toast.error(`Failed to save template: ${result.error}`);
-      }
-    } catch (error) {
-      console.error("Error saving template:", error);
-      toast.error("Could not save email template");
-    }
-  };
-
-  const insertVariable = (variable) => {
-    // Insert variable at cursor position in rich text editor
-    setHtmlContent((current) => {
-      // Logic to insert at cursor position
-      return insertAtCursor(current, `{{${variable}}}`);
-    });
-  };
-
-  return (
-    <div className="template-editor">
-      <div className="editor-header">
-        <div className="form-group">
-          <label>Template Name</label>
-          <input
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Enter template name"
-          />
-        </div>
-
-        <div className="form-group">
-          <label>Email Subject</label>
-          <input
-            type="text"
-            value={subject}
-            onChange={(e) => setSubject(e.target.value)}
-            placeholder="Enter email subject"
-          />
-        </div>
-      </div>
-
-      <div className="editor-toolbar">
-        <button onClick={() => setPreviewMode(!previewMode)}>
-          {previewMode ? "Edit Template" : "Preview Template"}
-        </button>
-
-        {!previewMode && (
-          <div className="variable-selector">
-            <select onChange={(e) => insertVariable(e.target.value)}>
-              <option value="">Insert Variable...</option>
-              <option value="supplierName">Supplier Name</option>
-              <option value="companyName">Company Name</option>
-              {/* More variables */}
-            </select>
-          </div>
-        )}
-      </div>
-
-      {previewMode ? (
-        <div className="template-preview">
-          <h3>Subject: {renderEmailTemplate(subject, previewData || {})}</h3>
-          <div
-            className="preview-content"
-            dangerouslySetInnerHTML={{
-              __html: renderEmailTemplate(htmlContent, previewData || {}),
-            }}
-          />
-        </div>
-      ) : (
-        <RichTextEditor value={htmlContent} onChange={setHtmlContent} />
-      )}
-
-      <div className="editor-actions">
-        <button
-          onClick={handleSave}
-          disabled={!name || !subject || !htmlContent}
-        >
-          Save Template
-        </button>
-      </div>
-    </div>
-  );
-};
+```html
+<!DOCTYPE html>
+<html>
+  <head>
+    <style>
+      ...
+    </style>
+  </head>
+  <body>
+    <h2>Reminder for Outstanding Orders</h2>
+    <p>Hello {{supplier}},</p>
+    <p>This is a reminder regarding the following outstanding orders:</p>
+    <table>
+      <thead>
+        ...
+        <th>Outstanding Qty</th>
+        ...
+      </thead>
+      <tbody>
+        {{#each orders}}
+        <tr class="{{#if (gt outstandingQty 0)}}urgent{{/if}}">
+          <td>{{poNumber}}</td>
+          <td>{{itemNo}}</td>
+          <td>{{description}}</td>
+          <td>{{orderQty}}</td>
+          <td>{{receivedQty}}</td>
+          <td>{{outstandingQty}}</td>
+        </tr>
+        {{/each}}
+      </tbody>
+    </table>
+    <p>
+      Please confirm receipt of this message and provide updated delivery
+      status.
+    </p>
+    <p>Kind regards,<br />OneMed Norge AS</p>
+  </body>
+</html>
 ```
 
-## Usage Examples
+_(Note: Styles and full table headers are omitted for brevity)_
 
-### Sending an Email with a Template
+### Helpers
 
-```jsx
-// Example of using a template to send an email
-const sendEmail = async (supplier, orders, templateId) => {
-  try {
-    // Get the template
-    const templateResult = await window.electron.getEmailTemplate(templateId);
+- **`gt` Helper:** A single custom Handlebars helper `gt` is registered (`Handlebars.registerHelper("gt", (a, b) => a > b)`). This is used in the template for conditional styling (e.g., marking rows as urgent if `outstandingQty` is greater than 0).
+- **No Other Custom Helpers:** The previously documented `formatDate`, `formatCurrency`, and `pluralize` helpers are **not** currently implemented or registered.
 
-    if (!templateResult.success) {
-      throw new Error(`Could not load template: ${templateResult.error}`);
-    }
+### Data
 
-    const template = templateResult.data;
+The `EmailData` interface expected by the service includes:
 
-    // Prepare data for template
-    const templateData = {
-      supplierName: supplier.name,
-      companyName: "OneMed AS",
-      contactPerson: "John Doe",
-      contactEmail: "john.doe@onemed.com",
-      contactPhone: "+47 12345678",
-      today: new Date().toISOString(),
-      orders: orders.map((order) => ({
-        ...order,
-        daysOverdue: calculateDaysOverdue(order.dueDate),
-      })),
-    };
+- `supplier`: The supplier name (string).
+- `orders`: An array of order objects, each containing fields like `poNumber`, `itemNo`, `description`, `orderQty`, `receivedQty`, `outstandingQty`.
+- `language`: Optional 'no' or 'en' to select the template.
 
-    // Render subject and body
-    const subject = renderEmailTemplate(template.subject, templateData);
-    const htmlBody = renderEmailTemplate(template.htmlContent, templateData);
+### Email Generation and Sending
 
-    // Send the email
-    const result = await window.electron.sendEmail({
-      to: supplier.email,
-      subject,
-      html: htmlBody,
-      supplier: supplier.name,
-      orderCount: orders.length,
-    });
+1.  **Recipient Lookup:** The `getSupplierEmail` method in the service looks up the supplier's email address in `src/renderer/data/supplierEmails.json` based on the provided supplier name. It performs direct and case-insensitive matching.
+2.  **Subject Generation:** The email subject is generated dynamically based on the selected language (e.g., "Purring på manglende leveranser - [Supplier Name]" or "Reminder for Outstanding Orders - [Supplier Name]"). It is **not** part of the template itself.
+3.  **Rendering:** `Handlebars.compile(template).compile(data)` is used to render the selected HTML template with the provided data.
+4.  **Sending:** The rendered HTML and generated subject, along with the looked-up recipient email, are passed to `window.electron.sendEmail`. This likely triggers an IPC call to the main process to open the user's default email client via `mailto:`.
 
-    if (result.success) {
-      toast.success("Email sent successfully");
-      return true;
-    } else {
-      toast.error(`Failed to send email: ${result.error}`);
-      return false;
-    }
-  } catch (error) {
-    console.error("Error sending email:", error);
-    toast.error("Could not send email");
-    return false;
-  }
-};
-```
+## Limitations of Current Implementation
 
-## Best Practices
+- Templates are hardcoded and require code changes to modify.
+- Only two language variants (NO/EN) are supported.
+- Limited formatting options (only the `gt` helper).
+- No UI for managing or previewing templates.
+- Subject lines are fixed (apart from language and supplier name).
+- No support for plain text alternatives or attachments via the template system.
 
-1. **Clear Structure**: Use consistent structure for all templates
-2. **Mobile Friendly**: Ensure templates display well on mobile devices
-3. **Plain Text Alternative**: Always include plain text versions
-4. **Variable Validation**: Validate all variables are available before sending
-5. **Error Handling**: Gracefully handle missing variables
+## Related Files
 
-## Troubleshooting
-
-Common issues and their solutions:
-
-1. **Missing Variables**: Ensure all required variables are provided
-2. **Formatting Issues**: Check HTML structure and CSS for rendering problems
-3. **Performance Problems**: Optimize templates with many iteration blocks
-4. **Email Client Compatibility**: Test templates in various email clients
-5. **Image Display**: Use appropriate image handling for email clients
-
-## Related Features
-
-- [Email Reminders](email-reminders.md) - Uses email templates for communications
-- [Supplier Management](supplier-management.md) - Provides contact data for templates
-- [Order Tracking](order-tracking.md) - Supplies order data for templates
+- `src/renderer/services/emailService.ts`: Contains the hardcoded templates and rendering logic.
+- `src/renderer/data/supplierEmails.json`: Stores the mapping between supplier names and email addresses.
+- `src/main/main.ts` / `src/main/index.ts`: Likely contains the `sendEmail` IPC handler that uses `shell.openExternal` for `mailto:`.

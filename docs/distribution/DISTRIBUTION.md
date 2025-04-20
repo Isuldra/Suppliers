@@ -1,66 +1,59 @@
-# Distribution Guide for Supplier Reminder Pro
+# Distribution Guide for SupplyChain OneMed
 
-This document provides instructions for building the application on Windows and creating a distribution package for users.
+This document provides instructions for building the application on Windows.
 
 ## Building the Application on Windows
 
-Due to native dependencies (better-sqlite3, sqlite3), the application must be built on Windows to create a valid Windows installer.
+Due to native dependencies (`better-sqlite3`), the application should ideally be built on Windows to create a valid Windows installer and portable executable.
 
 ### Prerequisites
 
-1. Install Node.js and npm on a Windows machine
-2. Clone the repository or transfer the code to the Windows machine
-3. Install build tools (if not already installed):
-   ```
-   npm install --global --production windows-build-tools
-   ```
+1.  Install Node.js and npm on a Windows machine.
+2.  Clone the repository or transfer the code to the Windows machine.
+3.  Install build tools (if not already installed via other means, e.g., Visual Studio):
+    ```bash
+    # May require administrator privileges
+    npm install --global --production windows-build-tools
+    ```
+    _Note: `windows-build-tools` installation can sometimes be problematic. Ensure Python and C++ build tools are available._
 
 ### Building Steps
 
-1. Open Command Prompt or PowerShell on the Windows machine
-2. Navigate to the project directory
-3. Install dependencies:
-   ```
-   npm install
-   ```
-4. Build the application and create the installer:
-   ```
-   npm run dist:win
-   ```
-5. The installer will be created in the `release` folder as `Supplier-Reminder-Pro-1.0.0-setup.exe`
+1.  Open Command Prompt or PowerShell on the Windows machine.
+2.  Navigate to the project directory.
+3.  Install dependencies:
+    ```bash
+    npm install
+    ```
+4.  Build the application and create the installer/portable versions (check `package.json` scripts like `dist:win`, `dist:portable`):
 
-## Creating the Distribution Package
+    ```bash
+    # Example: Build standard installer (NSIS assumed)
+    npm run dist:win
 
-Once you have the Windows installer, create a distribution package that users can easily install without admin rights:
+    # Example: Build portable version
+    npm run dist:portable
+    ```
 
-1. Copy the following files to a new folder:
+5.  The artifacts will typically be created in the `release` folder (defined in `package.json` > `build.directories.output`). Based on the current `package.json` configuration (`build.win.artifactName`, `build.portable.artifactName`), the filenames will be similar to:
+    - Installer: **`OneMed SupplyChain-[version]-setup.exe`**
+    - Portable: **`OneMed SupplyChain-Portable.exe`**
 
-   - `release/Supplier-Reminder-Pro-1.0.0-setup.exe` - The Windows installer
-   - `install-reminder-pro.ps1` - The PowerShell installation script
-   - `README.txt` - Installation instructions
+## Distribution
 
-2. Create a ZIP archive of this folder using any compression tool:
+Once built (often via automated GitHub Actions), the desired artifact (installer or portable `.exe`) can be distributed to users via:
 
-   - Windows Explorer: Right-click the folder > Send to > Compressed (zipped) folder
-   - 7-Zip: Right-click the folder > 7-Zip > Add to archive...
-
-3. Name the ZIP file something like `SupplierReminderPro-1.0.0-Install.zip`
-
-4. Share this ZIP file with users via:
-   - File sharing services (OneDrive, Dropbox, Google Drive)
-   - Internal file server
-   - Email (if size permits)
+- File sharing services (OneDrive, Dropbox, Google Drive)
+- Internal file server
+- Email (if size permits)
+- GitHub Releases page
 
 ## Notes for Users
 
-- The application can be installed without admin rights using the PowerShell script
-- The default installation location is `%LOCALAPPDATA%\Programs\SupplierReminderPro`
-- Users can also run the installer directly and choose "Install for current user only"
+- **Installer:** Users can run the `OneMed SupplyChain-[version]-setup.exe` installer directly. They should choose the option "Install for current user only" if prompted, which typically does not require administrator rights.
+- **Portable:** The `OneMed SupplyChain-Portable.exe` can be run directly without installation. All application data will still be stored in the standard user data location (`%LOCALAPPDATA%\one-med-supplychain-app`).
 
 ## Troubleshooting
 
-- If users report issues with PowerShell execution policy, they may need to run:
-  ```powershell
-  Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy Bypass -Force
-  ```
-- If native dependencies cause issues, ensure the application was built on Windows with the same architecture (x64) as the target machines
+- If users report issues with the installer requiring admin rights, ensure the build configuration (e.g., `nsis.perMachine` in `package.json`) is set to `false`.
+- If native dependencies cause issues on user machines, ensure the application was built on Windows with the same architecture (x64) as the target machines.

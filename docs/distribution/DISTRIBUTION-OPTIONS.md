@@ -1,41 +1,44 @@
-# Supplier Reminder Pro - Distribution Options
+# SupplyChain OneMed - Distribution Options
 
-This document provides comprehensive information about the different distribution options available for Supplier Reminder Pro, including how to create and distribute each format.
+This document provides comprehensive information about the different distribution options available for SupplyChain OneMed, including how to create and distribute each format.
 
 ## Available Distribution Formats
 
-Supplier Reminder Pro can be distributed in the following formats:
+SupplyChain OneMed can be distributed in the following formats for Windows (builds for macOS/Linux may also be configured but focus here is Windows):
 
-1. **Standard Installer (NSIS)** - Traditional Windows installer with options for user-level or system-level installation
-2. **MSI Package** - Microsoft Installer format for enterprise deployment
-3. **Portable Version** - Self-contained application that runs without installation
+1. **Standard Installer (NSIS)** - Traditional Windows installer (`.exe`) allowing user-level (no admin) or machine-level installation.
+2. **MSI Package** - Microsoft Installer format (`.msi`) often preferred for enterprise deployment via tools like Group Policy.
+3. **Portable Version** - Self-contained application (`.exe`) that runs without installation.
 
 ## Building the Distribution Packages
 
 ### Prerequisites
 
 - Node.js and npm installed
-- Windows environment (for building Windows installers)
+- Windows environment (recommended for building reliable Windows installers/portable versions due to native dependencies like `better-sqlite3`)
 - Git repository cloned
+- Build tools (Python, C++ via Visual Studio or `windows-build-tools`) installed.
 
-### Building All Formats at Once
+### Building All Formats (via Custom Script)
 
-To build all distribution formats in one operation:
+_This uses a custom script. Building individual targets might be simpler._
 
 ```bash
 npm run distributions
 ```
 
-This script will:
+This script (`scripts/create-all-distributions.js`) aims to:
 
-1. Build the application
-2. Create all distribution formats (NSIS, MSI, Portable)
-3. Package them together with documentation
-4. Create a distributable ZIP file
+1. Build the application code.
+2. Build multiple distribution formats (likely NSIS, MSI, Portable).
+3. Package them together, potentially with documentation.
+4. Create a distributable ZIP file in a `distributions` output folder.
 
-The output will be in the `distributions` directory, with a timestamped folder containing all formats.
+_(Review the script for exact behavior and output location/format)._
 
-### Building Individual Formats
+### Building Individual Formats (Recommended)
+
+Using the standard `electron-builder` scripts defined in `package.json` is often more straightforward:
 
 #### Standard NSIS Installer
 
@@ -43,7 +46,7 @@ The output will be in the `distributions` directory, with a timestamped folder c
 npm run dist:nsis
 ```
 
-Output: `release/Supplier-Reminder-Pro-[version]-setup.exe`
+Output: `release/OneMed SupplyChain-[version]-setup.exe` (Filename based on `build.win.artifactName`)
 
 #### MSI Package
 
@@ -51,15 +54,17 @@ Output: `release/Supplier-Reminder-Pro-[version]-setup.exe`
 npm run dist:msi
 ```
 
-Output: `release/Supplier-Reminder-Pro-[version]-Setup.msi`
+Output: `release/OneMed SupplyChain-[version]-Setup.msi` (Filename based on `build.msi.artifactName`)
 
 #### Portable Version
 
 ```bash
-npm run portable
+npm run dist:portable
 ```
 
-Output: `portable/Supplier-Reminder-Pro-Portable.zip`
+Output: `release/OneMed SupplyChain-Portable.exe` (Filename based on `build.portable.artifactName`)
+
+_(Note: There is also an `npm run portable` script that uses `scripts/create-portable.js`. Prefer `npm run dist:portable` unless the custom script offers specific needed functionality.)_
 
 ## Installation Options
 
@@ -67,87 +72,90 @@ Output: `portable/Supplier-Reminder-Pro-Portable.zip`
 
 #### Manual Installation
 
-1. Double-click the `Supplier-Reminder-Pro-[version]-setup.exe` file
+1. Double-click the `OneMed SupplyChain-[version]-setup.exe` file.
 2. Select installation type:
-   - "Install for all users" (requires admin rights)
-   - "Install for current user only" (no admin rights required)
-3. Choose installation directory
-4. Complete the installation wizard
+   - "Install for all users" (requires admin rights, requires `perMachine: true` in `build.nsis` config - currently `false`).
+   - "Install for current user only" (no admin rights required - default behavior with current config).
+3. Choose installation directory (allowed by current config `allowToChangeInstallationDirectory: true`).
+4. Complete the installation wizard.
 
 #### Silent Installation
 
 For automated deployment:
 
-```
-# Install for all users (requires admin)
-Setup.exe /S /ALLUSERS
+```bash
+# Install for current user only (no admin required - default behavior)
+.\\"OneMed SupplyChain-1.0.0-setup.exe" /S /CURRENTUSER
 
-# Install for current user only (no admin required)
-Setup.exe /S /CURRENTUSER
+# Install to a custom directory (for current user)
+.\\"OneMed SupplyChain-1.0.0-setup.exe" /S /CURRENTUSER /D=C:\CustomPath
 
-# Install to a custom directory
-Setup.exe /S /D=C:\CustomPath
+# (Requires build.nsis.perMachine=true and admin rights)
+# .\\"OneMed SupplyChain-1.0.0-setup.exe" /S /ALLUSERS
 ```
+
+_Replace filename with the actual version._
 
 ### MSI Package
 
 #### Manual Installation
 
-1. Double-click the `Supplier-Reminder-Pro-[version]-Setup.msi` file
-2. Follow the installation wizard
+1. Double-click the `OneMed SupplyChain-[version]-Setup.msi` file.
+2. Follow the installation wizard (configured for current user by default `perMachine: false`).
 
 #### Silent Installation
 
 For automated deployment:
 
-```
-# Basic silent install
-msiexec /i Setup.msi /quiet
+```bash
+# Basic silent install (for current user by default)
+msiexec /i "OneMed SupplyChain-1.0.0-Setup.msi" /quiet
 
-# Install for current user only
-msiexec /i Setup.msi ALLUSERS=2 /quiet
+# Explicitly for current user (redundant with current config but good practice)
+msiexec /i "OneMed SupplyChain-1.0.0-Setup.msi" ALLUSERS=2 /quiet
 
-# Install to a custom directory
-msiexec /i Setup.msi INSTALLDIR="C:\CustomPath" /quiet
+# Install to a custom directory (for current user)
+msiexec /i "OneMed SupplyChain-1.0.0-Setup.msi" INSTALLDIR="C:\CustomPath" ALLUSERS=2 /quiet
 
 # Silent uninstall
-msiexec /x Setup.msi /quiet
+msiexec /x "OneMed SupplyChain-1.0.0-Setup.msi" /quiet
 ```
+
+_Replace filename with the actual version._
 
 #### Group Policy Deployment
 
 The MSI package can be deployed via Group Policy in domain environments:
 
-1. Upload the MSI to a network share
-2. Create a Group Policy Object in Active Directory
-3. Configure the software installation policy
-4. Select the MSI package from the network share
-5. Configure deployment options (assigned or published)
+1. Upload the MSI to a network share accessible by target machines.
+2. Create or edit a Group Policy Object (GPO) linked to the target users/computers.
+3. Navigate to User Configuration (or Computer Configuration) > Policies > Software Settings > Software installation.
+4. Right-click > New > Package... Select the MSI from the network share.
+5. Choose deployment method (Assigned is typical for mandatory installs).
 
 ### Portable Version
 
 #### Usage
 
-1. Extract the `Supplier-Reminder-Pro-Portable.zip` file to any location
-2. Open the extracted folder
-3. Run `Supplier Reminder Pro.exe` or the included batch file
-4. All data will be stored in the `data` folder next to the executable
+1. Obtain the `OneMed SupplyChain-Portable.exe` file.
+2. Place the `.exe` file in any desired location (local drive, USB drive, network share).
+3. Run `OneMed SupplyChain-Portable.exe` directly.
 
 #### Notes
 
-- No installation required
-- No registry modifications
-- No admin rights needed
-- Can be run from USB drive
-- To move the application, move the entire folder including the `data` directory
+- No installation required.
+- No registry modifications are typically made by the application itself.
+- No admin rights needed to run the application.
+- Can be run from a USB drive.
+- **Data Storage:** Application data (like the `app.sqlite` database, logs, settings) is **NOT** stored next to the executable. It is stored in the standard user application data directory, typically `%LOCALAPPDATA%\one-med-supplychain-app` on Windows (derived from `name` in `package.json`). This means user data remains on the machine even if the portable `.exe` is moved or deleted.
 
 ## Choosing the Right Distribution Format
 
-| Format         | Advantages                                                                                                                                 | Disadvantages                                                              | Best For                                                     |
-| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------- | ------------------------------------------------------------ |
-| NSIS Installer | - Familiar installation experience<br>- Start menu shortcuts<br>- Appears in Add/Remove Programs<br>- Can run with or without admin rights | - Modifies registry<br>- Required uninstallation                           | Most end users                                               |
-| MSI Package    | - Enterprise deployment support<br>- Group Policy compatible<br>- Standardized installation<br>- Better corporate compliance               | - Usually requires admin rights<br>- Less customizable interface           | IT departments, corporate environments                       |
-| Portable       | - No installation needed<br>- No admin rights required<br>- Runs from any location<br>- Good for restricted environments                   | - No shortcuts created<br>- Not in Add/Remove Programs<br>- Manual updates | Users with limited permissions, USB deployment, kiosk setups |
+| Format         | Advantages                                                                                                                                            | Disadvantages                                                                                                         | Best For                                                      |
+| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
+| NSIS Installer | - Familiar installation experience<br>- Start menu/desktop shortcuts<br>- Appears in Add/Remove Programs<br>- Can install for current user (no admin) | - Modifies system slightly (installs files)<br>- Requires uninstallation                                              | Most individual end users                                     |
+| MSI Package    | - Enterprise deployment (GPO)<br>- Standardized installation/uninstallation<br>- Better corporate compliance                                          | - Usually associated with admin rights (though per-user possible)<br>- Less flexible UI                               | IT departments, corporate environments, managed deployments   |
+| Portable       | - No installation needed<br>- No admin rights required<br>- Runs from any location<br>- Good for restricted environments/kiosks/USB drives            | - No shortcuts created<br>- Not in Add/Remove Programs<br>- Manual updates<br>- **Data stored separately in AppData** | Users with limited permissions, temporary use, USB deployment |
 
 ## Advanced Configuration
 
@@ -170,11 +178,11 @@ The installer configurations can be modified in `package.json` under the `build`
 
 ### Creating a Custom Distribution Script
 
-If you need to customize the distribution process further, you can modify the scripts in the `scripts` directory:
+If you need to customize the distribution process further, you can examine and modify the scripts in the `scripts` directory:
 
-- `create-all-distributions.js` - Creates all distribution formats
-- `create-portable.js` - Creates portable version
-- `generate-icons.js` - Generates application icons
+- `create-all-distributions.js` - Example script to build and package multiple formats.
+- `create-portable.js` - Example custom script for portable version creation.
+- `generate-icons.js` - Script for generating application icons from source.
 
 ## Troubleshooting
 
@@ -182,20 +190,22 @@ If you need to customize the distribution process further, you can modify the sc
 
 1. **Admin Rights Issues**
 
-   - For non-admin installation, use NSIS installer with CURRENTUSER flag or use the portable version
+   - Ensure `perMachine` is `false` in `nsis` or `msi` config for per-user installs.
+   - Use the Portable version if installation is prohibited.
 
 2. **Missing Dependencies**
 
-   - Ensure all dependencies are installed with `npm install`
-   - Install native build tools if needed
+   - Ensure `npm install` was run before building.
+   - Ensure build tools (Python/C++) are correctly installed on the build machine.
 
 3. **Build Errors**
 
-   - Windows installers must be built on Windows due to native dependencies
+   - Windows targets should be built on Windows.
+   - Check logs from `electron-builder` for specific errors.
 
 4. **Silent Installation Failures**
-   - Ensure paths don't contain spaces or wrap them in quotes
-   - Check logs at `%TEMP%\Supplier-Reminder-Pro-Install-Log.txt`
+   - Ensure paths in commands (like `/D=` or `INSTALLDIR=`) are valid and properly quoted if they contain spaces.
+   - Check MSI logs (`msiexec /i ... /L*v install.log`) or NSIS logs (if enabled) for errors.
 
 ### Support
 

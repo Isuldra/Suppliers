@@ -1,10 +1,10 @@
 # External Link Handling
 
-The Supplier Reminder Pro application includes a robust system for securely handling external links, allowing users to access documentation, contact support, and interact with external resources while maintaining security.
+The SupplyChain OneMed application includes a robust system for securely handling external links, allowing users to access documentation, contact support, and interact with external resources while maintaining security.
 
 ## Overview
 
-External link handling is an important part of desktop applications that need to interact with web resources. In Supplier Reminder Pro, this functionality allows:
+External link handling is an important part of desktop applications that need to interact with web resources. In SupplyChain OneMed, this functionality allows:
 
 - Opening documentation and help resources in the user's default browser
 - Launching the user's default email client with pre-filled support emails
@@ -22,18 +22,14 @@ The external link functionality follows Electron's security best practices:
 
 ### Security Considerations
 
-- All URLs are validated before being opened
-- Special handling is implemented for different platforms
-- Detailed error reporting helps users troubleshoot issues
-- Fallback mechanisms are provided when links cannot be opened
+- All URLs are passed to the OS default handler via `shell.openExternal`.
+- The main process handler uses Electron's `shell.openExternal` API.
+- Error reporting captures failures during the `shell.openExternal` call.
+- Fallback mechanisms (e.g., showing error messages) should be implemented in the renderer process.
 
 ### Platform-Specific Features
 
-The implementation includes special handling for different platforms:
-
-- **Windows**: Additional options for handling `mailto:` links, which can be problematic on Windows
-- **macOS**: Standard handling works well on macOS
-- **Linux**: Standard handling with additional logging
+The implementation uses `shell.openExternal` directly, which generally handles platform differences appropriately. The previously documented special handling for `mailto:` links on Windows is not present in the current code.
 
 ## API Reference
 
@@ -55,35 +51,22 @@ if (result.success) {
 
 ### Main Process Handler
 
+The actual handler implemented in `src/main/main.ts` and `src/main/index.ts` is simpler:
+
 ```typescript
-// In main process
+// In main process (e.g., src/main/main.ts)
 ipcMain.handle("openExternalLink", async (_, url: string) => {
   try {
-    // Validate URL
-    if (!url || typeof url !== "string") {
-      throw new Error(`Invalid URL format: ${url}`);
-    }
-
-    // Platform-specific handling
-    const platform = process.platform;
-    if (url.startsWith("mailto:") && platform === "win32") {
-      // Special handling for mailto on Windows
-      await shell.openExternal(url, {
-        activate: true,
-        workingDirectory: process.cwd(),
-      });
-    } else {
-      // Standard handling
-      await shell.openExternal(url);
-    }
-
+    log.info(`Attempting to open external link: ${url}`); // Added logging
+    // No explicit URL validation here; relies on shell.openExternal
+    await shell.openExternal(url);
     return { success: true };
   } catch (error) {
+    log.error(`Error opening external link ${url}:`, error); // Added logging
     return {
       success: false,
       error: error instanceof Error ? error.message : "Unknown error",
-      platform: process.platform,
-      url,
+      // Note: platform and url are not included in the actual return object
     };
   }
 });
@@ -97,7 +80,7 @@ ipcMain.handle("openExternalLink", async (_, url: string) => {
 // In a Help Menu component
 const handleOpenDocumentation = async () => {
   const result = await window.electron.openExternalLink(
-    "https://github.com/Isuldra/Suppliers/wiki"
+    "https://github.com/your-github-username/supplychain-onemed/wiki"
   );
 
   if (!result.success) {
@@ -107,7 +90,7 @@ const handleOpenDocumentation = async () => {
         <p>Could not open documentation.</p>
         <p className="text-xs mt-1">
           Try opening the link manually:
-          https://github.com/Isuldra/Suppliers/wiki
+          https://github.com/your-github-username/supplychain-onemed/wiki
         </p>
       </div>
     );
@@ -121,7 +104,7 @@ const handleOpenDocumentation = async () => {
 // In a Support Button component
 const handleContactSupport = async () => {
   // Encode subject and body for mailto URL
-  const subject = encodeURIComponent("Supplier Reminder Pro Support");
+  const subject = encodeURIComponent("SupplyChain OneMed Support");
   const body = encodeURIComponent("Please describe your issue here...");
   const email = "support@example.com";
 
@@ -144,22 +127,21 @@ const handleContactSupport = async () => {
 
 ## Error Handling
 
-The external link handler provides detailed error information:
+If `shell.openExternal` fails in the main process, the Promise returned to the renderer process via `window.electron.openExternalLink` will resolve to an object indicating failure:
 
 ```typescript
 {
   success: false,
-  error: "The error message",
-  platform: "win32", // or "darwin", "linux"
-  url: "the://url.that.failed"
+  error: "The error message from shell.openExternal or the catch block"
+  // Note: platform and the original url are NOT included in the actual response
 }
 ```
 
-This information helps with:
+This information allows the renderer process to:
 
-1. Providing useful error messages to users
-2. Implementing platform-specific fallbacks
-3. Debugging issues in different environments
+1.  Display appropriate error messages to the user.
+2.  Implement fallback mechanisms (e.g., copying the link to the clipboard).
+3.  Log the error for debugging.
 
 ## Best Practices
 

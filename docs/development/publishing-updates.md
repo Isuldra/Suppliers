@@ -1,189 +1,119 @@
 # Publishing Updates
 
-This guide explains how to publish updates for Supplier Reminder Pro, allowing users to automatically receive and install new versions of the application.
+This guide explains how to prepare and manually publish updates for SupplyChain OneMed.
 
 ## Overview
 
-Supplier Reminder Pro uses [electron-updater](https://www.electron.build/auto-update) to handle automatic updates. The update system is configured to publish releases to GitHub, where the application will check for new versions.
+SupplyChain OneMed uses [electron-updater](https://www.electron.build/auto-update) to handle automatic updates once a release is published. The CI pipeline builds the application artifacts (installers, portable versions), but **publishing these artifacts to GitHub Releases is a manual process.**
 
 ## Prerequisites
 
-Before publishing an update, ensure you have:
+Before preparing an update for manual publishing, ensure you have:
 
-1. **GitHub Access**: Access to the GitHub repository configured in `package.json`
-2. **GitHub Token**: A personal access token with `repo` permissions
-3. **Version Control**: All changes are committed and pushed to the repository
-4. **Clean Working Directory**: No uncommitted changes
-5. **Package.json**: Version number updated
-6. **Changelog**: Release notes prepared
+1. **GitHub Access**: Write access to the GitHub repository where releases are hosted.
+2. **Version Control**: All changes for the release are committed and pushed to the main branch.
+3. **Clean Working Directory**: No uncommitted changes locally.
+4. **CI Build**: A successful CI build (e.g., from a tagged commit) has generated the required artifacts (`.exe` installer, portable `.exe`).
 
-## Update Process
+## Manual Publishing Process
 
-### 1. Update Version Number
+### 1. Determine and Update Version Number
 
-The first step is to update the version number in `package.json`:
-
-```json
-{
-  "name": "supplier-reminder-pro",
-  "version": "1.0.1", // Increment this version number
-  "description": "Desktop application for managing supplier reminders"
-  // ...
-}
-```
-
-Follow [semantic versioning](https://semver.org/) principles:
+Decide on the new version number following [semantic versioning](https://semver.org/) principles:
 
 - **MAJOR** version for incompatible API changes (`1.0.0` → `2.0.0`)
 - **MINOR** version for added functionality in a backwards compatible manner (`1.0.0` → `1.1.0`)
 - **PATCH** version for backwards compatible bug fixes (`1.0.0` → `1.0.1`)
 
-### 2. Test the Update Locally
-
-Before publishing, build and test the application locally:
-
-```bash
-# Build the application
-npm run build
-
-# Create distribution packages
-npm run dist
-```
-
-Test the resulting installers and ensure everything works correctly.
-
-### 3. Prepare GitHub
-
-Ensure your GitHub repository is set up correctly:
-
-1. Configure a GitHub token for the release process:
-
-```bash
-# On Windows
-set GH_TOKEN=your_token_here
-
-# On macOS/Linux
-export GH_TOKEN=your_token_here
-```
-
-2. Verify that the repository settings in `package.json` are correct:
+Update the `version` field in `package.json`:
 
 ```json
-"publish": [
-  {
-    "provider": "github",
-    "owner": "Isuldra",
-    "repo": "Suppliers"
-  }
-]
+{
+  "name": "supplychain-onemed",
+  "version": "1.0.1",
+  "description": "Desktop application for managing supply chain data for OneMed"
+}
 ```
 
-### 4. Publish the Release
+Commit and push this change. Optionally, create a Git tag matching the version (e.g., `v1.0.1`). Triggering the CI pipeline on this commit/tag is recommended.
 
-When you're ready to publish, use the release command:
+### 2. Build Artifacts (Locally or via CI)
 
-```bash
-npm run release
-```
+Ensure the application artifacts are built with the correct version number baked in.
 
-This command will:
+- **Using CI (Recommended):** If the CI pipeline runs on tags or the main branch after the version bump, it will automatically build the artifacts. Proceed to Step 3.
+- **Building Locally (Alternative):** If you need to build manually:
 
-1. Build the application
-2. Create distribution packages (NSIS, MSI, Portable)
-3. Create a GitHub release with the version number as the tag
-4. Upload the distribution packages to the GitHub release
-5. Publish the release
+  ```bash
+  # Ensure dependencies are installed
+  npm install
+
+  # Build the renderer/frontend
+  npm run build
+
+  # Create distribution packages (installer, portable, etc.)
+  # Ensure this command builds all necessary artifacts
+  # e.g., build NSIS installer and portable
+  npm run dist:nsis
+  npm run dist:portable
+  ```
+
+  The artifacts will typically be located in the `release` folder.
+
+### 3. Retrieve Artifacts
+
+- **From CI:** Navigate to the successful GitHub Actions run (associated with your version commit/tag). Download the build artifacts (e.g., `Supplier-Reminder-Pro-Windows-x64` which contains the `release` folder contents).
+- **From Local Build:** Locate the generated installer (`OneMed SupplyChain-[version]-setup.exe`), the portable executable (`OneMed SupplyChain-Portable.exe`), and the update metadata file (e.g., `latest.yml`) in your local `release` directory.
+
+### 4. Create GitHub Release and Upload Artifacts
+
+1. Go to your project's GitHub repository page.
+2. Click on the "Releases" link.
+3. Click "Draft a new release".
+4. **Tag version:** Choose or create the Git tag matching the version (e.g., `v1.0.1`).
+5. **Release title:** Enter a title (e.g., `v1.0.1`).
+6. **Describe this release:** Write release notes/changelog.
+7. **Attach binaries:** Drag and drop or select the built artifact files:
+   - The installer (`OneMed SupplyChain-[version]-setup.exe`).
+   - The portable executable (`OneMed SupplyChain-Portable.exe`).
+   - **Crucially, also upload the `latest.yml` file** generated alongside the installer. `electron-updater` needs this file on the release to find the update.
+   - (Optional) Upload other artifacts like `.msi` if built.
+8. **Pre-release:** Check this box if applicable.
+9. Click "Publish release".
 
 ### 5. Verify the Release
 
-After publishing:
+After publishing manually:
 
-1. Check the GitHub repository to ensure the release was created
-2. Verify that all assets were uploaded correctly
-3. Add detailed release notes to the GitHub release
-4. Test the update process by installing a previous version and checking for updates
+1. Check the GitHub Releases page to ensure the release looks correct.
+2. Verify all intended assets are attached.
+3. Double-check the release notes.
+4. **Crucially:** Install a previous version of the application and trigger the "Check for Updates" functionality to confirm it correctly detects and can download the new version from the manual GitHub release.
 
-## Advanced Configuration
+## Advanced Configuration Notes
 
-### Custom Release Notes
-
-To provide custom release notes:
-
-1. Create a `notes.md` file in the project root
-2. Add your release notes in Markdown format
-3. Use the `--releaseNotes=notes.md` option when running the release command:
-
-```bash
-npm run release -- --releaseNotes=notes.md
-```
-
-### Release Channels
-
-For more advanced release management, you can use channels:
-
-```json
-"publish": [
-  {
-    "provider": "github",
-    "owner": "Isuldra",
-    "repo": "Suppliers",
-    "channel": "latest"
-  }
-]
-```
-
-Common channels include:
-
-- `latest`: Standard release channel
-- `beta`: Pre-release channel for testing
-- `alpha`: Early access channel for internal testing
-
-To publish to a specific channel:
-
-```bash
-npm run release -- --channel=beta
-```
-
-### Staged Rollout
-
-For large user bases, consider a staged rollout approach:
-
-1. Release to a small percentage of users first
-2. Monitor for issues
-3. Gradually increase the percentage
-4. Release to all users when confident
+- **Release Channels:** While `electron-builder` supports channels (`beta`, `alpha`), managing these with manual uploads requires careful naming conventions or separate releases if needed.
+- **Staged Rollouts:** True staged rollouts are complex with manual GitHub releases. Consider alternative deployment strategies if this is required.
 
 ## Troubleshooting
 
 ### Common Issues
 
-#### Release Fails with Authentication Error
-
-- Ensure your GitHub token is correctly set
-- Check that the token has the correct permissions
-- Verify the token hasn't expired
-
-#### Assets Not Uploading
-
-- Check for network issues
-- Ensure file paths are correct
-- Verify GitHub release asset size limits
-
 #### Users Not Receiving Updates
 
-- Check that the version number was incremented
-- Verify that the release was published correctly
-- Test the update process manually
+- **Version Check:** Ensure the `version` in the released `package.json` (baked into the app) is higher than the user's current version.
+- **GitHub Release:** Verify the release is published (not a draft) on GitHub.
+- **Assets:** Confirm the correct artifact files (installer, `latest.yml` generated by builder) were manually uploaded to the GitHub release. `electron-updater` relies on these specific files being present.
+- **Firewall/Network:** Ensure users can reach GitHub.com to check for updates.
 
 ## Best Practices
 
-1. **Maintain a Changelog**: Document all changes for each release
-2. **Test Before Publishing**: Always test updates locally before publishing
-3. **Communicate Updates**: Inform users about new features and changes
-4. **Versioning Strategy**: Use semantic versioning consistently
-5. **Backup**: Always backup your code and environment before publishing
-6. **Release Schedule**: Establish a regular release schedule
-7. **Rollback Plan**: Have a plan for rolling back problematic updates
+1. **Maintain a Changelog**: Essential for release notes.
+2. **Test Artifacts**: Thoroughly test the exact artifacts generated by CI/build _before_ uploading.
+3. **Communicate Updates**: Inform users about new releases.
+4. **Versioning Strategy**: Stick to semantic versioning.
+5. **Backup**: Keep backups of code and release artifacts.
+6. **Rollback Plan**: Know how to unpublish a release or guide users if a rollback is needed.
 
 ## Reference
 
