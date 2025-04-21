@@ -1,54 +1,3 @@
-declare global {
-  interface Window {
-    electron: {
-      recordEmailSent: (
-        supplier: string,
-        recipient: string,
-        subject: string,
-        orderCount: number
-      ) => Promise<{ success: boolean; message?: string; error?: string }>;
-      validateData: (data: ExcelData) => Promise<{
-        success: boolean;
-        data?: {
-          hovedlisteCount: number;
-          bpCount: number;
-        };
-        error?: string;
-      }>;
-      sendEmail: (payload: {
-        to: string;
-        subject: string;
-        html: string;
-      }) => Promise<{ success: boolean; error?: string }>;
-      getSuppliers: () => Promise<{
-        success: boolean;
-        data?: string[];
-        error?: string;
-      }>;
-      parseExcel: (data: ExcelData) => void;
-      onExcelValidation: (callback: (data: ExcelData) => void) => () => void;
-      handleError: (error: Error) => void;
-      send: (channel: string, data: unknown) => void;
-      receive: (channel: string, func: (...args: unknown[]) => void) => void;
-      saveOrdersToDatabase: (payload: {
-        fileBuffer: ArrayBuffer;
-      }) => Promise<{ success: boolean; message?: string; error?: string }>;
-      openExternalLink: (
-        url: string
-      ) => Promise<{ success: boolean; error?: string }>;
-      getOutstandingOrders: (
-        supplier: string,
-        beforeCurrentWeek?: boolean
-      ) => Promise<{ success: boolean; data?: ExcelRow[]; error?: string }>;
-      showLogs: () => Promise<{ success: boolean; error?: string }>;
-      readLogTail: (
-        lineCount?: number
-      ) => Promise<{ success: boolean; logs?: string; error?: string }>;
-      sendLogsToSupport: () => Promise<{ success: boolean; error?: string }>;
-    };
-  }
-}
-
 import React, { useCallback, useState, useEffect, useRef } from "react";
 import { useDropzone } from "react-dropzone";
 import { ExcelData, ValidationError, ExcelRow } from "../types/ExcelData";
@@ -353,7 +302,6 @@ const FileUpload: React.FC<FileUploadProps> = ({
             );
           } catch (_error: unknown) {
             console.error("XLSX parsing error:", _error);
-
             // Spesifikk feilmelding og feilsøkingshjelp
             const errorDetail =
               _error instanceof Error ? _error.message : String(_error);
@@ -536,7 +484,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
                 if (isNaN(parsedDate.getTime())) {
                   parsedDate = new Date(rawDate.trim());
                 }
-              } catch (_e) {
+              } catch {
                 /* Ignore parsing errors */
               }
             } else if (typeof rawDate === "number") {
@@ -546,7 +494,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
                 if (d && d.y != null) {
                   parsedDate = new Date(d.y, d.m - 1, d.d);
                 }
-              } catch (_e) {
+              } catch {
                 /* ignore */
               }
             }
@@ -637,7 +585,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
                     if (isNaN(parsedFallback.getTime())) {
                       parsedFallback = new Date(fallbackRawDate.trim());
                     }
-                  } catch (_e) {
+                  } catch {
                     /* Ignore parsing errors */
                   }
                 } else if (typeof fallbackRawDate === "number") {
@@ -647,7 +595,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
                     if (d && d.y != null) {
                       parsedFallback = new Date(d.y, d.m - 1, d.d);
                     }
-                  } catch (_e) {
+                  } catch {
                     /* ignore */
                   }
                 }
@@ -961,9 +909,9 @@ const FileUpload: React.FC<FileUploadProps> = ({
           try {
             fileBuffer = await file.arrayBuffer();
             console.log("File read into ArrayBuffer for IPC.");
-          } catch (__error: unknown) {
+          } catch {
             // Prefix unused error
-            console.error("Error reading file into buffer:", __error);
+            console.error("Error reading file into buffer:");
             toast.error("Kunne ikke lese filinnhold.");
             setIsLoading(false);
             setIsValidating(false);
@@ -994,9 +942,9 @@ const FileUpload: React.FC<FileUploadProps> = ({
               // We might not need a specific count here anymore if the importer handles it
               toast.success(`Import vellykket og data lagret i databasen.`);
             }
-          } catch (__error: unknown) {
+          } catch {
             // Prefix unused error
-            console.error("Database error:", __error);
+            console.error("Database error:");
             // Continue even if database save fails
             toast.error("Data validated but not saved to local database");
           }
