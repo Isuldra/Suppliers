@@ -1,5 +1,6 @@
 name: 🏗️ Build Electron App for macOS & Windows
 
+# Trigger a new workflow run with this comment update
 on:
   push:
     branches: [main]
