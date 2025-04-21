@@ -1,26 +1,50 @@
 declare global {
   interface Window {
     electron: {
-      validateData: (data: any) => Promise<any>;
-      sendEmail: (
-        payload: any
-      ) => Promise<{ success: boolean; error?: string }>;
+      recordEmailSent: (
+        supplier: string,
+        recipient: string,
+        subject: string,
+        orderCount: number
+      ) => Promise<{ success: boolean; message?: string; error?: string }>;
+      validateData: (data: ExcelData) => Promise<{
+        success: boolean;
+        data?: {
+          hovedlisteCount: number;
+          bpCount: number;
+        };
+        error?: string;
+      }>;
+      sendEmail: (payload: {
+        to: string;
+        subject: string;
+        html: string;
+      }) => Promise<{ success: boolean; error?: string }>;
       getSuppliers: () => Promise<{
         success: boolean;
         data?: string[];
         error?: string;
       }>;
-      parseExcel: (data: any) => void;
-      onExcelValidation: (callback: (data: any) => void) => () => void;
+      parseExcel: (data: ExcelData) => void;
+      onExcelValidation: (callback: (data: ExcelData) => void) => () => void;
       handleError: (error: Error) => void;
-      send: (channel: string, data: any) => void;
-      receive: (channel: string, func: (...args: any[]) => void) => void;
-      saveOrdersToDatabase: (
-        data: ExcelData
-      ) => Promise<{ success: boolean; message?: string; error?: string }>;
+      send: (channel: string, data: unknown) => void;
+      receive: (channel: string, func: (...args: unknown[]) => void) => void;
+      saveOrdersToDatabase: (payload: {
+        fileBuffer: ArrayBuffer;
+      }) => Promise<{ success: boolean; message?: string; error?: string }>;
       openExternalLink: (
         url: string
       ) => Promise<{ success: boolean; error?: string }>;
+      getOutstandingOrders: (
+        supplier: string,
+        beforeCurrentWeek?: boolean
+      ) => Promise<{ success: boolean; data?: ExcelRow[]; error?: string }>;
+      showLogs: () => Promise<{ success: boolean; error?: string }>;
+      readLogTail: (
+        lineCount?: number
+      ) => Promise<{ success: boolean; logs?: string; error?: string }>;
+      sendLogsToSupport: () => Promise<{ success: boolean; error?: string }>;
     };
   }
 }
@@ -31,6 +55,7 @@ import { ExcelData, ValidationError, ExcelRow } from "../types/ExcelData";
 import toast from "react-hot-toast";
 import * as XLSX from "xlsx";
 import { QuestionMarkCircleIcon, XMarkIcon } from "@heroicons/react/24/outline";
+import { parse as parseDateFns } from "date-fns";
 
 interface FileUploadProps {
   onDataParsed: (data: ExcelData) => void;
@@ -305,15 +330,13 @@ const FileUpload: React.FC<FileUploadProps> = ({
               "Array buffer created successfully, size:",
               data.length
             );
-          } catch (bufferError: unknown) {
-            console.error("Buffer error:", bufferError);
+          } catch (_error: unknown) {
+            console.error("Buffer error:", _error);
             toast.error("Feil ved konvertering av fil-data");
             reject(
               new Error(
                 `Buffer error: ${
-                  bufferError instanceof Error
-                    ? bufferError.message
-                    : String(bufferError)
+                  _error instanceof Error ? _error.message : String(_error)
                 }`
               )
             );
@@ -323,52 +346,17 @@ const FileUpload: React.FC<FileUploadProps> = ({
           let workbook;
           try {
             console.log("Attempting to read Excel data with XLSX...");
-
-            // Legg til mer granulert debugging og platform-spesifikk håndtering
-            const options = {
-              type: "array" as const,
-              cellDates: true,
-              dateNF: "yyyy-mm-dd",
-              cellNF: false,
-              WTF: process.env.NODE_ENV === "development", // Slå på work-the-fuck-around i dev-modus
-              codepage: 65001, // UTF-8 koding for bedre støtte på tvers av plattformer
-              raw: false, // Konverter verdier til passende typer
-            };
-
-            console.log("XLSX read options:", JSON.stringify(options));
-            console.log("Platform:", navigator.platform);
-
-            // Windows-spesifikk håndtering og logging
-            if (navigator.platform.indexOf("Win") > -1) {
-              console.log(
-                "Windows plattform oppdaget - bruker spesifikk Excel-håndtering"
-              );
-
-              // Sjekker filstørrelse før lesing (Windows har noen begrensninger)
-              if (file.size > 10 * 1024 * 1024) {
-                // 10MB
-                console.warn(
-                  "Stor fil oppdaget på Windows - kan forårsake minneproblemer"
-                );
-              }
-            }
-
-            workbook = XLSX.read(data, options);
-
-            console.log("Workbook loaded successfully");
-            console.log("Sheets found:", workbook.SheetNames.join(", "));
+            workbook = XLSX.read(data, { type: "array" });
             console.log(
-              "First sheet ref:",
-              workbook.Sheets[workbook.SheetNames[0]]?.["!ref"]
+              "Workbook loaded successfully. Sheets:",
+              workbook.SheetNames.join(", ")
             );
-          } catch (xlsxError) {
-            console.error("XLSX parsing error:", xlsxError);
+          } catch (_error: unknown) {
+            console.error("XLSX parsing error:", _error);
 
             // Spesifikk feilmelding og feilsøkingshjelp
             const errorDetail =
-              xlsxError instanceof Error
-                ? xlsxError.message
-                : String(xlsxError);
+              _error instanceof Error ? _error.message : String(_error);
             const errorInfo = `
               Detaljer: ${errorDetail}
               Filtype: ${file.type}
@@ -441,243 +429,309 @@ const FileUpload: React.FC<FileUploadProps> = ({
             try {
               const sheet = workbook.Sheets[sheetName];
               if (!sheet) {
-                console.error(`Sheet ${sheetName} not found`);
+                console.warn(`Sheet ${sheetName} not found during parsing`); // Changed error to warn
                 return [];
               }
 
-              // Different parsing options based on sheet
-              let options: XLSX.Sheet2JSONOpts = {
-                defval: "", // Default value for empty cells
-                raw: false, // Convert values to string/number types as appropriate
-              };
-
-              // Special handling for Hovedliste which has a specific format
-              if (sheetName === "Hovedliste") {
-                // Try to determine if the sheet has a header row
-                const range = XLSX.utils.decode_range(sheet["!ref"] || "A1");
-                let headerRow = 0;
-
-                // Look at first few rows to find the row with column headers
-                for (let r = 0; r <= Math.min(5, range.e.r); r++) {
-                  const rowData = XLSX.utils.sheet_to_json(sheet, {
-                    header: 1,
-                    range: XLSX.utils.encode_range({
-                      s: { r, c: 0 },
-                      e: { r, c: range.e.c },
-                    }),
-                  })[0] as any[];
-
-                  if (rowData && Array.isArray(rowData)) {
-                    const hasHeaders = rowData.some(
-                      (cell) =>
-                        cell &&
-                        typeof cell === "string" &&
-                        (cell.includes("Nøkkel") ||
-                          cell.includes("Leverandør") ||
-                          cell.includes("Item") ||
-                          cell.includes("PO") ||
-                          cell.includes("Order"))
-                    );
-
-                    if (hasHeaders) {
-                      console.log(
-                        `Found headers in Hovedliste at row ${r}:`,
-                        rowData
-                      );
-                      headerRow = r;
-                      break;
-                    }
-                  }
+              // Find the header row dynamically for robustness
+              let headerRowIndex = 0;
+              let headers: string[] = [];
+              for (let r = 0; r < 10; r++) {
+                // Scan first 10 rows for headers
+                const row = XLSX.utils.sheet_to_json(sheet, {
+                  header: 1,
+                  range: r,
+                })[0] as string[];
+                if (
+                  row &&
+                  row.length > 0 &&
+                  row.some(
+                    (h) =>
+                      h &&
+                      typeof h === "string" &&
+                      (h.toLowerCase().includes("nøkkel") ||
+                        h.toLowerCase().includes("ref") ||
+                        h.toLowerCase().includes("est receipt date"))
+                  )
+                ) {
+                  headers = row.map((h) => (h ? String(h).trim() : "")); // Trim headers
+                  headerRowIndex = r;
+                  console.log(
+                    `Found header row ${r + 1} for sheet ${sheetName}:`,
+                    headers
+                  );
+                  break;
                 }
-
-                // Set options to use the detected header row
-                options = {
-                  ...options,
-                  range: headerRow > 0 ? headerRow : undefined,
-                  header: "A",
-                };
               }
 
-              const rawData = XLSX.utils.sheet_to_json(
-                sheet,
-                options
-              ) as Record<string, any>[];
+              if (headers.length === 0) {
+                console.error(
+                  `Could not find header row in sheet ${sheetName}. Falling back to default parsing.`
+                );
+                // Fallback or throw error if needed
+              }
+
+              const rawData = XLSX.utils.sheet_to_json(sheet, {
+                header: headers.length > 0 ? headers : "A", // Use found headers or default 'A'
+                range: headerRowIndex > 0 ? headerRowIndex + 1 : 0, // Start data from row after header
+                defval: "",
+                raw: false, // Let XLSX try type conversion
+              }) as Record<string, unknown>[];
+
               console.log(
-                `${sheetName} raw data (sample):`,
+                `${sheetName} raw data (first 2 rows):`,
                 rawData.slice(0, 2)
               );
 
-              // Log all column names from first row to debug
-              if (rawData.length > 0) {
-                console.log(
-                  `${sheetName} column names:`,
-                  Object.keys(rawData[0] as object)
-                );
-              }
-
-              // Look at the actual structure in the Hovedliste sheet
-              if (sheetName === "Hovedliste") {
-                // Examine a few rows to understand structure
-                rawData.slice(0, 3).forEach((row, idx) => {
-                  console.log(`Hovedliste row ${idx} full data:`, row);
-                });
-
-                // Try to find supplier column based on values
-                const possibleSupplierColumns = Object.keys(
-                  rawData[0] as object
-                ).filter((key) => {
-                  const values = rawData
-                    .slice(0, 10)
-                    .map((row) => (row as any)[key]);
-                  const uniqueValues = [
-                    ...new Set(
-                      values.filter((v) => v && typeof v === "string")
-                    ),
-                  ];
-                  console.log(`Column ${key} unique values:`, uniqueValues);
-
-                  // Check if any values match known supplier names
-                  const potentialSuppliers = uniqueValues.filter(
-                    (v) =>
-                      typeof v === "string" &&
-                      (v.includes("Norge") ||
-                        v.includes("LTD") ||
-                        v.includes("AS"))
-                  );
-
-                  return potentialSuppliers.length > 0;
-                });
-
-                console.log(
-                  "Potential supplier columns:",
-                  possibleSupplierColumns
-                );
-              }
-
-              // Map and provide defaults for missing properties
-              return rawData.map((row: any, index) => {
-                // For specific excel format, map the known column names
-                // Based on the console logs, we can see these column names:
-                // 'A' = 'Nøkkel', 'B' = 'PONo.', 'C' = 'Ordre status', 'D' = 'Ordrestatus',
-                // 'E' = 'Item No.', 'I' = 'Leverandør', 'J' = 'Item description', 'K' = 'Specification'
-                // 'O' = 'OrdQtyPO' - This is the primary source for order quantity
-
-                // Use Record<string, any> to allow for dynamic property assignment
-                const processedRow: Record<string, any> = {
-                  key:
-                    row.key ||
-                    row.Key ||
-                    row.ID ||
-                    row.A ||
-                    row.Nøkkel ||
-                    `row-${index}`,
-                  date: new Date(), // Default date since date conversion can be complex
-                  supplier:
-                    row.supplier ||
-                    row.Supplier ||
-                    row.Leverandør ||
-                    row.I ||
-                    "",
-                  // Prioritize the O column (OrdQtyPO) for order quantity
-                  // and ensure it's properly converted to a number
-                  orderQty: Number(
-                    row.O || row.OrdQtyPO || row.orderQty || row.OrderQty || 0
-                  ),
-                  receivedQty: Number(0), // We don't have received quantity in the raw data
-                  poNumber:
-                    row.poNumber || row.PO || row.B || row["PONo."] || "",
-                  itemNo: row.itemNo || row.E || row["Item No."] || "",
-                  description:
-                    row.description || row.J || row["Item description"] || "",
-                  specification: row.K || row.Specification || "",
-                  outstandingQty: 0,
-                };
-
-                // Try to extract proper date if available
-                if (row.F && typeof row.F === "string") {
-                  // Handle date format like '9/9/24'
-                  const dateMatch = row.F.match(/(\d+)\/(\d+)\/(\d+)/);
-                  if (dateMatch) {
-                    const [_, month, day, year] = dateMatch;
-                    const fullYear = year.length === 2 ? "20" + year : year;
-                    processedRow.date = new Date(`${fullYear}-${month}-${day}`);
-                  }
-                } else if (row.G && typeof row.G === "string") {
-                  // Try alternate date field (ETA from supplier)
-                  const dateMatch = row.G.match(/(\d+)\/(\d+)\/(\d+)/);
-                  if (dateMatch) {
-                    const [_, month, day, year] = dateMatch;
-                    const fullYear = year.length === 2 ? "20" + year : year;
-                    processedRow.date = new Date(`${fullYear}-${month}-${day}`);
-                  }
-                }
-
-                // Map all original raw columns to ensure we have all data
-                Object.keys(row).forEach((key) => {
-                  processedRow[key] = row[key];
-                });
-
-                // Direct field mapping for better matching
-                // Based on column analysis from logs
-                if (row.A) processedRow.key = row.A;
-                if (row.B) processedRow.poNumber = row.B;
-                if (row.E) processedRow.itemNo = row.E;
-                if (row.I) processedRow.supplier = row.I;
-                if (row.J) processedRow.description = row.J;
-                if (row.K) processedRow.specification = row.K;
-                // Remove this line as it overwrites orderQty with 0 if row.O is empty
-                // if (row.O) processedRow.orderQty = Number(row.O || 0);
-
-                // Ensure orderQty is always a number (avoiding NaN)
-                processedRow.orderQty = isNaN(processedRow.orderQty)
-                  ? 0
-                  : processedRow.orderQty;
-
-                // Calculate outstandingQty based on orderQty
-                processedRow.outstandingQty =
-                  processedRow.orderQty - processedRow.receivedQty;
-
-                // Special case for Hovedliste based on examining the structure
-                if (sheetName === "Hovedliste" && index < 5) {
-                  console.log(
-                    `Processed Hovedliste row ${index}:`,
-                    processedRow
-                  );
-                }
-
-                return processedRow as ExcelRow;
-              });
+              // --- Mapping logic removed from here, will be done after all sheets are read ---
+              return rawData as ExcelRow[]; // Return raw data for now
             } catch (err) {
               console.error(`Error parsing sheet ${sheetName}:`, err);
+              toast.error(`Feil ved lesing av ark: ${sheetName}`);
               return [];
             }
           };
 
-          const hovedliste = parseSheet("Hovedliste");
-          const bp = parseSheet("BP");
+          // Parse required sheets into raw JSON arrays
+          const hovedRaw = parseSheet("Hovedliste");
+          const bpRaw = parseSheet("BP"); // Keep parsing BP if needed elsewhere
+          const restRaw = parseSheet("Restliste til Leverandør");
+
+          // --- Build Date Map from Restliste ---
+          const estMap = new Map<string, Date>();
+          // Define expected header names (case-insensitive matching below)
+          const restNokkelHeaderKey = "ref"; // Lowercase for comparison
+          const restDateHeaderKey = "est receipt date"; // Lowercase
+          console.log(
+            `Building Restliste map using assumed keys: Key='${restNokkelHeaderKey}', Date='${restDateHeaderKey}'`
+          );
+
+          restRaw.forEach((r: Record<string, unknown>) => {
+            // Find the actual key based on expected header, case-insensitive
+            const keyProp = Object.keys(r).find(
+              (k) => k.trim().toLowerCase() === restNokkelHeaderKey
+            );
+            const dateProp = Object.keys(r).find(
+              (k) => k.trim().toLowerCase() === restDateHeaderKey
+            );
+
+            if (!keyProp || !dateProp) {
+              return;
+            }
+
+            const key = keyProp ? String(r[keyProp] || "").trim() : ""; // Get key value
+            const rawDate = dateProp ? r[dateProp] : undefined; // Get date value
+            if (!key || !rawDate) return;
+
+            let parsedDate: Date | null = null;
+            if (rawDate instanceof Date && !isNaN(rawDate.getTime())) {
+              parsedDate = rawDate;
+            } else if (typeof rawDate === "string") {
+              try {
+                parsedDate = parseDateFns(
+                  rawDate.trim(),
+                  "M/d/yyyy",
+                  new Date()
+                );
+                if (isNaN(parsedDate.getTime())) {
+                  parsedDate = new Date(rawDate.trim());
+                }
+              } catch (_e) {
+                /* Ignore parsing errors */
+              }
+            } else if (typeof rawDate === "number") {
+              // Handle Excel date serial numbers (requires xlsx library function)
+              try {
+                const d = XLSX.SSF.parse_date_code(rawDate);
+                if (d && d.y != null) {
+                  parsedDate = new Date(d.y, d.m - 1, d.d);
+                }
+              } catch (_e) {
+                /* ignore */
+              }
+            }
+
+            if (key && parsedDate && !isNaN(parsedDate.getTime())) {
+              parsedDate.setUTCHours(0, 0, 0, 0); // Normalize
+              estMap.set(key, parsedDate); // Use trimmed key
+            }
+          });
+          console.log(`Built Restliste date map with ${estMap.size} entries.`);
+
+          // --- Process Hovedliste, Merging Dates ---
+          // Define expected header names for Hovedliste (lowercase for comparison)
+          const hovedNokkelHeaderKey = "nøkkel";
+          const hovedDateHeaderKey = "dato varen skulle kommet inn";
+          const hovedSupplierHeaderKey = "leverandør";
+          const hovedPoHeaderKey = "pono."; // Matching the log output
+          const hovedItemNoHeaderKey = "item no."; // Matching the log output
+          const hovedDescHeaderKey = "item description";
+          const hovedSpecHeaderKey = "specification";
+          const hovedOrderQtyHeaderKey = "ordqtypo";
+
+          console.log(`Processing Hovedliste using assumed keys...`);
+
+          const processedHovedliste: ExcelRow[] = hovedRaw.map(
+            (r: Record<string, unknown>, index) => {
+              // Find actual keys based on expected headers, case-insensitive
+              const keyProp = Object.keys(r).find(
+                (k) => k.trim().toLowerCase() === hovedNokkelHeaderKey
+              );
+              const fallbackDateProp = Object.keys(r).find(
+                (k) => k.trim().toLowerCase() === hovedDateHeaderKey
+              );
+              const supplierProp = Object.keys(r).find(
+                (k) => k.trim().toLowerCase() === hovedSupplierHeaderKey
+              );
+              const poProp = Object.keys(r).find(
+                (k) => k.trim().toLowerCase() === hovedPoHeaderKey
+              );
+              const itemNoProp = Object.keys(r).find(
+                (k) => k.trim().toLowerCase() === hovedItemNoHeaderKey
+              );
+              const descProp = Object.keys(r).find(
+                (k) => k.trim().toLowerCase() === hovedDescHeaderKey
+              );
+              const specProp = Object.keys(r).find(
+                (k) => k.trim().toLowerCase() === hovedSpecHeaderKey
+              );
+              const orderQtyProp = Object.keys(r).find(
+                (k) => k.trim().toLowerCase() === hovedOrderQtyHeaderKey
+              );
+
+              // Get values using found property names, provide defaults
+              const key = keyProp ? String(r[keyProp] || "").trim() : "";
+              const fallbackRawDate = fallbackDateProp
+                ? r[fallbackDateProp]
+                : undefined;
+              const supplier = supplierProp
+                ? String(r[supplierProp] || "")
+                : "";
+              const poNumber = poProp ? String(r[poProp] || "") : "";
+              const itemNo = itemNoProp ? String(r[itemNoProp] || "") : "";
+              const description = descProp ? String(r[descProp] || "") : "";
+              const specification = specProp ? String(r[specProp] || "") : "";
+              const orderQtyValue = orderQtyProp
+                ? Number(r[orderQtyProp] || 0)
+                : 0;
+
+              let finalDate: Date | undefined = undefined;
+              const dateFromMap = key ? estMap.get(key) : undefined; // Use trimmed key for lookup
+
+              if (dateFromMap) {
+                finalDate = dateFromMap;
+              } else if (fallbackRawDate) {
+                let parsedFallback: Date | null = null;
+                if (
+                  fallbackRawDate instanceof Date &&
+                  !isNaN(fallbackRawDate.getTime())
+                ) {
+                  parsedFallback = fallbackRawDate;
+                } else if (typeof fallbackRawDate === "string") {
+                  try {
+                    parsedFallback = parseDateFns(
+                      fallbackRawDate.trim(),
+                      "M/d/yyyy",
+                      new Date()
+                    );
+                    if (isNaN(parsedFallback.getTime())) {
+                      parsedFallback = new Date(fallbackRawDate.trim());
+                    }
+                  } catch (_e) {
+                    /* Ignore parsing errors */
+                  }
+                } else if (typeof fallbackRawDate === "number") {
+                  // Handle Excel date serial numbers (requires xlsx library function)
+                  try {
+                    const d = XLSX.SSF.parse_date_code(fallbackRawDate);
+                    if (d && d.y != null) {
+                      parsedFallback = new Date(d.y, d.m - 1, d.d);
+                    }
+                  } catch (_e) {
+                    /* ignore */
+                  }
+                }
+                if (parsedFallback && !isNaN(parsedFallback.getTime())) {
+                  parsedFallback.setUTCHours(0, 0, 0, 0); // Normalize
+                  finalDate = parsedFallback;
+                }
+              }
+
+              const processedRow: ExcelRow = {
+                key: key || `row-${index}`, // Ensure key is always a string
+                dueDate: finalDate, // Assign the final merged and parsed date
+                supplier: supplier,
+                orderQty: orderQtyValue,
+                receivedQty: 0, // Assuming 0
+                poNumber: poNumber,
+                itemNo: itemNo,
+                description: description,
+                specification: specification,
+                outstandingQty: orderQtyValue, // Default outstanding
+              };
+
+              // Ensure orderQty is a non-NaN number
+              processedRow.orderQty = isNaN(processedRow.orderQty)
+                ? 0
+                : processedRow.orderQty;
+
+              // Ensure outstandingQty is a number (treat undefined as 0) and not NaN
+              const outQty = processedRow.outstandingQty ?? 0;
+              processedRow.outstandingQty = isNaN(outQty) ? 0 : outQty;
+
+              return processedRow;
+            }
+          );
+
+          // Sanity check log
+          console.table(
+            processedHovedliste.slice(0, 10).map((r) => ({
+              key: r.key,
+              supplier: r.supplier,
+              dueDate: r.dueDate?.toISOString().split("T")[0] ?? "NULL",
+            }))
+          );
+          console.log(
+            "Logged first 10 processed Hovedliste rows (check console). dueDate should have values."
+          );
 
           // Try to parse the supplier checklist sheet if available
-          let sjekkliste: ExcelRow[] = [];
+          let sjekklisteRaw: ExcelRow[] = [];
           try {
-            if (workbook.Sheets["Sjekkliste Leverandører"]) {
-              console.log("Found Sjekkliste Leverandører sheet, parsing...");
-              sjekkliste = parseSheet("Sjekkliste Leverandører");
-              console.log("Sjekkliste parsed, rows:", sjekkliste.length);
+            // Sheet name might vary slightly, use find
+            const sjekklisteSheetName = workbook.SheetNames.find((name) =>
+              name.toLowerCase().startsWith("sjekkliste leverandører")
+            );
+            if (sjekklisteSheetName && workbook.Sheets[sjekklisteSheetName]) {
+              console.log(
+                `Found sjekkliste sheet: ${sjekklisteSheetName}, parsing...`
+              );
+              sjekklisteRaw = parseSheet(sjekklisteSheetName);
+              console.log("Sjekkliste parsed, rows:", sjekklisteRaw.length);
+            } else {
+              console.warn("Sjekkliste Leverandører sheet not found.");
             }
           } catch (err) {
             console.warn("Error parsing Sjekkliste Leverandører sheet:", err);
           }
 
-          console.log("Parsed data:", {
-            hovedlisteCount: hovedliste.length,
-            bpCount: bp.length,
-            sjekklisteCount: sjekkliste.length,
+          console.log("Parsed data counts:", {
+            hovedlisteCount: processedHovedliste.length,
+            bpCount: bpRaw.length, // Using raw BP data count
+            sjekklisteCount: sjekklisteRaw.length, // Using raw Sjekkliste data count
           });
 
-          resolve({ hovedliste, bp, sjekkliste });
+          // Resolve with the processed Hovedliste data and raw BP/Sjekkliste data
+          resolve({
+            hovedliste: processedHovedliste,
+            bp: bpRaw,
+            sjekkliste: sjekklisteRaw,
+          });
         } catch (error) {
-          console.error("Error parsing file:", error);
-          toast.error("Feil ved analysering av filen. Vennligst prøv igjen.");
+          console.error("Error processing sheets:", error);
+          toast.error(
+            "Feil ved behandling av Excel-ark. Vennligst prøv igjen."
+          );
           reject(error);
         }
       };
@@ -842,30 +896,15 @@ const FileUpload: React.FC<FileUploadProps> = ({
   const onDrop = useCallback(
     async (acceptedFiles: File[]) => {
       if (acceptedFiles.length === 0) {
+        toast.error("Ingen fil valgt eller filtypen er ugyldig.");
         return;
       }
 
       const file = acceptedFiles[0];
       console.log("File dropped:", file.name);
 
-      // Logg detaljert info om filen
-      console.log("File details:", {
-        name: file.name,
-        size: file.size,
-        type: file.type,
-        lastModified: new Date(file.lastModified).toISOString(),
-      });
-
-      if (
-        file.type !==
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-      ) {
-        console.error("Invalid file type:", file.type);
-        toast.error("Vennligst last opp en Excel-fil (.xlsx)");
-        return;
-      }
-
       setIsLoading(true);
+      setIsValidating(false);
       setProgress(0);
       setProcessingStage("Leser fil...");
 
@@ -887,48 +926,77 @@ const FileUpload: React.FC<FileUploadProps> = ({
           const validationResult = await window.electron.validateData(
             parsedData
           );
-          console.log("Validation result:", validationResult);
 
-          if (!validationResult.success) {
-            console.error("Validation failed:", validationResult.error);
-            toast.error(`Valideringsfeil: ${validationResult.error}`);
+          // Add type assertion for validationResult
+          const typedResult = validationResult as {
+            success: boolean;
+            data?: {
+              hovedlisteCount: number;
+              bpCount: number;
+            };
+            error?: string;
+          };
+
+          console.log("Validation result:", typedResult);
+
+          if (!typedResult.success) {
+            console.error("Validation failed:", typedResult.error);
+            toast.error(`Valideringsfeil: ${typedResult.error}`);
             setIsLoading(false);
             setIsValidating(false);
             return;
           }
 
           // Update data with validation results if they exist
-          if (validationResult.data) {
+          if (typedResult.data) {
             // Create a new object with the validation data
             parsedData.validation = {
-              hovedlisteCount: validationResult.data.hovedlisteCount,
-              bpCount: validationResult.data.bpCount,
+              hovedlisteCount: typedResult.data.hovedlisteCount,
+              bpCount: typedResult.data.bpCount,
             };
           }
 
+          // --- Read file content for IPC ---
+          let fileBuffer: ArrayBuffer;
+          try {
+            fileBuffer = await file.arrayBuffer();
+            console.log("File read into ArrayBuffer for IPC.");
+          } catch (__error: unknown) {
+            // Prefix unused error
+            console.error("Error reading file into buffer:", __error);
+            toast.error("Kunne ikke lese filinnhold.");
+            setIsLoading(false);
+            setIsValidating(false);
+            return;
+          }
+          // --- End Read file content ---
+
           // Add this after successful ODBC validation
           try {
-            console.log("Saving to database...");
-            // Save to database if validation was successful
-            const dbResult = await window.electron.saveOrdersToDatabase(
-              parsedData
+            console.log(
+              "Triggering database import via IPC with file buffer..."
             );
-            console.log("Database save result:", dbResult);
+            // Call saveOrdersToDatabase with the fileBuffer
+            const dbResult = await window.electron.saveOrdersToDatabase({
+              fileBuffer: fileBuffer, // Pass the buffer directly
+            });
+            console.log("Database import/save result:", dbResult);
 
             if (!dbResult.success) {
               console.warn("Database save warning:", dbResult.error);
               // Continue even if database save fails - it's not critical for the app to function
-              toast.error("Data validated but not saved to local database");
-            } else {
-              console.log("Database save result:", dbResult);
-              toast.success(
-                `Saved ${
-                  parsedData.hovedliste.length + parsedData.bp.length
-                } orders to database`
+              toast.error(
+                dbResult.error ||
+                  "Data validert, men lagring til database feilet"
               );
+            } else {
+              console.log("Database import/save successful.");
+              // We might not need a specific count here anymore if the importer handles it
+              toast.success(`Import vellykket og data lagret i databasen.`);
             }
-          } catch (dbError) {
-            console.error("Database error:", dbError);
+          } catch (__error: unknown) {
+            // Prefix unused error
+            console.error("Database error:", __error);
             // Continue even if database save fails
             toast.error("Data validated but not saved to local database");
           }
@@ -1149,7 +1217,8 @@ const FileUpload: React.FC<FileUploadProps> = ({
                   : "Dra og slipp Excel-filen her, eller klikk for å velge fil"}
               </p>
               <p className="text-sm text-gray-500 mt-1">
-                Filen må inneholde arkene "Hovedliste" og "BP"
+                Filen må inneholde arkene &quot;Hovedliste&quot; og
+                &quot;BP&quot;
               </p>
             </div>
           </div>
@@ -1166,6 +1235,21 @@ const FileUpload: React.FC<FileUploadProps> = ({
           </button>
         </div>
       )}
+
+      <div className="mt-4 p-4 border border-neutral-light rounded-sm bg-primary-light bg-opacity-10">
+        <h4 className="font-medium text-primary mb-2">Hva må jeg gjøre?</h4>
+        <p className="text-sm text-neutral">
+          Last ned den nyeste versjonen av &quot;Hovedliste&quot; fra Qlik
+          Sense.
+        </p>
+        <p className="text-sm text-neutral mt-1">
+          Pass på at du eksporterer &quot;Hovedliste&quot;-arket som en
+          .xlsx-fil.
+        </p>
+        <p className="text-sm text-neutral mt-1">
+          Dra og slipp filen her, eller klikk for å velge den.
+        </p>
+      </div>
     </div>
   );
 };

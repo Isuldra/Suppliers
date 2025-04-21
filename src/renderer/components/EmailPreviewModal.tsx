@@ -1,6 +1,5 @@
 import React from "react";
 import { EmailData, EmailService } from "../services/emailService";
-import supplierEmailsData from "../data/supplierEmails.json";
 
 interface EmailPreviewModalProps {
   emailData: EmailData;
@@ -22,7 +21,7 @@ const EmailPreviewModal: React.FC<EmailPreviewModalProps> = ({
 
   return (
     <div className="fixed inset-0 bg-neutral bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-neutral-white rounded-md shadow-lg w-full max-w-4xl max-h-[90vh] flex flex-col">
+      <div className="bg-neutral-white rounded-md shadow-lg w-full max-w-7xl max-h-[90vh] flex flex-col">
         <div className="p-6 border-b flex justify-between items-center">
           <h2 className="text-xl font-bold text-neutral">
             Forhåndsvisning av e-post

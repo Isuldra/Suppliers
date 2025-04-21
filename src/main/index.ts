@@ -1,15 +1,14 @@
 import { app, BrowserWindow, ipcMain, shell, dialog, Menu } from "electron";
 import path from "path";
-import { ExcelData, ValidationResult } from "../renderer/types/ExcelData";
-import log from "electron-log";
+import * as log from "electron-log";
 import { databaseService } from "../services/databaseService";
-import { startOfWeek } from "../utils/dateUtils"; // We'll create this file later
-import { setupDatabaseHandlers, closeDatabaseConnection } from "./database";
+import { setupDatabaseHandlers } from "./database";
 import { checkForUpdatesManually } from "./auto-updater";
-import { fileURLToPath } from "url";
 import fs from "fs";
-import Database from "better-sqlite3"; // Import better-sqlite3
+import * as Database from "better-sqlite3"; // Import better-sqlite3
 import { importAlleArk } from "./importer"; // Import the Excel importer
+import child_process from "child_process"; // Added for send-logs-to-support
+import { autoUpdater } from "electron-updater"; // Added for update:install
 
 // Configure detailed logging for troubleshooting
 log.transports.file.level = "debug"; // Set to debug for maximum logging
@@ -49,9 +48,9 @@ process.on("uncaughtException", (error) => {
 });
 
 // Add a global error handler for unhandled promise rejections
-process.on("unhandledRejection", (reason, promise) => {
+process.on("unhandledRejection", (reason, _promise) => {
   log.error("Unhandled Promise Rejection:", reason);
-  // Optionally show an error box here too, or just log
+  // Optionally show an error box here, or just log
 });
 
 // Log startup information
@@ -90,38 +89,6 @@ ipcMain.handle("get-logs", async () => {
     return { success: false, error: String(error) };
   }
 });
-
-// Declare the odbc module interface instead of importing directly
-let odbcModule: any = null;
-
-// Custom interfaces for database results
-interface SupplierResult {
-  Supplier: string;
-}
-
-interface QueryResult<T> {
-  count: number;
-  columns: string[];
-  rows: T[];
-}
-
-// Mock ODBC functionality for development
-const mockOdbcConnection = {
-  query: async (sql: string) => {
-    // Return mock data for development testing
-    if (sql.includes("COUNT") && sql.includes("Supplier")) {
-      return [{ count: 5 }];
-    } else if (sql.includes("DISTINCT Supplier")) {
-      return [{ Supplier: "Mock Supplier 1" }, { Supplier: "Mock Supplier 2" }];
-    }
-    return [];
-  },
-  close: async () => {},
-};
-
-const mockOdbc = {
-  connect: async () => mockOdbcConnection,
-};
 
 let mainWindow: BrowserWindow | null = null;
 
@@ -189,7 +156,7 @@ app.whenReady().then(async () => {
     try {
       const logFilePath = log.transports.file.getFile().path;
       // Determine the folder containing the logs
-      const logsFolder = require("path").dirname(logFilePath);
+      const logsFolder = path.dirname(logFilePath);
 
       const template: Electron.MenuItemConstructorOptions[] = [
         { role: "fileMenu" }, // standard File menu
@@ -257,12 +224,14 @@ app.whenReady().then(async () => {
       log.error("Failed to create application menu:", err);
     }
     // --- End Added Section ---
-  } catch (error: any) {
+  } catch (error: unknown) {
     // Catch errors during the critical startup sequence
     log.error("FATAL STARTUP ERROR:", error);
     dialog.showErrorBox(
       "Application Initialization Failed",
-      `Could not initialize the application due to a database error: ${error.message}\n\nPlease check the logs for more details. The application will now close.`
+      `Could not initialize the application due to a database error: ${
+        error instanceof Error ? error.message : String(error)
+      }\n\nPlease check the logs for more details. The application will now close.`
     );
     app.quit();
     return; // Stop further execution in this callback
@@ -286,7 +255,7 @@ app.on("will-quit", async (event) => {
     // Use the refactored databaseService close method
     databaseService.close();
     log.info("Database closed successfully via databaseService.close()");
-  } catch (error) {
+  } catch (error: unknown) {
     log.error("Error closing database via databaseService:", error);
   } finally {
     log.info("Proceeding with application exit.");
@@ -297,140 +266,194 @@ app.on("will-quit", async (event) => {
   }
 });
 
-// Get the ODBC module - either the real one in production or mock in development
-async function getOdbcModule() {
-  if (odbcModule) {
-    return odbcModule;
+// Function to create the main application window
+async function createOrLoadDatabase(): Promise<Database.Database> {
+  const userDataPath = app.getPath("userData");
+  const dbPath = path.join(userDataPath, "app.sqlite");
+  log.info(`Database path determined: ${dbPath}`);
+
+  // Ensure the user data directory exists
+  try {
+    if (!fs.existsSync(userDataPath)) {
+      log.info(`User data directory not found, creating: ${userDataPath}`);
+      fs.mkdirSync(userDataPath, { recursive: true });
+    }
+  } catch (err: unknown) {
+    log.error(`Failed to create user data directory ${userDataPath}:`, err);
+    const message = err instanceof Error ? err.message : String(err);
+    throw new Error(`Could not create application data directory: ${message}`);
   }
 
-  if (process.env.NODE_ENV === "development") {
-    log.info("Using mock ODBC in development mode");
-    odbcModule = mockOdbc;
+  let db: Database.Database | null = null;
+  let needsImport = false;
+
+  if (fs.existsSync(dbPath)) {
+    log.info("Existing database file found. Attempting to open...");
+    try {
+      db = new Database.default(dbPath);
+      log.info("Successfully opened existing database.");
+      // Optional: Add a quick integrity check or version check here if needed
+    } catch (err: unknown) {
+      log.error(`Failed to open existing database file at ${dbPath}:`, err);
+      const __openErrorMessage =
+        err instanceof Error ? err.message : String(err);
+      // Decide how to handle corruption - e.g., backup and delete?
+      const backupPath = `${dbPath}.corrupt.${Date.now()}`;
+      try {
+        log.warn(`Attempting to rename corrupt database to: ${backupPath}`);
+        fs.renameSync(dbPath, backupPath);
+        log.info("Corrupt database renamed.");
+      } catch (renameErr: unknown) {
+        log.error(`Failed to rename corrupt database ${dbPath}:`, renameErr);
+        const renameErrorMessage =
+          renameErr instanceof Error ? renameErr.message : String(renameErr);
+        // If renaming fails, we might be stuck. Throw a specific error.
+        throw new Error(
+          `Could not open or rename the existing database file. Please check permissions or delete the file manually at ${dbPath}. Error: ${renameErrorMessage}`
+        );
+      }
+      db = null; // Ensure db is null so we proceed to import
+      needsImport = true;
+    }
   } else {
-    try {
-      log.info("Importing real ODBC module in production");
-      // Only import the real odbc module in production
-      const importedModule = await import("odbc");
-      odbcModule = importedModule.default;
-    } catch (error) {
-      log.error("Failed to import ODBC module:", error);
-      // Fallback to mock if real module fails
-      odbcModule = mockOdbc;
-    }
+    log.info("No existing database file found. Import needed.");
+    needsImport = true;
   }
 
-  return odbcModule;
-}
+  if (needsImport) {
+    log.info("Prompting user to select Excel file for initial import...");
+    const { canceled, filePaths } = await dialog.showOpenDialog({
+      title: "Select Master Excel File",
+      message:
+        "Please select the master Excel (.xlsx) file to initialize the database.",
+      filters: [{ name: "Excel Workbook", extensions: ["xlsx"] }],
+      properties: ["openFile"],
+    });
 
-// ODBC connection with retry logic
-async function connectWithRetry(
-  maxRetries: number = 3,
-  initialDelay: number = 500
-): Promise<any> {
-  const odbc = await getOdbcModule();
-  let lastError: Error | null = null;
-
-  for (let i = 0; i < maxRetries; i++) {
-    try {
-      if (process.env.NODE_ENV === "development") {
-        // In development, just return the mock connection
-        return mockOdbcConnection;
-      }
-
-      const connection = await odbc.connect(process.env.ODBC_DSN!);
-      return connection;
-    } catch (error) {
-      lastError =
-        error instanceof Error ? error : new Error("Unknown ODBC error");
-      log.warn(`ODBC connection attempt ${i + 1} failed:`, lastError.message);
-
-      if (i < maxRetries - 1) {
-        const delay = initialDelay * Math.pow(2, i);
-        await new Promise((resolve) => setTimeout(resolve, delay));
-      }
+    if (canceled || filePaths.length === 0) {
+      log.error("User canceled Excel file selection.");
+      throw new Error("Excel file selection is required for the first run.");
     }
-  }
 
-  throw lastError || new Error("Failed to connect to ODBC after retries");
-}
+    const xlsxPath = filePaths[0];
+    log.info(`User selected Excel file: ${xlsxPath}`);
 
-// Handle data validation
-ipcMain.handle(
-  "validateData",
-  async (_, data: ExcelData): Promise<ValidationResult> => {
-    // Remove the supplier check since supplier selection happens later in the wizard flow
-    // Supplier is only needed for ODBC validation, which we'll skip if no supplier is provided
     try {
-      if (data.supplier) {
-        // Only perform ODBC validation if a supplier is selected
-        const connection = await connectWithRetry();
+      // Create the new database file *before* importing
+      log.info(`Creating new database file at: ${dbPath}`);
+      db = new Database.default(dbPath);
+      log.info("New database file created successfully.");
 
-        try {
-          // Validate Hovedliste data
-          const hovedlisteResult = await connection.query(
-            `
-            SELECT COUNT(*) as count 
-            FROM Hovedliste 
-            WHERE Supplier = ? AND OrderQty > ReceivedQty
-          `,
-            [data.supplier]
-          );
+      // Run the import process
+      const importSuccess = await importAlleArk(xlsxPath, db);
 
-          // Validate BP data
-          const bpResult = await connection.query(
-            `
-            SELECT COUNT(*) as count 
-            FROM BP 
-            WHERE Supplier = ? AND OrderQty > ReceivedQty
-          `,
-            [data.supplier]
-          );
-
-          await connection.close();
-
-          return {
-            success: true,
-            data: {
-              hovedlisteCount: Number(hovedlisteResult[0]?.count || 0),
-              bpCount: Number(bpResult[0]?.count || 0),
-            },
-          };
-        } catch (error) {
-          await connection.close();
-          throw error;
+      if (!importSuccess) {
+        log.error(`Excel import failed from file: ${xlsxPath}`);
+        if (db) {
+          try {
+            db.close();
+          } catch (_e: unknown) {
+            /* ignore */
+          }
         }
-      } else {
-        // Skip ODBC validation if no supplier is provided yet
-        // Just validate basic file structure
-        return {
-          success: true,
-          data: {
-            hovedlisteCount: data.hovedliste.length,
-            bpCount: data.bp.length,
-          },
-        };
+        // Try to delete the partially created/empty DB file
+        try {
+          fs.unlinkSync(dbPath);
+        } catch (_e: unknown) {
+          /* ignore */
+        }
+        throw new Error("Failed to import data from the selected Excel file.");
       }
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : "Unknown error occurred";
-      log.error("Data validation failed:", errorMessage);
+
+      log.info("Excel import completed successfully.");
+    } catch (err: unknown) {
+      log.error("Error during database creation or initial import:", err);
+      const importErrorMessage =
+        err instanceof Error ? err.message : String(err);
+      if (db) {
+        try {
+          db.close();
+        } catch (_e: unknown) {
+          /* ignore */
+        }
+      }
+      // Attempt cleanup of potentially empty db file
+      if (fs.existsSync(dbPath)) {
+        try {
+          fs.unlinkSync(dbPath);
+          log.info("Cleaned up potentially empty DB file after error.");
+        } catch (_e: unknown) {
+          /* ignore */
+        }
+      }
+      throw new Error(`Database initialization failed: ${importErrorMessage}`);
+    }
+  }
+
+  // If we reach here, db should be a valid, open connection
+  if (!db) {
+    // This should theoretically not happen if logic above is correct
+    log.error(
+      "Database instance is null after initialization process. This indicates a logical error."
+    );
+    throw new Error("Failed to obtain a valid database connection.");
+  }
+
+  return db;
+}
+
+// --- IPC Handler for Excel Import ---
+ipcMain.handle(
+  "saveOrdersToDatabase",
+  async (_event, payload: { fileBuffer: ArrayBuffer }) => {
+    log.info(`Received 'saveOrdersToDatabase' request with file buffer.`);
+    if (!payload || !payload.fileBuffer) {
+      log.error("IPC 'saveOrdersToDatabase' call missing fileBuffer.");
+      return { success: false, error: "No file data received." };
+    }
+    try {
+      const db = databaseService.getDbInstance();
+      if (!db) {
+        log.error(
+          "Database service not connected or DB connection unavailable."
+        );
+        throw new Error("Database connection is not available.");
+      }
+
+      log.info("Calling importAlleArk with buffer...");
+      // Pass buffer directly to importer (it needs adaptation)
+      const success = await importAlleArk(payload.fileBuffer, db);
+      log.info(`importAlleArk finished with success: ${success}`);
+
+      if (success) {
+        return { success: true, message: "Import completed successfully." };
+      } else {
+        // Check if importAlleArk provides more specific error info
+        throw new Error("Import process failed. Check logs for details.");
+      }
+    } catch (err: unknown) {
+      log.error("Error during saveOrdersToDatabase handling:", err);
+      // Send the actual message & stack back to renderer
       return {
         success: false,
-        error: errorMessage,
+        error: err instanceof Error ? err.message : String(err),
+        stack: err instanceof Error ? err.stack : "<no stacktrace>",
       };
     }
   }
 );
+// --- End IPC Handler ---
 
 // Handle email sending
 ipcMain.handle(
   "sendEmail",
   async (_, payload: { to: string; subject: string; html: string }) => {
     try {
-      const { shell } = require("electron");
+      // Use the imported shell directly
+      // const { shell } = require("electron"); // Removed
 
       // Clean up the HTML to extract text content
-      let cleanText = payload.html
+      const cleanText = payload.html
         .replace(/<style>.*?<\/style>/gs, "")
         .replace(/<head>.*?<\/head>/gs, "")
         .replace(/<script>.*?<\/script>/gs, "")
@@ -452,7 +475,7 @@ ipcMain.handle(
       }
 
       // Create the mailto: URL
-      let mailtoUrl = `mailto:${encodeURIComponent(
+      const mailtoUrl = `mailto:${encodeURIComponent(
         emailTo
       )}?subject=${encodeURIComponent(
         payload.subject
@@ -468,62 +491,6 @@ ipcMain.handle(
         error instanceof Error ? error.message : "Unknown error occurred";
       log.error("Email sending failed:", errorMessage);
       return { success: false, error: errorMessage };
-    }
-  }
-);
-
-// Handle supplier list retrieval
-ipcMain.handle(
-  "getSuppliers",
-  async (): Promise<{ success: boolean; data?: string[]; error?: string }> => {
-    try {
-      const connection = await connectWithRetry();
-
-      try {
-        // Get unique suppliers from both tables
-        const hovedlisteQuery = `
-          SELECT DISTINCT Supplier 
-          FROM Hovedliste 
-          WHERE OrderQty > ReceivedQty
-        `;
-
-        const bpQuery = `
-          SELECT DISTINCT Supplier 
-          FROM BP 
-          WHERE OrderQty > ReceivedQty
-        `;
-
-        const hovedlisteResult = (await connection.query(
-          hovedlisteQuery
-        )) as unknown as SupplierResult[];
-        const bpResult = (await connection.query(
-          bpQuery
-        )) as unknown as SupplierResult[];
-
-        await connection.close();
-
-        // Combine and deduplicate suppliers
-        const suppliers = new Set<string>();
-
-        hovedlisteResult.forEach((row) => suppliers.add(row.Supplier));
-        bpResult.forEach((row) => suppliers.add(row.Supplier));
-
-        return {
-          success: true,
-          data: Array.from(suppliers).sort(),
-        };
-      } catch (error) {
-        await connection.close();
-        throw error;
-      }
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : "Unknown error occurred";
-      log.error("Failed to get suppliers:", errorMessage);
-      return {
-        success: false,
-        error: errorMessage,
-      };
     }
   }
 );
@@ -545,7 +512,8 @@ ipcMain.handle("update:check", async () => {
 ipcMain.handle("update:install", async () => {
   try {
     // This will only work if an update has been downloaded
-    const { autoUpdater } = require("electron-updater");
+    // Use the imported autoUpdater
+    // const { autoUpdater } = require("electron-updater"); // Removed
     autoUpdater.quitAndInstall(false, true);
     return { success: true };
   } catch (error) {
@@ -612,17 +580,16 @@ ipcMain.handle("show-logs", async () => {
     }
     log.info(`Successfully initiated opening of logs directory: ${logsDir}`);
     return { success: true }; // Indicate success to renderer if needed
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error(`Failed to open logs directory ${logsDir}:`, err);
+    const message = err instanceof Error ? err.message : String(err);
     // Show dialog to the user in the main process
     dialog.showErrorBox(
       "Error Opening Logs",
-      `Could not open the logs directory.\nPath: ${logsDir}\nError: ${
-        err.message || err
-      }`
+      `Could not open the logs directory.\nPath: ${logsDir}\nError: ${message}`
     );
     // Return failure status to the renderer
-    return { success: false, error: err.message || String(err) };
+    return { success: false, error: message };
   }
 });
 
@@ -649,12 +616,13 @@ ipcMain.handle("read-log-tail", async (_event, lineCount: number = 200) => {
 
     log.info(`Returning last ${tailLines.length} lines from log file.`);
     return { success: true, logs: tailLines.join("\n") };
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error(`Failed to read log file tail ${logFilePath}:`, err);
+    const message = err instanceof Error ? err.message : String(err);
     // Don't show error box here, just return error to renderer
     return {
       success: false,
-      error: `Failed to read log file: ${err.message || err}`,
+      error: `Failed to read log file: ${message}`,
       logs: "",
     };
   }
@@ -663,9 +631,11 @@ ipcMain.handle("read-log-tail", async (_event, lineCount: number = 200) => {
 // Add new IPC handler 'send-logs-to-support'
 ipcMain.handle("send-logs-to-support", async () => {
   try {
-    const os = require("os");
-    const { shell } = require("electron");
-    const child_process = require("child_process");
+    // Use imported modules
+    // const os = require("os"); // Removed
+    // const { shell } = require("electron"); // Removed
+    // const child_process = require("child_process"); // Removed
+
     const logFile = log.transports.file.getFile();
     const supportEmail = "andreas.elvethun@onemed.com";
     const subject = "Supplier Reminder Pro Support Logs";
@@ -716,134 +686,3 @@ ipcMain.handle("send-logs-to-support", async () => {
     };
   }
 });
-
-// Function to create the main application window
-async function createOrLoadDatabase(): Promise<Database.Database> {
-  const userDataPath = app.getPath("userData");
-  const dbPath = path.join(userDataPath, "app.sqlite");
-  log.info(`Database path determined: ${dbPath}`);
-
-  // Ensure the user data directory exists
-  try {
-    if (!fs.existsSync(userDataPath)) {
-      log.info(`User data directory not found, creating: ${userDataPath}`);
-      fs.mkdirSync(userDataPath, { recursive: true });
-    }
-  } catch (err: any) {
-    log.error(`Failed to create user data directory ${userDataPath}:`, err);
-    throw new Error(
-      `Could not create application data directory: ${err.message}`
-    );
-  }
-
-  let db: Database.Database | null = null;
-  let needsImport = false;
-
-  if (fs.existsSync(dbPath)) {
-    log.info("Existing database file found. Attempting to open...");
-    try {
-      db = new Database(dbPath);
-      log.info("Successfully opened existing database.");
-      // Optional: Add a quick integrity check or version check here if needed
-    } catch (err: any) {
-      log.error(`Failed to open existing database file at ${dbPath}:`, err);
-      // Decide how to handle corruption - e.g., backup and delete?
-      const backupPath = `${dbPath}.corrupt.${Date.now()}`;
-      try {
-        log.warn(`Attempting to rename corrupt database to: ${backupPath}`);
-        fs.renameSync(dbPath, backupPath);
-        log.info("Corrupt database renamed.");
-      } catch (renameErr: any) {
-        log.error(`Failed to rename corrupt database ${dbPath}:`, renameErr);
-        // If renaming fails, we might be stuck. Throw a specific error.
-        throw new Error(
-          `Could not open or rename the existing database file. Please check permissions or delete the file manually at ${dbPath}. Error: ${renameErr.message}`
-        );
-      }
-      db = null; // Ensure db is null so we proceed to import
-      needsImport = true;
-    }
-  } else {
-    log.info("No existing database file found. Import needed.");
-    needsImport = true;
-  }
-
-  if (needsImport) {
-    log.info("Prompting user to select Excel file for initial import...");
-    const { canceled, filePaths } = await dialog.showOpenDialog({
-      title: "Select Master Excel File",
-      message:
-        "Please select the master Excel (.xlsx) file to initialize the database.",
-      filters: [{ name: "Excel Workbook", extensions: ["xlsx"] }],
-      properties: ["openFile"],
-    });
-
-    if (canceled || filePaths.length === 0) {
-      log.error("User canceled Excel file selection.");
-      throw new Error("Excel file selection is required for the first run.");
-    }
-
-    const xlsxPath = filePaths[0];
-    log.info(`User selected Excel file: ${xlsxPath}`);
-
-    try {
-      // Create the new database file *before* importing
-      log.info(`Creating new database file at: ${dbPath}`);
-      db = new Database(dbPath);
-      log.info("New database file created successfully.");
-
-      // Run the import process
-      const importSuccess = await importAlleArk(xlsxPath, db);
-
-      if (!importSuccess) {
-        log.error(`Excel import failed from file: ${xlsxPath}`);
-        if (db) {
-          try {
-            db.close();
-          } catch (e) {
-            /* ignore */
-          }
-        }
-        // Try to delete the partially created/empty DB file
-        try {
-          fs.unlinkSync(dbPath);
-        } catch (e) {
-          /* ignore */
-        }
-        throw new Error("Failed to import data from the selected Excel file.");
-      }
-
-      log.info("Excel import completed successfully.");
-    } catch (err: any) {
-      log.error("Error during database creation or initial import:", err);
-      if (db) {
-        try {
-          db.close();
-        } catch (e) {
-          /* ignore */
-        }
-      }
-      // Attempt cleanup of potentially empty db file
-      if (fs.existsSync(dbPath)) {
-        try {
-          fs.unlinkSync(dbPath);
-          log.info("Cleaned up potentially empty DB file after error.");
-        } catch (e) {
-          /* ignore */
-        }
-      }
-      throw new Error(`Database initialization failed: ${err.message}`);
-    }
-  }
-
-  // If we reach here, db should be a valid, open connection
-  if (!db) {
-    // This should theoretically not happen if logic above is correct
-    log.error(
-      "Database instance is null after initialization process. This indicates a logical error."
-    );
-    throw new Error("Failed to obtain a valid database connection.");
-  }
-
-  return db;
-}

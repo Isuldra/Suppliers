@@ -125,6 +125,36 @@ export function getWeekNumber(date: Date): number {
 }
 
 /**
+ * Get the ISO week number and year for a given date.
+ * ISO 8601 week definition: Week starts on Monday, first week of the year is the one containing the first Thursday.
+ *
+ * @param date The date to get the week number for
+ * @returns An object containing the week number and year
+ */
+export function getWeekDateRange(
+  weekNumber: number,
+  _year: number
+): { start: Date; end: Date } | null {
+  if (weekNumber < 1 || weekNumber > 53) {
+    return null;
+  }
+
+  const firstDayOfYear = new Date(_year, 0, 1);
+  const dayOfWeek = firstDayOfYear.getDay();
+  const daysOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+
+  const firstMonday = new Date(_year, 0, 1 + daysOffset);
+
+  const result = {
+    start: firstMonday,
+    end: new Date(firstMonday),
+  };
+  result.end.setDate(result.start.getDate() + 6);
+
+  return result;
+}
+
+/**
  * Check if a date is before another date (ignoring time)
  * @param date The date to check
  * @param compareDate The date to compare against
@@ -139,37 +169,4 @@ export function isDateBefore(date: Date, compareDate: Date): boolean {
   d2.setHours(0, 0, 0, 0);
 
   return d1 < d2;
-}
-
-/**
- * Parse a date string with flexible format detection
- * @param dateStr Date string to parse
- * @returns Date object or null if parsing fails
- */
-export function parseFlexibleDate(dateStr: string): Date | null {
-  if (!dateStr) return null;
-
-  // Try parsing ISO format
-  const isoDate = new Date(dateStr);
-  if (!isNaN(isoDate.getTime())) {
-    return isoDate;
-  }
-
-  // Try DD.MM.YYYY format (Norwegian)
-  const norwegianFormat = /^(\d{1,2})\.(\d{1,2})\.(\d{4})$/;
-  const norwegianMatch = dateStr.match(norwegianFormat);
-  if (norwegianMatch) {
-    const [_, day, month, year] = norwegianMatch;
-    return new Date(Number(year), Number(month) - 1, Number(day));
-  }
-
-  // Try MM/DD/YYYY format (US)
-  const usFormat = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/;
-  const usMatch = dateStr.match(usFormat);
-  if (usMatch) {
-    const [_, month, day, year] = usMatch;
-    return new Date(Number(year), Number(month) - 1, Number(day));
-  }
-
-  return null;
 }

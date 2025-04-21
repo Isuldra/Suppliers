@@ -8,9 +8,7 @@ import path from "path";
 import fs from "fs";
 import { app } from "electron";
 import { ExcelRow } from "../types/ExcelRow";
-import { formatDate } from "../utils/dateUtils";
 import log from "electron-log";
-import crypto from "crypto";
 
 // Types
 export interface DbOrder extends ExcelRow {
@@ -86,8 +84,11 @@ export class DatabaseService {
       if (this.db) {
         try {
           this.db.close();
-        } catch (closeErr) {
-          /* Ignore close error */
+        } catch (_closeErr) {
+          log.error(
+            "Error closing database during backup creation:",
+            _closeErr
+          );
         }
         this.db = null;
       }
@@ -100,6 +101,11 @@ export class DatabaseService {
       DatabaseService.instance = new DatabaseService();
     }
     return DatabaseService.instance;
+  }
+
+  // Add a public getter for the database instance
+  public getDbInstance(): Database.Database | null {
+    return this.db;
   }
 
   private initialize(): void {
@@ -171,15 +177,25 @@ export class DatabaseService {
          ALTER TABLE orders ADD COLUMN email_sent_at TEXT;
       `);
       log.info("Database schema initialization checked/updated successfully");
-    } catch (error: any) {
-      // Ignore "duplicate column name" error for ALTER TABLE
-      if (
-        error.message &&
-        error.message.includes("duplicate column name: email_sent_at")
-      ) {
-        log.info("Column 'email_sent_at' already exists in 'orders' table.");
+    } catch (error: unknown) {
+      // Check if it's an Error object before accessing message
+      if (error instanceof Error) {
+        // Ignore "duplicate column name" error for ALTER TABLE
+        if (
+          error.message &&
+          error.message.includes("duplicate column name: email_sent_at")
+        ) {
+          log.info("Column 'email_sent_at' already exists in 'orders' table.");
+        } else {
+          log.error("Failed to initialize database schema:", error);
+          throw error;
+        }
       } else {
-        log.error("Failed to initialize database schema:", error);
+        // Handle cases where the caught value is not an Error
+        log.error(
+          "Failed to initialize database schema with non-Error value:",
+          error
+        );
         throw error;
       }
     }
@@ -189,8 +205,8 @@ export class DatabaseService {
     action: string,
     tableName: string,
     recordId?: number,
-    oldValue?: any,
-    newValue?: any
+    oldValue?: unknown,
+    newValue?: unknown
   ): void {
     if (this.isShuttingDown || !this.db) return;
 
@@ -401,7 +417,7 @@ export class DatabaseService {
         ORDER BY dueDate ASC
       `);
 
-      const rows = stmt.all(supplier) as any[];
+      const rows = stmt.all(supplier) as DbOrder[];
 
       this.queryCounter++;
       log.debug(
@@ -446,7 +462,7 @@ export class DatabaseService {
         ORDER BY dueDate ASC
       `);
 
-      const rows = stmt.all() as any[];
+      const rows = stmt.all() as DbOrder[];
 
       this.queryCounter++;
       log.debug(
@@ -500,7 +516,7 @@ export class DatabaseService {
       const rows = stmt.all(
         today.toISOString(),
         futureDate.toISOString()
-      ) as any[];
+      ) as DbOrder[];
 
       this.queryCounter++;
       log.debug(
@@ -570,7 +586,7 @@ export class DatabaseService {
         ORDER BY dueDate ASC
       `);
 
-      const rows = stmt.all(supplier) as any[];
+      const rows = stmt.all(supplier) as DbOrder[];
 
       this.queryCounter++;
       log.debug(
@@ -607,7 +623,7 @@ export class DatabaseService {
       // First, add the email_sent_at column if it doesn't exist
       try {
         this.db!.exec(`ALTER TABLE orders ADD COLUMN email_sent_at TEXT;`);
-      } catch (e) {
+      } catch (_e: unknown) {
         // Column might already exist, ignore the error
       }
 

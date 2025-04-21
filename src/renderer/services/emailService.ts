@@ -6,25 +6,6 @@ type SupplierEmails = {
   [key: string]: string;
 };
 
-// Declare electron API type
-declare global {
-  interface Window {
-    electron: {
-      getSuppliers: () => Promise<{
-        success: boolean;
-        data?: string[];
-        error?: string;
-      }>;
-      sendEmail: (
-        payload: any
-      ) => Promise<{ success: boolean; error?: string }>;
-    };
-  }
-}
-
-// Register Handlebars helper for comparison
-Handlebars.registerHelper("gt", (a: number, b: number) => a > b);
-
 export interface EmailData {
   supplier: string;
   orders: Array<{
@@ -37,6 +18,7 @@ export interface EmailData {
     description?: string;
   }>;
   language?: "no" | "en"; // Add language option
+  subject: string; // Make required
 }
 
 export class EmailService {
