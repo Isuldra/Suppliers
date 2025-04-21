@@ -2,6 +2,16 @@ import { contextBridge, ipcRenderer } from "electron";
 import { ExcelData } from "../renderer/types/ExcelData";
 import { ExcelRow } from "../types/ExcelRow";
 
+// Define specific type for validateData return value
+type ValidateDataResult = {
+  success: boolean;
+  data?: {
+    hovedlisteCount: number;
+    bpCount: number;
+  };
+  error?: string;
+};
+
 // Define types for the API
 interface ElectronAPI {
   send: (channel: string, data: unknown) => void;
@@ -12,8 +22,12 @@ interface ElectronAPI {
   handleError: (error: Error) => void;
   parseExcel: (data: unknown) => void;
   onExcelValidation: (callback: (data: unknown) => void) => () => void;
-  validateData: (data: ExcelData) => Promise<any>;
-  sendEmail: (payload: any) => Promise<{ success: boolean; error?: string }>;
+  validateData: (data: ExcelData) => Promise<ValidateDataResult>;
+  sendEmail: (payload: {
+    to: string;
+    subject: string;
+    html: string;
+  }) => Promise<{ success: boolean; error?: string }>;
   getSuppliers: () => Promise<{
     success: boolean;
     data?: string[];
@@ -25,7 +39,7 @@ interface ElectronAPI {
   getOutstandingOrders: (
     supplier: string,
     beforeCurrentWeek?: boolean
-  ) => Promise<{ success: boolean; data?: any[]; error?: string }>;
+  ) => Promise<{ success: boolean; data?: unknown[]; error?: string }>;
   recordEmailSent: (
     supplier: string,
     recipient: string,
@@ -50,9 +64,9 @@ interface ElectronAPI {
 
   // Auto-updater methods
   checkForUpdates: () => Promise<void>;
-  onUpdateAvailable: (callback: (info: any) => void) => () => void;
-  onUpdateDownloaded: (callback: (info: any) => void) => () => void;
-  onUpdateError: (callback: (error: any) => void) => () => void;
+  onUpdateAvailable: (callback: (info: unknown) => void) => () => void;
+  onUpdateDownloaded: (callback: (info: unknown) => void) => () => void;
+  onUpdateError: (callback: (error: Error) => void) => () => void;
   installUpdate: () => Promise<void>;
 
   // New API methods
@@ -200,7 +214,7 @@ contextBridge.exposeInMainWorld("electron", {
     return await ipcRenderer.invoke("validateData", data);
   },
   // Email sending
-  sendEmail: async (payload: any) => {
+  sendEmail: async (payload: { to: string; subject: string; html: string }) => {
     return await ipcRenderer.invoke("sendEmail", payload);
   },
   // Get suppliers
@@ -267,24 +281,24 @@ contextBridge.exposeInMainWorld("electron", {
   checkForUpdates: async () => {
     return await ipcRenderer.invoke("update:check");
   },
-  onUpdateAvailable: (callback: (info: any) => void) => {
-    const subscription = (_event: Electron.IpcRendererEvent, info: any) =>
+  onUpdateAvailable: (callback: (info: unknown) => void) => {
+    const subscription = (_event: Electron.IpcRendererEvent, info: unknown) =>
       callback(info);
     ipcRenderer.on("update:available", subscription);
     return () => {
       ipcRenderer.removeListener("update:available", subscription);
     };
   },
-  onUpdateDownloaded: (callback: (info: any) => void) => {
-    const subscription = (_event: Electron.IpcRendererEvent, info: any) =>
+  onUpdateDownloaded: (callback: (info: unknown) => void) => {
+    const subscription = (_event: Electron.IpcRendererEvent, info: unknown) =>
       callback(info);
     ipcRenderer.on("update:downloaded", subscription);
     return () => {
       ipcRenderer.removeListener("update:downloaded", subscription);
     };
   },
-  onUpdateError: (callback: (error: any) => void) => {
-    const subscription = (_event: Electron.IpcRendererEvent, error: any) =>
+  onUpdateError: (callback: (error: Error) => void) => {
+    const subscription = (_event: Electron.IpcRendererEvent, error: Error) =>
       callback(error);
     ipcRenderer.on("update:error", subscription);
     return () => {

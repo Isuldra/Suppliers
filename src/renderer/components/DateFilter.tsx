@@ -15,18 +15,18 @@ export interface DateFilterSettings {
 }
 
 interface DateFilterProps {
-  columnId: string;
-  data: any[];
+  _columnId: string;
+  data: unknown[];
   dateFilterSettings: DateFilterSettings;
   setDateFilterSettings: React.Dispatch<
     React.SetStateAction<DateFilterSettings>
   >;
   onApplyFilter: () => void;
-  getDateValue: (row: any) => Date | null;
+  getDateValue: (row: unknown) => Date | null;
 }
 
 const DateFilter: React.FC<DateFilterProps> = ({
-  columnId,
+  _columnId,
   data,
   dateFilterSettings,
   setDateFilterSettings,

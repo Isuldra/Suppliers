@@ -6,27 +6,11 @@ import { ExcelData, ExcelRow } from "../types/ExcelData";
 
 interface EmailButtonProps {
   excelData?: ExcelData;
-  selectedSupplier?: string;
+  selectedSupplier: string;
   onPrevious: () => void;
 }
 
 const emailService = new EmailService();
-
-declare global {
-  interface Window {
-    electron: {
-      sendEmail: (
-        payload: any
-      ) => Promise<{ success: boolean; error?: string }>;
-      recordEmailSent: (
-        supplier: string,
-        recipient: string,
-        subject: string,
-        orderCount: number
-      ) => Promise<any>;
-    };
-  }
-}
 
 const EmailButton: React.FC<EmailButtonProps> = ({
   excelData,
@@ -40,6 +24,7 @@ const EmailButton: React.FC<EmailButtonProps> = ({
     supplier: selectedSupplier || "",
     orders: [],
     language: "no", // Default to Norwegian
+    subject: "", // Provide a default subject
   });
   const [previewHtml, setPreviewHtml] = useState("");
 
@@ -51,12 +36,13 @@ const EmailButton: React.FC<EmailButtonProps> = ({
       .filter((row) => row.supplier === selectedSupplier)
       .map((row: ExcelRow) => ({
         key: row.key,
-        poNumber: row.poNumber,
-        orderQty: row.orderQty,
-        receivedQty: row.receivedQty,
-        outstandingQty: row.orderQty - row.receivedQty,
-        itemNo: row.itemNo,
-        description: row.description,
+        poNumber: String(row.poNumber || ""),
+        orderQty: Number(row.orderQty || 0),
+        receivedQty: Number(row.receivedQty || 0),
+        outstandingQty: Number(row.outstandingQty || 0),
+        itemNo: typeof row.itemNo === "string" ? row.itemNo : undefined,
+        description:
+          typeof row.description === "string" ? row.description : undefined,
       }));
   }, [excelData, selectedSupplier]);
 
@@ -67,6 +53,7 @@ const EmailButton: React.FC<EmailButtonProps> = ({
       supplier: selectedSupplier || "",
       orders,
       language: emailData.language,
+      subject: emailData.subject, // Carry over existing subject
     };
     setEmailData(updatedData);
 
@@ -89,6 +76,11 @@ const EmailButton: React.FC<EmailButtonProps> = ({
   };
 
   const handleSendEmail = async () => {
+    if (!selectedSupplier) {
+      console.error("No supplier selected, cannot send email.");
+      toast.error("Ingen leverandør valgt.");
+      return;
+    }
     setIsSending(true);
     try {
       const result = await emailService.sendReminder(emailData);
@@ -114,9 +106,9 @@ const EmailButton: React.FC<EmailButtonProps> = ({
       } else {
         throw new Error(result.error);
       }
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : "Ukjent feil";
+    } catch (_error: unknown) {
+      // const errorMessage = // Remove unused variable
+      //  error instanceof Error ? error.message : "Ukjent feil";
 
       if (retryCount < 2) {
         const delay = Math.pow(2, retryCount) * 500; // Exponential backoff
@@ -128,16 +120,26 @@ const EmailButton: React.FC<EmailButtonProps> = ({
           handleSendEmail();
         }, delay);
       } else {
-        toast.error("Kunne ikke sende e-post. Vil du prøve igjen?", {
-          duration: 5000,
-          action: {
-            label: "Prøv igjen",
-            onClick: () => {
-              setRetryCount(0);
-              handleSendEmail();
-            },
-          },
-        });
+        toast.error(
+          <span>
+            Kunne ikke sende e-post. Vil du prøve igjen?{" "}
+            <button
+              className="ml-2 underline text-primary font-medium"
+              onClick={() => {
+                setRetryCount(0);
+                handleSendEmail();
+                toast.dismiss(); // Dismiss this toast on click
+              }}
+            >
+              Prøv igjen
+            </button>
+          </span>,
+          {
+            duration: 10000, // Keep duration or adjust
+            // Remove the invalid 'action' property
+            // action: { ... },
+          }
+        );
       }
     } finally {
       setIsSending(false);

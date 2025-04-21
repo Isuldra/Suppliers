@@ -24,7 +24,7 @@ interface Planner {
 const SupplierSelect: React.FC<SupplierSelectProps> = ({
   onSupplierSelected,
   currentSupplier,
-  excelData,
+  // excelData, // Remove unused prop
   selectedWeekday,
   selectedPlanner,
 }) => {

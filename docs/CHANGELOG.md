@@ -1,5 +1,34 @@
 # Documentation Changelog
 
+## Phase 4: Import Debugging & UI Layout
+
+_Completed [Current Date - e.g., 21 Apr 2025]_
+
+This phase focused on resolving critical Excel import bugs and improving UI layout consistency.
+
+### Key Changes:
+
+- **Excel Import (`src/main/importer.ts`):**
+  - Refactored `findHeaderRow` helper to use `cell.text` instead of `row.values` for improved reliability with varied cell content (rich text, formulas).
+  - Fixed `Hovedliste` processing failure by applying the improved `findHeaderRow`.
+  - Fixed `Sjekkliste Leverandører *` processing by dynamically finding the header row using `findHeaderRow` instead of assuming row 4.
+  - Fixed numeric date parsing from Excel serial numbers in `Restliste til Leverandør` processing using `XLSX.SSF.parse_date_code` correctly.
+  - _Note:_ While `Hovedliste` import now succeeds, logs indicate potential remaining issues with populating the `estMap` from `Restliste` and extracting `weekly_status` data from `Sjekkliste` sheets.
+- **UI Layout (`src/renderer/styles/index.css`, `App.tsx`, modals, steps):**
+  - Removed `max-w` constraint from `.container-app` in global styles to allow content area to expand.
+  - Increased `max-w` on the Email Preview modal (`EmailPreviewModal.tsx`) for better viewing on wider screens.
+  - Applied `max-w` and centering (`mx-auto`) to the content block within the Weekday Select step (`WeekdaySelect.tsx`) to improve layout balance.
+- **Tooling:**
+  - Installed and configured ESLint (v9) with TypeScript and React plugins (`eslint.config.js`). Identified numerous linting issues to be addressed.
+
+### Pending / Next Steps:
+
+- Address remaining Excel import issues (Restliste `estMap`, Sjekkliste data extraction).
+- Systematically fix ESLint errors and warnings.
+- Further UI refinement pass.
+
+---
+
 ## Phase 3: Technical Accuracy Review & Cleanup
 
 _Completed [Current Month/Year - e.g., May 2024]_

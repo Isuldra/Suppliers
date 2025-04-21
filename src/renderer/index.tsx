@@ -18,7 +18,7 @@ if (!window.electron) {
     "If you are on Windows, check if antivirus or security software is blocking the app.";
   document.body.appendChild(errorDiv);
   // Also log to console for developer diagnostics
-  // eslint-disable-next-line no-console
+   
   console.error("Preload script not loaded: window.electron is undefined.");
 }
 

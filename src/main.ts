@@ -30,7 +30,7 @@ function createWindow() {
   // Prevent memory leaks by explicitly setting mainWindow to null when closed
   mainWindow.on("closed", () => {
     // This helps ensure resources are properly released
-    // @ts-ignore
+    // @ts-expect-error // Allow setting mainWindow to null despite BrowserWindow type
     mainWindow = null;
   });
 }

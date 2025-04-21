@@ -7,13 +7,28 @@ import {
   shell,
   ipcMain,
 } from "electron";
+import type { OnHeadersReceivedListenerDetails } from "electron";
 import { join } from "path";
 import { setupAutoUpdater, checkForUpdatesManually } from "./auto-updater";
 import log from "electron-log";
 
 let mainWindow: BrowserWindow | null = null;
-let securityHeadersListener: any = null;
-let cspListener: any = null;
+let securityHeadersListener:
+  | ((
+      details: OnHeadersReceivedListenerDetails,
+      callback: (response: {
+        responseHeaders?: Record<string, string[]>;
+      }) => void
+    ) => void)
+  | null = null;
+let cspListener:
+  | ((
+      details: OnHeadersReceivedListenerDetails,
+      callback: (response: {
+        responseHeaders?: Record<string, string[]>;
+      }) => void
+    ) => void)
+  | null = null;
 
 const isDevelopment = process.env.NODE_ENV === "development";
 
@@ -35,7 +50,7 @@ const cspPolicy = {
 // Create application menu
 function createApplicationMenu() {
   const isMac = process.platform === "darwin";
-  console.log("Creating application menu using improved method...");
+  log.info("Creating application menu...");
 
   const template = [
     // App menu (macOS only)
@@ -172,12 +187,13 @@ function createApplicationMenu() {
   ];
 
   try {
-    console.log("Setting application menu...");
+    log.info("Setting application menu...");
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const menu = Menu.buildFromTemplate(template as any);
     Menu.setApplicationMenu(menu);
-    console.log("Application menu set successfully!");
-  } catch (error) {
-    console.error("Failed to set application menu:", error);
+    log.info("Application menu set successfully!");
+  } catch (error: unknown) {
+    log.error("Failed to set application menu:", error);
   }
 }
 
@@ -187,23 +203,23 @@ function clearExistingHandlers() {
     // For Electron API, we should just create new listeners and not try to
     // remove the old ones, as the API doesn't support direct removal.
     // The new listeners will replace the old ones.
-  } catch (error) {
-    console.error("Error clearing handlers:", error);
+  } catch (error: unknown) {
+    log.error("Error clearing handlers:", error);
   }
 }
 
 // Setup IPC handlers for help menu functions
 function setupHelpMenuHandlers() {
-  console.log("Setting up help menu IPC handlers...");
+  log.info("Setting up help menu IPC handlers...");
 
   // Handler for opening external URLs (needs handle for invoke calls)
-  ipcMain.handle("openExternalLink", async (event, url) => {
-    console.log("Opening external URL:", url);
+  ipcMain.handle("openExternalLink", async (_event, url: string) => {
+    log.info("Opening external URL:", url);
     try {
       await shell.openExternal(url);
       return { success: true };
-    } catch (error) {
-      console.error("Failed to open external URL:", error);
+    } catch (error: unknown) {
+      log.error("Failed to open external URL:", error);
       return {
         success: false,
         error: error instanceof Error ? error.message : "Unknown error",
@@ -211,12 +227,12 @@ function setupHelpMenuHandlers() {
     }
   });
 
-  // Handler for checking updates (this one can remain as 'on' since it doesn't use invoke)
-  ipcMain.on("check-for-updates", async (event) => {
-    console.log("Check for updates requested");
+  // Handler for checking updates
+  ipcMain.on("check-for-updates", async (_event) => {
+    log.info("Check for updates requested");
     try {
       if (isDevelopment) {
-        console.log("In development mode, showing dialog");
+        log.info("In development mode, showing dialog");
         dialog.showMessageBox({
           type: "info",
           title: "Utviklermodus",
@@ -226,9 +242,9 @@ function setupHelpMenuHandlers() {
         return;
       }
 
-      console.log("Checking for updates...");
+      log.info("Checking for updates...");
       const result = await checkForUpdatesManually();
-      console.log("Update check result:", result);
+      log.info("Update check result:", result);
 
       // If no update is available, show a message
       if (!result.updateAvailable) {
@@ -240,8 +256,8 @@ function setupHelpMenuHandlers() {
         });
       }
       // If update is available, it will be handled by the auto-updater events
-    } catch (error) {
-      console.error("Failed to check for updates:", error);
+    } catch (error: unknown) {
+      log.error("Failed to check for updates:", error);
       dialog.showMessageBox({
         type: "error",
         title: "Feil ved oppdateringssjekk",
@@ -254,7 +270,7 @@ function setupHelpMenuHandlers() {
 
   // Handler for showing about dialog
   ipcMain.on("show-about-dialog", () => {
-    console.log("Showing about dialog");
+    log.info("Showing about dialog");
     dialog.showMessageBox({
       type: "info",
       title: "Om OneMed SupplyChain",
@@ -290,7 +306,12 @@ async function createWindow() {
 
   // Set Content-Security-Policy - only add it once
   if (!cspListener) {
-    cspListener = (details: any, callback: any) => {
+    cspListener = (
+      details: OnHeadersReceivedListenerDetails,
+      callback: (response: {
+        responseHeaders?: Record<string, string[]>;
+      }) => void
+    ) => {
       callback({
         responseHeaders: {
           ...details.responseHeaders,
@@ -303,7 +324,9 @@ async function createWindow() {
       });
     };
 
-    session.defaultSession.webRequest.onHeadersReceived(cspListener);
+    app.whenReady().then(() => {
+      session.defaultSession.webRequest.onHeadersReceived(cspListener);
+    });
   }
 
   if (isDevelopment) {
@@ -329,7 +352,7 @@ async function createWindow() {
           }
         }, 1000);
       });
-    } catch (err) {
+    } catch (err: unknown) {
       log.error("Failed to load development URL:", err);
     }
   } else {
@@ -337,24 +360,57 @@ async function createWindow() {
   }
 
   // Ekstra forsøk på å sette menyen etter at vinduet er lastet
-  console.log("Window loaded, trying to set menu again...");
+  log.info("Window loaded, trying to set menu again...");
   try {
     createApplicationMenu();
-  } catch (error) {
-    console.error("Error setting menu after window load:", error);
+  } catch (error: unknown) {
+    log.error("Error setting menu after window load:", error);
   }
 
+  // Prevent memory leaks by explicitly setting mainWindow to null when closed
   mainWindow.on("closed", () => {
     mainWindow = null;
+  });
+
+  // Handle external links opened via middle-click or ctrl+click in renderer
+  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    // Ensure only expected protocols are opened externally
+    if (
+      url.startsWith("http:") ||
+      url.startsWith("https:") ||
+      url.startsWith("mailto:")
+    ) {
+      shell.openExternal(url);
+    }
+    return { action: "deny" }; // Prevent Electron from creating a new window
+  });
+
+  // Optional: Intercept navigation to ensure it stays within the app or opens externally
+  mainWindow.webContents.on("will-navigate", (_event, url) => {
+    // Prevent navigation if it's not to the expected localhost URL during dev
+    if (
+      process.env.NODE_ENV === "development" &&
+      !url.startsWith("http://localhost:5173")
+    ) {
+      // event.preventDefault(); // Original logic commented out
+      shell.openExternal(url); // Open external links in default browser
+    }
+    // In production, you might want to restrict navigation further
+    // or ensure all links are handled via setWindowOpenHandler
   });
 }
 
 app.whenReady().then(() => {
-  console.log("App is ready, setting up environment...");
+  log.info("App is ready, setting up environment...");
 
   // Set global security settings - only add them once
   if (!securityHeadersListener) {
-    securityHeadersListener = (details: any, callback: any) => {
+    securityHeadersListener = (
+      details: OnHeadersReceivedListenerDetails,
+      callback: (response: {
+        responseHeaders?: Record<string, string[]>;
+      }) => void
+    ) => {
       callback({
         responseHeaders: {
           ...details.responseHeaders,
@@ -365,17 +421,19 @@ app.whenReady().then(() => {
       });
     };
 
-    session.defaultSession.webRequest.onHeadersReceived(
-      securityHeadersListener
-    );
+    app.whenReady().then(() => {
+      session.defaultSession.webRequest.onHeadersReceived(
+        securityHeadersListener
+      );
+    });
   }
 
   // Sett opp IPC handlere før noe annet
-  console.log("Setting up IPC handlers early...");
+  log.info("Setting up IPC handlers early...");
   setupHelpMenuHandlers();
 
   // Sett menyen først, før vinduet opprettes
-  console.log("About to create application menu...");
+  log.info("About to create application menu...");
   createApplicationMenu();
 
   // Initialiser auto-updater
@@ -386,7 +444,7 @@ app.whenReady().then(() => {
 
   // Prøv å sette menyen igjen etter at vinduet er opprettet
   setTimeout(() => {
-    console.log("Trying to set menu again after window creation...");
+    log.info("Trying to set menu again after window creation...");
     createApplicationMenu();
   }, 500);
 
