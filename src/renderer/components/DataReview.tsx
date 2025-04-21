@@ -8,11 +8,10 @@ import {
   SortingState,
   useReactTable,
   ColumnDef,
-  FilterFn,
 } from "@tanstack/react-table";
 import { ExcelData, ExcelRow } from "../types/ExcelData";
 import knownSuppliersData from "../data/suppliers.json";
-import DateFilter, { DateFilterSettings } from "./DateFilter";
+import { DateFilterSettings } from "./DateFilter";
 
 interface DataReviewProps {
   excelData?: ExcelData;
@@ -48,18 +47,10 @@ const DataReview: React.FC<DataReviewProps> = ({
   const [pageIndex, setPageIndex] = useState(0);
   const [pageSize, setPageSize] = useState(10);
 
-  // Date filtering settings
-  const [dateFilterSettings, setDateFilterSettings] =
-    useState<DateFilterSettings>({
-      selectAll: true,
-      selectedValues: [],
-      searchText: "",
-      sortOrder: null,
-      isActive: false,
-    });
-
-  const [filteredRows, setFilteredRows] = useState<ExcelRow[]>([]);
-  const [activeFilter, setActiveFilter] = useState<string>("all");
+  // State for filtering
+  const [_dateFilterSettings, _setDateFilterSettings] =
+    useState<DateFilterSettings | null>(null);
+  const [filteredTestData, setFilteredTestData] = useState<ExcelRow[]>([]);
 
   // Helper to check if a string looks like an article number
   const isArticleNumber = useMemo(
@@ -79,8 +70,8 @@ const DataReview: React.FC<DataReviewProps> = ({
   const applyDateFilter = (data: ExcelRow[]) => {
     // If no filters are active (selectAll is true), return all data
     if (
-      dateFilterSettings.selectAll ||
-      dateFilterSettings.selectedValues.length === 0
+      _dateFilterSettings?.selectAll ||
+      _dateFilterSettings?.selectedValues.length === 0
     ) {
       return data;
     }
@@ -95,12 +86,12 @@ const DataReview: React.FC<DataReviewProps> = ({
       const month = date.toLocaleString("no-NO", { month: "long" });
 
       // Check if the year is selected
-      if (dateFilterSettings.selectedValues.includes(year)) {
+      if (_dateFilterSettings?.selectedValues.includes(year)) {
         return true;
       }
 
       // Check if the month is selected
-      if (dateFilterSettings.selectedValues.includes(month)) {
+      if (_dateFilterSettings?.selectedValues.includes(month)) {
         return true;
       }
 
@@ -110,13 +101,13 @@ const DataReview: React.FC<DataReviewProps> = ({
 
   // Apply sorting based on dateFilterSettings.sortOrder
   const applySortToData = (data: ExcelRow[]) => {
-    if (!dateFilterSettings.sortOrder) return data;
+    if (!_dateFilterSettings?.sortOrder) return data;
 
     return [...data].sort((a, b) => {
       const dateA = a.date instanceof Date ? a.date.getTime() : 0;
       const dateB = b.date instanceof Date ? b.date.getTime() : 0;
 
-      if (dateFilterSettings.sortOrder === "asc") {
+      if (_dateFilterSettings?.sortOrder === "asc") {
         return dateA - dateB; // Oldest to newest
       } else {
         return dateB - dateA; // Newest to oldest
@@ -124,35 +115,47 @@ const DataReview: React.FC<DataReviewProps> = ({
     });
   };
 
-  const handleApplyDateFilter = () => {
-    // Apply both filtering and sorting
-    const filtered = applyDateFilter(filteredData);
-    const sorted = applySortToData(filtered);
-    setFilteredRows(sorted);
-  };
+  // const handleApplyDateFilter = () => { // Remove unused function
+  //   // Apply both filtering and sorting
+  //   const filtered = applyDateFilter(filteredData);
+  //   const sorted = applySortToData(filtered);
+  //   setFilteredRows(sorted);
+  // };
 
   // Get date value from a row
-  const getDateFromRow = (row: ExcelRow): Date | null => {
-    const date = row.date;
-    return date instanceof Date && !isNaN(date.getTime()) ? date : null;
-  };
+  // const getDateFromRow = (row: ExcelRow): Date | null => { // Remove unused function
+  //   const date = row.date;
+  //   return date instanceof Date && !isNaN(date.getTime()) ? date : null;
+  // };
 
   // Add status computation
   const getOrderStatus = (row: ExcelRow): "critical" | "overdue" | "normal" => {
-    const dueDate =
-      row.dueDate instanceof Date
-        ? row.dueDate
-        : new Date(row.dueDate || row.date);
+    // Directly use the pre-parsed dueDate from databaseService
+    const dueDate = row.dueDate; // Should be Date | undefined
+
+    // Handle cases where dueDate is missing or invalid
+    if (!dueDate || !(dueDate instanceof Date) || isNaN(dueDate.getTime())) {
+      // Decide how to handle missing/invalid dates - maybe 'normal' or a specific status?
+      // Returning 'normal' might be safest default to avoid incorrect 'overdue'
+      return "normal"; // Or potentially a new status like 'unknown'
+    }
+
     const today = new Date();
+    // Set hours to 0 to compare dates only, avoiding time-of-day issues
+    today.setHours(0, 0, 0, 0);
+    const dueDateStartOfDay = new Date(dueDate);
+    dueDateStartOfDay.setHours(0, 0, 0, 0);
+
     const daysDiff = Math.floor(
-      (dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
+      (dueDateStartOfDay.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
     );
 
-    if (daysDiff < 0) return "overdue";
-    if (daysDiff < 7) return "critical";
-    return "normal";
+    if (daysDiff < 0) return "overdue"; // Due date was before today
+    if (daysDiff < 7) return "critical"; // Due date is today or within the next 6 days
+    return "normal"; // Due date is 7 or more days away
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const columns = useMemo<ColumnDef<ExcelRow, any>[]>(
     () => [
       // Status column (new)
@@ -180,13 +183,15 @@ const DataReview: React.FC<DataReviewProps> = ({
       }),
 
       // Due Date column (enhanced)
-      columnHelper.accessor((row) => row.dueDate || row.date, {
+      columnHelper.accessor((row) => row.dueDate, {
         id: "dueDate",
         header: "Forfallsdato",
         size: 120,
         cell: (info) => {
           const date = info.getValue();
-          return date instanceof Date ? date.toLocaleDateString("no-NO") : "-";
+          return date instanceof Date && !isNaN(date.getTime())
+            ? date.toLocaleDateString("no-NO")
+            : "-";
         },
       }),
 
@@ -250,29 +255,6 @@ const DataReview: React.FC<DataReviewProps> = ({
           </div>
         ),
       }),
-      columnHelper.accessor("date", {
-        header: () => (
-          <div className="flex items-center justify-between">
-            <span>Dato</span>
-            <DateFilter
-              columnId="date"
-              data={filteredData}
-              dateFilterSettings={dateFilterSettings}
-              setDateFilterSettings={setDateFilterSettings}
-              onApplyFilter={handleApplyDateFilter}
-              getDateValue={getDateFromRow}
-            />
-          </div>
-        ),
-        size: 100,
-        cell: (info) => {
-          const date = info.getValue();
-          if (date instanceof Date && !isNaN(date.getTime())) {
-            return date.toLocaleDateString();
-          }
-          return "-";
-        },
-      }),
       columnHelper.accessor("key", {
         header: "Nøkkel",
         size: 150,
@@ -283,7 +265,7 @@ const DataReview: React.FC<DataReviewProps> = ({
         ),
       }),
     ],
-    [dateFilterSettings]
+    [_dateFilterSettings]
   );
 
   const filteredData = useMemo(() => {
@@ -324,45 +306,86 @@ const DataReview: React.FC<DataReviewProps> = ({
   const filterPresets = useMemo(
     () => ({
       all: () => {
-        setFilteredRows(filteredData);
-        setActiveFilter("all");
+        setFilteredTestData(filteredData);
+        _setDateFilterSettings({
+          selectAll: true,
+          selectedValues: [],
+          searchText: "",
+          sortOrder: null,
+          isActive: false,
+        });
       },
       critical: () => {
-        setFilteredRows(
+        setFilteredTestData(
           filteredData.filter((row) => getOrderStatus(row) === "critical")
         );
-        setActiveFilter("critical");
+        _setDateFilterSettings({
+          selectAll: false,
+          selectedValues: [],
+          searchText: "",
+          sortOrder: "asc",
+          isActive: true,
+        });
       },
       overdue: () => {
-        setFilteredRows(
+        setFilteredTestData(
           filteredData.filter((row) => getOrderStatus(row) === "overdue")
         );
-        setActiveFilter("overdue");
+        _setDateFilterSettings({
+          selectAll: false,
+          selectedValues: [],
+          searchText: "",
+          sortOrder: "desc",
+          isActive: true,
+        });
       },
       thisWeek: () => {
         const today = new Date();
         const endOfWeek = new Date(today);
         endOfWeek.setDate(today.getDate() + (7 - today.getDay()));
 
-        setFilteredRows(
+        setFilteredTestData(
           filteredData.filter((row) => {
-            const dueDate =
-              row.dueDate instanceof Date
-                ? row.dueDate
-                : new Date(row.dueDate || row.date);
+            // Corrected logic:
+            const rawDateValue = row.dueDate ?? row.date; // Use dueDate first, fallback to date
+            let safeDateValue: string | number | Date = ""; // Default for invalid types
+
+            if (
+              typeof rawDateValue === "string" ||
+              typeof rawDateValue === "number"
+            ) {
+              safeDateValue = rawDateValue;
+            } else if (rawDateValue instanceof Date) {
+              // Now instanceof is safe
+              safeDateValue = rawDateValue;
+            }
+
+            const dueDate = new Date(safeDateValue); // Create date from the validated value
             return dueDate <= endOfWeek;
           })
         );
-        setActiveFilter("thisWeek");
+        _setDateFilterSettings({
+          selectAll: false,
+          selectedValues: [],
+          searchText: "",
+          sortOrder: null,
+          isActive: true,
+        });
       },
       outstanding: () => {
-        setFilteredRows(
+        setFilteredTestData(
           filteredData.filter((row) => row.orderQty - row.receivedQty > 0)
         );
-        setActiveFilter("outstanding");
+        _setDateFilterSettings({
+          selectAll: false,
+          selectedValues: [],
+          searchText: "",
+          sortOrder: null,
+          isActive: true,
+        });
       },
     }),
-    [filteredData, getOrderStatus]
+    [filteredData, getOrderStatus, _setDateFilterSettings]
   );
 
   // Effect to reset filtered rows when filteredData changes
@@ -370,13 +393,12 @@ const DataReview: React.FC<DataReviewProps> = ({
     // Apply initial date filtering
     const filtered = applyDateFilter(filteredData);
     const sorted = applySortToData(filtered);
-    setFilteredRows(sorted);
-    setActiveFilter("all"); // Reset active filter when data changes
+    setFilteredTestData(sorted);
   }, [filteredData, applyDateFilter, applySortToData]);
 
   // Table instance
   const table = useReactTable({
-    data: filteredRows,
+    data: filteredTestData,
     columns,
     state: {
       sorting,
@@ -405,8 +427,8 @@ const DataReview: React.FC<DataReviewProps> = ({
     },
   });
 
-  const totalItems = filteredRows.length;
-  const outstandingCount = filteredRows.filter(
+  const totalItems = filteredTestData.length;
+  const outstandingCount = filteredTestData.filter(
     (row) => row.orderQty - row.receivedQty > 0
   ).length;
 
@@ -460,7 +482,7 @@ const DataReview: React.FC<DataReviewProps> = ({
           <button
             onClick={filterPresets.all}
             className={`btn btn-sm ${
-              activeFilter === "all" ? "btn-primary" : "btn-secondary"
+              _dateFilterSettings?.selectAll ? "btn-primary" : "btn-secondary"
             }`}
           >
             Alle ordrer
@@ -468,7 +490,7 @@ const DataReview: React.FC<DataReviewProps> = ({
           <button
             onClick={filterPresets.outstanding}
             className={`btn btn-sm ${
-              activeFilter === "outstanding" ? "btn-primary" : "btn-secondary"
+              _dateFilterSettings?.selectAll ? "btn-primary" : "btn-secondary"
             }`}
           >
             Utestående
@@ -476,7 +498,7 @@ const DataReview: React.FC<DataReviewProps> = ({
           <button
             onClick={filterPresets.critical}
             className={`btn btn-sm ${
-              activeFilter === "critical" ? "btn-primary" : "btn-accent"
+              _dateFilterSettings?.selectAll ? "btn-primary" : "btn-accent"
             }`}
           >
             Kritiske
@@ -484,7 +506,7 @@ const DataReview: React.FC<DataReviewProps> = ({
           <button
             onClick={filterPresets.overdue}
             className={`btn btn-sm ${
-              activeFilter === "overdue" ? "btn-primary" : "btn-error"
+              _dateFilterSettings?.selectAll ? "btn-primary" : "btn-error"
             }`}
           >
             Forfalt
@@ -492,7 +514,7 @@ const DataReview: React.FC<DataReviewProps> = ({
           <button
             onClick={filterPresets.thisWeek}
             className={`btn btn-sm ${
-              activeFilter === "thisWeek" ? "btn-primary" : "btn-secondary"
+              _dateFilterSettings?.selectAll ? "btn-primary" : "btn-secondary"
             }`}
           >
             Denne uken

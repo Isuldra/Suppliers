@@ -1,41 +1,40 @@
-import { app, dialog } from "electron";
-import pkg from "electron-updater";
-const { autoUpdater } = pkg;
-import type { UpdateInfo, ProgressInfo } from "electron-updater";
+import { dialog } from "electron";
+import { autoUpdater, type AppUpdater as _AppUpdater } from "electron-updater";
 import log from "electron-log";
+import type { UpdateInfo, ProgressInfo } from "electron-updater";
 
-// Konfigurer logger
-log.transports.file.level = "info";
-autoUpdater.logger = log;
+// Create a logger instance specifically for the auto-updater
+const updateLogger = log.scope("autoUpdater");
+autoUpdater.logger = updateLogger;
 
-// Konfigurasjon av default-innstillinger for auto-updater
-autoUpdater.autoDownload = true;
+// Disable auto download
+autoUpdater.autoDownload = false;
 autoUpdater.autoInstallOnAppQuit = true;
 
 export function setupAutoUpdater() {
   // Ikke kjør auto-oppdatering i utviklingsmodus
   if (process.env.NODE_ENV === "development") {
-    log.info(
+    updateLogger.info(
       "Kjører i utviklingsmodus - automatiske oppdateringer er deaktivert"
     );
     return;
   }
 
-  log.info("Auto-updater initialisert");
+  updateLogger.info("Auto-updater initialisert");
 
   // Handle update-sjekk
   autoUpdater.on("checking-for-update", () => {
-    log.info("Sjekker for oppdateringer...");
+    updateLogger.info("Sjekker for oppdateringer...");
   });
 
   // Ingen oppdateringer er tilgjengelige
-  autoUpdater.on("update-not-available", (info: UpdateInfo) => {
-    log.info("Ingen nye oppdateringer tilgjengelig:", info);
-  });
+  autoUpdater.on("update-not-available", ((info: UpdateInfo) => {
+    updateLogger.info("Ingen nye oppdateringer tilgjengelig:", info);
+  }) as (...args: unknown[]) => void);
 
   // Oppdatering funnet
-  autoUpdater.on("update-available", (info: UpdateInfo) => {
-    log.info("Ny oppdatering tilgjengelig:", info);
+  autoUpdater.on("update-available", ((info: UpdateInfo) => {
+    updateLogger.info("Ny oppdatering tilgjengelig:", info);
 
     // Varsle bruker om at nedlasting starter
     dialog.showMessageBox({
@@ -45,17 +44,19 @@ export function setupAutoUpdater() {
       detail: "Oppdateringen lastes ned og installeres automatisk...",
       buttons: ["OK"],
     });
-  });
+  }) as (...args: unknown[]) => void);
 
   // Håndtere nedlastningsfremdrift
-  autoUpdater.on("download-progress", (progressObj: ProgressInfo) => {
-    let message = `Laster ned oppdatering: ${Math.round(progressObj.percent)}%`;
-    log.info(message);
-  });
+  autoUpdater.on("download-progress", ((progressObj: ProgressInfo) => {
+    const message = `Laster ned oppdatering: ${Math.round(
+      progressObj.percent
+    )}%`;
+    updateLogger.info(message);
+  }) as (...args: unknown[]) => void);
 
   // Oppdatering er lastet ned og klar for installasjon
-  autoUpdater.on("update-downloaded", (info: UpdateInfo) => {
-    log.info("Oppdatering lastet ned:", info);
+  autoUpdater.on("update-downloaded", ((info: UpdateInfo) => {
+    updateLogger.info("Oppdatering lastet ned:", info);
 
     dialog
       .showMessageBox({
@@ -72,11 +73,11 @@ export function setupAutoUpdater() {
           autoUpdater.quitAndInstall(false, true);
         }
       });
-  });
+  }) as (...args: unknown[]) => void);
 
   // Håndtere feil
-  autoUpdater.on("error", (error: Error) => {
-    log.error("Feil ved oppdatering:", error);
+  autoUpdater.on("error", ((error: Error) => {
+    updateLogger.error("Feil ved oppdatering:", error);
 
     dialog.showMessageBox({
       type: "error",
@@ -85,7 +86,7 @@ export function setupAutoUpdater() {
       detail: `Detaljer: ${error ? error.toString() : "Ukjent feil"}`,
       buttons: ["OK"],
     });
-  });
+  }) as (...args: unknown[]) => void);
 
   // Sjekk for oppdateringer umiddelbart, men med forsinkelse for å sikre at
   // applikasjonen har startet fullstendig først
@@ -93,7 +94,7 @@ export function setupAutoUpdater() {
     autoUpdater
       .checkForUpdates()
       .catch((err: Error) =>
-        log.error("Feil ved sjekk for oppdateringer:", err)
+        updateLogger.error("Feil ved sjekk for oppdateringer:", err)
       );
   }, 10000);
 
@@ -103,7 +104,7 @@ export function setupAutoUpdater() {
     autoUpdater
       .checkForUpdates()
       .catch((err: Error) =>
-        log.error("Feil ved periodisk sjekk for oppdateringer:", err)
+        updateLogger.error("Feil ved periodisk sjekk for oppdateringer:", err)
       );
   }, ONE_HOUR);
 }
@@ -111,10 +112,12 @@ export function setupAutoUpdater() {
 // Funksjon for å manuelt sjekke for oppdateringer
 export function checkForUpdatesManually() {
   if (process.env.NODE_ENV === "development") {
-    log.info("Kjører i utviklingsmodus - manuelle oppdateringer er deaktivert");
+    updateLogger.info(
+      "Kjører i utviklingsmodus - manuelle oppdateringer er deaktivert"
+    );
     return Promise.resolve({ updateAvailable: false });
   }
 
-  log.info("Manuell sjekk for oppdateringer startet...");
+  updateLogger.info("Manuell sjekk for oppdateringer startet...");
   return autoUpdater.checkForUpdates();
 }

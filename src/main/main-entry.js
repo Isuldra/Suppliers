@@ -15,7 +15,7 @@ log.info("Application starting...");
 // Import the database handlers with proper error handling
 let setupDatabaseHandlers, closeDatabaseConnection;
 try {
-  const databaseModule = require("./database.js");
+  const databaseModule = await import("./database.js");
   setupDatabaseHandlers = databaseModule.setupDatabaseHandlers;
   closeDatabaseConnection = databaseModule.closeDatabaseConnection;
   log.info("Database module loaded successfully");
@@ -89,7 +89,7 @@ app.on("window-all-closed", () => {
 });
 
 // Close database when app is quitting
-app.on("will-quit", (event) => {
+app.on("will-quit", (_event) => {
   log.info("Application is quitting, closing database...");
   try {
     closeDatabaseConnection();

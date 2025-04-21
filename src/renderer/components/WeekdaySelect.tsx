@@ -88,7 +88,7 @@ const WeekdaySelect: React.FC<WeekdaySelectProps> = ({
           </p>
 
           <div
-            className="space-y-2"
+            className="space-y-2 max-w-md mx-auto"
             role="radiogroup"
             aria-labelledby="weekday-select-heading"
           >

@@ -13,14 +13,8 @@ import {
   ValidationError,
   WizardStep,
   WizardState,
-  ExcelRow,
 } from "./types/ExcelData";
-import {
-  HashRouter as Router,
-  Routes,
-  Route,
-  useLocation,
-} from "react-router-dom";
+import { HashRouter as Router, Routes, Route } from "react-router-dom";
 
 // Import the OneMed logo
 import onemedLogo from "./assets/onemed-logo.webp";
@@ -201,7 +195,7 @@ const MainApp: React.FC = () => {
           <div className="w-full">
             <EmailButton
               excelData={wizardState.excelData}
-              selectedSupplier={wizardState.selectedSupplier}
+              selectedSupplier={wizardState.selectedSupplier!}
               onPrevious={handlePreviousStep}
             />
           </div>

@@ -2,11 +2,11 @@
  * This adapter handles SQLite loading in a robust way
  * Ensures we can work with different SQLite implementations or fall back gracefully
  */
-export function getSqliteDatabase() {
+export async function getSqliteDatabase() {
   try {
     // Try the regular version first
-    // Use dynamic import with .node extension for native modules
-    const sqlite = require("better-sqlite3");
+    // Use dynamic import()
+    const sqlite = (await import("better-sqlite3")).default;
     console.log("Using better-sqlite3");
     return sqlite;
   } catch (err) {
@@ -14,16 +14,16 @@ export function getSqliteDatabase() {
 
     try {
       // Try sqlite3 as fallback
-      const sqlite3 = require("sqlite3");
+      const sqlite3 = (await import("sqlite3")).default;
       console.log("Using sqlite3");
       // Wrap to match better-sqlite3 interface
-      return function (filename, options) {
+      return function (filename, _options) {
         const db = new sqlite3.Database(filename);
         return {
           prepare: (sql) => ({
             run: (...params) => {
               return new Promise((resolve) => {
-                db.run(sql, params, function (err) {
+                db.run(sql, params, function (_err) {
                   resolve({
                     changes: this.changes,
                     lastInsertRowid: this.lastID,
@@ -33,12 +33,12 @@ export function getSqliteDatabase() {
             },
             get: (...params) => {
               return new Promise((resolve) => {
-                db.get(sql, params, (err, row) => resolve(row));
+                db.get(sql, params, (_err, row) => resolve(row));
               });
             },
             all: (...params) => {
               return new Promise((resolve) => {
-                db.all(sql, params, (err, rows) => resolve(rows || []));
+                db.all(sql, params, (_err, rows) => resolve(rows || []));
               });
             },
           }),
@@ -56,16 +56,16 @@ export function getSqliteDatabase() {
 
       // Return a mock implementation
       console.warn("Using mock database");
-      return function (filename, options) {
+      return function (_filename, _options) {
         return {
-          prepare: (sql) => ({
-            run: (...params) => ({ changes: 0, lastInsertRowid: -1 }),
-            get: (...params) => null,
-            all: (...params) => [],
+          prepare: (_sql) => ({
+            run: (..._params) => ({ changes: 0, lastInsertRowid: -1 }),
+            get: (..._params) => null,
+            all: (..._params) => [],
           }),
-          exec: (sql) => null,
+          exec: (_sql) => null,
           close: () => true,
-          pragma: (stmt) => null,
+          pragma: (_stmt) => null,
         };
       };
     }

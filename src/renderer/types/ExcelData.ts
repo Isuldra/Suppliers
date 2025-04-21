@@ -1,11 +1,17 @@
 export interface ExcelRow {
   key: string;
-  date: Date;
+  // date: Date; // Remove or comment out old date property
+  dueDate?: Date; // Add dueDate property
   supplier: string;
   orderQty: number;
   receivedQty: number;
   poNumber: string;
-  [key: string]: any; // For other columns we might need
+  outstandingQty?: number; // Add outstandingQty property
+  itemNo?: string; // Explicitly add itemNo as optional string
+  description?: string; // Explicitly add description as optional string
+  specification?: string; // Explicitly add specification as optional string
+  date?: Date; // Keep date as optional if needed for other logic
+  [key: string]: unknown; // Use unknown instead of any for better type safety
 }
 
 export interface ExcelData {
@@ -49,8 +55,6 @@ export interface WizardState {
 export interface ValidationResult {
   success: boolean;
   error?: string;
-  data?: {
-    hovedlisteCount: number;
-    bpCount: number;
-  };
+  data?: unknown;
+  validationErrors?: ValidationError[];
 }

@@ -137,7 +137,7 @@
 
   /* Utility styles */
   .container-app {
-    @apply max-w-[1200px] mx-auto px-6;
+    @apply mx-auto px-6;
   }
 }
 
