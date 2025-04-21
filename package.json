@@ -2,7 +2,7 @@
   "name": "one-med-supplychain-app",
   "version": "1.0.0",
   "description": "Desktop application for managing OneMed supply chain and vendor relations",
-  "main": "dist/main/main.cjs",
+  "main": "main/main.cjs",
   "private": true,
   "type": "module",
   "scripts": {
@@ -54,7 +54,8 @@
     "npmRebuild": false,
     "directories": {
       "buildResources": "resources",
-      "output": "release"
+      "output": "release",
+      "app": "dist"
     },
     "publish": null,
     "win": {
