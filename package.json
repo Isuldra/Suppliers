@@ -17,15 +17,16 @@
     "test:watch": "vitest watch",
     "test:coverage": "vitest run --coverage",
     "pack": "electron-builder --dir",
-    "dist": "electron-vite build && npm run prepare-deps && electron-builder",
+    "create-minimal-manifest": "node scripts/create-minimal-manifest.js",
+    "dist": "electron-vite build && npm run create-minimal-manifest && npm run prepare-deps && electron-builder",
     "clean-dist": "node scripts/clean-build.js",
-    "dist:win": "electron-vite build && npm run prepare-deps && electron-builder --win",
-    "dist:portable": "electron-vite build && npm run prepare-deps && electron-builder --win portable",
-    "dist:msi": "electron-vite build && npm run prepare-deps && electron-builder --win msi",
-    "dist:nsis": "electron-vite build && npm run prepare-deps && electron-builder --win nsis",
+    "dist:win": "electron-vite build && npm run create-minimal-manifest && npm run prepare-deps && electron-builder --win",
+    "dist:portable": "electron-vite build && npm run create-minimal-manifest && npm run prepare-deps && electron-builder --win portable",
+    "dist:msi": "electron-vite build && npm run create-minimal-manifest && npm run prepare-deps && electron-builder --win msi",
+    "dist:nsis": "electron-vite build && npm run create-minimal-manifest && npm run prepare-deps && electron-builder --win nsis",
     "portable": "node scripts/create-portable.js",
     "distributions": "node scripts/create-all-distributions.js",
-    "release": "electron-vite build && npm run prepare-deps && electron-builder --win --publish always",
+    "release": "electron-vite build && npm run create-minimal-manifest && npm run prepare-deps && electron-builder --win --publish always",
     "prepare-win-build": "node scripts/prepare-windows-build.js",
     "cross-build-win": "npm run prepare-win-build && npm run dist:portable",
     "build-for-work": "node scripts/build-for-work-pc.js",
@@ -45,11 +46,7 @@
       "node_modules/better-sqlite3/build/Release/better*.node"
     ],
     "files": [
-      {
-        "from": "dist",
-        "to": "."
-      },
-      "package.json"
+      "**/*"
     ],
     "npmRebuild": false,
     "directories": {
