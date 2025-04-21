@@ -80,7 +80,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: Supplier-Reminder-Pro-macOS-${{ matrix.arch }}
-          path: release/ # Adjust based on your build.directories.output in package.json
+          path: release/mac-${{ matrix.arch }}/*.dmg
+          retention-days: 7 # Keep artifacts for 7 days
 
   build-windows:
     name: Build for Windows (x64)
@@ -143,4 +144,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: Supplier-Reminder-Pro-Windows-x64
-          path: release/ # Adjust based on your build.directories.output in package.json
+          path: release/win*/**/*.exe
+          retention-days: 7 # Keep artifacts for 7 days
