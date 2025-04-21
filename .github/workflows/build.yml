@@ -49,11 +49,18 @@ jobs:
       - name: Build Application (macOS ${{ matrix.arch }})
         run: |
           npm run build # Just run the build script from package.json
-      - name: Copy manifest into dist (macOS)
+      - name: Create minimal manifest in dist (macOS)
+        shell: bash
         run: |
-          cp package.json dist/package.json
-          # If you have a lockfile (recommended):
-          cp package-lock.json dist/package-lock.json || true
+          # Create a minimal package.json for the built app
+          node -e "
+            const {{ name, version, dependencies, devDependencies }} = require('./package.json');
+            const pkg = {{ name, version, dependencies: dependencies || {{}}, devDependencies: devDependencies || {{}} }}; // Ensure deps objects exist
+            require('fs').writeFileSync('dist/package.json', JSON.stringify(pkg, null, 2));
+          "
+          # Copy lockfile too (if you use it)
+          echo "Copying package-lock.json to dist..."
+          cp package-lock.json dist/package-lock.json || echo "package-lock.json not found, skipping copy."
       - name: Prepare Dependencies (macOS)
         run: |
           npm run prepare-deps # Ensure dependencies are installed after build
@@ -107,12 +114,18 @@ jobs:
       - name: Build Application (Windows x64)
         run: |
           npm run build
-      - name: Copy manifest into dist (Windows)
-        shell: pwsh # Use PowerShell for Windows runner
+      - name: Create minimal manifest in dist (Windows)
+        shell: pwsh # Use PowerShell for Windows runner to handle shell specifics if needed, but Node for JSON logic
         run: |
-          Copy-Item package.json dist\\package.json
-          # If you have a lockfile (recommended):
-          Copy-Item package-lock.json dist\\package-lock.json -ErrorAction Ignore
+          # Create a minimal package.json for the built app using Node
+          node -e "
+            const {{ name, version, dependencies, devDependencies }} = require('./package.json');
+            const pkg = {{ name, version, dependencies: dependencies || {{}}, devDependencies: devDependencies || {{}} }}; // Ensure deps objects exist
+            require('fs').writeFileSync('dist/package.json', JSON.stringify(pkg, null, 2));
+          "
+          # Copy lockfile too (if you use it) using PowerShell
+          echo "Copying package-lock.json to dist..."
+          Copy-Item package-lock.json dist\\package-lock.json -ErrorAction SilentlyContinue
       - name: Prepare Dependencies (Windows)
         run: |
           npm run prepare-deps # Ensure dependencies are installed after build
