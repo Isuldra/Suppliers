@@ -49,11 +49,20 @@ jobs:
       - name: Build Application (macOS ${{ matrix.arch }})
         run: |
           npm run build # Just run the build script from package.json
+      - name: Copy manifest into dist (macOS)
+        run: |
+          cp package.json dist/package.json
+          # If you have a lockfile (recommended):
+          cp package-lock.json dist/package-lock.json || true
+      - name: Prepare Dependencies (macOS)
+        run: |
           npm run prepare-deps # Ensure dependencies are installed after build
           # ADD DEBUG STEP: List dist contents after build
           echo "--- Listing dist directory contents --- "
           ls -R dist || echo "dist directory not found"
           echo "--- End listing dist directory --- "
+      - name: Package Application (macOS)
+        run: |
           npx electron-builder --mac --${{ matrix.arch }} --publish never # Run builder
 
       # ADD DEBUG STEP: List ASAR contents if packaging failed but ASAR exists
@@ -96,16 +105,19 @@ jobs:
       # - name: Rebuild native modules (Windows x64)
       #   run: npx electron-rebuild -f -w better-sqlite3
       - name: Build Application (Windows x64)
-        # Modify dist:win script or add --publish never here if dist:win calls builder directly
-        # Assuming dist:win just runs 'electron-vite build && electron-builder --win'
-        # If dist:win doesn't directly call builder, adjust package.json instead.
-        # For now, assuming we modify the workflow step assuming dist:win is NOT used directly for builder args
-        # Assuming dist:win just runs 'electron-vite build && electron-builder --win'
-        # If dist:win doesn't directly call builder, adjust package.json instead.
-        # For now, assuming we modify the workflow step assuming dist:win is NOT used directly for builder args
         run: |
           npm run build
+      - name: Copy manifest into dist (Windows)
+        shell: pwsh # Use PowerShell for Windows runner
+        run: |
+          Copy-Item package.json dist\\package.json
+          # If you have a lockfile (recommended):
+          Copy-Item package-lock.json dist\\package-lock.json -ErrorAction Ignore
+      - name: Prepare Dependencies (Windows)
+        run: |
           npm run prepare-deps # Ensure dependencies are installed after build
+      - name: Package Application (Windows)
+        run: |
           npx electron-builder --win --publish never
 
       # ADD DEBUG STEP: List ASAR contents if packaging failed but ASAR exists
