@@ -53,11 +53,7 @@ jobs:
         shell: bash
         run: |
           # Create a minimal package.json for the built app
-          node -e "
-            const {{ name, version, dependencies, devDependencies }} = require('./package.json');
-            const pkg = {{ name, version, dependencies: dependencies || {{}}, devDependencies: devDependencies || {{}} }}; // Ensure deps objects exist
-            require('fs').writeFileSync('dist/package.json', JSON.stringify(pkg, null, 2));
-          "
+          node -e 'const { name, version, dependencies, devDependencies } = require("./package.json"); const pkg = { name, version, dependencies: dependencies || {}, devDependencies: devDependencies || {} }; require("fs").writeFileSync("dist/package.json", JSON.stringify(pkg, null, 2));'
           # Copy lockfile too (if you use it)
           echo "Copying package-lock.json to dist..."
           cp package-lock.json dist/package-lock.json || echo "package-lock.json not found, skipping copy."
@@ -118,11 +114,7 @@ jobs:
         shell: pwsh # Use PowerShell for Windows runner to handle shell specifics if needed, but Node for JSON logic
         run: |
           # Create a minimal package.json for the built app using Node
-          node -e "
-            const {{ name, version, dependencies, devDependencies }} = require('./package.json');
-            const pkg = {{ name, version, dependencies: dependencies || {{}}, devDependencies: devDependencies || {{}} }}; // Ensure deps objects exist
-            require('fs').writeFileSync('dist/package.json', JSON.stringify(pkg, null, 2));
-          "
+          node -e 'const { name, version, dependencies, devDependencies } = require("./package.json"); const pkg = { name, version, dependencies: dependencies || {}, devDependencies: devDependencies || {} }; require("fs").writeFileSync("dist/package.json", JSON.stringify(pkg, null, 2));'
           # Copy lockfile too (if you use it) using PowerShell
           echo "Copying package-lock.json to dist..."
           Copy-Item package-lock.json dist\\package-lock.json -ErrorAction SilentlyContinue
