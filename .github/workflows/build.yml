@@ -32,28 +32,44 @@ jobs:
         run: |
           npm install --save-optional @rollup/rollup-win32-x64-msvc
           npm install --save-optional @esbuild/win32-x64
+          # Verify installations
+          npm list @rollup/rollup-win32-x64-msvc @esbuild/win32-x64 || exit 1
 
       - name: Install dependencies
-        run: npm ci --ignore-scripts
+        run: |
+          npm ci --ignore-scripts
+          # Verify core dependencies
+          npm list better-sqlite3 electron-builder electron-vite || exit 1
+
+      - name: Verify build configuration
+        shell: pwsh
+        run: |
+          $pkg = Get-Content package.json | ConvertFrom-Json
+          if (-not $pkg.build.win) {
+            Write-Error "Windows build configuration missing in package.json"
+            exit 1
+          }
+          Write-Host "Build configuration verified"
 
       - name: Build Application (Windows x64)
-        run: |
-          npm run build
+        run: npm run build
 
       - name: Create minimal manifest in dist (Windows)
         shell: pwsh
-        run: |
-          node -e 'const root = require("./package.json"); let main = root.main || "main/main.cjs"; if(main.startsWith("dist/")) main = main.slice(5); const pkg = { name: root.name, version: root.version, description: root.description, author: root.author, main, dependencies: root.dependencies, devDependencies: root.devDependencies }; require("fs").writeFileSync("dist/package.json", JSON.stringify(pkg, null, 2));'
-          echo "Copying package-lock.json to dist..."
-          Copy-Item package-lock.json dist\\package-lock.json -ErrorAction SilentlyContinue
+        run: npm run create-minimal-manifest
 
       - name: Prepare Dependencies (Windows)
-        run: |
-          npm run prepare-deps
+        run: npm run prepare-deps
 
       - name: Package Application (Windows)
         run: |
-          npx electron-builder --win --publish never
+          # Use the dedicated script for portable builds
+          npm run dist:portable
+          # Verify the output exists
+          if (-not (Test-Path "release/*Portable.exe")) {
+            Write-Error "Portable executable not found in release directory"
+            exit 1
+          }
 
       - name: List ASAR Contents on Failure (Windows)
         if: failure()
@@ -72,5 +88,5 @@ jobs:
         continue-on-error: true # Won't fail the build if quota is hit
         with:
           name: Supplier-Reminder-Pro-Windows-x64
-          path: release/*.exe
+          path: release/*Portable.exe
           retention-days: 3 # Reduced retention period
