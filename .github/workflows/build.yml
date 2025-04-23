@@ -1,4 +1,4 @@
-name: 🏗️ Build Electron App for macOS & Windows
+name: 🏗️ Build Electron App for Windows
 
 # Trigger a new workflow run with this comment update
 on:
@@ -15,70 +15,6 @@ env:
   NODE_VERSION: "20.x"
 
 jobs:
-  build-macos:
-    name: Build for macOS (${{ matrix.arch }})
-    # Use macos-13 for Intel if needed, macos-latest targets Apple Silicon primarily
-    runs-on: macos-latest
-    strategy:
-      matrix:
-        arch: [x64, arm64] # Build for both Intel and Apple Silicon
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-
-      - name: Cache node modules
-        uses: actions/cache@v4
-        id: cache-node-modules
-        with:
-          path: node_modules
-          key: ${{ runner.os }}-${{ matrix.arch }}-node-${{ env.NODE_VERSION }}-${{ hashFiles('package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-${{ matrix.arch }}-node-${{ env.NODE_VERSION }}-
-
-      - name: Install dependencies
-        if: steps.cache-node-modules.outputs.cache-hit != 'true'
-        run: npm ci --ignore-scripts
-
-      # Optional: Rebuild native modules specifically for the target arch if needed
-      # - name: Rebuild native modules (macOS ${{ matrix.arch }})
-      #   run: npx electron-rebuild -f -w better-sqlite3 --arch ${{ matrix.arch }}
-      - name: Build Application (macOS ${{ matrix.arch }})
-        run: |
-          npm run build # Just run the build script from package.json
-      - name: Create minimal manifest in dist (macOS)
-        shell: bash
-        run: |
-          # Create a minimal package.json for the built app
-          node -e 'const root = require("./package.json"); let main = root.main || "main/main.cjs"; if(main.startsWith("dist/")) main = main.slice(5); const pkg = { name: root.name, version: root.version, description: root.description, author: root.author, main, dependencies: root.dependencies, devDependencies: root.devDependencies }; require("fs").writeFileSync("dist/package.json", JSON.stringify(pkg, null, 2));'
-          # Copy lockfile too (if you use it)
-          echo "Copying package-lock.json to dist..."
-          cp package-lock.json dist/package-lock.json || echo "package-lock.json not found, skipping copy."
-      - name: Prepare Dependencies (macOS)
-        run: |
-          npm run prepare-deps # Ensure dependencies are installed after build
-          # ADD DEBUG STEP: List dist contents after build
-          echo "--- Listing dist directory contents --- "
-          ls -R dist || echo "dist directory not found"
-          echo "--- End listing dist directory --- "
-      - name: Package Application (macOS)
-        run: |
-          npx electron-builder --mac --${{ matrix.arch }} --publish never # Run builder
-
-      # ADD DEBUG STEP: List ASAR contents if packaging failed but ASAR exists
-      - name: List ASAR Contents on Failure (macOS)
-        if: failure()
-        run: |
-          echo "--- Attempting to list ASAR contents --- "
-          find release -name app.asar -exec npx asar list {} \;
-          echo "--- End ASAR contents list --- "
-
-      # Removed macOS artifact upload since it's only for testing
-
   build-windows:
     name: Build for Windows (x64)
     runs-on: windows-latest
@@ -98,36 +34,31 @@ jobs:
           npm install --save-optional @esbuild/win32-x64
 
       - name: Install dependencies
-        # Run npm install, allowing scripts to run (including postinstall)
         run: npm ci --ignore-scripts
 
-      # Optional: Rebuild native modules specifically for Windows if needed
-      # - name: Rebuild native modules (Windows x64)
-      #   run: npx electron-rebuild -f -w better-sqlite3
       - name: Build Application (Windows x64)
         run: |
           npm run build
+
       - name: Create minimal manifest in dist (Windows)
-        shell: pwsh # Use PowerShell for Windows runner to handle shell specifics if needed, but Node for JSON logic
+        shell: pwsh
         run: |
-          # Create a minimal package.json for the built app using Node
           node -e 'const root = require("./package.json"); let main = root.main || "main/main.cjs"; if(main.startsWith("dist/")) main = main.slice(5); const pkg = { name: root.name, version: root.version, description: root.description, author: root.author, main, dependencies: root.dependencies, devDependencies: root.devDependencies }; require("fs").writeFileSync("dist/package.json", JSON.stringify(pkg, null, 2));'
-          # Copy lockfile too (if you use it) using PowerShell
           echo "Copying package-lock.json to dist..."
           Copy-Item package-lock.json dist\\package-lock.json -ErrorAction SilentlyContinue
+
       - name: Prepare Dependencies (Windows)
         run: |
-          npm run prepare-deps # Ensure dependencies are installed after build
+          npm run prepare-deps
+
       - name: Package Application (Windows)
         run: |
           npx electron-builder --win --publish never
 
-      # ADD DEBUG STEP: List ASAR contents if packaging failed but ASAR exists
       - name: List ASAR Contents on Failure (Windows)
         if: failure()
         run: |
           echo "--- Attempting to list ASAR contents --- "
-          # Use PowerShell commands on Windows runner
           $asarPath = Get-ChildItem -Path release -Recurse -Filter app.asar | Select-Object -First 1
           if ($asarPath) {
             npx asar list $asarPath.FullName
@@ -138,7 +69,8 @@ jobs:
 
       - name: Upload Windows Artifact
         uses: actions/upload-artifact@v4
+        continue-on-error: true # Won't fail the build if quota is hit
         with:
           name: Supplier-Reminder-Pro-Windows-x64
           path: release/*.exe
-          retention-days: 7 # Keep artifacts for 7 days
+          retention-days: 3 # Reduced retention period
