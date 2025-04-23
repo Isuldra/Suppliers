@@ -77,12 +77,7 @@ jobs:
           find release -name app.asar -exec npx asar list {} \;
           echo "--- End ASAR contents list --- "
 
-      - name: Upload macOS Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: Supplier-Reminder-Pro-macOS-${{ matrix.arch }}
-          path: release/*.dmg
-          retention-days: 7 # Keep artifacts for 7 days
+      # Removed macOS artifact upload since it's only for testing
 
   build-windows:
     name: Build for Windows (x64)
