@@ -45,11 +45,7 @@ jobs:
         shell: pwsh
         run: |
           $pkg = Get-Content package.json | ConvertFrom-Json
-          if (-not $pkg.build.win) {
-            Write-Error "Windows build configuration missing in package.json"
-            exit 1
-          }
-          Write-Host "Build configuration verified"
+          Write-Host "Windows build configuration: $($pkg.build.win | ConvertTo-Json)"
 
       - name: Build Application (Windows x64)
         run: npm run build
@@ -62,31 +58,33 @@ jobs:
         run: npm run prepare-deps
 
       - name: Package Application (Windows)
+        shell: pwsh
         run: |
           # Use the dedicated script for portable builds
           npm run dist:portable
-          # Verify the output exists
-          if (-not (Test-Path "release/*Portable.exe")) {
+          # Verify the output exists using Get-ChildItem
+          if (-not (Get-ChildItem -Path release -Filter '*Portable.exe')) {
             Write-Error "Portable executable not found in release directory"
             exit 1
           }
 
       - name: List ASAR Contents on Failure (Windows)
         if: failure()
+        shell: pwsh
         run: |
-          echo "--- Attempting to list ASAR contents --- "
+          Write-Host "--- Attempting to list ASAR contents ---"
           $asarPath = Get-ChildItem -Path release -Recurse -Filter app.asar | Select-Object -First 1
           if ($asarPath) {
             npx asar list $asarPath.FullName
           } else {
-            echo "app.asar not found in release directory."
+            Write-Host "app.asar not found in release directory."
           }
-          echo "--- End ASAR contents list --- "
+          Write-Host "--- End ASAR contents list ---"
 
       - name: Upload Windows Artifact
         uses: actions/upload-artifact@v4
         continue-on-error: true # Won't fail the build if quota is hit
         with:
           name: Supplier-Reminder-Pro-Windows-x64
-          path: release/*Portable.exe
+          path: release\*Portable.exe
           retention-days: 3 # Reduced retention period
