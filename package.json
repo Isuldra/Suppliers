@@ -20,22 +20,16 @@
     "create-minimal-manifest": "node scripts/create-minimal-manifest.js",
     "dist": "electron-vite build && npm run create-minimal-manifest && npm run prepare-deps && electron-builder",
     "clean-dist": "node scripts/clean-build.js",
-    "dist:win": "electron-vite build && npm run create-minimal-manifest && npm run prepare-deps && electron-builder --win",
+    "dist:win": "electron-vite build && npm run create-minimal-manifest && npm run prepare-deps && electron-builder --win nsis zip",
     "dist:portable": "electron-vite build && npm run create-minimal-manifest && npm run prepare-deps && electron-builder --win portable",
     "dist:msi": "electron-vite build && npm run create-minimal-manifest && npm run prepare-deps && electron-builder --win msi",
     "dist:nsis": "electron-vite build && npm run create-minimal-manifest && npm run prepare-deps && electron-builder --win nsis",
-    "portable": "node scripts/create-portable.js",
-    "distributions": "node scripts/create-all-distributions.js",
     "release": "electron-vite build && npm run create-minimal-manifest && npm run prepare-deps && electron-builder --win --publish always",
-    "prepare-win-build": "node scripts/prepare-windows-build.js",
-    "cross-build-win": "npm run prepare-win-build && npm run dist:portable",
-    "build-for-work": "node scripts/build-for-work-pc.js",
     "test-sqlite": "node scripts/test-sqlite-dependencies.js",
     "build-x64-portable": "node scripts/build-x64-portable.js",
-    "build-windows-zip": "node scripts/build-windows-zip.js",
-    "verify-windows-build": "node scripts/verify-windows-build.js",
-    "build-and-verify": "npm run build-windows-zip && npm run verify-windows-build",
-    "prepare-deps": "electron-builder install-app-deps"
+    "prepare-deps": "electron-builder install-app-deps",
+    "prebuild": "npm run build:email-template",
+    "build:email-template": "node --loader ts-node/esm scripts/buildEmailTemplate.ts"
   },
   "build": {
     "appId": "com.onemed.supplychain",
@@ -58,7 +52,7 @@
     "win": {
       "target": [
         {
-          "target": "portable",
+          "target": "zip",
           "arch": [
             "x64"
           ]
@@ -97,20 +91,6 @@
       "installerSidebar": "resources/sidebar.bmp",
       "uninstallerSidebar": "resources/sidebar.bmp",
       "include": "resources/installer.nsh"
-    },
-    "mac": {
-      "target": [
-        "dmg"
-      ],
-      "category": "public.app-category.business",
-      "icon": "supplychain.png"
-    },
-    "linux": {
-      "target": [
-        "AppImage",
-        "deb"
-      ],
-      "category": "Office"
     }
   },
   "keywords": [],
@@ -135,7 +115,7 @@
     "adm-zip": "^0.5.16",
     "autoprefixer": "^10.4.18",
     "cross-env": "^7.0.3",
-    "electron": "^28.1.0",
+    "electron": "^28.2.1",
     "electron-builder": "^24.9.1",
     "electron-rebuild": "^3.2.9",
     "electron-vite": "^2.0.0",
@@ -153,7 +133,9 @@
     "typescript": "^5.3.3",
     "typescript-eslint": "^8.30.1",
     "vite": "^5.1.4",
-    "vitest": "^1.3.1"
+    "vitest": "^1.3.1",
+    "ts-node": "^10.0.0",
+    "html-minifier-terser": "^7.0.0"
   },
   "dependencies": {
     "@heroicons/react": "^2.2.0",
@@ -175,6 +157,11 @@
     "react-hot-toast": "^2.5.2",
     "react-router-dom": "^6.22.1",
     "react-select": "^5.10.1",
-    "xlsx": "^0.18.5"
+    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.2/xlsx-0.20.2.tgz"
+  },
+  "overrides": {
+    "@electron-toolkit/utils": "^2.0.1",
+    "electron": "^28.2.1",
+    "electron-builder": "^24.9.1"
   }
 }
