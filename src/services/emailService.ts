@@ -1,33 +1,12 @@
 import { ipcRenderer } from "electron";
-import Handlebars from "handlebars";
-import fs from "fs";
-import path from "path";
+import {
+  generateEmailContent,
+  EmailData,
+} from "../generated/emailTemplateCompiled";
 import nodemailer from "nodemailer";
 import log from "electron-log";
 
-// Register custom Handlebars helper for comparison
-Handlebars.registerHelper("gt", (a: number, b: number) => a > b);
-
-interface EmailData {
-  supplier: string;
-  orders: Array<{
-    key: string;
-    poNumber: string;
-    orderQty: number;
-    receivedQty: number;
-    outstandingQty: number;
-  }>;
-}
-
 export class EmailService {
-  private template: Handlebars.TemplateDelegate;
-
-  constructor() {
-    const templatePath = path.join(__dirname, "emailTemplates", "reminder.hbs");
-    const templateSource = fs.readFileSync(templatePath, "utf8");
-    this.template = Handlebars.compile(templateSource);
-  }
-
   async sendReminder(
     data: EmailData
   ): Promise<{ success: boolean; error?: string }> {
@@ -52,7 +31,7 @@ export class EmailService {
     data: EmailData
   ): Promise<{ success: boolean; error?: string }> {
     try {
-      const html = this.template(data);
+      const html = generateEmailContent(data);
       const result = await ipcRenderer.invoke("sendEmail", {
         to: data.supplier,
         subject: "Purring på manglende leveranser",
@@ -79,7 +58,7 @@ export class EmailService {
         },
       });
 
-      const html = this.template(data);
+      const html = generateEmailContent(data);
       await transporter.sendMail({
         from: process.env.SMTP_FROM,
         to: data.supplier,
