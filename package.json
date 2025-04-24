@@ -20,7 +20,7 @@
     "create-minimal-manifest": "node scripts/create-minimal-manifest.js",
     "dist": "electron-vite build && npm run create-minimal-manifest && npm run prepare-deps && electron-builder",
     "clean-dist": "node scripts/clean-build.js",
-    "dist:win": "electron-vite build && npm run create-minimal-manifest && npm run prepare-deps && electron-builder --win nsis zip",
+    "dist:win": "electron-vite build && npm run create-minimal-manifest && npm run prepare-deps && electron-builder --win zip",
     "dist:portable": "electron-vite build && npm run create-minimal-manifest && npm run prepare-deps && electron-builder --win portable",
     "dist:msi": "electron-vite build && npm run create-minimal-manifest && npm run prepare-deps && electron-builder --win msi",
     "dist:nsis": "electron-vite build && npm run create-minimal-manifest && npm run prepare-deps && electron-builder --win nsis",
@@ -88,8 +88,6 @@
       "shortcutName": "OneMed SupplyChain",
       "deleteAppDataOnUninstall": false,
       "displayLanguageSelector": false,
-      "installerSidebar": "resources/sidebar.bmp",
-      "uninstallerSidebar": "resources/sidebar.bmp",
       "include": "resources/installer.nsh"
     }
   },
