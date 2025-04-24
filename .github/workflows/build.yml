@@ -62,9 +62,16 @@ jobs:
         run: |
           # Use the dedicated script for portable builds
           npm run dist:portable
+          # Build Windows ZIP installer package
+          npm run dist:win
           # Verify the output exists using Get-ChildItem
           if (-not (Get-ChildItem -Path release -Filter '*Portable.exe')) {
             Write-Error "Portable executable not found in release directory"
+            exit 1
+          }
+          # Verify the zip installer package exists
+          if (-not (Get-ChildItem -Path release -Filter '*.zip')) {
+            Write-Error "Windows zip package not found in release directory"
             exit 1
           }
 
@@ -85,6 +92,14 @@ jobs:
         uses: actions/upload-artifact@v4
         continue-on-error: true # Won't fail the build if quota is hit
         with:
-          name: Supplier-Reminder-Pro-Windows-x64
+          name: SupplyChain-OneMed-Windows-x64
           path: release\*Portable.exe
           retention-days: 3 # Reduced retention period
+
+      - name: Upload Windows ZIP Artifact
+        uses: actions/upload-artifact@v4
+        continue-on-error: true
+        with:
+          name: SupplyChain-OneMed-Windows-Zip
+          path: release\*.zip
+          retention-days: 3
