@@ -1,38 +1,28 @@
-import { app, BrowserWindow, ipcMain, shell, dialog, Menu } from "electron";
-import path from "path";
-import * as log from "electron-log";
+import { app, BrowserWindow, ipcMain, shell, dialog, Menu, Tray, nativeTheme } from "electron";
+import { join, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
+import fs from "node:fs";
+import * as Database from "better-sqlite3";
+import { importExcelData } from "./importer";
+import child_process from "node:child_process";
+import { autoUpdater } from "electron-updater";
+import log from "electron-log";
 import { databaseService } from "../services/databaseService";
 import { setupDatabaseHandlers } from "./database";
 import { checkForUpdatesManually } from "./auto-updater";
-import fs from "fs";
-import * as Database from "better-sqlite3"; // Import better-sqlite3
-import { importAlleArk } from "./importer"; // Import the Excel importer
-import child_process from "child_process"; // Added for send-logs-to-support
-import { autoUpdater } from "electron-updater"; // Added for update:install
 
-// Configure detailed logging for troubleshooting
-log.transports.file.level = "debug"; // Set to debug for maximum logging
-log.transports.console.level = "debug";
+// Calculate __dirname equivalent for ESM
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
-// Set log file size and rotation
-log.transports.file.maxSize = 10 * 1024 * 1024; // 10MB
-log.transports.file.format = "[{y}-{m}-{d} {h}:{i}:{s}.{ms}] [{level}] {text}";
+// Configure electron-log
+log.transports.file.resolvePathFn = () => join(app.getPath("userData"), "logs", "supplier-reminder-app.log");
+log.transports.file.format = '[{y}-{m}-{d} {h}:{i}:{s}.{ms}] [{level}] {text}';
+log.transports.console.format = '[{y}-{m}-{d} {h}:{i}:{s}.{ms}] [{level}] {text}';
+log.initialize({ preload: true });
 
-// Create logs directory in userData if it doesn't exist
-const logsDir = path.join(app.getPath("userData"), "logs");
-try {
-  if (!fs.existsSync(logsDir)) {
-    fs.mkdirSync(logsDir, { recursive: true });
-  }
-
-  // Set a custom log file path for easier identification
-  const logFilePath = path.join(logsDir, "supplier-reminder-app.log");
-  log.transports.file.resolvePathFn = () => logFilePath;
-
-  log.info("Log file location:", logFilePath);
-} catch (err) {
-  console.error("Failed to set up logging directory:", err);
-}
+log.info('App starting...');
+console.log("App starting..."); // Keep console log for early stage debugging
 
 // Add a global error handler for uncaught exceptions
 process.on("uncaughtException", (error) => {
@@ -91,16 +81,18 @@ ipcMain.handle("get-logs", async () => {
 });
 
 let mainWindow: BrowserWindow | null = null;
+let db: Database.Database | null = null;
+let tray: Tray | null = null;
 
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
-    icon: path.join(__dirname, "../../supplychain.png"),
+    icon: join(__dirname, "../../supplychain.png"),
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      preload: path.join(__dirname, "../preload/index.cjs"),
+      preload: join(__dirname, "../preload/index.cjs"),
     },
   });
 
@@ -113,7 +105,7 @@ function createWindow() {
   const isDev = process.env.NODE_ENV === "development";
   const url = isDev
     ? "http://localhost:5173"
-    : `file://${path.join(__dirname, "../renderer/index.html")}`;
+    : `file://${join(__dirname, "../renderer/index.html")}`;
 
   log.info(`Loading window URL: ${url}`);
   mainWindow.loadURL(url).catch((err) => {
@@ -156,7 +148,7 @@ app.whenReady().then(async () => {
     try {
       const logFilePath = log.transports.file.getFile().path;
       // Determine the folder containing the logs
-      const logsFolder = path.dirname(logFilePath);
+      const logsFolder = dirname(logFilePath);
 
       const template: Electron.MenuItemConstructorOptions[] = [
         { role: "fileMenu" }, // standard File menu
@@ -269,7 +261,7 @@ app.on("will-quit", async (event) => {
 // Function to create the main application window
 async function createOrLoadDatabase(): Promise<Database.Database> {
   const userDataPath = app.getPath("userData");
-  const dbPath = path.join(userDataPath, "app.sqlite");
+  const dbPath = join(userDataPath, "app.sqlite");
   log.info(`Database path determined: ${dbPath}`);
 
   // Ensure the user data directory exists
@@ -345,7 +337,7 @@ async function createOrLoadDatabase(): Promise<Database.Database> {
       log.info("New database file created successfully.");
 
       // Run the import process
-      const importSuccess = await importAlleArk(xlsxPath, db);
+      const importSuccess = await importExcelData(xlsxPath, db);
 
       if (!importSuccess) {
         log.error(`Excel import failed from file: ${xlsxPath}`);
@@ -420,15 +412,15 @@ ipcMain.handle(
         throw new Error("Database connection is not available.");
       }
 
-      log.info("Calling importAlleArk with buffer...");
+      log.info("Calling importExcelData with buffer...");
       // Pass buffer directly to importer (it needs adaptation)
-      const success = await importAlleArk(payload.fileBuffer, db);
-      log.info(`importAlleArk finished with success: ${success}`);
+      const success = await importExcelData(payload.fileBuffer, db);
+      log.info(`importExcelData finished with success: ${success}`);
 
       if (success) {
         return { success: true, message: "Import completed successfully." };
       } else {
-        // Check if importAlleArk provides more specific error info
+        // Check if importExcelData provides more specific error info
         throw new Error("Import process failed. Check logs for details.");
       }
     } catch (err: unknown) {
@@ -552,13 +544,13 @@ ipcMain.on("show-about-dialog", () => {
       process.versions.chrome
     }\n\n© ${new Date().getFullYear()} OneMed AS`,
     buttons: ["OK"],
-    icon: path.join(process.resourcesPath, "icon.png"),
+    icon: join(process.resourcesPath, "icon.png"),
   });
 });
 
 // Handle request to SHOW LOGS FOLDER
 ipcMain.handle("show-logs", async () => {
-  const logsDir = path.join(app.getPath("userData"), "logs");
+  const logsDir = join(app.getPath("userData"), "logs");
   log.info(`Request received to open logs directory: ${logsDir}`);
 
   try {
@@ -595,7 +587,7 @@ ipcMain.handle("show-logs", async () => {
 
 // Add new IPC handler to READ LOG FILE TAIL
 ipcMain.handle("read-log-tail", async (_event, lineCount: number = 200) => {
-  const logFilePath = path.join(
+  const logFilePath = join(
     app.getPath("userData"),
     "logs",
     "supplier-reminder-app.log"
