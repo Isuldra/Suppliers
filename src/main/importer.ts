@@ -1,12 +1,8 @@
 import ExcelJS from "exceljs";
 import Database from "better-sqlite3";
-// import { join } from "path"; // Unused
-// import { existsSync, mkdirSync } from "fs"; // Unused
-// import { app } from "electron"; // Unused
 import log from "electron-log"; // Added for logging
 import { formatISO, parse as parseDateFns } from "date-fns"; // Import date-fns functions
-import type { Worksheet } from "exceljs"; // Import Worksheet type
-import * as XLSX from "xlsx"; // Import xlsx library for SSF
+import type { Worksheet, Cell } from "exceljs"; // Import Worksheet and Cell types
 
 type WeeklyStatus = {
   leverandør: string;
@@ -18,242 +14,200 @@ type WeeklyStatus = {
 
 // Define structure for data going into the 'orders' table
 type OrderImportData = {
-  reference: string; // Mapped from 'nøkkel'
-  orderNumber: string; // Mapped from 'ordreNr'
-  // itemNo is not directly in orders table, maybe part of description?
-  description: string; // Mapped from 'beskrivelse'
-  dueDate: string | null; // Keep as ISO string YYYY-MM-DD for DB
-  supplier: string; // Mapped from 'ftgnavn'
-  // Other 'orders' columns like 'orderDate', 'category', 'value', 'currency', 'confirmed' are not directly available from Hovedliste here
+  reference: string;
+  orderNumber: string;
+  description: string;
+  dueDate: string | null; // Stored as YYYY-MM-DD string
+  supplier: string;
 };
+
+// Define structure for BP data (adjust fields as needed)
+type BpData = {
+  order_number: string;
+  item_number: string;
+  supplier_item_number: string | null;
+  promised_delivery_date: string | null; // Stored as YYYY-MM-DD string
+}
 
 // Helper function to find the header row index
 function findHeaderRow(
   ws: Worksheet,
   mustInclude: string[],
-  maxScanRows = 50 // Increased scan range slightly
+  maxScanRows = 15 // Scan fewer rows for header by default
 ): number {
+  log.debug(`Searching for header in sheet '${ws.name}' with keywords: ${mustInclude.join(', ')}`);
   for (let r = 1; r <= Math.min(maxScanRows, ws.rowCount); r++) {
     const row = ws.getRow(r);
-    // const textRow_old = (row.values as ExcelJS.CellValue[]) // Old method using row.values
-    //   .map((v) => (v == null ? "" : v.toString().toLowerCase().trim()))
-    //   .filter((v) => v !== "");
-
-    // New method using cell.text for better reliability
     const textRow: string[] = [];
     // Use .text to get the displayed string, handling richText/formulas
-    row.eachCell((cell) => {
-      const txt = cell.text ? cell.text.toString().trim().toLowerCase() : "";
-      if (txt) textRow.push(txt);
+    // Capture empty cells as well to compare against mustInclude array length
+    row.eachCell({ includeEmpty: true }, (cell: Cell) => {
+      const txt = cell && cell.text ? cell.text.toString().trim().toLowerCase() : "";
+      textRow.push(txt);
     });
 
-    // Check if all keywords are present in this row's non-empty cells
-    if (
-      textRow.length > 0 &&
-      mustInclude.every((kw) =>
-        textRow.some((c) => c.includes(kw.toLowerCase()))
-      )
-    ) {
-      log.info(
-        `Found header row ${r} in sheet '${
-          ws.name
-        }' containing keywords: ${mustInclude.join(", ")}`
-      );
+    // Check if all required keywords are present in this row's cells
+    const foundAll = mustInclude.every(kw =>
+        textRow.some(cellText => cellText.includes(kw.toLowerCase()))
+    );
+
+    if (foundAll) {
+      log.info(`Found header row ${r} in sheet '${ws.name}'. Content: ${JSON.stringify(textRow)}`);
       return r;
     }
   }
-  // Throw error if header not found
-  const errMsg = `Couldn't find header row in sheet '${
-    ws.name
-  }' containing all keywords: ${mustInclude.join(
-    ", "
-  )} within the first ${maxScanRows} rows.`;
+  const errMsg = `Couldn't find header row in sheet '${ws.name}' containing all keywords: ${mustInclude.join(", ")} within the first ${maxScanRows} rows.`;
   log.error(errMsg);
   throw new Error(errMsg);
 }
 
-// Accept an open database connection as an argument
-export async function importAlleArk(
-  source: string | ArrayBuffer,
-  db: Database.Database
-): Promise<boolean> {
-  // Return boolean for success/fail
-  log.info(
-    `Starting import from ${
-      typeof source === "string" ? "Excel file: " + source : "Excel buffer"
-    }`
-  );
-  const wb = new ExcelJS.Workbook();
-  try {
-    if (typeof source === "string") {
-      await wb.xlsx.readFile(source); // Read from path
-      log.info(`Successfully read Excel file: ${source}`);
-    } else {
-      await wb.xlsx.load(source); // Load from buffer
-      log.info(
-        `Successfully loaded Excel from buffer (${source.byteLength} bytes).`
-      );
-    }
-  } catch (err) {
-    log.error(`Failed to read/load Excel data:`, err);
-    return false; // Indicate failure
+// Function to parse dates robustly, trying multiple formats and handling Excel numbers
+function parseExcelDate(dateValue: unknown): string | null {
+  if (!dateValue || (typeof dateValue === 'string' && dateValue.trim() === '')) {
+    return null;
   }
-
-  // ─── Build a lookup from Restliste til Leverandør ─────────────────────────────
-  const restSheet = wb.getWorksheet("Restliste til Leverandør");
-  const estMap = new Map<string, Date>();
-  if (restSheet) {
+  // Check if it's already a valid Date object
+  if (dateValue instanceof Date) {
+    if (!isNaN(dateValue.getTime())) {
+      // Use UTC methods to avoid timezone issues when creating the ISO string
+      return formatISO(dateValue, { representation: 'date' });
+    }
+  }
+  // Check if it's an Excel date number (common origin: 1900-01-01, but Excel treats 1900 as a leap year)
+  if (typeof dateValue === 'number') {
     try {
-      const restHeaderIdx = findHeaderRow(restSheet, [
-        "ref",
-        "est receipt date",
-      ]);
-      const restHeaderRow = restSheet.getRow(restHeaderIdx);
-      let keyCol = -1,
-        estCol = -1;
-      restHeaderRow.eachCell((c, idx) => {
-        const t = c.text.trim().toLowerCase();
-        if (t.includes("ref")) keyCol = idx;
-        if (t.includes("est receipt date")) estCol = idx;
-      });
-
-      if (keyCol === -1 || estCol === -1) {
-        log.error(
-          "Could not find 'ref' or 'est receipt date' columns in Restliste header row."
-        );
-        log.warn(
-          "Required columns missing in Restliste header. Date map will be empty."
-        );
-      } else {
-        log.info(
-          `Reading Restliste data starting from row ${restHeaderIdx + 1}`
-        );
-        for (let r = restHeaderIdx + 1; r <= restSheet.rowCount; r++) {
-          const row = restSheet.getRow(r);
-          const keyCell = row.getCell(keyCol);
-          const dateCell = row.getCell(estCol);
-
-          const key = keyCell ? keyCell.text.trim() : null;
-          const rawDate = dateCell ? dateCell.value : null;
-
-          if (!key || !rawDate) {
-            continue;
-          }
-
-          let parsedDate: Date | null = null;
-          if (rawDate instanceof Date && !isNaN(rawDate.getTime())) {
-            parsedDate = rawDate;
-          } else if (typeof rawDate === "string" && rawDate.trim()) {
-            const dateStr = rawDate.trim();
-            try {
-              parsedDate = parseDateFns(dateStr, "M/d/yyyy", new Date());
-              if (isNaN(parsedDate.getTime())) parsedDate = new Date(dateStr);
-            } catch (_e) {
-              /* ignore */
-            }
-          } else if (typeof rawDate === "number") {
-            try {
-              // Use XLSX.SSF for numeric dates
-              const d = XLSX.SSF.parse_date_code(rawDate);
-              if (d && d.y != null) {
-                // Month is 1-based in parse_date_code, 0-based in Date constructor
-                parsedDate = new Date(d.y, d.m - 1, d.d);
-              }
-            } catch (_e) {
-              /* ignore */
-            }
-          }
-
-          if (key && parsedDate && !isNaN(parsedDate.getTime())) {
-            parsedDate.setUTCHours(0, 0, 0, 0); // Normalize
-            estMap.set(key, parsedDate);
-          }
-        }
-        log.info(`Built estMap with ${estMap.size} entries from Restliste.`);
-      }
-    } catch (error) {
-      log.error(`Error processing 'Restliste til Leverandør' sheet:`, error);
+      // Excel for Windows stores dates as days since 1900-01-00 (which is Dec 31, 1899)
+      // Excel for Mac stores dates as days since 1904-01-01
+      // We assume Windows format (most common). Add check for workbook.properties.date1904 if needed.
+      const excelEpoch = new Date(Date.UTC(1899, 11, 30)); // Dec 30, 1899 to account for Excel's leap year bug
+      const jsDate = new Date(excelEpoch.getTime() + dateValue * 86400000); // 86400000 ms in a day
+       if (!isNaN(jsDate.getTime())) {
+          return formatISO(jsDate, { representation: 'date' });
+       }
+    } catch (e) {
+      log.warn(`Error parsing Excel numeric date ${dateValue}: ${e}`);
     }
-  } else {
-    log.warn(
-      "'Restliste til Leverandør' sheet not found. Cannot get estimated receipt dates."
-    );
+  }
+  // Check if it's a string
+  if (typeof dateValue === 'string') {
+    const trimmedDate = dateValue.trim();
+    if (trimmedDate) {
+      // Try specific formats common in Excel
+      const formats = [
+        'dd.MM.yyyy',
+        'dd/MM/yyyy',
+        'MM/dd/yyyy',
+        'yyyy-MM-dd',
+        'yyyyMMdd',
+        'dd-MMM-yy',
+        'd. MMMM yyyy'
+      ];
+      for (const fmt of formats) {
+        try {
+          const parsed = parseDateFns(trimmedDate, fmt, new Date());
+          if (!isNaN(parsed.getTime())) {
+            return formatISO(parsed, { representation: 'date' });
+          }
+        } catch (e) { /* ignore format mismatch, try next */ }
+      }
+      // Fallback for standard ISO or JS Date parsable strings
+      try {
+        // Handle potential ISO strings with time/timezone
+        const parsed = new Date(trimmedDate.split('T')[0]); // Take only date part
+        if (!isNaN(parsed.getTime())) {
+          return formatISO(parsed, { representation: 'date' });
+        }
+      } catch(e) { /* ignore */ }
+    }
   }
 
-  // 1) Hent alle "Sjekkliste Leverandører *"‑arkene
-  const statusArk = wb.worksheets.filter((ws) =>
+  log.warn(`Could not parse date value: ${JSON.stringify(dateValue)}. Returning as string.`);
+  // Return the original string representation if all parsing fails
+  return String(dateValue);
+}
+
+
+// --- Import Functions for Each Sheet Type ---
+
+async function importSjekkliste(
+  wb: ExcelJS.Workbook,
+): Promise<{ success: boolean; data: WeeklyStatus[] }> {
+  log.info("Starting import of 'Sjekkliste Leverandører' sheets...");
+  const statusArk = wb.worksheets.filter((ws: Worksheet) =>
     ws.name.toLowerCase().startsWith("sjekkliste leverandører")
   );
+
+  if (statusArk.length === 0) {
+    log.warn("No 'Sjekkliste Leverandører' sheets found. Skipping status import.");
+    return { success: true, data: [] }; // Not an error, just no sheets
+  }
+
   log.info(`Found ${statusArk.length} 'Sjekkliste Leverandører' sheets.`);
 
   const alleStatus: WeeklyStatus[] = [];
+  const success = true; // Use const as it's not reassigned here
+
   for (const sheet of statusArk) {
     log.info(`Processing sheet: ${sheet.name}`);
-    // Ekstraher navnet på kjøper (f.eks. "Tony" eller "Joa") - Assuming last word is buyer
-    // const deler = sheet.name.split(" ");
-    // const buyer = deler[deler.length - 1]; // Buyer info not used in DB schema
-
-    // Dynamically find the header row instead of assuming row 4
     let sjekkHeaderIdx = -1;
     try {
-      sjekkHeaderIdx = findHeaderRow(sheet, ["leverandør", "uke", "mail"], 10); // Scan first 10 rows
-    } catch (_e) {
+      sjekkHeaderIdx = findHeaderRow(sheet, ["leverandør", "uke"], 10);
+    } catch (e: unknown) { // Type the error
+      const message = e instanceof Error ? e.message : String(e);
       log.warn(
-        `Could not find required header row in sheet ${sheet.name}. Skipping sheet.`
+        `Could not find required header row in sheet ${sheet.name}. Skipping sheet. Error: ${message}`
       );
-      continue;
+      continue; // Skip this sheet
     }
 
-    const headerRow = sheet.getRow(sjekkHeaderIdx); // Use dynamically found header row
+    const headerRow = sheet.getRow(sjekkHeaderIdx);
     let leverandorCol = -1;
-    let emailCol = -1;
+    let emailCol = -1; // Optional
     const ukeCols: { index: number; uke: string; dag: string }[] = [];
 
-    headerRow.eachCell((cell, colNumber) => {
-      const cellValue = cell.text.trim().toLowerCase();
-      if (cellValue.startsWith("leverand")) {
-        // Keep loose match
+    headerRow.eachCell({ includeEmpty: true }, (cell: Cell, colNumber: number) => {
+      const cellValue = cell.text ? cell.text.trim().toLowerCase() : "";
+      if (cellValue === "leverandør" || cellValue === "supplier") {
         leverandorCol = colNumber;
-      } else if (cellValue === "mail") {
+      } else if (cellValue === "mail" || cellValue === "email") {
         emailCol = colNumber;
       } else if (cellValue.startsWith("uke")) {
-        // Attempt to extract day from the cell above the dynamically found header
-        const dayCell = sheet.getRow(sjekkHeaderIdx - 1).getCell(colNumber);
-        const dag = dayCell ? dayCell.text.trim() : "Ukjent Dag"; // Default if day isn't found
-        ukeCols.push({ index: colNumber, uke: cell.text.trim(), dag: dag }); // Store original 'Uke XX' text
+        let dag = "Ukjent Dag";
+        if (sjekkHeaderIdx > 1) {
+          const dayCell = sheet.getCell(sjekkHeaderIdx - 1, colNumber);
+          if (dayCell && dayCell.text) {
+            dag = dayCell.text.trim();
+          }
+        }
+        ukeCols.push({ index: colNumber, uke: cell.text.trim(), dag });
       }
     });
 
     if (leverandorCol === -1) {
-      // This check might be redundant if findHeaderRow succeeded, but keep for safety
       log.warn(
-        `Could not find 'Leverandør' column in dynamically found header row ${sjekkHeaderIdx} for sheet: ${sheet.name}. Skipping sheet.`
+        `Could not find 'Leverandør' column in header row ${sjekkHeaderIdx} for sheet: ${sheet.name}. Skipping sheet.`
       );
       continue;
     }
     if (emailCol === -1) {
       log.warn(
-        `Could not find 'Mail' column in sheet: ${sheet.name} (header row ${sjekkHeaderIdx}). Using empty email.`
+        `Could not find 'Mail'/'Email' column in sheet: ${sheet.name} (header row ${sjekkHeaderIdx}). Email will be empty.`
       );
     }
 
     log.info(
-      `Sheet '${
-        sheet.name
-      }' - Found Header Row: ${sjekkHeaderIdx}, Leverandor Col: ${leverandorCol}, Email Col: ${emailCol}, Uke Cols: ${ukeCols
-        .map((uc) => uc.index)
-        .join(",")}`
+      `Sheet '${sheet.name}' - Header Row: ${sjekkHeaderIdx}, Leverandør Col: ${leverandorCol}, Email Col: ${emailCol}, Uke Cols: ${ukeCols.map(uc => `${uc.index}(${uc.uke}/${uc.dag})`).join(", ")}`
     );
 
-    // Les data starting from the row AFTER the dynamically found header
+    let rowsExtractedFromSheet = 0;
     for (let r = sjekkHeaderIdx + 1; r <= sheet.rowCount; r++) {
       const row = sheet.getRow(r);
       const lever = row.getCell(leverandorCol).text.trim();
       if (!lever) {
-        log.info(
-          `Reached empty 'Leverandør' cell at row ${r} in sheet ${sheet.name}. Stopping read for this sheet.`
-        );
-        break; // Stop if leverandør is empty
+        // log.debug(
+        //   `Stopping read for sheet ${sheet.name} at row ${r} due to empty 'Leverandør' cell.`
+        // );
+        break; // Stop if leverandør is empty for this sheet
       }
 
       const email = emailCol !== -1 ? row.getCell(emailCol).text.trim() : "";
@@ -261,7 +215,6 @@ export async function importAlleArk(
       for (const ukeCol of ukeCols) {
         const status = row.getCell(ukeCol.index).text.trim();
         if (status) {
-          // Only add if there is a status
           alleStatus.push({
             leverandør: lever,
             dag: ukeCol.dag,
@@ -269,319 +222,479 @@ export async function importAlleArk(
             status,
             email,
           });
+          rowsExtractedFromSheet++;
         }
       }
     }
-    log.info(`Extracted ${alleStatus.length} status entries so far.`);
+    log.info(`Extracted ${rowsExtractedFromSheet} status entries from ${sheet.name}.`);
   }
   log.info(
     `Finished processing status sheets. Total entries: ${alleStatus.length}`
   );
+  return { success, data: alleStatus }; // Return collected data
+}
 
-  // 2) Hovedliste
-  log.info("Processing 'Hovedliste' sheet...");
-  const hoved = wb.getWorksheet("Hovedliste");
-  const orderImportList: OrderImportData[] = [];
-  if (hoved) {
-    try {
-      // Find header row dynamically using corrected keywords
-      // Debug: dump first 10 rows to the log using cell.text
-      for (let r = 1; r <= Math.min(10, hoved.rowCount); r++) {
-        const row = hoved.getRow(r);
-        // const vals_old = (row.values as ExcelJS.CellValue[]) // Old debug log
-        //  .map(v => (v == null ? '' : v.toString().trim()));
-        // log.debug(`Hovedliste row ${r} values: ${JSON.stringify(vals_old)}`);
+async function buildEstMap(wb: ExcelJS.Workbook): Promise<Map<string, Date>> {
+  const estMap = new Map<string, Date>();
+  const restSheet = wb.getWorksheet("Restliste til Leverandør");
+  if (!restSheet) {
+    log.warn("'Restliste til Leverandør' sheet not found. Cannot build estimated receipt dates map.");
+    return estMap;
+  }
 
-        // New debug log using cell.text
-        const vals: string[] = [];
-        row.eachCell({ includeEmpty: true }, (cell) => {
-          // includeEmpty might be useful
-          vals.push(cell.text ? cell.text.trim() : "");
-        });
-        log.debug(`Hovedliste row ${r} texts: ${JSON.stringify(vals)}`);
-      }
+  try {
+    log.info("Processing 'Restliste til Leverandør' sheet to build EST map...");
+    const headerIdx = findHeaderRow(restSheet, ["ref", "est receipt date"], 10);
+    const headerRow = restSheet.getRow(headerIdx);
+    let keyCol = -1, estCol = -1;
 
-      const hovedHeaderIdx = findHeaderRow(hoved, [
-        "nøkkel",
-        "pono.", // Corrected keyword (added dot)
-        "dato varen skulle kommet inn",
-        "leverandør",
-      ]);
-      const hovedHeaderRow = hoved.getRow(hovedHeaderIdx);
+    headerRow.eachCell({ includeEmpty: true }, (c: Cell, idx: number) => {
+      const t = c.text ? c.text.trim().toLowerCase() : "";
+      if (t.includes("ref")) keyCol = idx;
+      if (t.includes("est receipt date")) estCol = idx;
+    });
 
-      // Reset column indices before searching the correct row
-      let nokkelCol = -1,
-        ordreNrCol = -1,
-        itemNoCol = -1,
-        beskCol = -1,
-        datoCol = -1,
-        ftgnavnCol = -1;
-      hovedHeaderRow.eachCell((cell, colNumber) => {
-        const cellValue = cell.text.trim().toLowerCase();
-        if (cellValue.includes("nøkkel") || cellValue === "ref")
-          nokkelCol = colNumber;
-        else if (cellValue.includes("pono")) ordreNrCol = colNumber; // Use pono
-        else if (cellValue.includes("item no")) itemNoCol = colNumber;
-        else if (cellValue.includes("item description")) beskCol = colNumber;
-        else if (cellValue.includes("dato varen skulle kommet inn"))
-          datoCol = colNumber;
-        else if (cellValue.includes("leverandør")) ftgnavnCol = colNumber; // Map to leverandør
-      });
-
-      log.info(
-        `Hovedliste Columns - Nøkkel: ${nokkelCol}, OrdreNr: ${ordreNrCol}, ItemNo: ${itemNoCol}, Beskrivelse: ${beskCol}, Dato: ${datoCol}, Ftgnavn(Supplier?): ${ftgnavnCol}` // Updated log
+    if (keyCol === -1 || estCol === -1) {
+      log.error(
+        "Could not find required columns 'ref' or 'est receipt date' in Restliste header row. Cannot build EST map."
       );
-
-      const startDataRow = hovedHeaderIdx + 1;
-      const dateFormat = "M/d/yyyy"; // Correct format
-
-      if (nokkelCol > 0 && ordreNrCol > 0 && ftgnavnCol > 0) {
-        // Check indices > 0
-        for (let r = startDataRow; r <= hoved.rowCount; r++) {
-          const row = hoved.getRow(r);
-          const nøkkel =
-            nokkelCol > 0 ? row.getCell(nokkelCol).text.trim() : null;
-          const ordreNr =
-            ordreNrCol > 0 ? row.getCell(ordreNrCol).text.trim() : null;
-          const supplier =
-            ftgnavnCol > 0 ? row.getCell(ftgnavnCol).text.trim() : null;
-
-          if (!nøkkel || !supplier || !ordreNr) {
-            log.warn(
-              `Skipping Hovedliste row ${r} due to missing nøkkel ('${nøkkel}'), supplier ('${supplier}'), or order number ('${ordreNr}').`
-            );
-            continue;
-          }
-
-          // --- Date Parsing Logic --- (Consolidated and Corrected)
-          let finalDate: Date | null = null;
-          const dateFromMap = nøkkel ? estMap.get(nøkkel) : undefined;
-
-          if (dateFromMap) {
-            finalDate = dateFromMap; // Already a normalized Date object
-          } else if (datoCol > 0) {
-            // Try parsing fallback date from Hovedliste
-            const fallbackDateCell = row.getCell(datoCol);
-            const fallbackRawDate = fallbackDateCell
-              ? fallbackDateCell.value
-              : null;
-
-            let parsedFallback: Date | null = null;
-            if (
-              fallbackRawDate instanceof Date &&
-              !isNaN(fallbackRawDate.getTime())
-            ) {
-              parsedFallback = fallbackRawDate;
-            } else if (
-              typeof fallbackRawDate === "string" &&
-              fallbackRawDate.trim()
-            ) {
-              try {
-                parsedFallback = parseDateFns(
-                  fallbackRawDate.trim(),
-                  dateFormat,
-                  new Date()
-                );
-                if (isNaN(parsedFallback.getTime()))
-                  parsedFallback = new Date(fallbackRawDate.trim());
-              } catch (_e) {
-                /* ignore */
-              }
-            } else if (typeof fallbackRawDate === "number") {
-              try {
-                // Use XLSX.SSF for numeric dates - This seems wrong, parse_date_code doesn't return Date
-                const d = XLSX.SSF.parse_date_code(fallbackRawDate);
-                if (d && d.y != null) {
-                  parsedFallback = new Date(d.y, d.m - 1, d.d);
-                }
-                // parsedFallback = XLSX.SSF.parse_date_code(fallbackRawDate); // Old line, likely incorrect
-              } catch (_e) {
-                /* ignore */
-              }
-            }
-
-            if (parsedFallback && !isNaN(parsedFallback.getTime())) {
-              parsedFallback.setUTCHours(0, 0, 0, 0); // Normalize
-              finalDate = parsedFallback;
-            }
-          }
-          // --- End Date Parsing Logic ---
-
-          // Find other column values using correct indices
-          const beskText = beskCol > 0 ? row.getCell(beskCol).text.trim() : "";
-          // const itemNoText = // Unused variable
-          //  itemNoCol > 0 ? row.getCell(itemNoCol).text.trim() : "";
-
-          // Ensure no stray isoDueDate variable is used
-          orderImportList.push({
-            reference: nøkkel, // Already checked non-null
-            orderNumber: ordreNr, // Already checked non-null
-            description: beskText,
-            // Format the final Date object (or null) to ISO string for DB
-            dueDate: finalDate
-              ? formatISO(finalDate, { representation: "date" })
-              : null,
-            supplier: supplier, // Already checked non-null
-          });
-        }
-        log.info(`Extracted ${orderImportList.length} orders from Hovedliste.`);
-        console.table(orderImportList.slice(0, 10)); // Keep console.table
-        log.info(
-          "Logged first 10 extracted orders (check console).dueDate should have ISO date strings or NULL."
-        );
-      } else {
-        log.warn(
-          "Could not find required columns ('Nøkkel', 'PONo.', 'Leverandør') in Hovedliste. Skipping order import."
-        );
-      }
-    } catch (error) {
-      log.error(`Error processing 'Hovedliste' sheet:`, error);
-      return false; // Stop import if Hovedliste processing fails
+      return estMap; // Return empty map
     }
-  } else {
-    log.warn("'Hovedliste' sheet not found. Skipping PO import.");
+    log.info(`Restliste cols for EST map: ref=${keyCol}, est receipt date=${estCol}`);
+
+    for (let r = headerIdx + 1; r <= restSheet.rowCount; r++) {
+      const row = restSheet.getRow(r);
+      const keyCell = row.getCell(keyCol);
+      const dateCell = row.getCell(estCol);
+
+      const key = keyCell ? keyCell.text.trim() : null;
+      const rawDate = dateCell ? dateCell.value : null;
+
+      if (!key || !rawDate) {
+        // log.debug(`Skipping Restliste row ${r}: missing key or date`);
+        continue;
+      }
+
+      const parsedDateStr = parseExcelDate(rawDate); // Get YYYY-MM-DD or original string
+      if (key && parsedDateStr) {
+        try {
+          // Attempt to create a Date object from the parsed YYYY-MM-DD string
+          const dateObj = new Date(parsedDateStr + 'T00:00:00Z'); // Add time part for UTC consistency
+          if (!isNaN(dateObj.getTime())) {
+            estMap.set(key, dateObj);
+          } else {
+            log.warn(`Could not create valid Date object from parsed string '${parsedDateStr}' for key '${key}' in Restliste`);
+          }
+        } catch (parseErr) {
+          log.warn(`Error creating Date object from '${parsedDateStr}' for key '${key}' in Restliste: ${parseErr}`);
+        }
+      }
+    }
+    log.info(`Built estMap with ${estMap.size} entries from Restliste.`);
+  } catch (error: unknown) { // Type the error
+    const message = error instanceof Error ? error.message : String(error);
+    log.error(`Error processing 'Restliste til Leverandør' sheet: ${message}`);
+    // Continue without EST data if Restliste processing fails
+  }
+  return estMap;
+}
+
+
+async function importHovedliste(
+  wb: ExcelJS.Workbook,
+  _estMap: Map<string, Date> // Pass the map here (prefixed as unused in this scope)
+): Promise<{ success: boolean; data: OrderImportData[] }> {
+  log.info("Processing 'Hovedliste' sheet...");
+  const hovedSheet = wb.getWorksheet("Hovedliste");
+  if (!hovedSheet) {
+    log.warn("'Hovedliste' sheet not found. Skipping Hovedliste import.");
+    return { success: true, data: [] }; // Not an error if sheet doesn't exist
   }
 
-  // 3) BP‑arket (ODBC‑dump) - Placeholder
-  log.info("Processing 'BP' sheet (placeholder)...");
-  const bp = wb.getWorksheet("BP");
-  if (bp) {
-    // Add logic to parse BP sheet similar to Hovedliste if needed
-    log.info("'BP' sheet found, but parsing logic is not implemented yet.");
-  } else {
-    log.warn("'BP' sheet not found.");
+  const orderImportList: OrderImportData[] = [];
+  try {
+    const HOVEDLISTE_HEADER_MAP: Record<keyof OrderImportData, string[]> = {
+      reference: ['nøkkel', 'ref'],
+      orderNumber: ['pono', 'pono.', 'purchase order no.', 'ordrenr', 'bestnr', 'po', 'ponr'],
+      description: ['item description', 'beskrivelse', 'prod. navn'], // Added 'prod. navn'
+      dueDate: ['dato varen skulle kommet inn', 'dato', 'eta fra leverandør', 'bestlovlevdat'],
+      supplier: ['leverandør', 'ftgnavn', 'ftgnamn']
+    };
+
+    const mustInclude = [...HOVEDLISTE_HEADER_MAP.reference]; // Reference (nøkkel) is the primary key
+    const headerIdx = findHeaderRow(hovedSheet, mustInclude, 10);
+    const headerRow = hovedSheet.getRow(headerIdx);
+
+    const colMap: Partial<Record<keyof OrderImportData, number>> = {};
+    headerRow.eachCell({ includeEmpty: true }, (cell: Cell, idx: number) => {
+      const txt = cell.text ? cell.text.trim().toLowerCase() : "";
+      if (!txt) return;
+      for (const [field, syns] of Object.entries(HOVEDLISTE_HEADER_MAP)) {
+        if (syns.some(s => txt.includes(s))) {
+          if (!colMap[field as keyof OrderImportData]) { // Take the first match
+            colMap[field as keyof OrderImportData] = idx;
+          }
+        }
+      }
+    });
+    log.info(`Hovedliste columns mapped: ${JSON.stringify(colMap)}`);
+
+    const requiredCols: (keyof OrderImportData)[] = ['reference']; // At least reference is needed
+    const missingCols = requiredCols.filter(col => !(col in colMap));
+    if (missingCols.length > 0) {
+      const missingSynonyms = missingCols.map(col => `${col} (e.g., ${HOVEDLISTE_HEADER_MAP[col].join('/')})`).join(', ');
+      log.error(`Required columns not found in Hovedliste header (row ${headerIdx}): ${missingSynonyms}. Cannot process Hovedliste.`);
+      return { success: false, data: [] };
+    }
+
+    for (let r = headerIdx + 1; r <= hovedSheet.rowCount; r++) {
+      const row = hovedSheet.getRow(r);
+      const ref = colMap.reference ? row.getCell(colMap.reference).text.trim() : '';
+      if (!ref) {
+        // log.debug(`Skipping Hovedliste row ${r}: empty reference cell.`);
+        continue;
+      }
+
+      const ord = colMap.orderNumber ? row.getCell(colMap.orderNumber).text.trim() : '';
+      const desc = colMap.description ? row.getCell(colMap.description).text.trim() : '';
+      const dueRaw = colMap.dueDate ? row.getCell(colMap.dueDate).value : null;
+      const dueDate = parseExcelDate(dueRaw);
+      const supp = colMap.supplier ? row.getCell(colMap.supplier).text.trim() : '';
+
+      orderImportList.push({
+        reference: ref,
+        orderNumber: ord,
+        description: desc,
+        dueDate: dueDate, // Use parsed date string
+        supplier: supp
+      });
+    }
+    log.info(`Extracted ${orderImportList.length} orders from Hovedliste.`);
+    return { success: true, data: orderImportList };
+
+  } catch (err: unknown) { // Type the error
+    const message = err instanceof Error ? err.message : String(err);
+    log.error(`Error processing Hovedliste sheet: ${message}`);
+    return { success: false, data: [] };
+  }
+}
+
+// TODO: Implement BP data import and define BpData type
+async function importBpData(wb: ExcelJS.Workbook): Promise<{ success: boolean; data: BpData[] }> {
+  log.info("Processing 'BP' sheet...");
+  const bpSheet = wb.getWorksheet("BP");
+  if (!bpSheet) {
+    log.warn("'BP' sheet not found. Skipping BP data import.");
+    return { success: true, data: [] }; // Not an error if sheet doesn't exist
   }
 
-  // --- Lag tabeller om de ikke finnes (using the passed-in db) ---
+  const bpDataList: BpData[] = [];
+  try {
+    const BP_HEADER_MAP = {
+      orderNumber: ['ordrenr', 'po', 'po number'], // Example synonyms
+      itemNumber: ['item no', 'artnr', 'item number'],
+      supplierItemNumber: ['supplier item no', 'lev artnr'],
+      promisedDeliveryDate: ['promised delivery date', 'lovad lev dat']
+    };
+    const mustInclude = [
+      ...BP_HEADER_MAP.orderNumber,
+      ...BP_HEADER_MAP.itemNumber
+    ];
+
+    const headerIdx = findHeaderRow(bpSheet, mustInclude, 10);
+    const headerRow = bpSheet.getRow(headerIdx);
+
+    const colMap: Partial<Record<keyof typeof BP_HEADER_MAP, number>> = {};
+    headerRow.eachCell({ includeEmpty: true }, (cell: Cell, idx: number) => {
+      const txt = cell.text ? cell.text.trim().toLowerCase() : "";
+      if (!txt) return;
+      for (const [field, syns] of Object.entries(BP_HEADER_MAP)) {
+        if (syns.some(s => txt.includes(s))) {
+          if (!colMap[field as keyof typeof BP_HEADER_MAP]) {
+            colMap[field as keyof typeof BP_HEADER_MAP] = idx;
+          }
+        }
+      }
+    });
+    log.info(`BP sheet columns mapped: ${JSON.stringify(colMap)}`);
+
+    const requiredBpCols = Object.keys(BP_HEADER_MAP) as (keyof typeof BP_HEADER_MAP)[];
+    const missingBpCols = requiredBpCols.filter(col => !(col in colMap));
+    if (missingBpCols.length > 0) {
+      const missingSynonyms = missingBpCols.map(col => `${col} (e.g., ${BP_HEADER_MAP[col].join('/')})`).join(', ');
+      log.error(`Required columns not found in BP header (row ${headerIdx}): ${missingSynonyms}. Cannot process BP data.`);
+      return { success: false, data: [] };
+    }
+
+    for (let r = headerIdx + 1; r <= bpSheet.rowCount; r++) {
+      const row = bpSheet.getRow(r);
+      const orderNum = colMap.orderNumber ? row.getCell(colMap.orderNumber).text.trim() : '';
+      const itemNum = colMap.itemNumber ? row.getCell(colMap.itemNumber).text.trim() : '';
+
+      if (!orderNum || !itemNum) {
+        // log.debug(`Skipping BP row ${r}: missing order number or item number.`);
+        continue;
+      }
+
+      const suppItemNum = colMap.supplierItemNumber ? row.getCell(colMap.supplierItemNumber).text.trim() : null;
+      const promisedDateRaw = colMap.promisedDeliveryDate ? row.getCell(colMap.promisedDeliveryDate).value : null;
+      const promisedDate = parseExcelDate(promisedDateRaw);
+
+      bpDataList.push({
+        order_number: orderNum,
+        item_number: itemNum,
+        supplier_item_number: suppItemNum,
+        promised_delivery_date: promisedDate,
+      });
+    }
+    log.info(`Extracted ${bpDataList.length} rows from BP sheet.`);
+    return { success: true, data: bpDataList };
+
+  } catch (err: unknown) { // Type the error
+    const message = err instanceof Error ? err.message : String(err);
+    log.error(`Error processing BP sheet: ${message}`);
+    return { success: false, data: [] };
+  }
+}
+
+/**
+ * Main function to import data from an Excel file into the SQLite database.
+ * Orchestrates the reading of different sheets and database operations.
+ */
+export async function importExcelData(
+  source: string | ArrayBuffer,
+  db: Database.Database
+): Promise<boolean> {
+  log.info(
+    `Starting import from ${typeof source === "string" ? "Excel file: " + source : "Excel buffer"}`
+  );
+  const wb = new ExcelJS.Workbook();
+  try {
+    if (typeof source === "string") {
+      await wb.xlsx.readFile(source);
+      log.info(`Successfully read Excel file: ${source}`);
+    } else {
+      await wb.xlsx.load(source);
+      log.info(`Successfully loaded Excel from buffer (${source.byteLength} bytes).`);
+    }
+  } catch (err: unknown) { // Type the error
+    const message = err instanceof Error ? err.message : String(err);
+    log.error(`Failed to read/load Excel data: ${message}`);
+    return false;
+  }
+
+  // --- Ensure Database Schema --- //
   log.info("Ensuring database tables exist...");
   try {
     db.exec(`
-        CREATE TABLE IF NOT EXISTS weekly_status (
+      PRAGMA journal_mode = WAL;
+      PRAGMA synchronous = NORMAL;
+
+      CREATE TABLE IF NOT EXISTS weekly_status (
         leverandor TEXT,
         dag         TEXT,
         uke         TEXT,
         status      TEXT,
         email       TEXT,
-        UNIQUE(leverandor, dag, uke) ON CONFLICT REPLACE -- Added uniqueness constraint
-        );
-        CREATE INDEX IF NOT EXISTS idx_weekly_status_leverandor ON weekly_status(leverandor);
-        CREATE INDEX IF NOT EXISTS idx_weekly_status_uke ON weekly_status(uke);
+        import_timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(leverandor, dag, uke) ON CONFLICT REPLACE
+      );
+      CREATE INDEX IF NOT EXISTS idx_weekly_status_leverandor ON weekly_status(leverandor);
+      CREATE INDEX IF NOT EXISTS idx_weekly_status_uke ON weekly_status(uke);
 
-        -- Remove purchase_order table creation
-        -- CREATE TABLE IF NOT EXISTS purchase_order ( ... );
-        -- CREATE INDEX IF NOT EXISTS idx_po_ordreNr ON purchase_order(ordreNr);
-        -- CREATE INDEX IF NOT EXISTS idx_po_ftgnavn ON purchase_order(ftgnavn);
+      CREATE TABLE IF NOT EXISTS orders (
+        reference       TEXT PRIMARY KEY, -- Nøkkel from Hovedliste
+        orderNumber     TEXT,             -- PO Number from Hovedliste
+        description     TEXT,
+        dueDate         TEXT,             -- Original due date from Hovedliste (YYYY-MM-DD)
+        supplier        TEXT,             -- Leverandør from Hovedliste
+        estimatedReceiptDate TEXT,       -- From Restliste (YYYY-MM-DD)
+        note TEXT DEFAULT '',             -- User editable note
+        status TEXT DEFAULT 'Pending',      -- Initial status, user editable
+        import_timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+        last_updated DATETIME DEFAULT CURRENT_TIMESTAMP
+      );
+      CREATE INDEX IF NOT EXISTS idx_orders_supplier ON orders(supplier);
+      CREATE INDEX IF NOT EXISTS idx_orders_orderNumber ON orders(orderNumber);
+      CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status);
 
-        -- Ensure 'orders' table exists (assuming schema from databaseService.ts)
-        CREATE TABLE IF NOT EXISTS orders (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          reference TEXT,
-          supplier TEXT NOT NULL,
-          orderNumber TEXT,
-          orderDate TEXT,       -- Store as ISO string 'YYYY-MM-DD' or keep TEXT if already?
-          dueDate TEXT,         -- Store as ISO string 'YYYY-MM-DD'
-          category TEXT,
-          description TEXT,
-          value REAL,
-          currency TEXT,
-          confirmed INTEGER DEFAULT 0,
-          createdAt TEXT DEFAULT CURRENT_TIMESTAMP,
-          updatedAt TEXT DEFAULT CURRENT_TIMESTAMP,
-          email_sent_at TEXT
-        );
-        CREATE INDEX IF NOT EXISTS idx_supplier ON orders(supplier);
-        CREATE INDEX IF NOT EXISTS idx_dueDate ON orders(dueDate);
-        CREATE UNIQUE INDEX IF NOT EXISTS idx_supplier_ordernum ON orders(supplier, orderNumber); -- Ensures uniqueness
+      -- Trigger to update last_updated timestamp on order changes
+      CREATE TRIGGER IF NOT EXISTS update_orders_last_updated
+      AFTER UPDATE ON orders
+      FOR EACH ROW
+      BEGIN
+          UPDATE orders SET last_updated = CURRENT_TIMESTAMP WHERE reference = OLD.reference;
+      END;
 
-        -- Add audit log table if not already present
-        CREATE TABLE IF NOT EXISTS audit_log (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          action TEXT NOT NULL,
-          table_name TEXT NOT NULL,
-          record_id INTEGER,
-          old_value TEXT,
-          new_value TEXT,
-          timestamp TEXT DEFAULT CURRENT_TIMESTAMP,
-          user_id TEXT
-        );
+      CREATE TABLE IF NOT EXISTS bp_data (
+        order_number TEXT,
+        item_number TEXT,
+        supplier_item_number TEXT,
+        promised_delivery_date TEXT, -- YYYY-MM-DD
+        import_timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (order_number, item_number) ON CONFLICT REPLACE
+      );
+      CREATE INDEX IF NOT EXISTS idx_bp_data_order_number ON bp_data(order_number);
+      CREATE INDEX IF NOT EXISTS idx_bp_data_item_number ON bp_data(item_number);
+
+      CREATE TABLE IF NOT EXISTS suppliers (
+        name TEXT PRIMARY KEY,
+        email TEXT,
+        contact_person TEXT,
+        phone TEXT,
+        notes TEXT,
+        last_updated DATETIME DEFAULT CURRENT_TIMESTAMP
+      );
+
+       -- Trigger to update last_updated timestamp on supplier changes
+      CREATE TRIGGER IF NOT EXISTS update_suppliers_last_updated
+      AFTER UPDATE ON suppliers
+      FOR EACH ROW
+      BEGIN
+          UPDATE suppliers SET last_updated = CURRENT_TIMESTAMP WHERE name = OLD.name;
+      END;
+
+      CREATE TABLE IF NOT EXISTS email_log (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+        supplier_name TEXT,
+        email_address TEXT,
+        subject TEXT,
+        body TEXT,
+        status TEXT, -- e.g., 'Sent', 'Failed'
+        error TEXT
+      );
+      CREATE INDEX IF NOT EXISTS idx_email_log_supplier ON email_log(supplier_name);
+      CREATE INDEX IF NOT EXISTS idx_email_log_timestamp ON email_log(timestamp);
     `);
-    log.info("Database tables ensured.");
-  } catch (err) {
-    log.error("Failed to create/verify database tables:", err);
+    log.info("Database tables ensured/updated.");
+  } catch (err: unknown) { // Type the error
+    const message = err instanceof Error ? err.message : String(err);
+    log.error(`Failed to create/verify database tables: ${message}`);
     return false;
   }
 
-  // --- Tøm gamle data og sett inn frisk import ---
-  log.info("Deleting old data and inserting new data...");
-  try {
-    // Delete from weekly_status, but DO NOT delete from 'orders' by default.
-    // We will use INSERT OR UPDATE logic for orders.
+  // --- Process Sheets & Insert Data --- //
+  let overallSuccess = true;
+  let statusCount = 0;
+  let orderCount = 0;
+  let bpDataList: BpData[] = []; // Declare bpDataList here
+
+  // Start a database transaction for efficiency
+  const importTransaction = db.transaction(async () => {
+    // Delete existing data first
+    log.info("Clearing existing data...");
     db.exec(`DELETE FROM weekly_status;`);
-    log.info("Old weekly_status data deleted.");
+    db.exec(`DELETE FROM orders;`);
+    db.exec(`DELETE FROM bp_data;`);
+    log.info("Old data deleted from weekly_status, orders, and bp_data tables.");
 
-    const stIns = db.prepare(`
-        INSERT INTO weekly_status (leverandor, dag, uke, status, email)
-        VALUES (@leverandør, @dag, @uke, @status, @email)
-    `);
-    // Prepare statement for orders table using INSERT...ON CONFLICT
-    const orderIns = db.prepare(`
-        INSERT INTO orders (reference, supplier, orderNumber, description, dueDate)
-        VALUES (@reference, @supplier, @orderNumber, @description, @dueDate)
-        ON CONFLICT(supplier, orderNumber) DO UPDATE SET
-          reference = excluded.reference,
-          description = excluded.description,
-          dueDate = excluded.dueDate,
-          updatedAt = CURRENT_TIMESTAMP -- Update timestamp on conflict
-    `);
+    // 1) Build EST map from Restliste
+    const estMap = await buildEstMap(wb);
 
-    // Transaction for weekly_status
-    const stTxn = db.transaction((rows: WeeklyStatus[]) => {
-      let count = 0;
-      for (const r of rows) {
-        stIns.run(r);
-        count++;
-      }
-      log.info(`Inserted ${count} rows into weekly_status.`);
-    });
+    // 2) Process Sjekkliste sheets
+    const sjekklisteResult = await importSjekkliste(wb);
+    if (!sjekklisteResult.success) {
+      log.error("Import failed during Sjekkliste processing.");
+      overallSuccess = false;
+      throw new Error("Sjekkliste processing failed"); // Abort transaction
+    }
+    const alleStatus = sjekklisteResult.data;
 
-    // Transaction for orders
-    const orderTxn = db.transaction((rows: OrderImportData[]) => {
-      let count = 0;
-      for (const order of rows) {
-        try {
-          // Basic validation before insertion
-          if (!order.supplier || !order.orderNumber) {
-            log.warn(
-              `Skipping order insert due to missing supplier or orderNumber:`,
-              order
-            );
-            continue;
-          }
-          orderIns.run(order); // Execute INSERT/UPDATE
-          count++;
-        } catch (runError) {
-          log.error(
-            `Failed to insert/update order: ${order.supplier} / ${order.orderNumber}`,
-            runError,
-            order
-          );
+    // Insert Sjekkliste data
+    if (alleStatus.length > 0) {
+        const stIns = db.prepare(`
+            INSERT INTO weekly_status (leverandor, dag, uke, status, email)
+            VALUES (@leverandør, @dag, @uke, @status, @email)
+            ON CONFLICT(leverandor, dag, uke) DO UPDATE SET status=excluded.status, email=excluded.email
+        `);
+        for (const r of alleStatus) {
+            stIns.run(r);
         }
-      }
-      log.info(`Inserted/Updated ${count} rows into orders.`);
-    });
+        statusCount = alleStatus.length;
+        log.info(`Inserted/Updated ${statusCount} rows into weekly_status.`);
+    }
 
-    // Execute transactions
-    stTxn(alleStatus);
-    orderTxn(orderImportList);
+    // 3) Process Hovedliste sheet
+    const hovedlisteResult = await importHovedliste(wb, estMap);
+    if (!hovedlisteResult.success) {
+      log.error("Import failed during Hovedliste processing.");
+      overallSuccess = false;
+      throw new Error("Hovedliste processing failed"); // Abort transaction
+    }
+    const orderImportList = hovedlisteResult.data;
 
-    log.info("Data insertion complete.");
-  } catch (err) {
-    log.error("Failed during data deletion or insertion:", err);
-    return false;
+    // Insert/Update Orders data
+    if (orderImportList.length > 0) {
+        const orderIns = db.prepare(`
+            INSERT INTO orders
+            (reference, orderNumber, description, dueDate, supplier, estimatedReceiptDate, note, status)
+            VALUES (@reference, @orderNumber, @description, @dueDate, @supplier, @estimatedReceiptDate, '', 'Pending')
+            ON CONFLICT(reference) DO UPDATE SET
+              orderNumber = excluded.orderNumber,
+              description = excluded.description,
+              dueDate = excluded.dueDate,
+              supplier = excluded.supplier,
+              estimatedReceiptDate = excluded.estimatedReceiptDate,
+              import_timestamp = CURRENT_TIMESTAMP,
+              last_updated = CURRENT_TIMESTAMP
+              -- Keep existing note and status on update unless explicitly overwritten
+        `);
+        for (const p of orderImportList) {
+          const estimatedReceiptDate = estMap.get(p.reference);
+          orderIns.run({
+            ...p,
+            estimatedReceiptDate: estimatedReceiptDate ? formatISO(estimatedReceiptDate, { representation: 'date' }) : null
+          });
+        }
+        orderCount = orderImportList.length;
+        log.info(`Inserted/Updated ${orderCount} rows into orders.`);
+    }
+
+    // 4) Process BP sheet
+    const bpResult = await importBpData(wb);
+    if (!bpResult.success) {
+      log.error("Import failed during BP data processing.");
+      overallSuccess = false;
+      throw new Error("BP data processing failed"); // Abort transaction
+    }
+    bpDataList = bpResult.data; // Assign to the outer scope variable
+
+    // Insert/Update BP data
+    if (bpDataList.length > 0) {
+        const bpIns = db.prepare(`
+            INSERT INTO bp_data (order_number, item_number, supplier_item_number, promised_delivery_date)
+            VALUES (@order_number, @item_number, @supplier_item_number, @promised_delivery_date)
+            ON CONFLICT(order_number, item_number) DO UPDATE SET
+                supplier_item_number = excluded.supplier_item_number,
+                promised_delivery_date = excluded.promised_delivery_date,
+                import_timestamp = CURRENT_TIMESTAMP
+        `);
+
+        const bpTxn = db.transaction((rows: BpData[]) => {
+            let count = 0;
+            for (const record of rows) {
+                bpIns.run(record);
+                count++;
+            }
+            log.info(`Inserted/Updated ${count} rows into bp_data.`);
+        });
+        bpTxn(bpDataList);
+    }
+
+  }); // End of transaction
+
+  try {
+    await importTransaction(); // Execute the transaction using await since it's async
+    if (overallSuccess) {
+        log.info(`Import process finished successfully. Status: ${statusCount}, Orders: ${orderCount}, BP: ${bpDataList.length}`);
+    } else {
+        log.warn("Import process finished with errors.");
+    }
+    return overallSuccess;
+  } catch (err: unknown) { // Type the error
+      const message = err instanceof Error ? err.message : String(err);
+      log.error(`Transaction failed: ${message}`);
+      return false; // Transaction rolled back
   }
-
-  log.info(
-    "Import process finished successfully (using provided DB connection)."
-  );
-  return true; // Indicate success
 }
