@@ -1,4 +1,4 @@
-This configuration defines how to run the Context7 MCP tool using `npx`. It specifies the package `@upstash/context7-mcp@latest` and includes the `-y` flag to automatically confirm any prompts during installation or execution. 
+This configuration defines how to run the Context7 MCP tool using `npx`. It specifies the package `@upstash/context7-mcp@latest` and includes the `-y` flag to automatically confirm any prompts during installation or execution.
 
 ## Dependency Documentation
 
@@ -10,32 +10,35 @@ SOURCE: https://github.com/exceljs/exceljs/blob/master/README.md#2025-04-11_snip
 
 LANGUAGE: javascript
 CODE:
+
 ```javascript
 const options = {
-  sharedStrings: 'emit',
-  hyperlinks: 'emit',
-  worksheets: 'emit',
+  sharedStrings: "emit",
+  hyperlinks: "emit",
+  worksheets: "emit",
 };
-const workbookReader = new ExcelJS.stream.xlsx.WorkbookReader('./file.xlsx', options);
+const workbookReader = new ExcelJS.stream.xlsx.WorkbookReader(
+  "./file.xlsx",
+  options
+);
 workbookReader.read();
 
-workbookReader.on('worksheet', worksheet => {
-  worksheet.on('row', row => {
-  });
+workbookReader.on("worksheet", (worksheet) => {
+  worksheet.on("row", (row) => {});
 });
 
-workbookReader.on('shared-strings', sharedString => {
+workbookReader.on("shared-strings", (sharedString) => {
   // ...
 });
 
-workbookReader.on('hyperlinks', hyperlinksReader => {
+workbookReader.on("hyperlinks", (hyperlinksReader) => {
   // ...
 });
 
-workbookReader.on('end', () => {
+workbookReader.on("end", () => {
   // ...
 });
-workbookReader.on('error', (err) => {
+workbookReader.on("error", (err) => {
   // ...
 });
 ```
@@ -46,6 +49,7 @@ SOURCE: https://github.com/exceljs/exceljs/blob/master/README.md#2025-04-11_snip
 
 LANGUAGE: javascript
 CODE:
+
 ```javascript
 // write to a file
 const workbook = createAndFillWorkbook();
@@ -64,30 +68,28 @@ SOURCE: https://github.com/exceljs/exceljs/blob/master/README.md#2025-04-11_snip
 
 LANGUAGE: javascript
 CODE:
+
 ```javascript
 // read from a file
 const workbook = new Excel.Workbook();
 await workbook.xlsx.readFile(filename);
 // ... use workbook
 
-
 // read from a stream
 const workbook = new Excel.Workbook();
 await workbook.xlsx.read(stream);
 // ... use workbook
-
 
 // load from buffer
 const workbook = new Excel.Workbook();
 await workbook.xlsx.load(data);
 // ... use workbook
 
-
 // using additional options
 const workbook = new Excel.Workbook();
 await workbook.xlsx.load(data, {
   ignoreNodes: [
-    'dataValidations' // ignores the workbook's Data Validations
+    "dataValidations", // ignores the workbook's Data Validations
   ],
 });
 // ... use workbook
@@ -99,33 +101,31 @@ SOURCE: https://github.com/exceljs/exceljs/blob/master/README.md#2025-04-11_snip
 
 LANGUAGE: javascript
 CODE:
+
 ```javascript
 // read from a file
 const workbook = new Excel.Workbook();
 const worksheet = await workbook.csv.readFile(filename);
 // ... use workbook or worksheet
 
-
 // read from a stream
 const workbook = new Excel.Workbook();
 const worksheet = await workbook.csv.read(stream);
 // ... use workbook or worksheet
 
-
 // read from a file with European Dates
 const workbook = new Excel.Workbook();
 const options = {
-  dateFormats: ['DD/MM/YYYY']
+  dateFormats: ["DD/MM/YYYY"],
 };
 const worksheet = await workbook.csv.readFile(filename, options);
 // ... use workbook or worksheet
-
 
 // read from a file with custom value parsing
 const workbook = new Excel.Workbook();
 const options = {
   map(value, index) {
-    switch(index) {
+    switch (index) {
       case 0:
         // column 1 is string
         return value;
@@ -142,7 +142,7 @@ const options = {
   },
   // https://c2fo.github.io/fast-csv/docs/parsing/options
   parserOptions: {
-    delimiter: '\t',
+    delimiter: "\t",
     quote: false,
   },
 };
@@ -156,6 +156,7 @@ SOURCE: https://github.com/exceljs/exceljs/blob/master/README.md#2025-04-11_snip
 
 LANGUAGE: javascript
 CODE:
+
 ```javascript
 // write to a file
 const workbook = createAndFillWorkbook();
@@ -164,28 +165,27 @@ await workbook.csv.writeFile(filename);
 // write to a stream
 // Be careful that you need to provide sheetName or
 // sheetId for correct import to csv.
-await workbook.csv.write(stream, { sheetName: 'Page name' });
+await workbook.csv.write(stream, { sheetName: "Page name" });
 
 // write to a file with European Date-Times
 const workbook = new Excel.Workbook();
 const options = {
-  dateFormat: 'DD/MM/YYYY HH:mm:ss',
+  dateFormat: "DD/MM/YYYY HH:mm:ss",
   dateUTC: true, // use utc when rendering dates
 };
 await workbook.csv.writeFile(filename, options);
-
 
 // write to a file with custom value formatting
 const workbook = new Excel.Workbook();
 const options = {
   map(value, index) {
-    switch(index) {
+    switch (index) {
       case 0:
         // column 1 is string
         return value;
       case 1:
         // column 2 is a date
-        return dayjs(value).format('YYYY-MM-DD');
+        return dayjs(value).format("YYYY-MM-DD");
       case 2:
         // column 3 is a formula, write just the result
         return value.result;
@@ -196,7 +196,7 @@ const options = {
   },
   // https://c2fo.github.io/fast-csv/docs/formatting/options
   formatterOptions: {
-    delimiter: '\t',
+    delimiter: "\t",
     quote: false,
   },
 };
@@ -212,8 +212,9 @@ SOURCE: https://github.com/exceljs/exceljs/blob/master/README.md#2025-04-11_snip
 
 LANGUAGE: javascript
 CODE:
+
 ```javascript
-const workbookReader = new ExcelJS.stream.xlsx.WorkbookReader('./file.xlsx');
+const workbookReader = new ExcelJS.stream.xlsx.WorkbookReader("./file.xlsx");
 for await (const worksheetReader of workbookReader) {
   for await (const row of worksheetReader) {
     // ...
@@ -221,19 +222,19 @@ for await (const worksheetReader of workbookReader) {
 }
 
 const options = {
-  sharedStrings: 'emit',
-  hyperlinks: 'emit',
-  worksheets: 'emit',
+  sharedStrings: "emit",
+  hyperlinks: "emit",
+  worksheets: "emit",
 };
-const workbook = new ExcelJS.stream.xlsx.WorkbookReader('./file.xlsx', options);
-for await (const {eventType, value} of workbook.parse()) {
+const workbook = new ExcelJS.stream.xlsx.WorkbookReader("./file.xlsx", options);
+for await (const { eventType, value } of workbook.parse()) {
   switch (eventType) {
-    case 'shared-strings':
-      // value is the shared string
-    case 'worksheet':
-      // value is the worksheetReader
-    case 'hyperlinks':
-      // value is the hyperlinksReader
+    case "shared-strings":
+    // value is the shared string
+    case "worksheet":
+    // value is the worksheetReader
+    case "hyperlinks":
+    // value is the hyperlinksReader
   }
 }
 ```
@@ -244,11 +245,12 @@ SOURCE: https://github.com/exceljs/exceljs/blob/master/README.md#2025-04-11_snip
 
 LANGUAGE: javascript
 CODE:
+
 ```javascript
 const workbook = new ExcelJS.Workbook();
 
-workbook.creator = 'Me';
-workbook.lastModifiedBy = 'Her';
+workbook.creator = "Me";
+workbook.lastModifiedBy = "Her";
 workbook.created = new Date(1985, 8, 30);
 workbook.modified = new Date();
 workbook.lastPrinted = new Date(2016, 9, 27);
@@ -256,12 +258,14 @@ workbook.lastPrinted = new Date(2016, 9, 27);
 
 LANGUAGE: javascript
 CODE:
+
 ```javascript
 workbook.properties.date1904 = true;
 ```
 
 LANGUAGE: javascript
 CODE:
+
 ```javascript
 workbook.calcProperties.fullCalcOnLoad = true;
 ```
@@ -272,24 +276,25 @@ SOURCE: https://github.com/exceljs/exceljs/blob/master/README.md#2025-04-11_snip
 
 LANGUAGE: javascript
 CODE:
+
 ```javascript
 // add image to workbook by filename
 const imageId1 = workbook.addImage({
-  filename: 'path/to/image.jpg',
-  extension: 'jpeg',
+  filename: "path/to/image.jpg",
+  extension: "jpeg",
 });
 
 // add image to workbook by buffer
 const imageId2 = workbook.addImage({
-  buffer: fs.readFileSync('path/to.image.png'),
-  extension: 'png',
+  buffer: fs.readFileSync("path/to.image.png"),
+  extension: "png",
 });
 
 // add image to workbook by base64
 const myBase64Image = "data:image/png;base64,iVBORw0KG...";
 const imageId2 = workbook.addImage({
   base64: myBase64Image,
-  extension: 'png',
+  extension: "png",
 });
 ```
 
@@ -299,32 +304,40 @@ SOURCE: https://github.com/exceljs/exceljs/blob/master/README.md#2025-04-11_snip
 
 LANGUAGE: javascript
 CODE:
+
 ```javascript
-const sheet = workbook.addWorksheet('My Sheet');
+const sheet = workbook.addWorksheet("My Sheet");
 
-const sheet1 = workbook.addWorksheet('My Sheet', {properties:{tabColor:{argb:'FFC0000'}}});
-
-const sheet2 = workbook.addWorksheet('My Sheet', {views: [{showGridLines: false}]});
-
-const sheet3 = workbook.addWorksheet('My Sheet', {views:[{state: 'frozen', xSplit: 1, ySplit:1}]});
-
-const sheet4 = workbook.addWorksheet('My Sheet', {
-  headerFooter:{firstHeader: "Hello Exceljs", firstFooter: "Hello World"}
+const sheet1 = workbook.addWorksheet("My Sheet", {
+  properties: { tabColor: { argb: "FFC0000" } },
 });
 
-const worksheet = workbook.addWorksheet('My Sheet', {
-  pageSetup:{paperSize: 9, orientation:'landscape'}
+const sheet2 = workbook.addWorksheet("My Sheet", {
+  views: [{ showGridLines: false }],
+});
+
+const sheet3 = workbook.addWorksheet("My Sheet", {
+  views: [{ state: "frozen", xSplit: 1, ySplit: 1 }],
+});
+
+const sheet4 = workbook.addWorksheet("My Sheet", {
+  headerFooter: { firstHeader: "Hello Exceljs", firstFooter: "Hello World" },
+});
+
+const worksheet = workbook.addWorksheet("My Sheet", {
+  pageSetup: { paperSize: 9, orientation: "landscape" },
 });
 ```
 
 LANGUAGE: javascript
 CODE:
+
 ```javascript
-workbook.eachSheet(function(worksheet, sheetId) {
+workbook.eachSheet(function (worksheet, sheetId) {
   // ...
 });
 
-const worksheet1 = workbook.getWorksheet('My Sheet');
+const worksheet1 = workbook.getWorksheet("My Sheet");
 
 const worksheet2 = workbook.getWorksheet(1);
 
@@ -337,6 +350,7 @@ SOURCE: https://github.com/exceljs/exceljs/blob/master/README.md#2025-04-11_snip
 
 LANGUAGE: shell
 CODE:
+
 ```shell
 npm install exceljs
 ```
@@ -347,8 +361,9 @@ SOURCE: https://github.com/exceljs/exceljs/blob/master/README.md#2025-04-11_snip
 
 LANGUAGE: javascript
 CODE:
+
 ```javascript
-const ExcelJS = require('exceljs');
+const ExcelJS = require("exceljs");
 ```
 
 **TITLE: Browserify Bundle Integration**
@@ -357,6 +372,7 @@ SOURCE: https://github.com/exceljs/exceljs/blob/master/README.md#2025-04-11_snip
 
 LANGUAGE: html
 CODE:
+
 ```html
 <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-polyfill/6.26.0/polyfill.js"></script>
 <script src="exceljs.js"></script>
@@ -364,6 +380,7 @@ CODE:
 
 LANGUAGE: html
 CODE:
+
 ```html
 <script src="--your-project's-pollyfills-here--"></script>
 <script src="exceljs.bare.js"></script>
@@ -375,25 +392,28 @@ SOURCE: https://github.com/exceljs/exceljs/blob/master/README.md#2025-04-11_snip
 
 LANGUAGE: javascript
 CODE:
+
 ```javascript
 // construct a streaming XLSX workbook writer with styles and shared strings
 const options = {
-  filename: './streamed-workbook.xlsx',
+  filename: "./streamed-workbook.xlsx",
   useStyles: true,
-  useSharedStrings: true
+  useSharedStrings: true,
 };
 const workbook = new Excel.stream.xlsx.WorkbookWriter(options);
 
-worksheet.addRow({
-   id: i,
-   name: theName,
-   etc: someOtherDetail
-}).commit();
+worksheet
+  .addRow({
+    id: i,
+    name: theName,
+    etc: someOtherDetail,
+  })
+  .commit();
 
-worksheet.mergeCells('A1:B2');
-worksheet.getCell('A1').value = 'I am merged';
-worksheet.getCell('C1').value = 'I am not';
-worksheet.getCell('C2').value = 'Neither am I';
+worksheet.mergeCells("A1:B2");
+worksheet.getCell("A1").value = "I am merged";
+worksheet.getCell("C1").value = "I am not";
+worksheet.getCell("C2").value = "Neither am I";
 worksheet.getRow(2).commit(); // now rows 1 and two are committed.
 
 // Finished adding data. Commit the worksheet
@@ -410,8 +430,9 @@ SOURCE: https://github.com/exceljs/exceljs/blob/master/README.md#2025-04-11_snip
 
 LANGUAGE: javascript
 CODE:
+
 ```javascript
-const cell = worksheet.getCell('C3');
+const cell = worksheet.getCell("C3");
 
 // Modify/Add individual cell
 cell.value = new Date(1968, 5, 1);
@@ -423,7 +444,7 @@ expect(cell.type).toEqual(Excel.ValueType.Date);
 myInput.value = cell.text;
 
 // use html-safe string for rendering...
-const html = '<div>' + cell.html + '</div>';
+const html = "<div>" + cell.html + "</div>";
 ```
 
 **TITLE: Setting Cell Values to Null in ExcelJS**
@@ -432,8 +453,9 @@ SOURCE: https://github.com/exceljs/exceljs/blob/master/README.md#2025-04-11_snip
 
 LANGUAGE: javascript
 CODE:
+
 ```javascript
-worksheet.getCell('A1').value = null;
+worksheet.getCell("A1").value = null;
 ```
 
 **TITLE: Managing Columns in ExcelJS**
@@ -442,20 +464,21 @@ SOURCE: https://github.com/exceljs/exceljs/blob/master/README.md#2025-04-11_snip
 
 LANGUAGE: javascript
 CODE:
+
 ```javascript
 worksheet.columns = [
-  { header: 'Id', key: 'id', width: 10 },
-  { header: 'Name', key: 'name', width: 32 },
-  { header: 'D.O.B.', key: 'DOB', width: 10, outlineLevel: 1 }
+  { header: "Id", key: "id", width: 10 },
+  { header: "Name", key: "name", width: 32 },
+  { header: "D.O.B.", key: "DOB", width: 10, outlineLevel: 1 },
 ];
 
-const idCol = worksheet.getColumn('id');
-const nameCol = worksheet.getColumn('B');
+const idCol = worksheet.getColumn("id");
+const nameCol = worksheet.getColumn("B");
 const dobCol = worksheet.getColumn(3);
 
-dobCol.header = 'Date of Birth';
-dobCol.header = ['Date of Birth', 'A.K.A. D.O.B.'];
-dobCol.key = 'dob';
+dobCol.header = "Date of Birth";
+dobCol.header = ["Date of Birth", "A.K.A. D.O.B."];
+dobCol.key = "dob";
 dobCol.width = 15;
 dobCol.hidden = true;
 
@@ -465,19 +488,17 @@ worksheet.getColumn(5).outlineLevel = 1;
 expect(worksheet.getColumn(4).collapsed).to.equal(false);
 expect(worksheet.getColumn(5).collapsed).to.equal(true);
 
-dobCol.eachCell(function(cell, rowNumber) {
-});
+dobCol.eachCell(function (cell, rowNumber) {});
 
-dobCol.eachCell({ includeEmpty: true }, function(cell, rowNumber) {
-});
+dobCol.eachCell({ includeEmpty: true }, function (cell, rowNumber) {});
 
-worksheet.getColumn(6).values = [1,2,3,4,5];
-worksheet.getColumn(7).values = [,,2,3,,5,,7,,,,11];
+worksheet.getColumn(6).values = [1, 2, 3, 4, 5];
+worksheet.getColumn(7).values = [, , 2, 3, , 5, , 7, , , , 11];
 
-worksheet.spliceColumns(3,2);
+worksheet.spliceColumns(3, 2);
 
-const newCol3Values = [1,2,3,4,5];
-const newCol4Values = ['one', 'two', 'three', 'four', 'five'];
+const newCol3Values = [1, 2, 3, 4, 5];
+const newCol4Values = ["one", "two", "three", "four", "five"];
 worksheet.spliceColumns(3, 1, newCol3Values, newCol4Values);
 ```
 
@@ -487,17 +508,18 @@ SOURCE: https://github.com/exceljs/exceljs/blob/master/README.md#2025-04-11_snip
 
 LANGUAGE: javascript
 CODE:
+
 ```javascript
-const table = ws.getTable('MyTable');
+const table = ws.getTable("MyTable");
 
 // remove first two rows
 table.removeRows(0, 2);
 
 // insert new rows at index 5
-table.addRow([new Date('2019-08-05'), 5, 'Mid'], 5);
+table.addRow([new Date("2019-08-05"), 5, "Mid"], 5);
 
 // append new row to bottom of table
-table.addRow([new Date('2019-08-10'), 10, 'End']);
+table.addRow([new Date("2019-08-10"), 10, "End"]);
 
 // commit the table changes into the sheet
 table.commit();
@@ -509,16 +531,23 @@ SOURCE: https://github.com/exceljs/exceljs/blob/master/README.md#2025-04-11_snip
 
 LANGUAGE: javascript
 CODE:
+
 ```javascript
-const table = ws.getTable('MyTable');
+const table = ws.getTable("MyTable");
 
 // remove second column
 table.removeColumns(1, 1);
 
 // insert new column (with data) at index 1
 table.addColumn(
-  {name: 'Letter', totalsRowFunction: 'custom', totalsRowFormula: 'ROW()', totalsRowResult: 6, filterButton: true},
-  ['a', 'b', 'c', 'd'],
+  {
+    name: "Letter",
+    totalsRowFunction: "custom",
+    totalsRowFormula: "ROW()",
+    totalsRowResult: 6,
+    filterButton: true,
+  },
+  ["a", "b", "c", "d"],
   2
 );
 
@@ -532,8 +561,9 @@ SOURCE: https://github.com/exceljs/exceljs/blob/master/README.md#2025-04-11_snip
 
 LANGUAGE: javascript
 CODE:
+
 ```javascript
-worksheet.getCell('B2').value = { sharedFormula: 'A2', result: 10 };
+worksheet.getCell("B2").value = { sharedFormula: "A2", result: 10 };
 ```
 
 **TITLE: Protecting and Unprotecting Excel Worksheets with JavaScript**
@@ -542,12 +572,14 @@ SOURCE: https://github.com/exceljs/exceljs/blob/master/README.md#2025-04-11_snip
 
 LANGUAGE: javascript
 CODE:
+
 ```javascript
-await worksheet.protect('the-password', options);
+await worksheet.protect("the-password", options);
 ```
 
 LANGUAGE: javascript
 CODE:
+
 ```javascript
 worksheet.unprotect();
 ```
@@ -558,6 +590,7 @@ SOURCE: https://github.com/exceljs/exceljs/blob/master/README.md#2025-04-11_snip
 
 LANGUAGE: javascript
 CODE:
+
 ```javascript
 const row = worksheet.getRow(5);
 const rows = worksheet.getRows(5, 2);
@@ -573,41 +606,41 @@ expect(worksheet.getRow(4).collapsed).to.equal(false);
 expect(worksheet.getRow(5).collapsed).to.equal(true);
 
 row.getCell(1).value = 5;
-row.getCell('name').value = 'Zeb';
-row.getCell('C').value = new Date();
+row.getCell("name").value = "Zeb";
+row.getCell("C").value = new Date();
 
 row = worksheet.getRow(4).values;
-expect(row[5]).toEqual('Kyle');
+expect(row[5]).toEqual("Kyle");
 
-row.values = [1,2,3];
+row.values = [1, 2, 3];
 expect(row.getCell(1).value).toEqual(1);
 expect(row.getCell(2).value).toEqual(2);
 expect(row.getCell(3).value).toEqual(3);
 
-const values = []
+const values = [];
 values[5] = 7;
-values[10] = 'Hello, World!';
+values[10] = "Hello, World!";
 row.values = values;
 expect(row.getCell(1).value).toBeNull();
 expect(row.getCell(5).value).toEqual(7);
-expect(row.getCell(10).value).toEqual('Hello, World!');
+expect(row.getCell(10).value).toEqual("Hello, World!");
 
 row.addPageBreak();
 
-worksheet.eachRow(function(row, rowNumber) {
-  console.log('Row ' + rowNumber + ' = ' + JSON.stringify(row.values));
+worksheet.eachRow(function (row, rowNumber) {
+  console.log("Row " + rowNumber + " = " + JSON.stringify(row.values));
 });
 
-worksheet.eachRow({ includeEmpty: true }, function(row, rowNumber) {
-  console.log('Row ' + rowNumber + ' = ' + JSON.stringify(row.values));
+worksheet.eachRow({ includeEmpty: true }, function (row, rowNumber) {
+  console.log("Row " + rowNumber + " = " + JSON.stringify(row.values));
 });
 
-row.eachCell(function(cell, colNumber) {
-  console.log('Cell ' + colNumber + ' = ' + cell.value);
+row.eachCell(function (cell, colNumber) {
+  console.log("Cell " + colNumber + " = " + cell.value);
 });
 
-row.eachCell({ includeEmpty: true }, function(cell, colNumber) {
-  console.log('Cell ' + colNumber + ' = ' + cell.value);
+row.eachCell({ includeEmpty: true }, function (cell, colNumber) {
+  console.log("Cell " + colNumber + " = " + cell.value);
 });
 
 row.commit();
@@ -624,6 +657,7 @@ SOURCE: https://github.com/date-fns/date-fns/blob/main/docs/i18nContributionGuid
 
 LANGUAGE: javascript
 CODE:
+
 ```javascript
 import formatDistance from "./_lib/formatDistance/index.js";
 import formatLong from "./_lib/formatLong/index.js";
@@ -679,6 +713,7 @@ SOURCE: https://github.com/date-fns/date-fns/blob/main/README.md#2025-04-17_snip
 
 LANGUAGE: javascript
 CODE:
+
 ```javascript
 import { compareAsc, format } from "date-fns";
 
@@ -704,6 +739,7 @@ SOURCE: https://github.com/date-fns/date-fns/blob/main/docs/i18nContributionGuid
 
 LANGUAGE: javascript
 CODE:
+
 ```javascript
 // Same as en-US
 import formatDistance from "../en-US/_lib/formatDistance/index.js";
@@ -745,6 +781,7 @@ SOURCE: https://github.com/date-fns/date-fns/blob/main/docs/gettingStarted.md#20
 
 LANGUAGE: javascript
 CODE:
+
 ```javascript
 // The main submodule:
 import { addDays } from "date-fns";
@@ -759,6 +796,7 @@ SOURCE: https://github.com/date-fns/date-fns/blob/main/docs/i18n.md#2025-04-17_s
 
 LANGUAGE: javascript
 CODE:
+
 ```javascript
 // app/_lib/format.js
 
@@ -803,6 +841,7 @@ SOURCE: https://github.com/date-fns/date-fns/blob/main/docs/gettingStarted.md#20
 
 LANGUAGE: javascript
 CODE:
+
 ```javascript
 import { formatDistance, subDays } from "date-fns";
 
@@ -816,6 +855,7 @@ SOURCE: https://github.com/date-fns/date-fns/blob/main/docs/gettingStarted.md#20
 
 LANGUAGE: javascript
 CODE:
+
 ```javascript
 import { format, compareAsc } from "date-fns";
 
@@ -841,6 +881,7 @@ SOURCE: https://github.com/date-fns/date-fns/blob/main/src/locale/en-US/snapshot
 
 LANGUAGE: markdown
 CODE:
+
 ```
 ## `formatRelative`
 
@@ -853,6 +894,7 @@ SOURCE: https://github.com/date-fns/date-fns/blob/main/README.md#2025-04-17_snip
 
 LANGUAGE: bash
 CODE:
+
 ```
 npm install date-fns --save
 ```
@@ -863,6 +905,7 @@ SOURCE: https://github.com/date-fns/date-fns/blob/main/docs/timeZones.md#2025-04
 
 LANGUAGE: typescript
 CODE:
+
 ```
 import { TZDate } from "@date-fns/tz";
 import { addHours } from "date-fns";
@@ -887,6 +930,7 @@ SOURCE: https://github.com/date-fns/date-fns/blob/main/docs/timeZones.md#2025-04
 
 LANGUAGE: typescript
 CODE:
+
 ```
 import { transpose } from "date-fns";
 import { tz } from "@date-fns/tz";
@@ -905,11 +949,12 @@ const systemDate = transpose(laDate, Date);
 ```
 
 **TITLE: Matching Localized Values (en-US)**
-DESCRIPTION: This snippet defines the `match` object for the `en-US` locale, used by the `parse` function.  It includes regular expressions and utility functions for matching and parsing ordinal numbers, eras, quarters, months, days, and day periods. The `buildMatchPatternFn` and `buildMatchFn` functions are assumed to be imported from other modules within the library.
+DESCRIPTION: This snippet defines the `match` object for the `en-US` locale, used by the `parse` function. It includes regular expressions and utility functions for matching and parsing ordinal numbers, eras, quarters, months, days, and day periods. The `buildMatchPatternFn` and `buildMatchFn` functions are assumed to be imported from other modules within the library.
 SOURCE: https://github.com/date-fns/date-fns/blob/main/docs/i18nContributionGuide.md#2025-04-17_snippet_15
 
 LANGUAGE: javascript
 CODE:
+
 ```js
 // In `en-US` locale:
 import buildMatchPatternFn from "../../../_lib/buildMatchPatternFn/index.js";
@@ -1057,6 +1102,7 @@ SOURCE: https://github.com/date-fns/date-fns/blob/main/docs/unicodeTokens.md#202
 
 LANGUAGE: javascript
 CODE:
+
 ```javascript
 // ❌ Wrong!
 format(new Date(), "YYYY-MM-DD");
@@ -1081,6 +1127,7 @@ SOURCE: https://github.com/date-fns/date-fns/blob/main/docs/i18nContributionGuid
 
 LANGUAGE: javascript
 CODE:
+
 ```javascript
 // In `en-US` locale:
 import buildLocalizeFn from "../../../_lib/buildLocalizeFn/index.js";
@@ -1109,6 +1156,7 @@ SOURCE: https://github.com/date-fns/date-fns/blob/main/docs/timeZones.md#2025-04
 
 LANGUAGE: typescript
 CODE:
+
 ```
 import { TZDate } from "@date-fns/tz";
 import { differenceInBusinessDays } from "date-fns";
@@ -1131,6 +1179,7 @@ SOURCE: https://github.com/date-fns/date-fns/blob/main/docs/i18n.md#2025-04-17_s
 
 LANGUAGE: javascript
 CODE:
+
 ```javascript
 import { formatDistance } from "date-fns";
 // Require Esperanto locale
@@ -1139,7 +1188,7 @@ import { eo } from "date-fns/locale";
 const result = formatDistance(
   new Date(2016, 7, 1),
   new Date(2015, 0, 1),
-  { locale: eo }, // Pass the locale as an option
+  { locale: eo } // Pass the locale as an option
 );
 //=> 'pli ol 1 jaro'
 ```
@@ -1152,6 +1201,7 @@ SOURCE: https://github.com/TanStack/table/blob/main/docs/framework/svelte/svelte
 
 LANGUAGE: svelte
 CODE:
+
 ```svelte
 <script>
 
@@ -1168,6 +1218,7 @@ SOURCE: https://github.com/TanStack/table/blob/main/examples/angular/basic/READM
 
 LANGUAGE: bash
 CODE:
+
 ```bash
 ng generate component component-name
 ```
@@ -1178,6 +1229,7 @@ SOURCE: https://github.com/TanStack/table/blob/main/examples/angular/column-resi
 
 LANGUAGE: bash
 CODE:
+
 ```bash
 ng generate component component-name
 ```
@@ -1188,12 +1240,14 @@ SOURCE: https://github.com/TanStack/table/blob/main/examples/angular/sub-compone
 
 LANGUAGE: shell
 CODE:
+
 ```shell
 ng generate component component-name
 ```
 
 LANGUAGE: shell
 CODE:
+
 ```shell
 ng generate directive|pipe|service|class|guard|interface|enum|module
 ```
@@ -1204,6 +1258,7 @@ SOURCE: https://github.com/TanStack/table/blob/main/examples/angular/expanding/R
 
 LANGUAGE: bash
 CODE:
+
 ```bash
 ng generate component component-name
 ```
@@ -1214,11 +1269,12 @@ SOURCE: https://github.com/TanStack/table/blob/main/docs/framework/react/react-t
 
 LANGUAGE: tsx
 CODE:
+
 ```tsx
-import { useReactTable } from '@tanstack/react-table'
+import { useReactTable } from "@tanstack/react-table";
 
 function App() {
-  const table = useReactTable(options)
+  const table = useReactTable(options);
 
   // ...render your table
 }
@@ -1230,6 +1286,7 @@ SOURCE: https://github.com/TanStack/table/blob/main/examples/angular/sub-compone
 
 LANGUAGE: shell
 CODE:
+
 ```shell
 ng help
 ```
@@ -1240,6 +1297,7 @@ SOURCE: https://github.com/TanStack/table/blob/main/examples/angular/column-pinn
 
 LANGUAGE: bash
 CODE:
+
 ```bash
 ng help
 ```
@@ -1250,6 +1308,7 @@ SOURCE: https://github.com/TanStack/table/blob/main/examples/angular/column-pinn
 
 LANGUAGE: shell
 CODE:
+
 ```shell
 ng help
 ```
@@ -1260,6 +1319,7 @@ SOURCE: https://github.com/TanStack/table/blob/main/examples/angular/filters/REA
 
 LANGUAGE: bash
 CODE:
+
 ```bash
 ng help
 ```
@@ -1270,16 +1330,17 @@ SOURCE: https://github.com/TanStack/table/blob/main/docs/guide/global-filtering.
 
 LANGUAGE: jsx
 CODE:
+
 ```jsx
 return (
   <div>
     <input
       value=""
-      onChange={e => table.setGlobalFilter(String(e.target.value))}
+      onChange={(e) => table.setGlobalFilter(String(e.target.value))}
       placeholder="Search..."
     />
   </div>
-)
+);
 ```
 
 **TITLE: Generating Angular Components and Other Artifacts**
@@ -1288,6 +1349,7 @@ SOURCE: https://github.com/TanStack/table/blob/main/examples/angular/column-orde
 
 LANGUAGE: Shell
 CODE:
+
 ```shell
 ng generate component component-name
 ```
@@ -1298,6 +1360,7 @@ SOURCE: https://github.com/TanStack/table/blob/main/examples/angular/signal-inpu
 
 LANGUAGE: bash
 CODE:
+
 ```bash
 ng generate component component-name
 ```
@@ -1308,6 +1371,7 @@ SOURCE: https://github.com/TanStack/table/blob/main/docs/api/features/row-select
 
 LANGUAGE: tsx
 CODE:
+
 ```tsx
 getToggleAllPageRowsSelectedHandler: () => (event: unknown) => void
 ```
@@ -1318,21 +1382,22 @@ SOURCE: https://github.com/TanStack/table/blob/main/docs/framework/qwik/qwik-tab
 
 LANGUAGE: jsx
 CODE:
+
 ```jsx
-import { flexRender } from '@tanstack/qwik-table'
+import { flexRender } from "@tanstack/qwik-table";
 //...
 return (
   <tbody>
-    {table.getRowModel().rows.map(row => {
+    {table.getRowModel().rows.map((row) => {
       return (
         <tr key={row.id}>
-          {row.getVisibleCells().map(cell => (
+          {row.getVisibleCells().map((cell) => (
             <td key={cell.id}>
               {flexRender(cell.column.columnDef.cell, cell.getContext())}
             </td>
           ))}
         </tr>
-      )
+      );
     })}
   </tbody>
 );
@@ -1344,14 +1409,15 @@ SOURCE: https://github.com/TanStack/table/blob/main/docs/guide/global-filtering.
 
 LANGUAGE: jsx
 CODE:
+
 ```jsx
 const table = useReactTable({
   data,
   columns,
   getCoreRowModel: getCoreRowModel(),
   getFilteredRowModel: getFilteredRowModel(),
-  globalFilterFn: 'text' // built-in filter function
-})
+  globalFilterFn: "text", // built-in filter function
+});
 ```
 
 **TITLE: Table API - getToggleAllRowsSelectedHandler**
@@ -1360,6 +1426,7 @@ SOURCE: https://github.com/TanStack/table/blob/main/docs/api/features/row-select
 
 LANGUAGE: tsx
 CODE:
+
 ```tsx
 getToggleAllRowsSelectedHandler: () => (event: unknown) => void
 ```
@@ -1370,6 +1437,7 @@ SOURCE: https://github.com/TanStack/table/blob/main/examples/angular/expanding/R
 
 LANGUAGE: bash
 CODE:
+
 ```bash
 ng generate component component-name
 ```
@@ -1380,8 +1448,9 @@ SOURCE: https://github.com/TanStack/table/blob/main/docs/api/core/cell.md#2025-0
 
 LANGUAGE: tsx
 CODE:
+
 ```tsx
-row: Row<TData>
+row: Row<TData>;
 ```
 
 **TITLE: Implementing Fuzzy Filter with Ranking**
@@ -1390,36 +1459,37 @@ SOURCE: https://github.com/TanStack/table/blob/main/docs/api/features/column-fil
 
 LANGUAGE: tsx
 CODE:
-```tsx
-import { sortingFns } from '@tanstack/react-table'
 
-import { rankItem, compareItems } from '@tanstack/match-sorter-utils'
+```tsx
+import { sortingFns } from "@tanstack/react-table";
+
+import { rankItem, compareItems } from "@tanstack/match-sorter-utils";
 
 const fuzzyFilter = (row, columnId, value, addMeta) => {
   // Rank the item
-  const itemRank = rankItem(row.getValue(columnId), value)
+  const itemRank = rankItem(row.getValue(columnId), value);
 
   // Store the ranking info
-  addMeta(itemRank)
+  addMeta(itemRank);
 
   // Return if the item should be filtered in/out
-  return itemRank.passed
-}
+  return itemRank.passed;
+};
 
 const fuzzySort = (rowA, rowB, columnId) => {
-  let dir = 0
+  let dir = 0;
 
   // Only sort by rank if the column has ranking information
   if (rowA.columnFiltersMeta[columnId]) {
     dir = compareItems(
       rowA.columnFiltersMeta[columnId]!,
       rowB.columnFiltersMeta[columnId]!
-    )
+    );
   }
 
   // Provide an alphanumeric fallback for when the item ranks are equal
-  return dir === 0 ? sortingFns.alphanumeric(rowA, rowB, columnId) : dir
-}
+  return dir === 0 ? sortingFns.alphanumeric(rowA, rowB, columnId) : dir;
+};
 ```
 
 **TITLE: Managing Individual Controlled State with Lit**
@@ -1428,6 +1498,7 @@ SOURCE: https://github.com/TanStack/table/blob/main/docs/framework/lit/guide/tab
 
 LANGUAGE: jsx
 CODE:
+
 ```jsx
 import {html} from "lit";
 
@@ -1466,20 +1537,24 @@ SOURCE: https://github.com/TanStack/table/blob/main/docs/framework/qwik/guide/ta
 
 LANGUAGE: jsx
 CODE:
+
 ```jsx
-const columnFilters = Qwik.useSignal([]) //no default filters
-const sorting = Qwik.useSignal([{
-  id: 'age',
-  desc: true, //sort by age in descending order by default
-}]) 
-const pagination = Qwik.useSignal({ pageIndex: 0, pageSize: 15 })
+const columnFilters = Qwik.useSignal([]); //no default filters
+const sorting = Qwik.useSignal([
+  {
+    id: "age",
+    desc: true, //sort by age in descending order by default
+  },
+]);
+const pagination = Qwik.useSignal({ pageIndex: 0, pageSize: 15 });
 
 //Use our controlled state values to fetch data
 const tableQuery = useQuery({
-  queryKey: ['users', columnFilters.value, sorting.value, pagination.value],
-  queryFn: () => fetchUsers(columnFilters.value, sorting.value, pagination.value),
+  queryKey: ["users", columnFilters.value, sorting.value, pagination.value],
+  queryFn: () =>
+    fetchUsers(columnFilters.value, sorting.value, pagination.value),
   //...
-})
+});
 
 const table = useQwikTable({
   columns: columns.value,
@@ -1490,16 +1565,19 @@ const table = useQwikTable({
     sorting: sorting.value,
     pagination: pagination.value,
   },
-  onColumnFiltersChange: updater => {
-    columnFilters.value = updater instanceof Function ? updater(columnFilters.value) : updater //hoist columnFilters state into our own state management
+  onColumnFiltersChange: (updater) => {
+    columnFilters.value =
+      updater instanceof Function ? updater(columnFilters.value) : updater; //hoist columnFilters state into our own state management
   },
-  onSortingChange: updater => {
-    sorting.value = updater instanceof Function ? updater(sorting.value) : updater
+  onSortingChange: (updater) => {
+    sorting.value =
+      updater instanceof Function ? updater(sorting.value) : updater;
   },
-  onPaginationChange: updater => {
-    pagination.value = updater instanceof Function ? updater(pagination.value) : updater
+  onPaginationChange: (updater) => {
+    pagination.value =
+      updater instanceof Function ? updater(pagination.value) : updater;
   },
-})
+});
 //...
 ```
 
@@ -1509,8 +1587,9 @@ SOURCE: https://github.com/TanStack/table/blob/main/docs/api/core/cell.md#2025-0
 
 LANGUAGE: tsx
 CODE:
+
 ```tsx
-row: Row<TData>
+row: Row<TData>;
 ```
 
 **TITLE: Render Row Value Method Definition**
@@ -1519,8 +1598,9 @@ SOURCE: https://github.com/TanStack/table/blob/main/docs/api/core/row.md#2025-04
 
 LANGUAGE: tsx
 CODE:
+
 ```tsx
-renderValue: (columnId: string) => TValue
+renderValue: (columnId: string) => TValue;
 ```
 
 **TITLE: Table API - getIsSomePageRowsSelected**
@@ -1529,8 +1609,9 @@ SOURCE: https://github.com/TanStack/table/blob/main/docs/api/features/row-select
 
 LANGUAGE: tsx
 CODE:
+
 ```tsx
-getIsSomePageRowsSelected: () => boolean
+getIsSomePageRowsSelected: () => boolean;
 ```
 
 **TITLE: Implementing a Custom Global Filter Function in React Table**
@@ -1539,15 +1620,16 @@ SOURCE: https://github.com/TanStack/table/blob/main/docs/guide/global-filtering.
 
 LANGUAGE: jsx
 CODE:
+
 ```jsx
 const customFilterFn = (rows, columnId, filterValue) => {
   // custom filter logic
-}
+};
 
 const table = useReactTable({
   // other options...
-  globalFilterFn: customFilterFn
-})
+  globalFilterFn: customFilterFn,
+});
 ```
 
 ### `nodemailer`
@@ -1558,6 +1640,7 @@ SOURCE: https://github.com/nodemailer/nodemailer/blob/master/CHANGELOG.md#2025-0
 
 LANGUAGE: JavaScript
 CODE:
+
 ```
 attachment: {
   encoding: 'base64',
@@ -1565,7 +1648,7 @@ attachment: {
 }
 ```
 
-----------------------------------------
+---
 
 **TITLE: Using Data URIs as Attachments in Nodemailer**
 DESCRIPTION: Demonstrates how to use data URIs as attachment paths in Nodemailer. This allows embedding binary data directly in the email configuration object.
@@ -1573,13 +1656,14 @@ SOURCE: https://github.com/nodemailer/nodemailer/blob/master/CHANGELOG.md#2025-0
 
 LANGUAGE: JavaScript
 CODE:
+
 ```
 attachment: {
   path: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAHElEQVQI12P4//8/w38GIAXDIBKE0DHxgljNBAAO9TXL0Y4OHwAAAABJRU5ErkJggg=="
 }
 ```
 
-----------------------------------------
+---
 
 **TITLE: Using Raw MIME Content in Nodemailer Attachments**
 DESCRIPTION: Shows how to use pre-prepared MIME content as an attachment using the new 'raw' option. Useful for injecting custom-crafted MIME nodes.
@@ -1587,6 +1671,7 @@ SOURCE: https://github.com/nodemailer/nodemailer/blob/master/CHANGELOG.md#2025-0
 
 LANGUAGE: JavaScript
 CODE:
+
 ```
 attachments: [{
   raw: 'Content-Type: text/plain\\r\\n' +
@@ -1595,7 +1680,7 @@ attachments: [{
 }]
 ```
 
-----------------------------------------
+---
 
 **TITLE: Using Raw MIME Messages in Nodemailer**
 DESCRIPTION: Demonstrates how to use an existing MIME message instead of generating a new one, using the 'raw' message option.
@@ -1603,6 +1688,7 @@ SOURCE: https://github.com/nodemailer/nodemailer/blob/master/CHANGELOG.md#2025-0
 
 LANGUAGE: JavaScript
 CODE:
+
 ```
 let message = {
   raw: 'From: sender@example.com\\r\\n' +
@@ -1613,7 +1699,7 @@ let message = {
 };
 ```
 
-----------------------------------------
+---
 
 **TITLE: Configuring TLS Options in Nodemailer**
 DESCRIPTION: Example configuration for setting up TLS options in Nodemailer with proper security settings. Shows how to set minimum TLS version and certificate validation options.
@@ -1621,6 +1707,7 @@ SOURCE: https://github.com/nodemailer/nodemailer/blob/master/README.md#2025-04-2
 
 LANGUAGE: javascript
 CODE:
+
 ```
 let configOptions = {
     host: "smtp.example.com",
@@ -1632,7 +1719,7 @@ let configOptions = {
 }
 ```
 
-----------------------------------------
+---
 
 **TITLE: Configuring Direct IP Connection in Nodemailer**
 DESCRIPTION: Example showing how to configure Nodemailer to connect directly to an IP address while maintaining proper TLS certificate validation through the servername option.
@@ -1640,6 +1727,7 @@ SOURCE: https://github.com/nodemailer/nodemailer/blob/master/README.md#2025-04-2
 
 LANGUAGE: javascript
 CODE:
+
 ```
 let configOptions = {
     host: "1.2.3.4",
@@ -1652,7 +1740,7 @@ let configOptions = {
 }
 ```
 
-----------------------------------------
+---
 
 **TITLE: Embedding iCalendar Events in Nodemailer Messages**
 DESCRIPTION: Demonstrates how to embed iCalendar events in Nodemailer messages using the new 'icalEvent' option.
@@ -1660,6 +1748,7 @@ SOURCE: https://github.com/nodemailer/nodemailer/blob/master/CHANGELOG.md#2025-0
 
 LANGUAGE: JavaScript
 CODE:
+
 ```
 icalEvent: {
   filename: 'invitation.ics',
@@ -1668,7 +1757,7 @@ icalEvent: {
 }
 ```
 
-----------------------------------------
+---
 
 **TITLE: Changelog Entry Format**
 DESCRIPTION: Standard changelog format showing version number, date, and changes categorized as Features and Bug Fixes.
@@ -1676,6 +1765,7 @@ SOURCE: https://github.com/nodemailer/nodemailer/blob/master/CHANGELOG.md#2025-0
 
 LANGUAGE: markdown
 CODE:
+
 ```
 ## [6.10.1](https://github.com/nodemailer/nodemailer/compare/v6.10.0...v6.10.1) (2025-02-06)
 
@@ -1684,7 +1774,7 @@ CODE:
 * close correct socket ([a18062c](https://github.com/nodemailer/nodemailer/commit/a18062c04d0e05ca4357fbe8f0a59b690fa5391e))
 ```
 
-----------------------------------------
+---
 
 **TITLE: Bug Fix Entry Format**
 DESCRIPTION: Standard format for documenting bug fixes with component name, fix description, and relevant issue/commit references.
@@ -1692,13 +1782,14 @@ SOURCE: https://github.com/nodemailer/nodemailer/blob/master/CHANGELOG.md#2025-0
 
 LANGUAGE: markdown
 CODE:
+
 ```
 ### Bug Fixes
 
 * **addressparser:** Correctly detect if user local part is attached to domain part ([f2096c5](https://github.com/nodemailer/nodemailer/commit/f2096c51b92a69ecfbcc15884c28cb2c2f00b826))
 ```
 
-----------------------------------------
+---
 
 **TITLE: Breaking Changes Documentation**
 DESCRIPTION: Documentation format for major version changes and breaking changes, exemplified in the v3.0.0 release notes
@@ -1706,6 +1797,7 @@ SOURCE: https://github.com/nodemailer/nodemailer/blob/master/CHANGELOG.md#2025-0
 
 LANGUAGE: markdown
 CODE:
+
 ```
 ## v3.0.0 2017-01-31
 
@@ -1720,7 +1812,7 @@ This update brings a lot of breaking changes:
 -   **OAuth2 authentication** is built in
 ```
 
-----------------------------------------
+---
 
 **TITLE: Changelog Entry Format**
 DESCRIPTION: Example of the standard changelog entry format used throughout the document, showing version number, date, and changes
@@ -1728,6 +1820,7 @@ SOURCE: https://github.com/nodemailer/nodemailer/blob/master/CHANGELOG.md#2025-0
 
 LANGUAGE: markdown
 CODE:
+
 ```
 ## 6.3.1 2019-10-09
 
@@ -1736,7 +1829,7 @@ CODE:
 -   Support more DNS errors (madarche) [2391aa4]
 ```
 
-----------------------------------------
+---
 
 **TITLE: Feature Update Entry Format**
 DESCRIPTION: Example of how new features are documented in the changelog with associated issue numbers and commit references.
@@ -1744,13 +1837,14 @@ SOURCE: https://github.com/nodemailer/nodemailer/blob/master/CHANGELOG.md#2025-0
 
 LANGUAGE: markdown
 CODE:
+
 ```
 ### Features
 
 * **services:** add Seznam email service configuration ([#1695](https://github.com/nodemailer/nodemailer/issues/1695)) ([d1ae0a8](https://github.com/nodemailer/nodemailer/commit/d1ae0a86883ba6011a49a5bbdf076098e2e3637a))
 ```
 
-----------------------------------------
+---
 
 **TITLE: The Duchess's Lullaby - Verse 1**
 DESCRIPTION: A cruel lullaby sung by the Duchess to her baby, with a chorus joined by the cook and baby.
@@ -1758,11 +1852,12 @@ SOURCE: https://github.com/nodemailer/nodemailer/blob/master/test/base64/fixture
 
 LANGUAGE: text
 CODE:
+
 ```
    'Speak roughly to your little boy,\\n    And beat him when he sneezes:\\n   He only does it to annoy,\\n    Because he knows it teases.'\\n         CHORUS.\\n (In which the cook and the baby joined):\\n       'Wow! wow! wow!'
 ```
 
-----------------------------------------
+---
 
 **TITLE: The Duchess's Lullaby - Verse 2**
 DESCRIPTION: The second verse of the Duchess's harsh lullaby, maintaining the theme of punishing sneezing.
@@ -1770,6 +1865,7 @@ SOURCE: https://github.com/nodemailer/nodemailer/blob/master/test/base64/fixture
 
 LANGUAGE: text
 CODE:
+
 ```
    'I speak severely to my boy,\\n    I beat him when he sneezes;\\n   For he can thoroughly enjoy\\n    The pepper when he pleases!'\\n         CHORUS.\\n       'Wow! wow! wow!'
 ```
@@ -1782,6 +1878,7 @@ SOURCE: https://github.com/electron/electron/blob/main/docs/tutorial/ipc.md#2025
 
 LANGUAGE: javascript
 CODE:
+
 ```
 const { app, BrowserWindow, ipcMain } = require('electron')
 const path = require('node:path')
@@ -1810,7 +1907,7 @@ app.whenReady().then(() => {
 // ...
 ```
 
-----------------------------------------
+---
 
 **TITLE: IPC Message Handling in Electron Main Process**
 DESCRIPTION: Code for the Electron main process to handle IPC messages from a test driver. This shows how to set up communication handlers in the application being tested.
@@ -1818,6 +1915,7 @@ SOURCE: https://github.com/electron/electron/blob/main/docs/tutorial/automated-t
 
 LANGUAGE: javascript
 CODE:
+
 ```
 // listen for messages from the test suite
 process.on('message', (msg) => {
@@ -1828,7 +1926,7 @@ process.on('message', (msg) => {
 process.send({ my: 'message' })
 ```
 
-----------------------------------------
+---
 
 **TITLE: Handling Invokable IPC Calls in Main Process with ipcMain**
 DESCRIPTION: This snippet demonstrates how to use ipcMain.handle() to process invokable IPC calls from renderer processes. The handler returns a Promise whose result will be sent back to the caller.
@@ -1836,6 +1934,7 @@ SOURCE: https://github.com/electron/electron/blob/main/docs/api/ipc-main.md#2025
 
 LANGUAGE: javascript
 CODE:
+
 ```
 ipcMain.handle('my-invokable-ipc', async (event, ...args) => {
   const result = await somePromise(...args)
@@ -1843,7 +1942,7 @@ ipcMain.handle('my-invokable-ipc', async (event, ...args) => {
 })
 ```
 
-----------------------------------------
+---
 
 **TITLE: IPC Handler Setup in Main Process**
 DESCRIPTION: Demonstrates how to set up an IPC handler in the main process to respond to ping requests from the renderer.
@@ -1851,6 +1950,7 @@ SOURCE: https://github.com/electron/electron/blob/main/docs/tutorial/tutorial-3-
 
 LANGUAGE: javascript
 CODE:
+
 ```
 const { app, BrowserWindow, ipcMain } = require('electron/main')
 const path = require('node:path')
@@ -1871,7 +1971,7 @@ app.whenReady().then(() => {
 })
 ```
 
-----------------------------------------
+---
 
 **TITLE: Implementing Two-Way IPC with ipcMain.handle for File Dialog**
 DESCRIPTION: Sets up a two-way IPC handler in the main process using ipcMain.handle. When invoked, it opens a native file dialog and returns the selected file path to the renderer process.
@@ -1879,6 +1979,7 @@ SOURCE: https://github.com/electron/electron/blob/main/docs/tutorial/ipc.md#2025
 
 LANGUAGE: javascript
 CODE:
+
 ```
 const { app, BrowserWindow, dialog, ipcMain } = require('electron')
 const path = require('node:path')
@@ -1908,7 +2009,7 @@ app.whenReady().then(() => {
 // ...
 ```
 
-----------------------------------------
+---
 
 **TITLE: Setting DevTools WebContents via IPC in Main Process**
 DESCRIPTION: This code snippet demonstrates the main process code for setting the DevTools WebContents using `webContents.setDevToolsWebContents` after receiving an IPC message. It retrieves the target and DevTools WebContents based on their IDs and then associates them.
@@ -1916,6 +2017,7 @@ SOURCE: https://github.com/electron/electron/blob/main/docs/api/web-contents.md#
 
 LANGUAGE: JavaScript
 CODE:
+
 ```
 // Main process
 const { ipcMain, webContents } = require('electron')
@@ -1925,7 +2027,7 @@ ipcMain.on('openDevTools', (event, webContentsId) => {
 })
 ```
 
-----------------------------------------
+---
 
 **TITLE: Implementing Forwarding Mouse Events in Electron Main Process**
 DESCRIPTION: This JavaScript code for the main process sets up an IPC listener to toggle mouse event ignoring with optional forwarding.
@@ -1933,6 +2035,7 @@ SOURCE: https://github.com/electron/electron/blob/main/docs/tutorial/custom-wind
 
 LANGUAGE: javascript
 CODE:
+
 ```
 const { BrowserWindow, ipcMain } = require('electron')
 const path = require('node:path')
@@ -1949,7 +2052,7 @@ ipcMain.on('set-ignore-mouse-events', (event, ignore, options) => {
 })
 ```
 
-----------------------------------------
+---
 
 **TITLE: Log Frame ID in Main Process on IPC Message**
 DESCRIPTION: This snippet shows how to access the frame ID from an incoming IPC message in the main process. The `event.frameId` property of the event object provides the ID of the frame that sent the message. This allows the main process to identify the origin of the message.
@@ -1957,6 +2060,7 @@ SOURCE: https://github.com/electron/electron/blob/main/docs/api/web-contents.md#
 
 LANGUAGE: JavaScript
 CODE:
+
 ```
 // In the main process
 ipcMain.on('unload-event', (event) => {
@@ -1969,7 +2073,7 @@ ipcMain.on('unload-event', async (event) => {
 })
 ```
 
-----------------------------------------
+---
 
 **TITLE: Using ipcRenderer.invoke with Promise in Electron**
 DESCRIPTION: Example showing how to use ipcRenderer.invoke in the renderer process to communicate with the main process and receive a Promise-based response. The main process handles the request using ipcMain.handle.
@@ -1977,6 +2081,7 @@ SOURCE: https://github.com/electron/electron/blob/main/docs/api/ipc-renderer.md#
 
 LANGUAGE: javascript
 CODE:
+
 ```
 // Renderer process
 ipcRenderer.invoke('some-name', someArgument).then((result) => {
@@ -1990,7 +2095,7 @@ ipcMain.handle('some-name', async (event, someArgument) => {
 })
 ```
 
-----------------------------------------
+---
 
 **TITLE: Legacy IPC Communication Using ipcRenderer.send**
 DESCRIPTION: Demonstrates two-way communication between renderer and main process using ipcRenderer.send. This pattern was commonly used before Electron 7 but has limitations with message tracking and response handling.
@@ -1998,6 +2103,7 @@ SOURCE: https://github.com/electron/electron/blob/main/docs/tutorial/ipc.md#2025
 
 LANGUAGE: javascript
 CODE:
+
 ```
 const { ipcRenderer } = require('electron')
 
@@ -2009,6 +2115,7 @@ ipcRenderer.send('asynchronous-message', 'ping')
 
 LANGUAGE: javascript
 CODE:
+
 ```
 ipcMain.on('asynchronous-message', (event, arg) => {
   console.log(arg) // prints "ping" in the Node console
@@ -2016,7 +2123,7 @@ ipcMain.on('asynchronous-message', (event, arg) => {
 })
 ```
 
-----------------------------------------
+---
 
 **TITLE: Transferring MessagePort from Renderer to Main Process in Electron**
 DESCRIPTION: Example demonstrating how to transfer MessagePort objects from the renderer process to the main process using ipcRenderer.postMessage. The main process receives the ports through the event object.
@@ -2024,6 +2131,7 @@ SOURCE: https://github.com/electron/electron/blob/main/docs/api/ipc-renderer.md#
 
 LANGUAGE: javascript
 CODE:
+
 ```
 // Renderer process
 const { port1, port2 } = new MessageChannel()
@@ -2038,7 +2146,7 @@ ipcMain.on('port', (e) => {
 })
 ```
 
-----------------------------------------
+---
 
 **TITLE: Invoking IPC Calls from Renderer Process**
 DESCRIPTION: This snippet shows how to invoke an IPC call from a renderer process using ipcRenderer.invoke(). The function returns a Promise that resolves with the result from the main process handler.
@@ -2046,6 +2154,7 @@ SOURCE: https://github.com/electron/electron/blob/main/docs/api/ipc-main.md#2025
 
 LANGUAGE: javascript
 CODE:
+
 ```
 async () => {
   const result = await ipcRenderer.invoke('my-invokable-ipc', arg1, arg2)
@@ -2053,7 +2162,7 @@ async () => {
 }
 ```
 
-----------------------------------------
+---
 
 **TITLE: Handle IPC and Start Drag in main.js (Electron)**
 DESCRIPTION: This JavaScript code in the main process sets up an IPC listener for the 'ondragstart' event. When the event is received, it retrieves the file path, constructs the full file path, sets the icon, and calls `event.sender.startDrag` to initiate the native drag and drop operation.
@@ -2061,6 +2170,7 @@ SOURCE: https://github.com/electron/electron/blob/main/docs/tutorial/native-file
 
 LANGUAGE: JavaScript
 CODE:
+
 ```
 const { app, BrowserWindow, ipcMain } = require('electron/main')
 const path = require('node:path')
@@ -2112,7 +2222,7 @@ app.on('activate', () => {
 })
 ```
 
-----------------------------------------
+---
 
 **TITLE: Implementing Dark Mode Control in Electron Main Process**
 DESCRIPTION: This JavaScript snippet shows the main process implementation of dark mode control in Electron. It sets up IPC handlers for toggling dark mode and resetting to system theme, utilizing the nativeTheme API to manage the application's appearance.
@@ -2120,6 +2230,7 @@ SOURCE: https://github.com/electron/electron/blob/main/docs/tutorial/dark-mode.m
 
 LANGUAGE: javascript
 CODE:
+
 ```
 const { app, BrowserWindow, ipcMain, nativeTheme } = require('electron')
 const path = require('node:path')
@@ -2166,14 +2277,15 @@ app.on('window-all-closed', () => {
 })
 ```
 
-----------------------------------------
+---
 
 **TITLE: DesktopCapturer.getSources: Removed in Renderer**
-DESCRIPTION: This snippet demonstrates how to replace the usage of `desktopCapturer.getSources` in the renderer process by moving it to the main process and using `ipcMain.handle` and `ipcRenderer.invoke` for inter-process communication.  It also suggests further restricting the information returned to the renderer for security purposes.
+DESCRIPTION: This snippet demonstrates how to replace the usage of `desktopCapturer.getSources` in the renderer process by moving it to the main process and using `ipcMain.handle` and `ipcRenderer.invoke` for inter-process communication. It also suggests further restricting the information returned to the renderer for security purposes.
 SOURCE: https://github.com/electron/electron/blob/main/docs/breaking-changes.md#_snippet_41
 
 LANGUAGE: javascript
 CODE:
+
 ```
 // Main process
 const { ipcMain, desktopCapturer } = require('electron')
@@ -2187,6 +2299,7 @@ ipcMain.handle(
 
 LANGUAGE: javascript
 CODE:
+
 ```
 // Renderer process
 const { ipcRenderer } = require('electron')
@@ -2196,7 +2309,7 @@ const desktopCapturer = {
 }
 ```
 
-----------------------------------------
+---
 
 **TITLE: Using MessageChannelMain for Inter-Process Communication in Electron**
 DESCRIPTION: Example demonstrating how to create a MessageChannel in the main process and send one of its ports to a renderer process. The main process creates the channel and sends port2 to the renderer, while using port1 to post messages. The renderer process receives the port and sets up a message handler.
@@ -2204,6 +2317,7 @@ SOURCE: https://github.com/electron/electron/blob/main/docs/api/message-channel-
 
 LANGUAGE: javascript
 CODE:
+
 ```
 // Main process
 const { BrowserWindow, MessageChannelMain } = require('electron')
@@ -2222,7 +2336,7 @@ ipcRenderer.on('port', (e) => {
 })
 ```
 
-----------------------------------------
+---
 
 **TITLE: IPC Communication in Renderer Process**
 DESCRIPTION: Shows how to use the exposed ping function to communicate with the main process from the renderer.
@@ -2230,6 +2344,7 @@ SOURCE: https://github.com/electron/electron/blob/main/docs/tutorial/tutorial-3-
 
 LANGUAGE: javascript
 CODE:
+
 ```
 const func = async () => {
   const response = await window.versions.ping()
@@ -2239,7 +2354,7 @@ const func = async () => {
 func()
 ```
 
-----------------------------------------
+---
 
 **TITLE: Defining IpcMainInvokeEvent Object Properties in Markdown**
 DESCRIPTION: This snippet outlines the properties of the IpcMainInvokeEvent object, including type, processId, frameId, sender, and senderFrame. It provides details on the data types and possible values for each property.
@@ -2247,6 +2362,7 @@ SOURCE: https://github.com/electron/electron/blob/main/docs/api/structures/ipc-m
 
 LANGUAGE: markdown
 CODE:
+
 ```
 # IpcMainInvokeEvent Object extends `Event`
 
@@ -2257,7 +2373,7 @@ CODE:
 * `senderFrame` [WebFrameMain](../web-frame-main.md) | null _Readonly_ - The frame that sent this message. May be `null` if accessed after the frame has either navigated or been destroyed.
 ```
 
-----------------------------------------
+---
 
 **TITLE: Defining IpcMainEvent Object Properties in Markdown**
 DESCRIPTION: This snippet lists the properties of the IpcMainEvent object, including their types and descriptions. It covers important attributes like processId, frameId, sender, and methods like reply for handling IPC communication.
@@ -2265,6 +2381,7 @@ SOURCE: https://github.com/electron/electron/blob/main/docs/api/structures/ipc-m
 
 LANGUAGE: markdown
 CODE:
+
 ```
 # IpcMainEvent Object extends `Event`
 
@@ -2280,7 +2397,7 @@ CODE:
   * `...args` any[]
 ```
 
-----------------------------------------
+---
 
 **TITLE: Accessing webContents from webview using IPC - JavaScript**
 DESCRIPTION: Demonstrates how to securely access the webContents of a `<webview>` using IPC, avoiding the deprecated `webview.getWebContents()` method. It includes both the main and renderer process code. Requires `electron` to be installed to provide `ipcMain`, `webContents` and `ipcRenderer` modules.
@@ -2288,6 +2405,7 @@ SOURCE: https://github.com/electron/electron/blob/main/docs/breaking-changes.md#
 
 LANGUAGE: javascript
 CODE:
+
 ```
 // main
 const { ipcMain, webContents } = require('electron')
@@ -2314,7 +2432,7 @@ const { ipcRenderer } = require('electron')
 ipcRenderer.invoke('openDevTools', webview.getWebContentsId())
 ```
 
-----------------------------------------
+---
 
 **TITLE: Implementing Inter-Process Communication with parentPort in Electron**
 DESCRIPTION: Example of bidirectional communication between renderer and main process using parentPort. The main process sends a message to the child process, which then processes the message and sends a response back to the parent.
@@ -2322,6 +2440,7 @@ SOURCE: https://github.com/electron/electron/blob/main/docs/api/parent-port.md#2
 
 LANGUAGE: javascript
 CODE:
+
 ```
 // Main process
 const child = utilityProcess.fork(path.join(__dirname, 'test.js'))
@@ -2336,7 +2455,7 @@ process.parentPort.on('message', (e) => {
 })
 ```
 
-----------------------------------------
+---
 
 **TITLE: Handling Invokable IPC Messages with ipcMainServiceWorker.handle()**
 DESCRIPTION: Registers a handler for invokable IPC messages on a specific channel. The handler can return a value or a Promise that resolves to a value.
@@ -2344,11 +2463,12 @@ SOURCE: https://github.com/electron/electron/blob/main/docs/api/ipc-main-service
 
 LANGUAGE: javascript
 CODE:
+
 ```
 ipcMainServiceWorker.handle(channel, listener)
 ```
 
-----------------------------------------
+---
 
 **TITLE: Accessing WebFrameMain properties in IPC events**
 DESCRIPTION: This example shows the correct way to access WebFrameMain properties immediately upon receiving an IPC event to avoid issues with detached frames and null returns due to cross-origin navigations. The first `ipcMain.on` shows immediate access while the second demonstrates late access leading to a `null` return.
@@ -2356,6 +2476,7 @@ SOURCE: https://github.com/electron/electron/blob/main/docs/api/web-contents.md#
 
 LANGUAGE: JavaScript
 CODE:
+
 ```
 // In the main process
 ipcMain.on('unload-event', (event) => {
@@ -2368,7 +2489,7 @@ ipcMain.on('unload-event', async (event) => {
 })
 ```
 
-----------------------------------------
+---
 
 **TITLE: Handling a Single Invokable IPC Message with ipcMainServiceWorker.handleOnce()**
 DESCRIPTION: Registers a one-time handler for an invokable IPC message on a specific channel. After handling a single invocation, the handler is automatically removed.
@@ -2376,6 +2497,586 @@ SOURCE: https://github.com/electron/electron/blob/main/docs/api/ipc-main-service
 
 LANGUAGE: javascript
 CODE:
+
 ```
 ipcMainServiceWorker.handleOnce(channel, listener)
+```
+
+TITLE: Configuring vite-plugin-electron (Simple API)
+DESCRIPTION: Demonstrates how to add `vite-plugin-electron/simple` to the `plugins` array in `vite.config.ts`. It configures the entry points for the main process and preload scripts, and optionally enables Node.js API usage in the renderer.
+SOURCE: https://github.com/electron-vite/vite-plugin-electron/blob/main/README.md#_snippet_1
+
+LANGUAGE: javascript
+CODE:
+
+```
+import electron from 'vite-plugin-electron/simple'
+
+export default {
+  plugins: [
+    electron({
+      main: {
+        // Shortcut of `build.lib.entry`
+        entry: 'electron/main.ts',
+      },
+      preload: {
+        // Shortcut of `build.rollupOptions.input`
+        input: 'electron/preload.ts',
+      },
+      // Optional: Use Node.js API in the Renderer process
+      renderer: {},
+    }),
+  ],
+}
+```
+
+---
+
+TITLE: Updating package.json for Main Entry
+DESCRIPTION: Shows the necessary modification to the `package.json` file. It adds or updates the `main` field to point to the output path of the built Electron main process script, allowing Electron to find the entry point.
+SOURCE: https://github.com/electron-vite/vite-plugin-electron/blob/main/README.md#_snippet_3
+
+LANGUAGE: json
+CODE:
+
+```
+{
++ "main": "dist-electron/main.mjs"
+}
+```
+
+---
+
+TITLE: Initializing Electron Main Process and Window
+DESCRIPTION: Basic Electron main process setup. It waits for the app to be ready, creates a `BrowserWindow`, and loads either the development server URL or the built HTML file depending on the environment.
+SOURCE: https://github.com/electron-vite/vite-plugin-electron/blob/main/README.md#_snippet_2
+
+LANGUAGE: javascript
+CODE:
+
+```
+import { app, BrowserWindow } from 'electron'
+
+app.whenReady().then(() => {
+  const win = new BrowserWindow({
+    title: 'Main window',
+  })
+
+  // You can use `process.env.VITE_DEV_SERVER_URL` when the vite command is called `serve`
+  if (process.env.VITE_DEV_SERVER_URL) {
+    win.loadURL(process.env.VITE_DEV_SERVER_URL)
+  } else {
+    // Load your file
+    win.loadFile('dist/index.html');
+  }
+})
+```
+
+---
+
+TITLE: Installing vite-plugin-electron Dependency
+DESCRIPTION: Command to install `vite-plugin-electron` as a development dependency using npm. This is the first step in setting up the plugin for an Electron project using Vite.
+SOURCE: https://github.com/electron-vite/vite-plugin-electron/blob/main/README.md#_snippet_0
+
+LANGUAGE: shell
+CODE:
+
+```
+npm i -D vite-plugin-electron
+```
+
+---
+
+TITLE: Implementing Hot Reload for Preload Scripts
+DESCRIPTION: Code snippet for the main process (`electron/main.ts`) that listens for the `electron-vite&type=hot-reload` message. Upon receiving this message, it iterates through all open browser windows and reloads their web contents, effectively hot-reloading updated preload scripts.
+SOURCE: https://github.com/electron-vite/vite-plugin-electron/blob/main/README.md#_snippet_7
+
+LANGUAGE: javascript
+CODE:
+
+```
+// electron/main.ts
+
+process.on('message', (msg) => {
+  if (msg === 'electron-vite&type=hot-reload') {
+    for (const win of BrowserWindow.getAllWindows()) {
+      // Hot reload preload scripts
+      win.webContents.reload()
+    }
+  }
+})
+```
+
+---
+
+TITLE: Using JavaScript API for Build and Startup
+DESCRIPTION: Example showing how to programmatically build the Electron process files using the `build` function and start the Electron application in development mode using the `startup` function within a custom Vite plugin hook.
+SOURCE: https://github.com/electron-vite/vite-plugin-electron/blob/main/README.md#_snippet_6
+
+LANGUAGE: javascript
+CODE:
+
+```
+import { build, startup } from 'vite-plugin-electron'
+
+const isDev = process.env.NODE_ENV === 'development'
+const isProd = process.env.NODE_ENV === 'production'
+
+build({
+  entry: 'electron/main.ts',
+  vite: {
+    mode: process.env.NODE_ENV,
+    build: {
+      minify: isProd,
+      watch: isDev ? {} : null,
+    },
+    plugins: [{
+      name: 'plugin-start-electron',
+      closeBundle() {
+        if (isDev) {
+          // Startup Electron App
+          startup()
+        }
+      },
+    }],
+  },
+})
+```
+
+---
+
+TITLE: Configuring vite-plugin-electron (Flat API)
+DESCRIPTION: Demonstrates configuring the plugin using the flat API (`vite-plugin-electron`). Unlike the simple API, it only requires specifying the main entry point, offering more flexibility but requiring manual handling of preload scripts configuration if needed.
+SOURCE: https://github.com/electron-vite/vite-plugin-electron/blob/main/README.md#_snippet_4
+
+LANGUAGE: javascript
+CODE:
+
+```
+import electron from 'vite-plugin-electron'
+
+export default {
+  plugins: [
+    electron({
+      entry: 'electron/main.ts',
+    }),
+  ],
+}
+```
+
+---
+
+TITLE: Using vite-plugin-electron JavaScript Build API (TypeScript)
+DESCRIPTION: Demonstrates how to use the `build`, `withExternalBuiltins`, `resolveViteConfig`, and `startup` functions programmatically, introduced in v0.11.0. It configures a build with externalized Node.js builtins, default Vite config, and custom options, then starts the Electron app in a `closeBundle` plugin hook. Requires importing these functions from `vite-plugin-electron`.
+SOURCE: https://github.com/electron-vite/vite-plugin-electron/blob/main/CHANGELOG.md#_snippet_4
+
+LANGUAGE: TypeScript
+CODE:
+
+```
+build(
+  withExternalBuiltins( // external Node.js builtin modules
+    resolveViteConfig( // with default config
+      {
+        entry: 'foo.ts',
+        vite: {
+          mode: 'foo-mode', // for .env file
+          plugins: [{
+            name: 'plugin-build-done',
+            closeBundle() {
+              // Startup Electron App
+              startup()
+            },
+          }],
+        },
+      }
+    )
+  )
+)
+```
+
+---
+
+TITLE: Externalizing Native Node.js Modules
+DESCRIPTION: Demonstrates how to configure the `vite-plugin-electron` options to add specific native Node.js modules (like `serialport`, `sqlite3`) to the `external` list in Rollup options. This prevents Vite from trying to bundle them, allowing Electron to load them externally.
+SOURCE: https://github.com/electron-vite/vite-plugin-electron/blob/main/README.md#_snippet_8
+
+LANGUAGE: javascript
+CODE:
+
+```
+export default {
+  plugins: [
+    electron({
+      entry: 'electron/main.ts',
+      vite: {
+        build: {
+          rollupOptions: {
+            // Here are some C/C++ modules them can't be built properly
+            external: [
+              'serialport',
+              'sqlite3',
+            ],
+          },
+        },
+      },
+    }),
+  ],
+}
+```
+
+---
+
+TITLE: Configuring vite-plugin-electron Simple API (JavaScript)
+DESCRIPTION: Demonstrates how to configure the `vite-plugin-electron/simple` plugin. It requires importing the plugin and passing an options object with `main`, `preload`, and `renderer` fields. This is a basic setup for different Electron process types introduced in v0.14.0-beta.0.
+SOURCE: https://github.com/electron-vite/vite-plugin-electron/blob/main/CHANGELOG.md#_snippet_1
+
+LANGUAGE: JavaScript
+CODE:
+
+```
+import electron from 'vite-plugin-electron/simple'
+
+electron({
+  main: {},
+  preload: {},
+  renderer: {},
+})
+```
+
+---
+
+TITLE: Configuring vite-plugin-electron-renderer for Node.js Integration (TS)
+DESCRIPTION: Explains how to enable Node.js integration in the Electron renderer process build configuration using `vite-plugin-electron-renderer` to resolve the 'require is not defined' error, allowing the use of Node.js APIs.
+SOURCE: https://github.com/electron-vite/vite-plugin-electron/blob/main/CHANGELOG.md#_snippet_8
+
+LANGUAGE: typescript
+CODE:
+
+```
+import renderer from 'vite-plugin-electron-renderer'
+
+// In plugins option
+renderer({
+  nodeIntegration: true,
+})
+```
+
+---
+
+TITLE: Integrating vite-plugin-native for Native Modules
+DESCRIPTION: Shows an alternative method for handling native Node.js modules by integrating the `vite-plugin-native` plugin directly into the nested Vite configuration within the `vite-plugin-electron` options.
+SOURCE: https://github.com/electron-vite/vite-plugin-electron/blob/main/README.md#_snippet_9
+
+LANGUAGE: javascript
+CODE:
+
+```
+import native from 'vite-plugin-native'
+
+export default {
+  plugins: [
+    electron({
+      entry: 'electron/main.ts',
+      vite: {
+        plugins: [
+          native(/* options */),
+        ],
+      },
+    }),
+  ],
+}
+```
+
+---
+
+TITLE: Configuring Renderer and Worker with Node.js Integration (TS)
+DESCRIPTION: Configures the Vite build for the Electron renderer process and its associated workers using `vite-plugin-electron-renderer`, enabling Node.js integration in both the renderer thread and the worker threads.
+SOURCE: https://github.com/electron-vite/vite-plugin-electron/blob/main/CHANGELOG.md#_snippet_11
+
+LANGUAGE: typescript
+CODE:
+
+```
+import renderer, { worker } from 'vite-plugin-electron-renderer'
+
+export default {
+  plugins: [
+    renderer({
+      // If you need use Node.js in Electron-Renderer process
+      nodeIntegration: true,
+    }),
+  ],
+  worker: {
+    plugins: [
+      worker({
+        // If you need use Node.js in Worker
+        nodeIntegrationInWorker: true,
+      }),
+    ],
+  },
+}
+```
+
+---
+
+TITLE: Instantiating Worker in Electron Main Process (TS)
+DESCRIPTION: Demonstrates how to create a new Node.js `Worker` instance from the Electron main process, referencing a script that is built as a separate entry point by `vite-plugin-electron`.
+SOURCE: https://github.com/electron-vite/vite-plugin-electron/blob/main/CHANGELOG.md#_snippet_10
+
+LANGUAGE: typescript
+CODE:
+
+```
+// In electron/main.ts
+new Worker(path.join(__dirname, './worker.js'))
+```
+
+---
+
+TITLE: Handling Hot-Reload Message in Electron Main Process (JavaScript)
+DESCRIPTION: This JavaScript snippet demonstrates how to handle the 'electron-vite&type=hot-reload' message in the Electron main process. Upon receiving this message, it iterates through all active browser windows and reloads their web contents, facilitating hot-reloading for preload scripts or applications without a renderer process.
+SOURCE: https://github.com/electron-vite/vite-plugin-electron/blob/main/CHANGELOG.md#_snippet_0
+
+LANGUAGE: js
+CODE:
+
+```
+// electron/main.ts
+
+process.on('message', (msg) => {
+  if (msg === 'electron-vite&type=hot-reload') {
+    for (const win of BrowserWindow.getAllWindows()) {
+      // Hot reload preload scripts
+      win.webContents.reload()
+    }
+  }
+})
+```
+
+---
+
+TITLE: Configuring vite-plugin-electron for Multiple Entries (TS)
+DESCRIPTION: Shows how to configure `vite-plugin-electron` to include multiple entry points for the Electron main process build, useful for scenarios like including a separate worker script.
+SOURCE: https://github.com/electron-vite/vite-plugin-electron/blob/main/CHANGELOG.md#_snippet_9
+
+LANGUAGE: typescript
+CODE:
+
+```
+import electron from 'vite-plugin-electron'
+
+// In plugins option
+electron({
+  entry: [
+    'electron/main.ts',
+    'electron/worker.ts',
+  ],
+})
+```
+
+---
+
+TITLE: Configuring Multiple Entry Files (Config Array) (TypeScript)
+DESCRIPTION: Illustrates configuring the `electron` plugin with an array of configuration objects. Each object can specify its own `entry` (which can also be an array) and `vite` options, allowing for multiple independent builds or processes within Electron, as described in v0.10.0.
+SOURCE: https://github.com/electron-vite/vite-plugin-electron/blob/main/CHANGELOG.md#_snippet_6
+
+LANGUAGE: TypeScript
+CODE:
+
+```
+import electron from 'vite-plugin-electron'
+
+// Or use configuration array
+electron([
+  {
+    entry: [
+      'electron/entry-1.ts',
+      'electron/entry-2.ts',
+    ],
+  },
+  {
+    entry: 'foo/bar.ts',
+  },
+])
+```
+
+---
+
+TITLE: Configuring Multiple Entry Files (Array) (TypeScript)
+DESCRIPTION: Demonstrates configuring the `electron` plugin with an array of entry file paths for the `entry` option. This allows the plugin to process multiple main process files within a single configuration object, a feature highlighted in v0.10.0 and requiring Vite v3.2.0+.
+SOURCE: https://github.com/electron-vite/vite-plugin-electron/blob/main/CHANGELOG.md#_snippet_5
+
+LANGUAGE: TypeScript
+CODE:
+
+```
+import electron from 'vite-plugin-electron'
+
+// In plugins option
+electron({
+  entry: [
+    'electron/entry-1.ts',
+    'electron/entry-2.ts',
+  ],
+})
+```
+
+---
+
+TITLE: Configuring vite-plugin-electron NotBundle Plugin (JavaScript)
+DESCRIPTION: This snippet shows how to integrate the `notBundle` experimental feature into a Vite project using `vite-plugin-electron`. It adds the `notBundle` plugin to the Vite configuration specifically when the `command` is `serve`, effectively disabling bundling for certain modules during development for faster build times. Requires `vite-plugin-electron` v0.13.0 or later.
+SOURCE: https://github.com/electron-vite/vite-plugin-electron/blob/main/README.md#_snippet_10
+
+LANGUAGE: JavaScript
+CODE:
+
+```
+import electron from 'vite-plugin-electron'
+import { notBundle } from 'vite-plugin-electron/plugin'
+
+export default defineConfig(({ command }) => ({
+  plugins: [
+    electron({
+      entry: 'electron/main.ts',
+      vite: {
+        plugins: [
+          command === 'serve' && notBundle(/* NotBundleOptions */),
+        ],
+      },
+    }),
+  ],
+}))
+```
+
+---
+
+TITLE: Conditionally Adding notBundle Plugin (TypeScript)
+DESCRIPTION: Illustrates how to include the `notBundle` plugin only when the Vite command is 'serve'. This requires importing `defineConfig` from `vite` and `notBundle` from `vite-plugin-electron/plugin`. It configures the main electron entry point and adds the conditional plugin within the `vite.plugins` array, as shown in v0.13.0-beta.3.
+SOURCE: https://github.com/electron-vite/vite-plugin-electron/blob/main/CHANGELOG.md#_snippet_2
+
+LANGUAGE: TypeScript
+CODE:
+
+```
+import electron from 'vite-plugin-electron'
+import { defineConfig } from 'vite'
+import { notBundle } from 'vite-plugin-electron/plugin'
+
+export default defineConfig(({ command }) => ({
+  plugins: [
+    electron({
+      entry: 'electron/main.ts',
+      vite: {
+        plugins: [
+          command === 'serve' && notBundle(/* NotBundleOptions */),
+        ],
+      },
+    }),
+  ],
+}))
+```
+
+---
+
+TITLE: Adding notBundle Plugin to Vite Config (TypeScript)
+DESCRIPTION: Shows how to add the standalone `notBundle` plugin to a Vite configuration object using a plain config structure. It requires importing `notBundle` from `vite-plugin-electron/plugin`. The plugin is added to the `vite.plugins` array within the main `electron` plugin configuration, demonstrated in v0.13.0-beta.2.
+SOURCE: https://github.com/electron-vite/vite-plugin-electron/blob/main/CHANGELOG.md#_snippet_3
+
+LANGUAGE: TypeScript
+CODE:
+
+```
+import electron from 'vite-plugin-electron'
+import { notBundle } from 'vite-plugin-electron/plugin'
+
+export default {
+  plugins: [
+    electron({
+      entry: 'electron/main.ts',
+      vite: {
+        plugins: [
+          notBundle(/* NotBundleOptions */),
+        ],
+      },
+    }),
+  ],
+}
+```
+
+---
+
+TITLE: Defining NotBundleOptions Interface (TypeScript)
+DESCRIPTION: This TypeScript snippet defines the `NotBundleOptions` interface used by the `notBundle` plugin function. It specifies a single optional property, `filter`, which is a function allowing custom filtering logic to control which modules are excluded from bundling. This interface helps developers understand the configuration possibilities for the `notBundle` feature.
+SOURCE: https://github.com/electron-vite/vite-plugin-electron/blob/main/README.md#_snippet_11
+
+LANGUAGE: TypeScript
+CODE:
+
+```
+export interface NotBundleOptions {
+  filter?: (id: string) => void | false
+}
+```
+
+---
+
+TITLE: Defining ElectronOptions Interface (Flat API)
+DESCRIPTION: Provides the TypeScript definition for the options object accepted by the flat API. It details properties like `entry`, nested Vite configuration, and the `onstart` hook which provides control over the Electron startup process.
+SOURCE: https://github.com/electron-vite/vite-plugin-electron/blob/main/README.md#_snippet_5
+
+LANGUAGE: typescript
+CODE:
+
+```
+export interface ElectronOptions {
+  /**
+   * Shortcut of `build.lib.entry`
+   */
+  entry?: import('vite').LibraryOptions['entry']
+  vite?: import('vite').InlineConfig
+  /**
+   * Triggered when Vite is built every time -- `vite serve` command only.
+   *
+   * If this `onstart` is passed, Electron App will not start automatically.
+   * However, you can start Electroo App via `startup` function.
+   */
+  onstart?: (args: {
+    /**
+     * Electron App startup function.
+     * It will mount the Electron App child-process to `process.electronApp`.
+     * @param argv default value `['.', '--no-sandbox']`
+     * @param options options for `child_process.spawn`
+     * @param customElectronPkg custom electron package name (default: 'electron')
+     */
+    startup: (argv?: string[], options?: import('node:child_process').SpawnOptions, customElectronPkg?: string) => Promise<void>
+    /** Reload Electron-Renderer */
+    reload: () => void
+  }) => void | Promise<void>
+}
+```
+
+---
+
+TITLE: Configuration Type Definition (TypeScript)
+DESCRIPTION: Defines the TypeScript interface for the `vite-plugin-electron` configuration object, specifically the structure used in version 0.11.0. It details the available options like `entry` (shortcut for `build.lib.entry`), `onstart` callback, and nested `vite` options.
+SOURCE: https://github.com/electron-vite/vite-plugin-electron/blob/main/CHANGELOG.md#_snippet_7
+
+LANGUAGE: TypeScript
+CODE:
+
+```
+export type Configuration = {
+  /**
+   * Shortcut of `build.lib.entry`
+   */
+  entry?: import('vite').LibraryOptions['entry']
+  /**
+   * Triggered when Vite is built.
+   * If passed this parameter will not automatically start Electron App.
+   * You can start Electron App through the `startup` function passed through the callback function.
+   */
+  onstart?: (this: import('rollup').PluginContext, startup: (args?: string[]) => Promise<void>) => void
+  vite?: import('vite').InlineConfig
+}
 ```

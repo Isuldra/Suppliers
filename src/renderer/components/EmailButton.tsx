@@ -30,9 +30,9 @@ const EmailButton: React.FC<EmailButtonProps> = ({
 
   // Create order list from excel data
   const orders = useMemo(() => {
-    if (!excelData?.hovedliste || !selectedSupplier) return [];
+    if (!excelData?.bp || !selectedSupplier) return [];
 
-    return excelData.hovedliste
+    return excelData.bp
       .filter((row) => row.supplier === selectedSupplier)
       .map((row: ExcelRow) => ({
         key: row.key,

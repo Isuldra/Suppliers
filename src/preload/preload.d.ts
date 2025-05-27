@@ -5,7 +5,6 @@ import { ExcelRow } from "../types/ExcelRow";
 type ValidateDataResult = {
   success: boolean;
   data?: {
-    hovedlisteCount: number;
     bpCount: number;
   };
   error?: string;
@@ -94,6 +93,16 @@ interface ElectronAPI {
     logs?: string;
     error?: string;
   }>;
+
+  getAllSupplierNames: () => Promise<{
+    success: boolean;
+    data?: string[];
+    error?: string;
+  }>;
+
+  getSupplierEmail: (
+    supplierName: string
+  ) => Promise<{ success: boolean; data?: string | null; error?: string }>;
 }
 
 // Extend the global Window interface

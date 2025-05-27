@@ -1,6 +1,15 @@
 import Handlebars from "handlebars";
 import supplierEmailsData from "../data/supplierEmails.json";
 
+// Register Handlebars helpers
+Handlebars.registerHelper("gt", function (a, b) {
+  return a > b;
+});
+
+Handlebars.registerHelper("eq", function (a, b) {
+  return a === b;
+});
+
 // Type for supplier emails
 type SupplierEmails = {
   [key: string]: string;
@@ -28,103 +37,73 @@ export class EmailService {
   };
 
   constructor() {
-    // Norwegian template
-    const noTemplate = `
-<!DOCTYPE html>
+    // Norwegian template - ultra-basic HTML table for maximum email client compatibility
+    const noTemplate = `<!DOCTYPE html>
 <html>
-<head>
-    <style>
-        body { font-family: Arial, sans-serif; }
-        table { border-collapse: collapse; width: 100%; }
-        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-        th { background-color: #f2f2f2; }
-        .urgent { background-color: #ffebee; }
-    </style>
-</head>
 <body>
-    <h2>Purring på manglende leveranser</h2>
-    <p>Hei {{supplier}},</p>
-    <p>Dette er en påminnelse om følgende manglende leveranser:</p>
-    
-    <table>
-        <thead>
-            <tr>
-                <th>PO-nummer</th>
-                <th>Varenummer</th>
-                <th>Beskrivelse</th>
-                <th>Ordre antall</th>
-                <th>Mottatt antall</th>
-                <th>Utestående antall</th>
-            </tr>
-        </thead>
-        <tbody>
-            {{#each orders}}
-            <tr class="{{#if (gt outstandingQty 0)}}urgent{{/if}}">
-                <td>{{poNumber}}</td>
-                <td>{{itemNo}}</td>
-                <td>{{description}}</td>
-                <td>{{orderQty}}</td>
-                <td>{{receivedQty}}</td>
-                <td>{{outstandingQty}}</td>
-            </tr>
-            {{/each}}
-        </tbody>
-    </table>
+<h3>Purring på manglende leveranser</h3>
+<p>Hei {{supplier}},</p>
+<p>Dette er en påminnelse om følgende manglende leveranser:</p>
 
-    <p>Vennligst bekreft mottak av denne meldingen og oppdater leveringsstatus.</p>
-    <p>Med vennlig hilsen,<br>OneMed Norge AS</p>
+<table border="1" cellpadding="4" cellspacing="0" width="100%">
+<tr bgcolor="#f0f0f0">
+<td><b>PO-nummer</b></td>
+<td><b>OneMed varenummer</b></td>
+<td><b>Leverandørs artikkelnummer</b></td>
+<td><b>Ordre antall</b></td>
+<td><b>Mottatt antall</b></td>
+<td><b>Utestående antall</b></td>
+</tr>
+{{#each orders}}
+<tr>
+<td>{{poNumber}}</td>
+<td>{{itemNo}}</td>
+<td>{{description}}</td>
+<td>{{orderQty}}</td>
+<td>{{receivedQty}}</td>
+<td><b>{{outstandingQty}}</b></td>
+</tr>
+{{/each}}
+</table>
+
+<p>Vennligst bekreft mottak av denne meldingen og oppdater leveringsstatus.</p>
+<p>Med vennlig hilsen,<br>OneMed Norge AS</p>
 </body>
-</html>
-    `;
+</html>`;
 
-    // English template
-    const enTemplate = `
-<!DOCTYPE html>
+    // English template - ultra-basic HTML table for maximum email client compatibility
+    const enTemplate = `<!DOCTYPE html>
 <html>
-<head>
-    <style>
-        body { font-family: Arial, sans-serif; }
-        table { border-collapse: collapse; width: 100%; }
-        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-        th { background-color: #f2f2f2; }
-        .urgent { background-color: #ffebee; }
-    </style>
-</head>
 <body>
-    <h2>Reminder for Outstanding Orders</h2>
-    <p>Hello {{supplier}},</p>
-    <p>This is a reminder regarding the following outstanding orders:</p>
-    
-    <table>
-        <thead>
-            <tr>
-                <th>PO Number</th>
-                <th>Item Number</th>
-                <th>Description</th>
-                <th>Order Qty</th>
-                <th>Received Qty</th>
-                <th>Outstanding Qty</th>
-            </tr>
-        </thead>
-        <tbody>
-            {{#each orders}}
-            <tr class="{{#if (gt outstandingQty 0)}}urgent{{/if}}">
-                <td>{{poNumber}}</td>
-                <td>{{itemNo}}</td>
-                <td>{{description}}</td>
-                <td>{{orderQty}}</td>
-                <td>{{receivedQty}}</td>
-                <td>{{outstandingQty}}</td>
-            </tr>
-            {{/each}}
-        </tbody>
-    </table>
+<h3>Reminder for Outstanding Orders</h3>
+<p>Hello {{supplier}},</p>
+<p>This is a reminder regarding the following outstanding orders:</p>
 
-    <p>Please confirm receipt of this message and provide updated delivery status.</p>
-    <p>Kind regards,<br>OneMed Norge AS</p>
+<table border="1" cellpadding="4" cellspacing="0" width="100%">
+<tr bgcolor="#f0f0f0">
+<td><b>PO Number</b></td>
+<td><b>OneMed Item Number</b></td>
+<td><b>Supplier Article Number</b></td>
+<td><b>Order Qty</b></td>
+<td><b>Received Qty</b></td>
+<td><b>Outstanding Qty</b></td>
+</tr>
+{{#each orders}}
+<tr>
+<td>{{poNumber}}</td>
+<td>{{itemNo}}</td>
+<td>{{description}}</td>
+<td>{{orderQty}}</td>
+<td>{{receivedQty}}</td>
+<td><b>{{outstandingQty}}</b></td>
+</tr>
+{{/each}}
+</table>
+
+<p>Please confirm receipt of this message and provide updated delivery status.</p>
+<p>Kind regards,<br>OneMed Norge AS</p>
 </body>
-</html>
-    `;
+</html>`;
 
     this.templates = {
       no: noTemplate,
@@ -132,34 +111,18 @@ export class EmailService {
     };
   }
 
-  // Get supplier email from the supplier name
-  getSupplierEmail(supplierName: string): string | null {
-    const emails = supplierEmailsData.supplierEmails as SupplierEmails;
-
-    // Direct match
-    if (emails[supplierName]) {
-      return emails[supplierName];
-    }
-
-    // Case-insensitive match
-    const supplierLower = supplierName.toLowerCase();
-    for (const [name, email] of Object.entries(emails)) {
-      if (name.toLowerCase() === supplierLower) {
-        return email;
+  // Get supplier email from the database
+  async getSupplierEmail(supplierName: string): Promise<string | null> {
+    try {
+      const result = await window.electron.getSupplierEmail(supplierName);
+      if (result.success && result.data) {
+        return result.data;
       }
+      return null;
+    } catch (error) {
+      console.error("Error getting supplier email from database:", error);
+      return null;
     }
-
-    // Try partial match
-    for (const [name, email] of Object.entries(emails)) {
-      if (
-        name.toLowerCase().includes(supplierLower) ||
-        supplierLower.includes(name.toLowerCase())
-      ) {
-        return email;
-      }
-    }
-
-    return null;
   }
 
   // New method to generate email preview HTML
@@ -175,7 +138,7 @@ export class EmailService {
   ): Promise<{ success: boolean; error?: string }> {
     try {
       // Get supplier email address
-      const supplierEmail = this.getSupplierEmail(data.supplier);
+      const supplierEmail = await this.getSupplierEmail(data.supplier);
 
       if (!supplierEmail) {
         return {
