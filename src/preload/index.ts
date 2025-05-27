@@ -6,7 +6,6 @@ import { ExcelRow } from "../types/ExcelRow";
 type ValidateDataResult = {
   success: boolean;
   data?: {
-    hovedlisteCount: number;
     bpCount: number;
   };
   error?: string;
@@ -33,13 +32,10 @@ interface ElectronAPI {
     data?: string[];
     error?: string;
   }>;
-  saveOrdersToDatabase: (
-    data: ExcelData
-  ) => Promise<{ success: boolean; message?: string; error?: string }>;
-  getOutstandingOrders: (
-    supplier: string,
-    beforeCurrentWeek?: boolean
-  ) => Promise<{ success: boolean; data?: unknown[]; error?: string }>;
+  saveOrdersToDatabase: (payload: {
+    fileBuffer: ArrayBuffer;
+  }) => Promise<{ success: boolean; message?: string; error?: string }>;
+  getOutstandingOrders: (supplier: string) => Promise<ExcelRow[]>;
   recordEmailSent: (
     supplier: string,
     recipient: string,
@@ -94,6 +90,22 @@ interface ElectronAPI {
     logs?: string;
     error?: string;
   }>;
+
+  getAllSupplierNames: () => Promise<string[]>;
+  getSupplierEmail: (supplierName: string) => Promise<string>;
+
+  // Settings methods
+  getSettings: () => Promise<{
+    success: boolean;
+    data?: import("../renderer/types/Settings").SettingsData;
+    error?: string;
+  }>;
+  saveSettings: (
+    settings: import("../renderer/types/Settings").SettingsData
+  ) => Promise<{
+    success: boolean;
+    error?: string;
+  }>;
 }
 
 // Valid send channels for IPC communication
@@ -130,6 +142,8 @@ const validSendChannels = [
   "show-about-dialog",
   "show-logs",
   "read-log-tail",
+  "getSettings",
+  "saveSettings",
 ] as const;
 
 // Valid receive channels for IPC communication
@@ -166,6 +180,8 @@ const validReceiveChannels = [
   "show-about-dialog",
   "show-logs",
   "read-log-tail",
+  "getSettings",
+  "saveSettings",
 ] as const;
 
 // Expose the API to the renderer process
@@ -222,15 +238,11 @@ contextBridge.exposeInMainWorld("electron", {
     return await ipcRenderer.invoke("getSuppliers");
   },
   // Database methods
-  saveOrdersToDatabase: async (data: ExcelData) => {
-    return await ipcRenderer.invoke("saveOrdersToDatabase", data);
+  saveOrdersToDatabase: async (payload: { fileBuffer: ArrayBuffer }) => {
+    return await ipcRenderer.invoke("saveOrdersToDatabase", payload);
   },
-  getOutstandingOrders: async (supplier: string, beforeCurrentWeek = false) => {
-    return await ipcRenderer.invoke(
-      "getOutstandingOrders",
-      supplier,
-      beforeCurrentWeek
-    );
+  getOutstandingOrders: async (supplier: string) => {
+    return await ipcRenderer.invoke("getOutstandingOrders", supplier);
   },
   recordEmailSent: async (
     supplier: string,
@@ -345,5 +357,13 @@ contextBridge.exposeInMainWorld("electron", {
   readLogTail: async (lineCount?: number) => {
     // Pass lineCount to main process, defaulting if undefined
     return await ipcRenderer.invoke("read-log-tail", lineCount);
+  },
+
+  getAllSupplierNames: async () => {
+    return await ipcRenderer.invoke("getAllSupplierNames");
+  },
+
+  getSupplierEmail: async (supplierName: string) => {
+    return await ipcRenderer.invoke("getSupplierEmail", supplierName);
   },
 } as ElectronAPI);

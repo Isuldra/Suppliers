@@ -10,23 +10,27 @@ import { ExcelRow } from "../types/ExcelRow";
 // Example data
 const sampleOrders: ExcelRow[] = [
   {
+    key: "sample-1",
     supplier: "Acme Inc",
-    orderNumber: "ORD-001",
-    orderDate: new Date("2023-05-15"),
+    poNumber: "ORD-001",
+    status: "Open",
+    itemNo: "ITEM-001",
     dueDate: new Date("2023-06-15"),
     description: "Office supplies",
-    value: 1200.5,
-    currency: "USD",
+    orderQty: 100,
+    receivedQty: 0,
     confirmed: false,
   },
   {
+    key: "sample-2",
     supplier: "Acme Inc",
-    orderNumber: "ORD-002",
-    orderDate: new Date("2023-05-20"),
+    poNumber: "ORD-002",
+    status: "Open",
+    itemNo: "ITEM-002",
     dueDate: new Date("2023-06-20"),
     description: "Furniture",
-    value: 3500.75,
-    currency: "USD",
+    orderQty: 50,
+    receivedQty: 0,
     confirmed: false,
   },
 ];
@@ -73,41 +77,70 @@ async function insertSampleOrders() {
 
 // In the renderer, we would use the API we defined in src/renderer/api/database.ts
 
-/*
-import { databaseAPI } from '../api/database';
+import { databaseAPI } from "../renderer/api/database";
 
-// Example React component using the database API
-function OrderList() {
-  const [orders, setOrders] = useState<ExcelRow[]>([]);
-  
-  useEffect(() => {
-    async function loadOrders() {
-      try {
-        const supplier = 'Acme Inc';
-        const orders = await databaseAPI.getOrdersBySupplier(supplier);
-        setOrders(orders);
-      } catch (error) {
-        console.error('Error loading orders:', error);
-      }
-    }
-    
-    loadOrders();
-  }, []);
-  
-  const handleMarkConfirmed = async (supplier: string, orderNumber: string | null) => {
-    try {
-      await databaseAPI.markOrderAsConfirmed(supplier, orderNumber);
-      // Refresh orders
-      const updatedOrders = await databaseAPI.getOrdersBySupplier('Acme Inc');
-      setOrders(updatedOrders);
-    } catch (error) {
-      console.error('Error marking order as confirmed:', error);
-    }
-  };
-  
-  // Component render code...
+// Example usage of the database API
+async function exampleUsage() {
+  try {
+    // Insert a new order
+    const order1 = {
+      key: "order-1",
+      supplier: "Test Supplier",
+      poNumber: "ORD-001",
+      status: "Open",
+      itemNo: "ITEM-001",
+      orderQty: 100,
+      receivedQty: 0,
+      dueDate: new Date("2024-01-15"),
+      description: "Test product",
+    };
+
+    const order2 = {
+      key: "order-2",
+      supplier: "Test Supplier",
+      poNumber: "ORD-002",
+      status: "Open",
+      itemNo: "ITEM-002",
+      orderQty: 50,
+      receivedQty: 25,
+      dueDate: new Date("2024-01-20"),
+      description: "Another test product",
+    };
+
+    // Insert orders
+    const id1 = await databaseAPI.insertOrUpdateOrder(order1);
+    const id2 = await databaseAPI.insertOrUpdateOrder(order2);
+
+    console.log("Inserted orders with IDs:", id1, id2);
+
+    // Get orders by supplier
+    const supplierOrders = await databaseAPI.getOrdersBySupplier(
+      "Test Supplier"
+    );
+    console.log("Orders for Test Supplier:", supplierOrders);
+
+    // Get all orders
+    const allOrders = await databaseAPI.getAllOrders();
+    console.log("All orders:", allOrders);
+
+    // Get orders due within 30 days
+    const dueOrders = await databaseAPI.getOrdersDueWithinDays(30);
+    console.log("Orders due within 30 days:", dueOrders);
+
+    // Mark an order as confirmed
+    const confirmed = await databaseAPI.markOrderAsConfirmed(
+      "Test Supplier",
+      "ORD-001"
+    );
+    console.log("Order confirmed:", confirmed);
+
+    // Delete an order
+    const deleted = await databaseAPI.deleteOrder("Test Supplier", "ORD-002");
+    console.log("Order deleted:", deleted);
+  } catch (error) {
+    console.error("Database operation failed:", error);
+  }
 }
-*/
 
-// Export the example function so it can be run
-export { insertSampleOrders };
+// Export the example function
+export { exampleUsage };

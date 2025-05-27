@@ -11,6 +11,11 @@ export interface ExcelRow {
   description?: string; // Explicitly add description as optional string
   specification?: string; // Explicitly add specification as optional string
   date?: Date; // Keep date as optional if needed for other logic
+  // New fields for BP sheet structure
+  internalSupplierNumber?: string; // Column D - Internal supplier number
+  warehouse?: string; // Column E - Warehouse (Gardermoen is L 40)
+  supplierArticleNo?: string; // Column I - Supplier article number
+  selected?: boolean; // Track selection state for email sending
   [key: string]: unknown; // Use unknown instead of any for better type safety
 }
 
@@ -21,7 +26,7 @@ export interface ExcelData {
   supplier?: string; // Current selected supplier
   weekday?: string; // Current selected weekday
   validation?: {
-    hovedlisteCount: number;
+    hovedlisteCount?: number; // Made optional since we no longer use it
     bpCount: number;
   }; // Validation data from ODBC check
 }

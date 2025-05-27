@@ -74,19 +74,50 @@ export function setupDatabaseHandlers() {
   });
 
   // Handler for recording email sent
-  ipcMain.handle("recordEmailSent", async (_, orderIds) => {
-    try {
-      log.info(`Recording email sent for order IDs: ${orderIds.join(", ")}`);
-      const count = databaseService.recordEmailSent(orderIds);
-      return { success: true, data: { count } };
-    } catch (error) {
-      log.error(`Error recording email sent:`, error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : "Unknown error",
-      };
+  ipcMain.handle(
+    "recordEmailSent",
+    async (_, supplier, recipient, subject, orderCount) => {
+      try {
+        log.info(
+          `Recording email sent to ${supplier} (${recipient}) with ${orderCount} orders`
+        );
+
+        // Get the outstanding orders for this supplier to mark them as emailed
+        const outstandingOrders =
+          databaseService.getOutstandingOrders(supplier);
+        const orderIds = outstandingOrders
+          .map((order) => order.id)
+          .filter((id) => id !== undefined);
+
+        if (orderIds.length > 0) {
+          const count = databaseService.recordEmailSent(orderIds);
+          log.info(
+            `Marked ${count} orders as emailed for supplier: ${supplier}`
+          );
+          return {
+            success: true,
+            data: { count },
+            message: `Email recorded for ${count} orders`,
+          };
+        } else {
+          log.warn(
+            `No orders found to mark as emailed for supplier: ${supplier}`
+          );
+          return {
+            success: true,
+            data: { count: 0 },
+            message: "No orders found to mark as emailed",
+          };
+        }
+      } catch (error) {
+        log.error(`Error recording email sent:`, error);
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : "Unknown error",
+        };
+      }
     }
-  });
+  );
 
   log.info("Database IPC handlers setup complete.");
   handlersInstalled = true; // Set flag after handlers are registered

@@ -75,6 +75,25 @@ export class DatabaseService {
         this.setupBackupSchedule();
       }
       log.info("DatabaseService connected and initialized successfully.");
+
+      // --- Migration: ensure importer 'key' column exists on orders table ---
+      try {
+        // query table_info and extract column names
+        const existingCols = (
+          this.db.prepare("PRAGMA table_info(orders)").all() as Array<{
+            name: string;
+          }>
+        ).map((row) => row.name);
+        if (!existingCols.includes("key")) {
+          log.info("Adding missing column 'key' to orders table");
+          this.db.exec("ALTER TABLE orders ADD COLUMN key TEXT");
+        }
+      } catch (migrationErr) {
+        log.error(
+          "Error during migrating 'key' column for orders table:",
+          migrationErr
+        );
+      }
     } catch (error) {
       log.error(
         "Error during DatabaseService connection/initialization:",
@@ -168,15 +187,96 @@ export class DatabaseService {
           itemNo      TEXT,
           beskrivelse TEXT,
           dato        TEXT,
-          ftgnavn     TEXT
+          ftgnavn     TEXT,
+          status      TEXT,
+          producer_item TEXT,
+          specification TEXT,
+          note        TEXT,
+          inventory_balance REAL DEFAULT 0,
+          order_qty   INTEGER DEFAULT 0,
+          received_qty INTEGER DEFAULT 0,
+          purchaser   TEXT,
+          incoming_date TEXT,
+          eta_supplier TEXT,
+          supplier_name TEXT,
+          warehouse   TEXT,
+          outstanding_qty INTEGER DEFAULT 0
         );
          CREATE INDEX IF NOT EXISTS idx_po_ordreNr ON purchase_order(ordreNr);
          CREATE INDEX IF NOT EXISTS idx_po_ftgnavn ON purchase_order(ftgnavn);
 
-         -- Add potentially missing email_sent_at column to orders table
-         ALTER TABLE orders ADD COLUMN email_sent_at TEXT;
-      `);
+        -- Add supplier emails table
+        CREATE TABLE IF NOT EXISTS supplier_emails (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          supplier_name TEXT NOT NULL UNIQUE,
+          email_address TEXT NOT NULL,
+          updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+        );
+        CREATE INDEX IF NOT EXISTS idx_supplier_emails_name ON supplier_emails(supplier_name);
+      `); // End of initial CREATE TABLE/INDEX statements
+
+      // --- Migrations for purchase_order table ---
+      const poColumns = [
+        { name: "status", type: "TEXT" },
+        { name: "producer_item", type: "TEXT" },
+        { name: "specification", type: "TEXT" },
+        { name: "note", type: "TEXT" },
+        { name: "inventory_balance", type: "REAL" },
+        { name: "order_qty", type: "REAL" },
+        { name: "received_qty", type: "REAL DEFAULT 0" },
+        { name: "purchaser", type: "TEXT" },
+        { name: "from_restliste", type: "INTEGER DEFAULT 0" },
+        { name: "incoming_date", type: "TEXT" },
+        { name: "eta_supplier", type: "TEXT" },
+        { name: "supplier_name", type: "TEXT" },
+        { name: "warehouse", type: "TEXT" },
+        { name: "outstanding_qty", type: "REAL DEFAULT 0" },
+      ];
+
+      for (const col of poColumns) {
+        try {
+          // Each ALTER TABLE is a separate execution
+          this.db.exec(
+            `ALTER TABLE purchase_order ADD COLUMN ${col.name} ${col.type}`
+          );
+          log.info(`Added column '${col.name}' to 'purchase_order' table.`);
+        } catch (e: unknown) {
+          if (
+            e instanceof Error &&
+            e.message.includes(`duplicate column name: ${col.name}`)
+          ) {
+            log.info(
+              `Column '${col.name}' already exists in 'purchase_order' table.`
+            );
+          } else {
+            log.error(
+              `Failed to add column '${col.name}' to 'purchase_order':`,
+              e
+            );
+          }
+        }
+      }
+
+      // --- Migration for orders table (email_sent_at) ---
+      try {
+        this.db.exec(`ALTER TABLE orders ADD COLUMN email_sent_at TEXT`);
+        log.info(
+          "Added column 'email_sent_at' to 'orders' table (if it was missing)."
+        );
+      } catch (e: unknown) {
+        if (
+          e instanceof Error &&
+          e.message.includes("duplicate column name: email_sent_at")
+        ) {
+          log.info("Column 'email_sent_at' already exists in 'orders' table.");
+        } else {
+          log.error("Failed to add 'email_sent_at' to 'orders':", e);
+        }
+      }
       log.info("Database schema initialization checked/updated successfully");
+
+      // Clean up any corrupted supplier data
+      this.cleanupCorruptedSupplierData();
     } catch (error: unknown) {
       // Check if it's an Error object before accessing message
       if (error instanceof Error) {
@@ -330,7 +430,7 @@ export class DatabaseService {
         WHERE supplier = ? AND 
               (orderNumber = ? OR (orderNumber IS NULL AND ? IS NULL))
       `
-      ).get(order.supplier, order.orderNumber, order.orderNumber) as
+      ).get(order.supplier, order.poNumber, order.poNumber) as
         | { id: number }
         | undefined;
 
@@ -376,7 +476,7 @@ export class DatabaseService {
         const info = stmt.run(
           order.reference || null,
           order.supplier,
-          order.orderNumber || null,
+          order.poNumber || null,
           order.orderDate ? new Date(order.orderDate).toISOString() : null,
           order.dueDate ? new Date(order.dueDate).toISOString() : null,
           order.category || null,
@@ -404,7 +504,7 @@ export class DatabaseService {
           id,
           reference,
           supplier,
-          orderNumber,
+          orderNumber AS poNumber,
           orderDate,
           dueDate,
           category,
@@ -424,18 +524,26 @@ export class DatabaseService {
         `[Query #${this.queryCounter}] Fetched ${rows.length} orders for supplier: ${supplier}`
       );
 
-      return rows.map((row) => ({
-        reference: row.reference,
-        supplier: row.supplier,
-        orderNumber: row.orderNumber,
-        orderDate: row.orderDate ? new Date(row.orderDate) : undefined,
-        dueDate: row.dueDate ? new Date(row.dueDate) : undefined,
-        category: row.category,
-        description: row.description,
-        value: row.value,
-        currency: row.currency,
-        confirmed: !!row.confirmed,
-      }));
+      return rows.map(
+        (row) =>
+          ({
+            key: String(row.id || ""),
+            poNumber: row.poNumber,
+            status: "",
+            itemNo: "",
+            supplier: row.supplier,
+            description: row.description || "",
+            orderQty: row.value || 0,
+            receivedQty: 0,
+            reference: row.reference,
+            orderDate: row.orderDate ? new Date(row.orderDate) : undefined,
+            dueDate: row.dueDate ? new Date(row.dueDate) : undefined,
+            category: row.category,
+            value: row.value,
+            currency: row.currency,
+            confirmed: !!row.confirmed,
+          } as ExcelRow)
+      );
     } catch (error) {
       log.error(`Error getting orders for supplier ${supplier}:`, error);
       throw error;
@@ -450,7 +558,7 @@ export class DatabaseService {
           id,
           reference,
           supplier,
-          orderNumber,
+          orderNumber AS poNumber,
           orderDate,
           dueDate,
           category,
@@ -469,18 +577,26 @@ export class DatabaseService {
         `[Query #${this.queryCounter}] Fetched all ${rows.length} orders`
       );
 
-      return rows.map((row) => ({
-        reference: row.reference,
-        supplier: row.supplier,
-        orderNumber: row.orderNumber,
-        orderDate: row.orderDate ? new Date(row.orderDate) : undefined,
-        dueDate: row.dueDate ? new Date(row.dueDate) : undefined,
-        category: row.category,
-        description: row.description,
-        value: row.value,
-        currency: row.currency,
-        confirmed: !!row.confirmed,
-      }));
+      return rows.map(
+        (row) =>
+          ({
+            key: String(row.id || ""),
+            poNumber: row.poNumber,
+            status: "",
+            itemNo: "",
+            supplier: row.supplier,
+            description: row.description || "",
+            orderQty: row.value || 0,
+            receivedQty: 0,
+            reference: row.reference,
+            orderDate: row.orderDate ? new Date(row.orderDate) : undefined,
+            dueDate: row.dueDate ? new Date(row.dueDate) : undefined,
+            category: row.category,
+            value: row.value,
+            currency: row.currency,
+            confirmed: !!row.confirmed,
+          } as ExcelRow)
+      );
     } catch (error) {
       log.error("Error getting all orders:", error);
       throw error;
@@ -499,7 +615,7 @@ export class DatabaseService {
           id,
           reference,
           supplier,
-          orderNumber,
+          orderNumber AS poNumber,
           orderDate,
           dueDate,
           category,
@@ -525,18 +641,26 @@ export class DatabaseService {
         } orders due within ${days} days (from ${today.toISOString()} to ${futureDate.toISOString()})`
       );
 
-      return rows.map((row) => ({
-        reference: row.reference,
-        supplier: row.supplier,
-        orderNumber: row.orderNumber,
-        orderDate: row.orderDate ? new Date(row.orderDate) : undefined,
-        dueDate: row.dueDate ? new Date(row.dueDate) : undefined,
-        category: row.category,
-        description: row.description,
-        value: row.value,
-        currency: row.currency,
-        confirmed: !!row.confirmed,
-      }));
+      return rows.map(
+        (row) =>
+          ({
+            key: String(row.id || ""),
+            poNumber: row.poNumber,
+            status: "",
+            itemNo: "",
+            supplier: row.supplier,
+            description: row.description || "",
+            orderQty: row.value || 0,
+            receivedQty: 0,
+            reference: row.reference,
+            orderDate: row.orderDate ? new Date(row.orderDate) : undefined,
+            dueDate: row.dueDate ? new Date(row.dueDate) : undefined,
+            category: row.category,
+            value: row.value,
+            currency: row.currency,
+            confirmed: !!row.confirmed,
+          } as ExcelRow)
+      );
     } catch (error) {
       log.error(`Error getting orders due within ${days} days:`, error);
       throw error;
@@ -563,55 +687,120 @@ export class DatabaseService {
     }
   }
 
-  public getOutstandingOrders(supplier: string): DbOrder[] {
-    if (!this.db) throw new Error("Database not connected.");
+  public getOutstandingOrders(supplierName: string): DbOrder[] {
+    if (!this.db) {
+      log.warn("getOutstandingOrders called but DB is not connected.");
+      return [];
+    }
+    this.queryCounter += 1;
+    log.info(
+      `[Query #${this.queryCounter}] Fetching outstanding orders (from purchase_order) for supplier: ${supplierName}`
+    );
+
     try {
-      const stmt = this.db!.prepare(`
-        SELECT 
-          id,
-          reference,
-          supplier,
-          orderNumber,
-          orderDate,
-          dueDate,
-          category,
-          description,
-          value,
-          currency,
-          confirmed,
-          createdAt as inserted_at,
-          updatedAt as updated_at
-        FROM orders
-        WHERE supplier = ? AND confirmed = 0
-        ORDER BY dueDate ASC
-      `);
+      const sql = `
+      SELECT
+        (ordreNr || '-' || itemNo) AS key,
+        ordreNr AS poNumber,
+        status,
+        itemNo,
+        incoming_date AS dueDate,      -- Stored as YYYY-MM-DD string, will be converted to Date object
+        eta_supplier AS supplierETA,   -- Stored as YYYY-MM-DD string, will be converted to Date object
+        producer_item AS producerItemNo,
+        COALESCE(supplier_name, ftgnavn) AS supplier,
+        beskrivelse AS description,
+        specification,
+        note,
+        inventory_balance AS inventoryBalance,
+        order_qty AS orderQty,
+        received_qty AS receivedQty,
+        COALESCE(outstanding_qty, (order_qty - COALESCE(received_qty, 0))) AS outstandingQty,
+        purchaser,
+        warehouse
+      FROM purchase_order
+      WHERE COALESCE(supplier_name, ftgnavn) LIKE ? 
+        AND (outstanding_qty > 0 OR (order_qty - COALESCE(received_qty, 0)) > 0)
+        AND eta_supplier IS NOT NULL 
+        AND eta_supplier != ''
+      ORDER BY date(eta_supplier) ASC, ordreNr ASC, itemNo ASC
+    `;
 
-      const rows = stmt.all(supplier) as DbOrder[];
+      // Use LIKE with wildcards for more flexible matching
+      const searchPattern = `%${supplierName.trim()}%`;
+      const stmt = this.db.prepare(sql);
+      const rows = stmt.all(searchPattern) as DbOrder[];
 
-      this.queryCounter++;
-      log.debug(
-        `[Query #${this.queryCounter}] Fetched ${rows.length} outstanding orders for supplier: ${supplier}`
+      // Convert date strings to Date objects
+      rows.forEach((row) => {
+        // Ensure the properties exist and are strings before attempting to convert
+        if (row.dueDate && typeof row.dueDate === "string") {
+          row.dueDate = new Date(row.dueDate);
+        }
+        if (row.supplierETA && typeof row.supplierETA === "string") {
+          row.supplierETA = new Date(row.supplierETA);
+        }
+      });
+
+      log.info(
+        `[Query #${this.queryCounter}] Fetched ${rows.length} outstanding orders for supplier: ${supplierName}`
       );
 
-      return rows.map((row) => ({
-        id: row.id,
-        reference: row.reference,
-        supplier: row.supplier,
-        orderNumber: row.orderNumber,
-        orderDate: row.orderDate ? new Date(row.orderDate) : undefined,
-        dueDate: row.dueDate ? new Date(row.dueDate) : undefined,
-        category: row.category,
-        description: row.description,
-        value: row.value,
-        currency: row.currency,
-        confirmed: !!row.confirmed,
-        inserted_at: row.inserted_at,
-        updated_at: row.updated_at,
-        email_sent_at: null, // Default value since it's not in the table yet
-      }));
+      // Log first few results for debugging
+      if (rows.length > 0 && process.env.NODE_ENV === "development") {
+        log.info(
+          "Sample results:",
+          rows.slice(0, 3).map((r) => ({
+            supplier: r.supplier,
+            poNumber: r.poNumber,
+            itemNo: r.itemNo,
+            outstandingQty: r.outstandingQty,
+          }))
+        );
+      }
+
+      return rows;
     } catch (error) {
-      log.error("Error getting outstanding orders:", error);
+      log.error("Error getting outstanding orders from purchase_order:", error);
       throw error;
+    }
+  }
+
+  public getAllSupplierNames(): string[] {
+    if (!this.db) {
+      log.warn("getAllSupplierNames called but DB is not connected.");
+      return [];
+    }
+
+    try {
+      const sql = `
+        SELECT DISTINCT COALESCE(supplier_name, ftgnavn) AS supplier
+        FROM purchase_order
+        WHERE COALESCE(supplier_name, ftgnavn) IS NOT NULL 
+          AND COALESCE(supplier_name, ftgnavn) != ''
+          AND COALESCE(supplier_name, ftgnavn) != '[object Object]'
+        ORDER BY supplier
+      `;
+      const stmt = this.db.prepare(sql);
+      const rows = stmt.all() as { supplier: string }[];
+      const suppliers = rows
+        .map((row) => row.supplier)
+        .filter(
+          (supplier) =>
+            supplier &&
+            supplier.trim() !== "" &&
+            supplier !== "[object Object]" &&
+            !supplier.includes("[object Object]")
+        );
+
+      log.info(`Found ${suppliers.length} unique suppliers in database`);
+      if (process.env.NODE_ENV === "development") {
+        log.info("Available suppliers:", suppliers.slice(0, 10)); // Log first 10
+      }
+
+      return suppliers;
+    } catch (error) {
+      log.error("Error getting supplier names:", error);
+      return [];
     }
   }
 
@@ -746,6 +935,75 @@ export class DatabaseService {
       }
     } catch (error) {
       log.error("Error closing database:", error);
+    }
+  }
+
+  public getSupplierEmail(supplierName: string): string | null {
+    if (!this.db) {
+      log.warn("getSupplierEmail called but DB is not connected.");
+      return null;
+    }
+
+    try {
+      const stmt = this.db.prepare(`
+        SELECT email_address 
+        FROM supplier_emails 
+        WHERE supplier_name = ? 
+        OR supplier_name LIKE ?
+        ORDER BY 
+          CASE WHEN supplier_name = ? THEN 1 ELSE 2 END
+        LIMIT 1
+      `);
+      const row = stmt.get(supplierName, `%${supplierName}%`, supplierName) as
+        | { email_address: string }
+        | undefined;
+      return row ? row.email_address : null;
+    } catch (error) {
+      log.error("Error getting supplier email:", error);
+      return null;
+    }
+  }
+
+  public cleanupCorruptedSupplierData(): void {
+    if (!this.db) {
+      log.warn("cleanupCorruptedSupplierData called but DB is not connected.");
+      return;
+    }
+
+    try {
+      // Remove entries with [object Object] or other corrupted supplier names
+      const deleteStmt = this.db.prepare(`
+        DELETE FROM purchase_order 
+        WHERE COALESCE(supplier_name, ftgnavn) = '[object Object]'
+           OR COALESCE(supplier_name, ftgnavn) LIKE '%[object Object]%'
+           OR COALESCE(supplier_name, ftgnavn) = 'undefined'
+           OR COALESCE(supplier_name, ftgnavn) = 'null'
+      `);
+
+      const result = deleteStmt.run();
+      if (result.changes > 0) {
+        log.info(
+          `Cleaned up ${result.changes} corrupted supplier entries from database`
+        );
+      }
+
+      // Also clean up supplier_emails table
+      const deleteEmailStmt = this.db.prepare(`
+        DELETE FROM supplier_emails 
+        WHERE supplier_name = '[object Object]'
+           OR supplier_name LIKE '%[object Object]%'
+           OR supplier_name = 'undefined'
+           OR supplier_name = 'null'
+      `);
+
+      const emailResult = deleteEmailStmt.run();
+      if (emailResult.changes > 0) {
+        log.info(
+          `Cleaned up ${emailResult.changes} corrupted supplier email entries`
+        );
+      }
+    } catch (error) {
+      log.error("Error cleaning up corrupted supplier data:", error);
     }
   }
 }

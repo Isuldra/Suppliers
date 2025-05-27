@@ -101,15 +101,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
       Object.keys(workbook.Sheets)
     );
 
-    // Check for required sheets
-    if (!workbook.Sheets["Hovedliste"]) {
-      console.log("Missing Hovedliste sheet");
-      errors.push({
-        type: "missingSheet",
-        message:
-          'Filen mangler arket "Hovedliste". Vennligst velg en korrekt Excel-fil.',
-      });
-    }
+    // Check for required BP sheet only
     if (!workbook.Sheets["BP"]) {
       console.log("Missing BP sheet");
       errors.push({
@@ -128,112 +120,31 @@ const FileUpload: React.FC<FileUploadProps> = ({
     }
 
     try {
-      // Validate Hovedliste sheet
-      const hovedliste = workbook.Sheets["Hovedliste"];
-      console.log("Hovedliste sheet ref:", hovedliste["!ref"]);
+      // Validate BP sheet
+      const bpSheet = workbook.Sheets["BP"];
+      console.log("BP sheet ref:", bpSheet["!ref"]);
 
-      const range = XLSX.utils.decode_range(hovedliste["!ref"] || "A1");
+      const range = XLSX.utils.decode_range(bpSheet["!ref"] || "A1");
       console.log("Decoded range:", range);
 
-      // Try to find headers, looking at different rows since headers
-      // might not be in the first row
-      let headers: string[] = [];
-      let foundHeaders = false;
-
-      // Try first 3 rows to find headers
-      for (let row = 0; row <= 2; row++) {
-        try {
-          const rowData = XLSX.utils.sheet_to_json(hovedliste, {
-            header: 1,
-            range: XLSX.utils.encode_range({
-              s: { r: row, c: 0 },
-              e: { r: row, c: range.e.c },
-            }),
-          })[0] as string[];
-
-          console.log(`Headers from row ${row + 1}:`, rowData);
-
-          if (
-            rowData &&
-            Array.isArray(rowData) &&
-            rowData.length > 0 &&
-            rowData.some((h) => h && typeof h === "string" && h.length > 0)
-          ) {
-            headers = rowData;
-            foundHeaders = true;
-            console.log(`Found headers in row ${row + 1}:`, headers);
-            break;
-          }
-        } catch (err) {
-          console.log(`Error reading headers from row ${row + 1}:`, err);
-        }
-      }
-
-      if (!foundHeaders) {
-        console.warn("No headers found in first 3 rows");
-        // In development, we'll be lenient and continue anyway
-        if (process.env.NODE_ENV !== "development") {
-          errors.push({
-            type: "missingColumn",
-            message: "Finner ikke kolonner i de første rader av arket",
-          });
-          return errors;
-        }
-      }
-
-      // Check for required columns with more flexible matching
-      // Look for columns that might contain these values or similar
-      const requiredFields = [
-        {
-          name: "key",
-          alternatives: ["Key", "ID", "Nøkkel", "A", "ARS", "Nummer", "Nr"],
-        },
-        {
-          name: "supplier",
-          alternatives: [
-            "Supplier",
-            "Leverandør",
-            "F",
-            "Vendor",
-            "Lev",
-            "Navn",
-          ],
-        },
-        {
-          name: "poNumber",
-          alternatives: [
-            "PO",
-            "Purchase Order",
-            "Order",
-            "OrderID",
-            "I",
-            "Ordre",
-            "Ordrenr",
-          ],
-        },
-      ];
-
-      const missingColumns = requiredFields.filter((field) => {
-        // Check if any of the alternatives exist in headers
-        const found = field.alternatives.some((alt) =>
-          headers.some(
-            (header) =>
-              header &&
-              typeof header === "string" &&
-              header.toLowerCase().includes(alt.toLowerCase())
-          )
-        );
-        return !found;
-      });
-
-      missingColumns.forEach((col) => {
-        console.log(`Missing required column: ${col.name}`);
+      // Check if we have at least 6 rows (data starts at row 6)
+      if (range.e.r < 5) {
         errors.push({
           type: "missingColumn",
-          message: `Mangler kolonne ${col.name} i Hovedliste.`,
-          column: col.name,
+          message: "BP-arket har ikke nok rader. Data må starte fra rad 6.",
         });
-      });
+        return errors;
+      }
+
+      // Check if we have the required columns (at least up to column P)
+      if (range.e.c < 15) {
+        // Column P is index 15 (0-based)
+        errors.push({
+          type: "missingColumn",
+          message:
+            "BP-arket mangler nødvendige kolonner. Må ha minst kolonner A-P.",
+        });
+      }
     } catch (err) {
       console.error("Error during sheet validation:", err);
       errors.push({
@@ -244,6 +155,14 @@ const FileUpload: React.FC<FileUploadProps> = ({
 
     return errors;
   };
+
+  /**
+   * Drop header-like first row if it matches header keywords
+   */
+  // function skipHeaderRows(rows: ExcelRow[]): ExcelRow[] {
+  //   // No longer needed since we read from fixed row positions
+  //   return rows;
+  // }
 
   const parseExcelData = async (file: File): Promise<ExcelData> => {
     return new Promise((resolve, reject) => {
@@ -371,126 +290,151 @@ const FileUpload: React.FC<FileUploadProps> = ({
           }
 
           setProcessingStage("Konverterer data...");
-          console.log("Converting sheets to JSON...");
-          // Use more resilient parsing with defaults for missing data
-          const parseSheet = (sheetName: string): ExcelRow[] => {
+          console.log("Converting BP sheet to JSON...");
+
+          // Parse BP sheet with new structure
+          const parseBPSheet = (): ExcelRow[] => {
             try {
-              const sheet = workbook.Sheets[sheetName];
+              const sheet = workbook.Sheets["BP"];
               if (!sheet) {
-                console.warn(`Sheet ${sheetName} not found during parsing`); // Changed error to warn
+                console.warn("BP sheet not found during parsing");
                 return [];
               }
 
-              // Find the header row dynamically for robustness
-              let headerRowIndex = 0;
-              let headers: string[] = [];
-              for (let r = 0; r < 10; r++) {
-                // Scan first 10 rows for headers
-                const row = XLSX.utils.sheet_to_json(sheet, {
-                  header: 1,
-                  range: r,
-                })[0] as string[];
-                if (
-                  row &&
-                  row.length > 0 &&
-                  row.some(
-                    (h) =>
-                      h &&
-                      typeof h === "string" &&
-                      (h.toLowerCase().includes("nøkkel") ||
-                        h.toLowerCase().includes("ref") ||
-                        h.toLowerCase().includes("est receipt date"))
-                  )
-                ) {
-                  headers = row.map((h) => (h ? String(h).trim() : "")); // Trim headers
-                  headerRowIndex = r;
-                  console.log(
-                    `Found header row ${r + 1} for sheet ${sheetName}:`,
-                    headers
-                  );
-                  break;
-                }
-              }
-
-              if (headers.length === 0) {
-                console.error(
-                  `Could not find header row in sheet ${sheetName}. Falling back to default parsing.`
-                );
-                // Fallback or throw error if needed
-              }
-
-              const rawData = XLSX.utils.sheet_to_json(sheet, {
-                header: headers.length > 0 ? headers : "A", // Use found headers or default 'A'
-                range: headerRowIndex > 0 ? headerRowIndex + 1 : 0, // Start data from row after header
-                defval: "",
-                raw: false, // Let XLSX try type conversion
-              }) as Record<string, unknown>[];
+              // Data starts from row 6 (index 5), so we skip the first 5 rows
+              const range = XLSX.utils.decode_range(sheet["!ref"] || "A1");
+              const startRow = 5; // Row 6 in Excel (0-based index)
 
               console.log(
-                `${sheetName} raw data (first 2 rows):`,
-                rawData.slice(0, 2)
+                `Parsing BP sheet from row ${startRow + 1} to ${range.e.r + 1}`
               );
 
-              // --- Mapping logic removed from here, will be done after all sheets are read ---
-              return rawData as ExcelRow[]; // Return raw data for now
+              // Read data starting from row 6
+              const rawData = XLSX.utils.sheet_to_json(sheet, {
+                header: 1, // Use array format to access by column index
+                range: XLSX.utils.encode_range({
+                  s: { r: startRow, c: 0 }, // Start from row 6, column A
+                  e: { r: range.e.r, c: range.e.c }, // End at last row and column
+                }),
+                defval: "", // Default value for empty cells
+                raw: false, // Let XLSX try type conversion
+              }) as unknown[][];
+
+              console.log(`BP raw data (first 3 rows):`, rawData.slice(0, 3));
+
+              // Map each row to ExcelRow format using column indices
+              const processedData: ExcelRow[] = rawData.map(
+                (row: unknown[], index) => {
+                  // Column mapping based on user specification:
+                  // A (0) = ignore, B (1) = ignore
+                  const poNumber = String(row[2] || "").trim(); // Column C = PO
+                  const internalSupplierNumber = String(row[3] || "").trim(); // Column D = Internal supplier number
+                  const warehouse = String(row[4] || "").trim(); // Column E = Warehouse
+                  // F (5) = ignore, G (6) = ignore
+                  const oneMedArticleNo = String(row[7] || "").trim(); // Column H = OneMed article number
+                  const supplierArticleNo = String(row[8] || "").trim(); // Column I = Supplier article number
+                  const etaDate1 = row[9]; // Column J = Expected ETA 1
+                  const etaDate2 = row[10]; // Column K = Expected ETA 2
+                  const erpComment = String(row[11] || "").trim(); // Column L = ERP comment
+                  const orderedQty = Number(row[12] || 0); // Column M = Ordered quantity
+                  const deliveredQty = Number(row[13] || 0); // Column N = Delivered quantity
+                  const outstandingQty = Number(row[14] || 0); // Column O = Outstanding quantity
+                  const supplierName = String(row[15] || "").trim(); // Column P = Supplier name
+                  // Q (16) = ignore
+
+                  // Parse ETA dates (prefer J over K, both should be past dates)
+                  let dueDate: Date | undefined = undefined;
+
+                  // Try to parse ETA date from column J first
+                  if (etaDate1) {
+                    dueDate = parseExcelDate(etaDate1);
+                  }
+
+                  // If no valid date from J, try column K
+                  if (!dueDate && etaDate2) {
+                    dueDate = parseExcelDate(etaDate2);
+                  }
+
+                  // Create a unique key using PO number and OneMed article number
+                  const keyCandidate = `${poNumber}-${oneMedArticleNo}`;
+                  const key =
+                    keyCandidate.trim() !== "-" && keyCandidate.trim() !== ""
+                      ? keyCandidate
+                      : `bp-row-${index}`;
+
+                  const processedRow: ExcelRow = {
+                    key: key,
+                    dueDate: dueDate,
+                    supplier: supplierName,
+                    orderQty: isNaN(orderedQty) ? 0 : orderedQty,
+                    receivedQty: isNaN(deliveredQty) ? 0 : deliveredQty,
+                    outstandingQty: isNaN(outstandingQty) ? 0 : outstandingQty,
+                    poNumber: poNumber,
+                    itemNo: oneMedArticleNo,
+                    description: supplierArticleNo, // Using supplier article number as description
+                    specification: erpComment, // Using ERP comment as comment
+                    // Additional fields for the new structure
+                    internalSupplierNumber: internalSupplierNumber,
+                    warehouse: warehouse,
+                    supplierArticleNo: supplierArticleNo,
+                  };
+
+                  return processedRow;
+                }
+              );
+
+              // Filter out rows with no meaningful data (empty PO and supplier)
+              const filteredData = processedData.filter(
+                (row) =>
+                  row.poNumber &&
+                  row.supplier &&
+                  row.poNumber.trim() !== "" &&
+                  row.supplier.trim() !== ""
+              );
+
+              console.log(
+                `Processed ${filteredData.length} valid rows from BP sheet`
+              );
+              return filteredData;
             } catch (err) {
-              console.error(`Error parsing sheet ${sheetName}:`, err);
-              toast.error(`Feil ved lesing av ark: ${sheetName}`);
+              console.error("Error parsing BP sheet:", err);
+              toast.error("Feil ved lesing av BP-ark");
               return [];
             }
           };
 
-          // Parse required sheets into raw JSON arrays
-          const hovedRaw = parseSheet("Hovedliste");
-          const bpRaw = parseSheet("BP"); // Keep parsing BP if needed elsewhere
-          const restRaw = parseSheet("Restliste til Leverandør");
-
-          // --- Build Date Map from Restliste ---
-          const estMap = new Map<string, Date>();
-          // Define expected header names (case-insensitive matching below)
-          const restNokkelHeaderKey = "ref"; // Lowercase for comparison
-          const restDateHeaderKey = "est receipt date"; // Lowercase
-          console.log(
-            `Building Restliste map using assumed keys: Key='${restNokkelHeaderKey}', Date='${restDateHeaderKey}'`
-          );
-
-          restRaw.forEach((r: Record<string, unknown>) => {
-            // Find the actual key based on expected header, case-insensitive
-            const keyProp = Object.keys(r).find(
-              (k) => k.trim().toLowerCase() === restNokkelHeaderKey
-            );
-            const dateProp = Object.keys(r).find(
-              (k) => k.trim().toLowerCase() === restDateHeaderKey
-            );
-
-            if (!keyProp || !dateProp) {
-              return;
-            }
-
-            const key = keyProp ? String(r[keyProp] || "").trim() : ""; // Get key value
-            const rawDate = dateProp ? r[dateProp] : undefined; // Get date value
-            if (!key || !rawDate) return;
+          // Helper function to parse Excel dates
+          const parseExcelDate = (dateValue: unknown): Date | undefined => {
+            if (!dateValue) return undefined;
 
             let parsedDate: Date | null = null;
-            if (rawDate instanceof Date && !isNaN(rawDate.getTime())) {
-              parsedDate = rawDate;
-            } else if (typeof rawDate === "string") {
+
+            if (dateValue instanceof Date && !isNaN(dateValue.getTime())) {
+              parsedDate = dateValue;
+            } else if (typeof dateValue === "string") {
               try {
-                parsedDate = parseDateFns(
-                  rawDate.trim(),
-                  "M/d/yyyy",
-                  new Date()
-                );
+                const dateStr = dateValue.trim();
+                // Try different date formats
+                parsedDate = parseDateFns(dateStr, "M/d/yyyy", new Date());
                 if (isNaN(parsedDate.getTime())) {
-                  parsedDate = new Date(rawDate.trim());
+                  parsedDate = parseDateFns(dateStr, "d/M/yyyy", new Date());
+                }
+                if (isNaN(parsedDate.getTime())) {
+                  parsedDate = parseDateFns(dateStr, "M/d/yy", new Date());
+                }
+                if (isNaN(parsedDate.getTime())) {
+                  parsedDate = parseDateFns(dateStr, "d/M/yy", new Date());
+                }
+                if (isNaN(parsedDate.getTime())) {
+                  parsedDate = new Date(dateStr);
                 }
               } catch {
                 /* Ignore parsing errors */
               }
-            } else if (typeof rawDate === "number") {
-              // Handle Excel date serial numbers (requires xlsx library function)
+            } else if (typeof dateValue === "number") {
+              // Handle Excel date serial numbers
               try {
-                const d = XLSX.SSF.parse_date_code(rawDate);
+                const d = XLSX.SSF.parse_date_code(dateValue);
                 if (d && d.y != null) {
                   parsedDate = new Date(d.y, d.m - 1, d.d);
                 }
@@ -499,181 +443,40 @@ const FileUpload: React.FC<FileUploadProps> = ({
               }
             }
 
-            if (key && parsedDate && !isNaN(parsedDate.getTime())) {
+            if (parsedDate && !isNaN(parsedDate.getTime())) {
               parsedDate.setUTCHours(0, 0, 0, 0); // Normalize
-              estMap.set(key, parsedDate); // Use trimmed key
+              return parsedDate;
             }
-          });
-          console.log(`Built Restliste date map with ${estMap.size} entries.`);
 
-          // --- Process Hovedliste, Merging Dates ---
-          // Define expected header names for Hovedliste (lowercase for comparison)
-          const hovedNokkelHeaderKey = "nøkkel";
-          const hovedDateHeaderKey = "dato varen skulle kommet inn";
-          const hovedSupplierHeaderKey = "leverandør";
-          const hovedPoHeaderKey = "pono."; // Matching the log output
-          const hovedItemNoHeaderKey = "item no."; // Matching the log output
-          const hovedDescHeaderKey = "item description";
-          const hovedSpecHeaderKey = "specification";
-          const hovedOrderQtyHeaderKey = "ordqtypo";
+            return undefined;
+          };
 
-          console.log(`Processing Hovedliste using assumed keys...`);
-
-          const processedHovedliste: ExcelRow[] = hovedRaw.map(
-            (r: Record<string, unknown>, index) => {
-              // Find actual keys based on expected headers, case-insensitive
-              const keyProp = Object.keys(r).find(
-                (k) => k.trim().toLowerCase() === hovedNokkelHeaderKey
-              );
-              const fallbackDateProp = Object.keys(r).find(
-                (k) => k.trim().toLowerCase() === hovedDateHeaderKey
-              );
-              const supplierProp = Object.keys(r).find(
-                (k) => k.trim().toLowerCase() === hovedSupplierHeaderKey
-              );
-              const poProp = Object.keys(r).find(
-                (k) => k.trim().toLowerCase() === hovedPoHeaderKey
-              );
-              const itemNoProp = Object.keys(r).find(
-                (k) => k.trim().toLowerCase() === hovedItemNoHeaderKey
-              );
-              const descProp = Object.keys(r).find(
-                (k) => k.trim().toLowerCase() === hovedDescHeaderKey
-              );
-              const specProp = Object.keys(r).find(
-                (k) => k.trim().toLowerCase() === hovedSpecHeaderKey
-              );
-              const orderQtyProp = Object.keys(r).find(
-                (k) => k.trim().toLowerCase() === hovedOrderQtyHeaderKey
-              );
-
-              // Get values using found property names, provide defaults
-              const key = keyProp ? String(r[keyProp] || "").trim() : "";
-              const fallbackRawDate = fallbackDateProp
-                ? r[fallbackDateProp]
-                : undefined;
-              const supplier = supplierProp
-                ? String(r[supplierProp] || "")
-                : "";
-              const poNumber = poProp ? String(r[poProp] || "") : "";
-              const itemNo = itemNoProp ? String(r[itemNoProp] || "") : "";
-              const description = descProp ? String(r[descProp] || "") : "";
-              const specification = specProp ? String(r[specProp] || "") : "";
-              const orderQtyValue = orderQtyProp
-                ? Number(r[orderQtyProp] || 0)
-                : 0;
-
-              let finalDate: Date | undefined = undefined;
-              const dateFromMap = key ? estMap.get(key) : undefined; // Use trimmed key for lookup
-
-              if (dateFromMap) {
-                finalDate = dateFromMap;
-              } else if (fallbackRawDate) {
-                let parsedFallback: Date | null = null;
-                if (
-                  fallbackRawDate instanceof Date &&
-                  !isNaN(fallbackRawDate.getTime())
-                ) {
-                  parsedFallback = fallbackRawDate;
-                } else if (typeof fallbackRawDate === "string") {
-                  try {
-                    parsedFallback = parseDateFns(
-                      fallbackRawDate.trim(),
-                      "M/d/yyyy",
-                      new Date()
-                    );
-                    if (isNaN(parsedFallback.getTime())) {
-                      parsedFallback = new Date(fallbackRawDate.trim());
-                    }
-                  } catch {
-                    /* Ignore parsing errors */
-                  }
-                } else if (typeof fallbackRawDate === "number") {
-                  // Handle Excel date serial numbers (requires xlsx library function)
-                  try {
-                    const d = XLSX.SSF.parse_date_code(fallbackRawDate);
-                    if (d && d.y != null) {
-                      parsedFallback = new Date(d.y, d.m - 1, d.d);
-                    }
-                  } catch {
-                    /* ignore */
-                  }
-                }
-                if (parsedFallback && !isNaN(parsedFallback.getTime())) {
-                  parsedFallback.setUTCHours(0, 0, 0, 0); // Normalize
-                  finalDate = parsedFallback;
-                }
-              }
-
-              const processedRow: ExcelRow = {
-                key: key || `row-${index}`, // Ensure key is always a string
-                dueDate: finalDate, // Assign the final merged and parsed date
-                supplier: supplier,
-                orderQty: orderQtyValue,
-                receivedQty: 0, // Assuming 0
-                poNumber: poNumber,
-                itemNo: itemNo,
-                description: description,
-                specification: specification,
-                outstandingQty: orderQtyValue, // Default outstanding
-              };
-
-              // Ensure orderQty is a non-NaN number
-              processedRow.orderQty = isNaN(processedRow.orderQty)
-                ? 0
-                : processedRow.orderQty;
-
-              // Ensure outstandingQty is a number (treat undefined as 0) and not NaN
-              const outQty = processedRow.outstandingQty ?? 0;
-              processedRow.outstandingQty = isNaN(outQty) ? 0 : outQty;
-
-              return processedRow;
-            }
-          );
-
-          // Sanity check log
-          console.table(
-            processedHovedliste.slice(0, 10).map((r) => ({
-              key: r.key,
-              supplier: r.supplier,
-              dueDate: r.dueDate?.toISOString().split("T")[0] ?? "NULL",
-            }))
-          );
-          console.log(
-            "Logged first 10 processed Hovedliste rows (check console). dueDate should have values."
-          );
-
-          // Try to parse the supplier checklist sheet if available
-          let sjekklisteRaw: ExcelRow[] = [];
-          try {
-            // Sheet name might vary slightly, use find
-            const sjekklisteSheetName = workbook.SheetNames.find((name) =>
-              name.toLowerCase().startsWith("sjekkliste leverandører")
-            );
-            if (sjekklisteSheetName && workbook.Sheets[sjekklisteSheetName]) {
-              console.log(
-                `Found sjekkliste sheet: ${sjekklisteSheetName}, parsing...`
-              );
-              sjekklisteRaw = parseSheet(sjekklisteSheetName);
-              console.log("Sjekkliste parsed, rows:", sjekklisteRaw.length);
-            } else {
-              console.warn("Sjekkliste Leverandører sheet not found.");
-            }
-          } catch (err) {
-            console.warn("Error parsing Sjekkliste Leverandører sheet:", err);
-          }
+          // Parse the BP sheet
+          const bpData = parseBPSheet();
 
           console.log("Parsed data counts:", {
-            hovedlisteCount: processedHovedliste.length,
-            bpCount: bpRaw.length, // Using raw BP data count
-            sjekklisteCount: sjekklisteRaw.length, // Using raw Sjekkliste data count
+            bpCount: bpData.length,
           });
 
-          // Resolve with the processed Hovedliste data and raw BP/Sjekkliste data
+          // Log sample data for debugging
+          console.table(
+            bpData.slice(0, 5).map((r) => ({
+              key: r.key,
+              supplier: r.supplier,
+              poNumber: r.poNumber,
+              dueDate: r.dueDate?.toISOString().split("T")[0] ?? "NULL",
+              orderQty: r.orderQty,
+              outstandingQty: r.outstandingQty,
+            }))
+          );
+
+          // Return the processed data
           resolve({
-            hovedliste: processedHovedliste,
-            bp: bpRaw,
-            sjekkliste: sjekklisteRaw,
+            hovedliste: [], // No longer using hovedliste
+            bp: bpData, // All data comes from BP sheet now
+            sjekkliste: [], // No longer using sjekkliste
+            supplier: "", // Will be determined from the data
+            weekday: "", // Will be determined from the data
           });
         } catch (error) {
           console.error("Error processing sheets:", error);
@@ -686,159 +489,6 @@ const FileUpload: React.FC<FileUploadProps> = ({
 
       reader.readAsArrayBuffer(file);
     });
-  };
-
-  const generateMockData = (): ExcelData => {
-    // Generate some mock data for testing - use real-looking supplier names
-    const suppliers = [
-      "Abena Norge AS",
-      "VERNACARE LTD",
-      "ICU Medical BV",
-      "Smith & Nephew AS",
-      "Mediq Norge AS",
-      "ConvaTec Norway AS",
-    ];
-
-    const mockHovedliste: ExcelRow[] = Array.from({ length: 30 }, (_, i) => {
-      const supplierIndex = i % suppliers.length;
-      return {
-        key: `H${i + 1000}`,
-        date: new Date(),
-        supplier: suppliers[supplierIndex],
-        Leverandør: suppliers[supplierIndex], // Add Norwegian field name
-        __EMPTY_8: suppliers[supplierIndex], // Add Excel-specific field
-        orderQty: 100 + i * 10,
-        receivedQty: i * 5,
-        poNumber: `PO-${2023 + i}`,
-        itemNo: `ITEM-${1000 + i}`,
-        description: `Test product ${i}`,
-      };
-    });
-
-    const mockBP: ExcelRow[] = Array.from({ length: 15 }, (_, i) => {
-      const supplierIndex = i % suppliers.length;
-      return {
-        key: `BP${i + 2000}`,
-        date: new Date(),
-        supplier: suppliers[supplierIndex],
-        Leverandør: suppliers[supplierIndex],
-        __EMPTY_8: suppliers[supplierIndex],
-        orderQty: 50 + i * 5,
-        receivedQty: i * 2,
-        poNumber: `PO-BP-${1000 + i}`,
-        itemNo: `ITEM-BP-${2000 + i}`,
-        description: `BP test product ${i}`,
-      };
-    });
-
-    // Create mock sjekkliste that resembles the real data
-    const mockSjekkliste: ExcelRow[] = [
-      {
-        key: "Mandag",
-        Leverandør: "Mandag",
-        __EMPTY_1: "Uke 46",
-        __EMPTY_2: "Uke 47",
-        date: new Date(),
-        supplier: "N/A", // Add required fields
-        orderQty: 0,
-        receivedQty: 0,
-        poNumber: "",
-      },
-      {
-        key: "supplier1",
-        Leverandør: "Abena Norge AS",
-        __EMPTY_1: "Purret",
-        __EMPTY_2: "Avvent",
-        date: new Date(),
-        supplier: "Abena Norge AS",
-        orderQty: 0,
-        receivedQty: 0,
-        poNumber: "",
-      },
-      {
-        key: "supplier2",
-        Leverandør: "VERNACARE LTD",
-        __EMPTY_1: "Ingen Backorders",
-        __EMPTY_2: "Purret",
-        date: new Date(),
-        supplier: "VERNACARE LTD",
-        orderQty: 0,
-        receivedQty: 0,
-        poNumber: "",
-      },
-      {
-        key: "Tirsdag",
-        Leverandør: "Tirsdag",
-        __EMPTY_1: "Uke 46",
-        __EMPTY_2: "Uke 47",
-        date: new Date(),
-        supplier: "N/A",
-        orderQty: 0,
-        receivedQty: 0,
-        poNumber: "",
-      },
-      {
-        key: "supplier3",
-        Leverandør: "ICU Medical BV",
-        __EMPTY_1: "Purret",
-        __EMPTY_2: "Avvent",
-        date: new Date(),
-        supplier: "ICU Medical BV",
-        orderQty: 0,
-        receivedQty: 0,
-        poNumber: "",
-      },
-      {
-        key: "supplier4",
-        Leverandør: "Smith & Nephew AS",
-        __EMPTY_1: "Purret",
-        __EMPTY_2: "Purret",
-        date: new Date(),
-        supplier: "Smith & Nephew AS",
-        orderQty: 0,
-        receivedQty: 0,
-        poNumber: "",
-      },
-      {
-        key: "Onsdag",
-        Leverandør: "Onsdag",
-        __EMPTY_1: "Uke 46",
-        __EMPTY_2: "Uke 47",
-        date: new Date(),
-        supplier: "N/A",
-        orderQty: 0,
-        receivedQty: 0,
-        poNumber: "",
-      },
-      {
-        key: "supplier5",
-        Leverandør: "Mediq Norge AS",
-        __EMPTY_1: "Ingen Backorders",
-        __EMPTY_2: "Ingen Backorders",
-        date: new Date(),
-        supplier: "Mediq Norge AS",
-        orderQty: 0,
-        receivedQty: 0,
-        poNumber: "",
-      },
-      {
-        key: "supplier6",
-        Leverandør: "ConvaTec Norway AS",
-        __EMPTY_1: "Ingen Backorders",
-        __EMPTY_2: "Purret",
-        date: new Date(),
-        supplier: "ConvaTec Norway AS",
-        orderQty: 0,
-        receivedQty: 0,
-        poNumber: "",
-      },
-    ];
-
-    return {
-      hovedliste: mockHovedliste,
-      bp: mockBP,
-      sjekkliste: mockSjekkliste,
-    };
   };
 
   const onDrop = useCallback(
@@ -860,9 +510,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
         console.log("Starting Excel parsing process...");
         const parsedData = await parseExcelData(file);
         console.log("Excel data parsed successfully", {
-          hovedlisteRows: parsedData.hovedliste.length,
           bpRows: parsedData.bp.length,
-          sjekklisteRows: parsedData.sjekkliste?.length || 0,
         });
 
         setProcessingStage("Validerer data mot database...");
@@ -879,7 +527,6 @@ const FileUpload: React.FC<FileUploadProps> = ({
           const typedResult = validationResult as {
             success: boolean;
             data?: {
-              hovedlisteCount: number;
               bpCount: number;
             };
             error?: string;
@@ -899,7 +546,6 @@ const FileUpload: React.FC<FileUploadProps> = ({
           if (typedResult.data) {
             // Create a new object with the validation data
             parsedData.validation = {
-              hovedlisteCount: typedResult.data.hovedlisteCount,
               bpCount: typedResult.data.bpCount,
             };
           }
@@ -910,7 +556,6 @@ const FileUpload: React.FC<FileUploadProps> = ({
             fileBuffer = await file.arrayBuffer();
             console.log("File read into ArrayBuffer for IPC.");
           } catch {
-            // Prefix unused error
             console.error("Error reading file into buffer:");
             toast.error("Kunne ikke lese filinnhold.");
             setIsLoading(false);
@@ -941,9 +586,35 @@ const FileUpload: React.FC<FileUploadProps> = ({
               console.log("Database import/save successful.");
               // We might not need a specific count here anymore if the importer handles it
               toast.success(`Import vellykket og data lagret i databasen.`);
+
+              // Debug: Log all available suppliers
+              try {
+                const suppliersResult =
+                  await window.electron.getAllSupplierNames();
+                if (suppliersResult.success && suppliersResult.data) {
+                  console.log(
+                    "Available suppliers in database:",
+                    suppliersResult.data
+                  );
+                  console.log(
+                    "Total suppliers found:",
+                    suppliersResult.data.length
+                  );
+
+                  // Check if Abena is in the list
+                  const abenaSuppliers = suppliersResult.data.filter((s) =>
+                    s.toLowerCase().includes("abena")
+                  );
+                  console.log("Abena-related suppliers:", abenaSuppliers);
+                }
+              } catch (debugError) {
+                console.error(
+                  "Error getting supplier names for debug:",
+                  debugError
+                );
+              }
             }
           } catch {
-            // Prefix unused error
             console.error("Database error:");
             // Continue even if database save fails
             toast.error("Data validated but not saved to local database");
@@ -1004,14 +675,6 @@ const FileUpload: React.FC<FileUploadProps> = ({
     maxFiles: 1,
     disabled: isLoading || isValidating,
   });
-
-  const loadMockData = () => {
-    if (process.env.NODE_ENV === "development") {
-      const mockData = generateMockData();
-      onDataParsed(mockData);
-      toast.success("Testdata ble lastet");
-    }
-  };
 
   return (
     <div className="p-6">
@@ -1165,34 +828,25 @@ const FileUpload: React.FC<FileUploadProps> = ({
                   : "Dra og slipp Excel-filen her, eller klikk for å velge fil"}
               </p>
               <p className="text-sm text-gray-500 mt-1">
-                Filen må inneholde arkene &quot;Hovedliste&quot; og
-                &quot;BP&quot;
+                Filen må inneholde arket &quot;BP&quot; med data fra rad 6
               </p>
             </div>
           </div>
         </div>
       )}
 
-      {process.env.NODE_ENV === "development" && (
-        <div className="mt-4 text-center">
-          <button
-            onClick={loadMockData}
-            className="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300"
-          >
-            Bruk testdata (kun i utviklingsmodus)
-          </button>
-        </div>
-      )}
-
       <div className="mt-4 p-4 border border-neutral-light rounded-sm bg-primary-light bg-opacity-10">
         <h4 className="font-medium text-primary mb-2">Hva må jeg gjøre?</h4>
         <p className="text-sm text-neutral">
-          Last ned den nyeste versjonen av &quot;Hovedliste&quot; fra Qlik
-          Sense.
+          Last ned den nyeste versjonen av &quot;BP&quot;-arket fra systemet.
         </p>
         <p className="text-sm text-neutral mt-1">
-          Pass på at du eksporterer &quot;Hovedliste&quot;-arket som en
-          .xlsx-fil.
+          Pass på at du eksporterer &quot;BP&quot;-arket som en .xlsx-fil med
+          data fra rad 6.
+        </p>
+        <p className="text-sm text-neutral mt-1">
+          Arket må inneholde kolonnene C-P med PO-nummer, leverandørinfo,
+          ETA-datoer og mengder.
         </p>
         <p className="text-sm text-neutral mt-1">
           Dra og slipp filen her, eller klikk for å velge den.

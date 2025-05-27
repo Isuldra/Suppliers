@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { EmailData, EmailService } from "../services/emailService";
 
 interface EmailPreviewModalProps {
@@ -17,7 +17,26 @@ const EmailPreviewModal: React.FC<EmailPreviewModalProps> = ({
   onChangeLanguage,
 }) => {
   const emailService = new EmailService();
-  const recipientEmail = emailService.getSupplierEmail(emailData.supplier);
+  const [recipientEmail, setRecipientEmail] = useState<string | null>(null);
+  const [isLoadingEmail, setIsLoadingEmail] = useState(true);
+
+  // Load supplier email when component mounts or supplier changes
+  useEffect(() => {
+    const loadSupplierEmail = async () => {
+      setIsLoadingEmail(true);
+      try {
+        const email = await emailService.getSupplierEmail(emailData.supplier);
+        setRecipientEmail(email);
+      } catch (error) {
+        console.error("Error loading supplier email:", error);
+        setRecipientEmail(null);
+      } finally {
+        setIsLoadingEmail(false);
+      }
+    };
+
+    loadSupplierEmail();
+  }, [emailData.supplier]);
 
   return (
     <div className="fixed inset-0 bg-neutral bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -53,12 +72,17 @@ const EmailPreviewModal: React.FC<EmailPreviewModalProps> = ({
         <div className="p-6 border-b">
           <div className="mb-2">
             <span className="font-medium">Til:</span> {emailData.supplier}
-            {recipientEmail && (
+            {isLoadingEmail && (
+              <span className="ml-2 text-neutral-secondary">
+                (Laster e-postadresse...)
+              </span>
+            )}
+            {!isLoadingEmail && recipientEmail && (
               <span className="ml-2 text-neutral-secondary">
                 ({recipientEmail})
               </span>
             )}
-            {!recipientEmail && (
+            {!isLoadingEmail && !recipientEmail && (
               <span className="ml-2 text-accent">
                 (Ingen e-postadresse funnet)
               </span>
@@ -85,14 +109,14 @@ const EmailPreviewModal: React.FC<EmailPreviewModalProps> = ({
           </button>
           <button
             className={`btn ${
-              recipientEmail
+              !isLoadingEmail && recipientEmail
                 ? "btn-primary"
                 : "bg-neutral-secondary text-neutral-light cursor-not-allowed"
             }`}
             onClick={onSend}
-            disabled={!recipientEmail}
+            disabled={isLoadingEmail || !recipientEmail}
           >
-            Send e-post
+            {isLoadingEmail ? "Laster..." : "Send e-post"}
           </button>
         </div>
       </div>

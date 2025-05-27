@@ -8,9 +8,10 @@ import {
   SortingState,
   useReactTable,
   ColumnDef,
+  getFilteredRowModel,
 } from "@tanstack/react-table";
 import { ExcelData, ExcelRow } from "../types/ExcelData";
-import knownSuppliersData from "../data/suppliers.json";
+// import knownSuppliersData from "../data/suppliers.json"; // Unused for now
 import { DateFilterSettings } from "./DateFilter";
 
 interface DataReviewProps {
@@ -38,94 +39,80 @@ const DataReview: React.FC<DataReviewProps> = ({
   ]);
 
   // Create a set of known suppliers for faster lookup
-  const knownSuppliers = useMemo(
-    () => new Set(knownSuppliersData.knownSuppliers),
-    []
-  );
+  // const knownSuppliers = useMemo(
+  //   () => new Set(knownSuppliersData.knownSuppliers),
+  //   []
+  // );
 
-  // State for pagination
-  const [pageIndex, setPageIndex] = useState(0);
-  const [pageSize, setPageSize] = useState(10);
+  // State for pagination (currently unused but may be needed for future pagination)
+  // const [pageIndex, setPageIndex] = useState(0);
+  // const [pageSize, setPageSize] = useState(10);
 
   // State for filtering
-  const [_dateFilterSettings, _setDateFilterSettings] =
+  const [_dateFilterSettings /* _setDateFilterSettings */] =
     useState<DateFilterSettings | null>(null);
-  const [filteredTestData, setFilteredTestData] = useState<ExcelRow[]>([]);
 
   // Helper to check if a string looks like an article number
-  const isArticleNumber = useMemo(
-    () =>
-      (str: string): boolean => {
-        // Article numbers often contain dashes and digits
-        return (
-          /^\d{3}-[A-Z0-9]+$/.test(str) || // Format like 011-MC100
-          str.startsWith("011-") || // Format specifically for ICU Medical
-          /^\d{10,}$/.test(str)
-        );
-      },
-    []
-  );
+  // const isArticleNumber = useMemo(
+  //   () =>
+  //     (str: string): boolean => {
+  //       // Article numbers often contain dashes and digits
+  //       return (
+  //         /^\d{3}-[A-Z0-9]+$/.test(str) || // Format like 011-MC100
+  //         str.startsWith("011-") || // Format specifically for ICU Medical
+  //         /^\d{10,}$/.test(str)
+  //       );
+  //     },
+  //   []
+  // );
 
   // Date filtering function
-  const applyDateFilter = (data: ExcelRow[]) => {
-    // If no filters are active (selectAll is true), return all data
-    if (
-      _dateFilterSettings?.selectAll ||
-      _dateFilterSettings?.selectedValues.length === 0
-    ) {
-      return data;
-    }
+  // const applyDateFilter = (data: ExcelRow[]) => {
+  //   // If no filters are active (selectAll is true), return all data
+  //   if (
+  //     _dateFilterSettings?.selectAll ||
+  //     _dateFilterSettings?.selectedValues.length === 0
+  //   ) {
+  //     return data;
+  //   }
 
-    return data.filter((row) => {
-      const date = row.date;
-      if (!(date instanceof Date) || isNaN(date.getTime())) {
-        return false; // Skip rows without valid date
-      }
+  //   return data.filter((row) => {
+  //     const date = row.date;
+  //     if (!(date instanceof Date) || isNaN(date.getTime())) {
+  //       return false; // Skip rows without valid date
+  //     }
 
-      const year = date.getFullYear().toString();
-      const month = date.toLocaleString("no-NO", { month: "long" });
+  //     const year = date.getFullYear().toString();
+  //     const month = date.toLocaleString("no-NO", { month: "long" });
 
-      // Check if the year is selected
-      if (_dateFilterSettings?.selectedValues.includes(year)) {
-        return true;
-      }
+  //     // Check if the year is selected
+  //     if (_dateFilterSettings?.selectedValues.includes(year)) {
+  //       return true;
+  //     }
 
-      // Check if the month is selected
-      if (_dateFilterSettings?.selectedValues.includes(month)) {
-        return true;
-      }
+  //     // Check if the month is selected
+  //     if (_dateFilterSettings?.selectedValues.includes(month)) {
+  //       return true;
+  //     }
 
-      return false;
-    });
-  };
-
-  // Apply sorting based on dateFilterSettings.sortOrder
-  const applySortToData = (data: ExcelRow[]) => {
-    if (!_dateFilterSettings?.sortOrder) return data;
-
-    return [...data].sort((a, b) => {
-      const dateA = a.date instanceof Date ? a.date.getTime() : 0;
-      const dateB = b.date instanceof Date ? b.date.getTime() : 0;
-
-      if (_dateFilterSettings?.sortOrder === "asc") {
-        return dateA - dateB; // Oldest to newest
-      } else {
-        return dateB - dateA; // Newest to oldest
-      }
-    });
-  };
-
-  // const handleApplyDateFilter = () => { // Remove unused function
-  //   // Apply both filtering and sorting
-  //   const filtered = applyDateFilter(filteredData);
-  //   const sorted = applySortToData(filtered);
-  //   setFilteredRows(sorted);
+  //     return false;
+  //   });
   // };
 
-  // Get date value from a row
-  // const getDateFromRow = (row: ExcelRow): Date | null => { // Remove unused function
-  //   const date = row.date;
-  //   return date instanceof Date && !isNaN(date.getTime()) ? date : null;
+  // Apply sorting based on dateFilterSettings.sortOrder
+  // const applySortToData = (data: ExcelRow[]) => {
+  //   if (!_dateFilterSettings?.sortOrder) return data;
+
+  //   return [...data].sort((a, b) => {
+  //     const dateA = a.date instanceof Date ? a.date.getTime() : 0;
+  //     const dateB = b.date instanceof Date ? b.date.getTime() : 0;
+
+  //     if (_dateFilterSettings?.sortOrder === "asc") {
+  //       return dateA - dateB; // Oldest to newest
+  //     } else {
+  //       return dateB - dateA; // Newest to oldest
+  //     }
+  //   });
   // };
 
   // Add status computation
@@ -158,6 +145,30 @@ const DataReview: React.FC<DataReviewProps> = ({
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const columns = useMemo<ColumnDef<ExcelRow, any>[]>(
     () => [
+      // Selection checkbox column
+      columnHelper.display({
+        id: "select",
+        header: ({ table }) => (
+          <input
+            type="checkbox"
+            checked={table.getIsAllRowsSelected()}
+            onChange={table.getToggleAllRowsSelectedHandler()}
+            className="rounded border-gray-300 text-primary focus:ring-primary"
+            aria-label="Velg alle rader"
+          />
+        ),
+        cell: ({ row }) => (
+          <input
+            type="checkbox"
+            checked={row.getIsSelected()}
+            onChange={row.getToggleSelectedHandler()}
+            className="rounded border-gray-300 text-primary focus:ring-primary"
+            aria-label={`Velg rad ${row.original.poNumber}`}
+          />
+        ),
+        size: 50,
+      }),
+
       // Status column (new)
       columnHelper.accessor((row) => getOrderStatus(row), {
         id: "status",
@@ -201,27 +212,19 @@ const DataReview: React.FC<DataReviewProps> = ({
         cell: (info) => info.getValue() || "-",
       }),
       columnHelper.accessor("itemNo", {
-        header: "Varenummer",
-        size: 120,
+        header: "OneMed varenummer",
         cell: (info) => info.getValue() || "-",
+        size: 120,
       }),
       columnHelper.accessor("description", {
-        header: "Beskrivelse",
-        size: 200,
-        cell: (info) => (
-          <div className="max-w-xs truncate" title={info.getValue() || "-"}>
-            {info.getValue() || "-"}
-          </div>
-        ),
+        header: "Leverandørs artikkelnummer",
+        cell: (info) => info.getValue() || "-",
+        size: 150,
       }),
       columnHelper.accessor("specification", {
-        header: "Spesifikasjon",
+        header: "Kommentar",
+        cell: (info) => info.getValue() || "-",
         size: 150,
-        cell: (info) => (
-          <div className="max-w-xs truncate" title={info.getValue() || "-"}>
-            {info.getValue() || "-"}
-          </div>
-        ),
       }),
       columnHelper.accessor("orderQty", {
         header: "Ordre antall",
@@ -268,167 +271,73 @@ const DataReview: React.FC<DataReviewProps> = ({
     [_dateFilterSettings]
   );
 
-  const filteredData = useMemo(() => {
-    if (!excelData?.hovedliste || !selectedSupplier) return [];
+  // Rows to render: fetch directly from SQLite via IPC
+  const [rowsToRender, setRowsToRender] = useState<ExcelRow[]>([]);
+  // const [isLoading, setIsLoading] = useState(true); // Currently unused
+  const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({});
+  const [globalFilter, setGlobalFilter] = useState("");
+  const [pagination, setPagination] = useState({
+    pageIndex: 0,
+    pageSize: 25,
+  });
 
-    console.log("Filtering data for supplier:", selectedSupplier);
-    console.log("Total rows in hovedliste:", excelData.hovedliste.length);
-
-    // Determine if the selected supplier is a known supplier name or an article number
-    const isSupplierAnArticleNumber = isArticleNumber(selectedSupplier);
-    const isKnownSupplier = knownSuppliers.has(selectedSupplier);
-
-    // Create a case-insensitive version of the supplier for matching
-    const supplierLower = selectedSupplier.toLowerCase();
-
-    return excelData.hovedliste.filter((row) => {
-      // If the selected supplier is an article number, match against itemNo
-      if (isSupplierAnArticleNumber) {
-        // Direct match with item number
-        return row.itemNo === selectedSupplier;
-      }
-
-      // If it's a known supplier name, match against the supplier column
-      if (isKnownSupplier) {
-        // Return only rows where the supplier name matches
-        return row.supplier?.toLowerCase() === supplierLower;
-      }
-
-      // If we don't know if it's an article or supplier name, try to match against both
-      return (
-        row.supplier?.toLowerCase() === supplierLower ||
-        row.itemNo === selectedSupplier
-      );
-    });
-  }, [excelData, selectedSupplier, isArticleNumber, knownSuppliers]);
-
-  // Quick filter presets
-  const filterPresets = useMemo(
-    () => ({
-      all: () => {
-        setFilteredTestData(filteredData);
-        _setDateFilterSettings({
-          selectAll: true,
-          selectedValues: [],
-          searchText: "",
-          sortOrder: null,
-          isActive: false,
-        });
-      },
-      critical: () => {
-        setFilteredTestData(
-          filteredData.filter((row) => getOrderStatus(row) === "critical")
-        );
-        _setDateFilterSettings({
-          selectAll: false,
-          selectedValues: [],
-          searchText: "",
-          sortOrder: "asc",
-          isActive: true,
-        });
-      },
-      overdue: () => {
-        setFilteredTestData(
-          filteredData.filter((row) => getOrderStatus(row) === "overdue")
-        );
-        _setDateFilterSettings({
-          selectAll: false,
-          selectedValues: [],
-          searchText: "",
-          sortOrder: "desc",
-          isActive: true,
-        });
-      },
-      thisWeek: () => {
-        const today = new Date();
-        const endOfWeek = new Date(today);
-        endOfWeek.setDate(today.getDate() + (7 - today.getDay()));
-
-        setFilteredTestData(
-          filteredData.filter((row) => {
-            // Corrected logic:
-            const rawDateValue = row.dueDate ?? row.date; // Use dueDate first, fallback to date
-            let safeDateValue: string | number | Date = ""; // Default for invalid types
-
-            if (
-              typeof rawDateValue === "string" ||
-              typeof rawDateValue === "number"
-            ) {
-              safeDateValue = rawDateValue;
-            } else if (rawDateValue instanceof Date) {
-              // Now instanceof is safe
-              safeDateValue = rawDateValue;
-            }
-
-            const dueDate = new Date(safeDateValue); // Create date from the validated value
-            return dueDate <= endOfWeek;
-          })
-        );
-        _setDateFilterSettings({
-          selectAll: false,
-          selectedValues: [],
-          searchText: "",
-          sortOrder: null,
-          isActive: true,
-        });
-      },
-      outstanding: () => {
-        setFilteredTestData(
-          filteredData.filter((row) => row.orderQty - row.receivedQty > 0)
-        );
-        _setDateFilterSettings({
-          selectAll: false,
-          selectedValues: [],
-          searchText: "",
-          sortOrder: null,
-          isActive: true,
-        });
-      },
-    }),
-    [filteredData, getOrderStatus, _setDateFilterSettings]
-  );
-
-  // Effect to reset filtered rows when filteredData changes
+  // Initialize all rows as selected by default
   useEffect(() => {
-    // Apply initial date filtering
-    const filtered = applyDateFilter(filteredData);
-    const sorted = applySortToData(filtered);
-    setFilteredTestData(sorted);
-  }, [filteredData, applyDateFilter, applySortToData]);
+    if (rowsToRender.length > 0) {
+      const initialSelection: Record<string, boolean> = {};
+      rowsToRender.forEach((_, index) => {
+        initialSelection[index.toString()] = true; // Select all by default
+      });
+      setRowSelection(initialSelection);
+    }
+  }, [rowsToRender]);
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        // IPC returns an object { success: boolean, data?: ExcelRow[], error?: string }
+        const response = await window.electron.getOutstandingOrders(
+          selectedSupplier || ""
+        );
+        if (response.success && response.data) {
+          setRowsToRender(response.data as ExcelRow[]);
+        } else {
+          console.error(
+            "Failed to fetch outstanding orders or no data returned:",
+            response.error || "No data"
+          );
+          setRowsToRender([]);
+        }
+      } catch (error) {
+        console.error("Failed to fetch outstanding orders:", error);
+        setRowsToRender([]);
+      }
+    })();
+  }, [selectedSupplier]);
 
   // Table instance
   const table = useReactTable({
-    data: filteredTestData,
+    data: rowsToRender,
     columns,
+    getCoreRowModel: getCoreRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    enableRowSelection: true,
+    onRowSelectionChange: setRowSelection,
+    onSortingChange: setSorting,
+    onGlobalFilterChange: setGlobalFilter,
+    onPaginationChange: setPagination,
     state: {
       sorting,
-      pagination: {
-        pageIndex,
-        pageSize,
-      },
-    },
-    enableSorting: true,
-    onSortingChange: setSorting,
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    onPaginationChange: (updater) => {
-      if (typeof updater === "function") {
-        const newState = updater({
-          pageIndex,
-          pageSize,
-        });
-        setPageIndex(newState.pageIndex);
-        setPageSize(newState.pageSize);
-      } else {
-        setPageIndex(updater.pageIndex);
-        setPageSize(updater.pageSize);
-      }
+      globalFilter,
+      pagination,
+      rowSelection,
     },
   });
 
-  const totalItems = filteredTestData.length;
-  const outstandingCount = filteredTestData.filter(
+  const totalItems = rowsToRender.length;
+  const outstandingCount = rowsToRender.filter(
     (row) => row.orderQty - row.receivedQty > 0
   ).length;
 
@@ -474,50 +383,42 @@ const DataReview: React.FC<DataReviewProps> = ({
               <span className="font-medium">Utestående ordre:</span>{" "}
               <span className="font-bold text-accent">{outstandingCount}</span>
             </p>
+            <p className="text-neutral mt-1">
+              <span className="font-medium">Valgte for e-post:</span>{" "}
+              <span className="font-bold text-primary">
+                {Object.values(rowSelection).filter(Boolean).length}
+              </span>
+            </p>
           </div>
         </div>
 
-        {/* Quick Filter Buttons */}
-        <div className="flex flex-wrap gap-2 mb-2">
+        {/* Selection controls */}
+        <div className="flex flex-wrap gap-2 mb-4">
           <button
-            onClick={filterPresets.all}
-            className={`btn btn-sm ${
-              _dateFilterSettings?.selectAll ? "btn-primary" : "btn-secondary"
-            }`}
+            onClick={() => table.toggleAllRowsSelected(true)}
+            className="btn btn-sm btn-secondary"
           >
-            Alle ordrer
+            Velg alle
           </button>
           <button
-            onClick={filterPresets.outstanding}
-            className={`btn btn-sm ${
-              _dateFilterSettings?.selectAll ? "btn-primary" : "btn-secondary"
-            }`}
+            onClick={() => table.toggleAllRowsSelected(false)}
+            className="btn btn-sm btn-secondary"
           >
-            Utestående
+            Velg ingen
           </button>
           <button
-            onClick={filterPresets.critical}
-            className={`btn btn-sm ${
-              _dateFilterSettings?.selectAll ? "btn-primary" : "btn-accent"
-            }`}
+            onClick={() => {
+              // Select only rows with outstanding quantity > 0
+              const newSelection: Record<string, boolean> = {};
+              rowsToRender.forEach((row, index) => {
+                newSelection[index.toString()] =
+                  row.orderQty - row.receivedQty > 0;
+              });
+              setRowSelection(newSelection);
+            }}
+            className="btn btn-sm btn-secondary"
           >
-            Kritiske
-          </button>
-          <button
-            onClick={filterPresets.overdue}
-            className={`btn btn-sm ${
-              _dateFilterSettings?.selectAll ? "btn-primary" : "btn-error"
-            }`}
-          >
-            Forfalt
-          </button>
-          <button
-            onClick={filterPresets.thisWeek}
-            className={`btn btn-sm ${
-              _dateFilterSettings?.selectAll ? "btn-primary" : "btn-secondary"
-            }`}
-          >
-            Denne uken
+            Velg kun utestående
           </button>
         </div>
       </div>
@@ -705,11 +606,25 @@ const DataReview: React.FC<DataReviewProps> = ({
           Tilbake
         </button>
         <button
-          onClick={onNext}
+          onClick={() => {
+            // Get selected rows and pass them to the next step
+            const selectedRows = rowsToRender.filter(
+              (_, index) => rowSelection[index.toString()]
+            );
+
+            // Store selected rows in the excelData for the email step
+            if (excelData) {
+              excelData.bp = selectedRows;
+            }
+
+            onNext();
+          }}
           className="btn btn-primary"
           aria-label="Gå videre til e-post"
+          disabled={Object.values(rowSelection).filter(Boolean).length === 0}
         >
-          Send e-post
+          Send e-post ({Object.values(rowSelection).filter(Boolean).length}{" "}
+          valgte)
         </button>
       </div>
     </div>
