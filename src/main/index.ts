@@ -1,28 +1,47 @@
-import { app, BrowserWindow, ipcMain, shell, dialog, Menu, Tray, nativeTheme } from "electron";
-import { join, dirname } from "node:path";
-import { fileURLToPath } from "node:url";
-import fs from "node:fs";
-import * as Database from "better-sqlite3";
-import { importExcelData } from "./importer";
-import child_process from "node:child_process";
-import { autoUpdater } from "electron-updater";
-import log from "electron-log";
+import {
+  app,
+  BrowserWindow,
+  ipcMain,
+  shell,
+  dialog,
+  Menu,
+  IpcMainInvokeEvent,
+} from "electron";
+import path from "path";
+import * as log from "electron-log";
 import { databaseService } from "../services/databaseService";
 import { setupDatabaseHandlers } from "./database";
 import { checkForUpdatesManually } from "./auto-updater";
+import fs from "fs";
+import * as Database from "better-sqlite3"; // Import better-sqlite3
+import { importAlleArk } from "./importer"; // Import the Excel importer
+import child_process from "child_process"; // Added for send-logs-to-support
+import { autoUpdater } from "electron-updater"; // Added for update:install
+import type { ExcelData } from "../renderer/types/ExcelData";
 
-// Calculate __dirname equivalent for ESM
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+// Configure detailed logging for troubleshooting
+log.transports.file.level = "debug"; // Set to debug for maximum logging
+log.transports.console.level = "debug";
 
-// Configure electron-log
-log.transports.file.resolvePathFn = () => join(app.getPath("userData"), "logs", "supplier-reminder-app.log");
-log.transports.file.format = '[{y}-{m}-{d} {h}:{i}:{s}.{ms}] [{level}] {text}';
-log.transports.console.format = '[{y}-{m}-{d} {h}:{i}:{s}.{ms}] [{level}] {text}';
-log.initialize({ preload: true });
+// Set log file size and rotation
+log.transports.file.maxSize = 10 * 1024 * 1024; // 10MB
+log.transports.file.format = "[{y}-{m}-{d} {h}:{i}:{s}.{ms}] [{level}] {text}";
 
-log.info('App starting...');
-console.log("App starting..."); // Keep console log for early stage debugging
+// Create logs directory in userData if it doesn't exist
+const logsDir = path.join(app.getPath("userData"), "logs");
+try {
+  if (!fs.existsSync(logsDir)) {
+    fs.mkdirSync(logsDir, { recursive: true });
+  }
+
+  // Set a custom log file path for easier identification
+  const logFilePath = path.join(logsDir, "supplier-reminder-app.log");
+  log.transports.file.resolvePathFn = () => logFilePath;
+
+  log.info("Log file location:", logFilePath);
+} catch (err) {
+  console.error("Failed to set up logging directory:", err);
+}
 
 // Add a global error handler for uncaught exceptions
 process.on("uncaughtException", (error) => {
@@ -81,18 +100,16 @@ ipcMain.handle("get-logs", async () => {
 });
 
 let mainWindow: BrowserWindow | null = null;
-let db: Database.Database | null = null;
-let tray: Tray | null = null;
 
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
-    icon: join(__dirname, "../../supplychain.png"),
+    icon: path.join(__dirname, "../../supplychain.png"),
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      preload: join(__dirname, "../preload/index.cjs"),
+      preload: path.join(__dirname, "../preload/index.cjs"),
     },
   });
 
@@ -105,7 +122,7 @@ function createWindow() {
   const isDev = process.env.NODE_ENV === "development";
   const url = isDev
     ? "http://localhost:5173"
-    : `file://${join(__dirname, "../renderer/index.html")}`;
+    : `file://${path.join(__dirname, "../renderer/index.html")}`;
 
   log.info(`Loading window URL: ${url}`);
   mainWindow.loadURL(url).catch((err) => {
@@ -126,20 +143,29 @@ function createWindow() {
 app.whenReady().then(async () => {
   log.info("App is ready. Initializing database and application...");
   try {
-    // 1. Initialize or Load Database
-    const dbInstance = await createOrLoadDatabase();
+    // 1. Initialize or Load Database (this now also connects/initializes DatabaseService)
+    // The function createOrLoadDatabase will now ensure the databaseService is connected and initialized.
+    await createOrLoadDatabase();
 
-    // 2. Connect the DatabaseService
-    log.info("Connecting Database Service...");
-    databaseService.connect(dbInstance); // Pass the obtained instance
-    log.info("Database Service connected.");
+    // Ensure DatabaseService has a DB instance after createOrLoadDatabase
+    if (!databaseService.getDbInstance()) {
+      log.error(
+        "DatabaseService has no DB instance after createOrLoadDatabase completed."
+      );
+      throw new Error(
+        "Critical error: DatabaseService not properly initialized."
+      );
+    }
+    log.info(
+      "Database Service connection and schema initialization is handled by createOrLoadDatabase."
+    );
 
-    // 3. Setup IPC Handlers (which should now use the connected databaseService)
+    // 2. Setup IPC Handlers (which should now use the connected databaseService)
     log.info("Setting up IPC Handlers...");
     setupDatabaseHandlers();
     log.info("IPC Handlers setup complete.");
 
-    // 4. Create Main Window
+    // 3. Create Main Window
     log.info("Creating main window...");
     createWindow();
     log.info("Main window created.");
@@ -148,7 +174,7 @@ app.whenReady().then(async () => {
     try {
       const logFilePath = log.transports.file.getFile().path;
       // Determine the folder containing the logs
-      const logsFolder = dirname(logFilePath);
+      const logsFolder = path.dirname(logFilePath);
 
       const template: Electron.MenuItemConstructorOptions[] = [
         { role: "fileMenu" }, // standard File menu
@@ -261,7 +287,7 @@ app.on("will-quit", async (event) => {
 // Function to create the main application window
 async function createOrLoadDatabase(): Promise<Database.Database> {
   const userDataPath = app.getPath("userData");
-  const dbPath = join(userDataPath, "app.sqlite");
+  const dbPath = path.join(userDataPath, "app.sqlite");
   log.info(`Database path determined: ${dbPath}`);
 
   // Ensure the user data directory exists
@@ -276,35 +302,48 @@ async function createOrLoadDatabase(): Promise<Database.Database> {
     throw new Error(`Could not create application data directory: ${message}`);
   }
 
-  let db: Database.Database | null = null;
+  let dbForReturn: Database.Database | null = null;
   let needsImport = false;
+  let rawDbInstanceForInitialization: Database.Database | null = null;
 
   if (fs.existsSync(dbPath)) {
     log.info("Existing database file found. Attempting to open...");
     try {
-      db = new Database.default(dbPath);
+      rawDbInstanceForInitialization = new Database.default(dbPath);
       log.info("Successfully opened existing database.");
-      // Optional: Add a quick integrity check or version check here if needed
+      // Connect and initialize schema for existing database via DatabaseService
+      log.info("Connecting and initializing schema for existing database...");
+      databaseService.connect(rawDbInstanceForInitialization);
+      log.info(
+        "Existing database schema initialization complete via DatabaseService."
+      );
+      dbForReturn = databaseService.getDbInstance();
     } catch (err: unknown) {
-      log.error(`Failed to open existing database file at ${dbPath}:`, err);
-      const __openErrorMessage =
-        err instanceof Error ? err.message : String(err);
-      // Decide how to handle corruption - e.g., backup and delete?
+      log.error(
+        `Failed to open or initialize existing database file at ${dbPath}:`,
+        err
+      );
       const backupPath = `${dbPath}.corrupt.${Date.now()}`;
       try {
         log.warn(`Attempting to rename corrupt database to: ${backupPath}`);
+        // If rawDbInstanceForInitialization is open due to partial success, close it before rename
+        if (
+          rawDbInstanceForInitialization &&
+          rawDbInstanceForInitialization.open
+        ) {
+          rawDbInstanceForInitialization.close();
+        }
         fs.renameSync(dbPath, backupPath);
         log.info("Corrupt database renamed.");
       } catch (renameErr: unknown) {
         log.error(`Failed to rename corrupt database ${dbPath}:`, renameErr);
         const renameErrorMessage =
           renameErr instanceof Error ? renameErr.message : String(renameErr);
-        // If renaming fails, we might be stuck. Throw a specific error.
         throw new Error(
           `Could not open or rename the existing database file. Please check permissions or delete the file manually at ${dbPath}. Error: ${renameErrorMessage}`
         );
       }
-      db = null; // Ensure db is null so we proceed to import
+      rawDbInstanceForInitialization = null; // Ensure it's null for the import path
       needsImport = true;
     }
   } else {
@@ -330,68 +369,88 @@ async function createOrLoadDatabase(): Promise<Database.Database> {
     const xlsxPath = filePaths[0];
     log.info(`User selected Excel file: ${xlsxPath}`);
 
+    let tempDbInstance: Database.Database | null = null;
     try {
-      // Create the new database file *before* importing
+      // Create the new database file
       log.info(`Creating new database file at: ${dbPath}`);
-      db = new Database.default(dbPath);
+      tempDbInstance = new Database.default(dbPath);
       log.info("New database file created successfully.");
 
+      // Connect and initialize the schema via DatabaseService
+      log.info("Connecting and initializing schema for new database...");
+      databaseService.connect(tempDbInstance); // This will call .initialize()
+      log.info("New database schema initialized via DatabaseService.");
+
+      // Get the (now initialized) instance from the service for the import
+      const initializedDbForImport = databaseService.getDbInstance();
+      if (!initializedDbForImport) {
+        log.error(
+          "Failed to get initialized DB instance from DatabaseService after connection."
+        );
+        if (tempDbInstance && tempDbInstance.open) tempDbInstance.close();
+        throw new Error(
+          "Database service could not provide an initialized database instance for import."
+        );
+      }
+
       // Run the import process
-      const importSuccess = await importExcelData(xlsxPath, db);
+      log.info(`Starting Excel import from: ${xlsxPath}`);
+      const importSuccess = await importAlleArk(
+        xlsxPath,
+        initializedDbForImport
+      );
 
       if (!importSuccess) {
         log.error(`Excel import failed from file: ${xlsxPath}`);
-        if (db) {
-          try {
-            db.close();
-          } catch (_e: unknown) {
-            /* ignore */
-          }
-        }
-        // Try to delete the partially created/empty DB file
-        try {
-          fs.unlinkSync(dbPath);
-        } catch (_e: unknown) {
-          /* ignore */
-        }
+        // databaseService.close() will handle closing the db instance
         throw new Error("Failed to import data from the selected Excel file.");
       }
 
       log.info("Excel import completed successfully.");
+      dbForReturn = initializedDbForImport;
     } catch (err: unknown) {
       log.error("Error during database creation or initial import:", err);
       const importErrorMessage =
         err instanceof Error ? err.message : String(err);
-      if (db) {
-        try {
-          db.close();
-        } catch (_e: unknown) {
-          /* ignore */
-        }
+
+      // Attempt to close and delete the problematic DB file
+      if (databaseService.getDbInstance()) {
+        databaseService.close(); // Closes the instance managed by the service
+      } else if (tempDbInstance && tempDbInstance.open) {
+        tempDbInstance.close(); // Closes the raw instance if service didn't connect
       }
-      // Attempt cleanup of potentially empty db file
+
       if (fs.existsSync(dbPath)) {
         try {
           fs.unlinkSync(dbPath);
-          log.info("Cleaned up potentially empty DB file after error.");
-        } catch (_e: unknown) {
-          /* ignore */
+          log.info(
+            "Cleaned up database file after import/initialization error."
+          );
+        } catch (cleanupErr) {
+          log.error(
+            "Error during cleanup of database file after import error:",
+            cleanupErr
+          );
         }
       }
       throw new Error(`Database initialization failed: ${importErrorMessage}`);
     }
   }
 
-  // If we reach here, db should be a valid, open connection
-  if (!db) {
-    // This should theoretically not happen if logic above is correct
+  // If dbForReturn is not set, it means an existing DB was expected but failed to open/initialize,
+  // and the import path was not taken or also failed.
+  if (!dbForReturn) {
     log.error(
-      "Database instance is null after initialization process. This indicates a logical error."
+      "Database instance (dbForReturn) is null after initialization process. This indicates a critical logical error."
     );
-    throw new Error("Failed to obtain a valid database connection.");
+    throw new Error(
+      "Failed to obtain a valid database connection. The database service may not be connected."
+    );
   }
 
-  return db;
+  // The actual database instance used by the app is now managed by DatabaseService.
+  // We return the instance that was successfully connected and initialized.
+  return dbForReturn;
 }
 
 // --- IPC Handler for Excel Import ---
@@ -412,15 +471,15 @@ ipcMain.handle(
         throw new Error("Database connection is not available.");
       }
 
-      log.info("Calling importExcelData with buffer...");
+      log.info("Calling importAlleArk with buffer...");
       // Pass buffer directly to importer (it needs adaptation)
-      const success = await importExcelData(payload.fileBuffer, db);
-      log.info(`importExcelData finished with success: ${success}`);
+      const success = await importAlleArk(payload.fileBuffer, db);
+      log.info(`importAlleArk finished with success: ${success}`);
 
       if (success) {
         return { success: true, message: "Import completed successfully." };
       } else {
-        // Check if importExcelData provides more specific error info
+        // Check if importAlleArk provides more specific error info
         throw new Error("Import process failed. Check logs for details.");
       }
     } catch (err: unknown) {
@@ -434,54 +493,114 @@ ipcMain.handle(
     }
   }
 );
-// --- End IPC Handler ---
 
-// Handle email sending
+/**
+ * Validate that the parsed Excel data has all required fields before saving.
+ */
+ipcMain.handle(
+  "validateData",
+  async (event: IpcMainInvokeEvent, parsedData: ExcelData) => {
+    if (!parsedData) {
+      throw new Error("No parsed data provided");
+    }
+    const { bp } = parsedData;
+
+    // Only validate BP data now - it's the only required sheet
+    if (!Array.isArray(bp) || bp.length === 0) {
+      throw new Error("Missing or empty BP data");
+    }
+
+    // Validate that BP data has required fields
+    const invalidRows = bp.filter(
+      (row) =>
+        !row.poNumber ||
+        !row.supplier ||
+        row.poNumber.trim() === "" ||
+        row.supplier.trim() === ""
+    );
+
+    if (invalidRows.length > 0) {
+      throw new Error(
+        `Found ${invalidRows.length} rows with missing PO number or supplier information`
+      );
+    }
+
+    return {
+      success: true,
+      data: {
+        bpCount: bp.length,
+      },
+    };
+  }
+);
+
+// Handle email sending via .eml file for proper HTML rendering
 ipcMain.handle(
   "sendEmail",
   async (_, payload: { to: string; subject: string; html: string }) => {
     try {
-      // Use the imported shell directly
-      // const { shell } = require("electron"); // Removed
+      log.info(`Creating HTML email draft for: ${payload.to}`);
+      log.info(`Subject: ${payload.subject}`);
 
-      // Clean up the HTML to extract text content
-      const cleanText = payload.html
+      // Get the email address from supplier_emails table
+      const emailTo =
+        databaseService.getSupplierEmail(payload.to) || payload.to;
+      log.info(`Resolved email address: ${emailTo}`);
+
+      // Ensure we have a valid email address
+      if (!emailTo.includes("@")) {
+        log.warn(`No valid email address found for supplier: ${payload.to}`);
+        return {
+          success: false,
+          error: `Ingen e-postadresse funnet for ${payload.to}. Sjekk leverandør e-post innstillinger.`,
+        };
+      }
+
+      // Create .eml file with proper MIME headers for HTML
+      // Use the official supply planning email address for all communications
+      const senderEmail = "supply.planning.no@onemed.com";
+      const EOL = "\r\n";
+      const headers = [
+        `From: OneMed Norge AS <${senderEmail}>`,
+        `Reply-To: ${senderEmail}`,
+        `Sender: ${senderEmail}`,
+        `Return-Path: ${senderEmail}`,
+        `To: ${emailTo}`,
+        `Subject: ${payload.subject}`,
+        `MIME-Version: 1.0`,
+        `Content-Type: text/html; charset=UTF-8`,
+        `Content-Transfer-Encoding: 8bit`,
+        `X-Mailer: OneMed SupplyChain`,
+        ``,
+      ].join(EOL);
+
+      // Ensure proper line endings for email and clean up the HTML
+      const cleanHtml = payload.html
         .replace(/<style>.*?<\/style>/gs, "")
         .replace(/<head>.*?<\/head>/gs, "")
         .replace(/<script>.*?<\/script>/gs, "")
-        .replace(/<[^>]*>/g, "\n")
-        .replace(/\n{2,}/g, "\n\n")
         .trim();
 
-      // Ensure the supplier email is in a valid format
-      // For demonstration, we'll use a placeholder if not specified
-      let emailTo = payload.to;
-      if (!emailTo.includes("@")) {
-        // This is just a supplier name, not an email
-        // In a real app, you might want to look up the email from a contacts database
-        // For now, just logging this situation
-        log.info(
-          `No valid email for supplier: ${payload.to}, using placeholder`
-        );
-        emailTo = "supplier@example.com";
-      }
+      const body = cleanHtml.replace(/\r?\n/g, EOL);
+      const emlContent = headers + body;
 
-      // Create the mailto: URL
-      const mailtoUrl = `mailto:${encodeURIComponent(
-        emailTo
-      )}?subject=${encodeURIComponent(
-        payload.subject
-      )}&body=${encodeURIComponent(cleanText)}`;
+      // Write to temp file
+      const tempDir = app.getPath("temp");
+      const fileName = `onemed-reminder-${Date.now()}.eml`;
+      const filePath = path.join(tempDir, fileName);
 
-      // Open the default mail client
-      log.info(`Opening mail client with mailto: URL for ${emailTo}`);
-      await shell.openExternal(mailtoUrl);
+      fs.writeFileSync(filePath, emlContent, "utf8");
+      log.info(`Created .eml file: ${filePath}`);
 
-      return { success: true };
+      // Open in default mail client as HTML draft
+      await shell.openPath(filePath);
+      log.info(`Opened HTML email draft in default mail client`);
+
+      return { success: true, filePath };
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : "Unknown error occurred";
-      log.error("Email sending failed:", errorMessage);
+      log.error("Error creating email draft:", errorMessage);
       return { success: false, error: errorMessage };
     }
   }
@@ -544,13 +663,13 @@ ipcMain.on("show-about-dialog", () => {
       process.versions.chrome
     }\n\n© ${new Date().getFullYear()} OneMed AS`,
     buttons: ["OK"],
-    icon: join(process.resourcesPath, "icon.png"),
+    icon: path.join(process.resourcesPath, "icon.png"),
   });
 });
 
 // Handle request to SHOW LOGS FOLDER
 ipcMain.handle("show-logs", async () => {
-  const logsDir = join(app.getPath("userData"), "logs");
+  const logsDir = path.join(app.getPath("userData"), "logs");
   log.info(`Request received to open logs directory: ${logsDir}`);
 
   try {
@@ -587,7 +706,7 @@ ipcMain.handle("show-logs", async () => {
 
 // Add new IPC handler to READ LOG FILE TAIL
 ipcMain.handle("read-log-tail", async (_event, lineCount: number = 200) => {
-  const logFilePath = join(
+  const logFilePath = path.join(
     app.getPath("userData"),
     "logs",
     "supplier-reminder-app.log"
@@ -676,5 +795,47 @@ ipcMain.handle("send-logs-to-support", async () => {
       success: false,
       error: error instanceof Error ? error.message : "Ukjent feil",
     };
+  }
+});
+
+// Expose outstanding POs to the renderer
+ipcMain.handle("getOutstandingOrders", async (_event, supplier: string) => {
+  try {
+    const dbsvc = databaseService;
+    if (!dbsvc.getDbInstance()) {
+      // It's better to return a structured error response
+      return { success: false, error: "Database not connected" };
+    }
+    const orders = dbsvc.getOutstandingOrders(supplier);
+    return { success: true, data: orders }; // Wrap the response
+  } catch (err) {
+    log.error("IPC getOutstandingOrders error:", err);
+    // Ensure a structured error response is also returned on catch
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : String(err),
+    };
+  }
+});
+
+// Add new IPC handler to get all supplier names for debugging
+ipcMain.handle("getAllSupplierNames", async () => {
+  try {
+    const suppliers = databaseService.getAllSupplierNames();
+    return { success: true, data: suppliers };
+  } catch (error) {
+    log.error("Error getting supplier names:", error);
+    return { success: false, error: String(error) };
+  }
+});
+
+// Add IPC handler for getting supplier email
+ipcMain.handle("getSupplierEmail", async (event, supplierName: string) => {
+  try {
+    const email = databaseService.getSupplierEmail(supplierName);
+    return { success: true, data: email };
+  } catch (error) {
+    log.error("Error getting supplier email:", error);
+    return { success: false, error: String(error) };
   }
 });
