@@ -96,7 +96,7 @@ export async function importAlleArk(
   }
 
   const purchaseInsert = db.prepare(
-    `INSERT OR REPLACE INTO purchase_order (
+    `INSERT INTO purchase_order (
       nøkkel, ordreNr, itemNo, beskrivelse, dato, ftgnavn,
       status, producer_item, specification, note, inventory_balance, order_qty, received_qty, purchaser,
       incoming_date, eta_supplier, supplier_name, warehouse, outstanding_qty, order_row_number
@@ -117,6 +117,12 @@ export async function importAlleArk(
   );
 
   const tx = db.transaction(() => {
+    // Clear existing purchase order data before importing new data
+    // This ensures that removed/changed POs from the Excel file don't persist in the database
+    log.info("Clearing existing purchase order data before import...");
+    const deleteResult = db.prepare("DELETE FROM purchase_order").run();
+    log.info(`Cleared ${deleteResult.changes} existing purchase order records`);
+
     // BP sheet import (new structure) - data starts from row 6
     const bpSheet = getSafeWorksheet(wb, "BP");
     const startRow = 6; // Data starts from row 6 (1-based)
