@@ -43,8 +43,7 @@ export interface OrderData {
   poNumber: string;
   itemNo: string;
   description: string;
-  orderQty: number;
-  receivedQty: number;
+  orderRowNumber?: string;
   outstandingQty: number;
 }
 

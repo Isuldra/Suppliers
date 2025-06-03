@@ -99,11 +99,11 @@ export async function importAlleArk(
     `INSERT OR REPLACE INTO purchase_order (
       nøkkel, ordreNr, itemNo, beskrivelse, dato, ftgnavn,
       status, producer_item, specification, note, inventory_balance, order_qty, received_qty, purchaser,
-      incoming_date, eta_supplier, supplier_name, warehouse, outstanding_qty
+      incoming_date, eta_supplier, supplier_name, warehouse, outstanding_qty, order_row_number
     ) VALUES (
       @nøkkel, @ordreNr, @itemNo, @beskrivelse, @dato, @ftgnavn,
       @status, @producer_item, @comment, @note, @inventory_balance, @order_qty, @received_qty, @purchaser,
-      @incoming_date, @eta_supplier, @supplier_name, @warehouse, @outstanding_qty
+      @incoming_date, @eta_supplier, @supplier_name, @warehouse, @outstanding_qty, @order_row_number
     )`
   );
 
@@ -143,7 +143,7 @@ export async function importAlleArk(
       const outstandingQty =
         parseFloat(getCellStringValue(row.getCell(15))) || 0; // Column O = Outstanding quantity
       const supplierName = getCellStringValue(row.getCell(16)).trim(); // Column P = Supplier name (trimmed)
-      // Q (17) = ignore
+      const orderRowNumber = getCellStringValue(row.getCell(17)); // Column Q = Order Row Number (bestradnr)
 
       // Skip rows with no meaningful data
       if (
@@ -202,6 +202,7 @@ export async function importAlleArk(
         supplier_name: supplierName, // Also store in new supplier_name field for queries
         warehouse: warehouse,
         outstanding_qty: outstandingQty,
+        order_row_number: orderRowNumber,
       });
 
       processedCount++;

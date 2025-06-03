@@ -19,8 +19,7 @@
             <tr>
                 <th>Nøkkel</th>
                 <th>PO-nummer</th>
-                <th>Ordre antall</th>
-                <th>Mottatt antall</th>
+                <th>Ordrerad</th>
                 <th>Utestående antall</th>
             </tr>
         </thead>
@@ -29,8 +28,7 @@
             <tr class="{{#if (gt outstandingQty 0)}}urgent{{/if}}">
                 <td>{{key}}</td>
                 <td>{{poNumber}}</td>
-                <td>{{orderQty}}</td>
-                <td>{{receivedQty}}</td>
+                <td>{{orderRowNumber}}</td>
                 <td>{{outstandingQty}}</td>
             </tr>
             {{/each}}

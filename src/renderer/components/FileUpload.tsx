@@ -340,7 +340,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
                   const deliveredQty = Number(row[13] || 0); // Column N = Delivered quantity
                   const outstandingQty = Number(row[14] || 0); // Column O = Outstanding quantity
                   const supplierName = String(row[15] || "").trim(); // Column P = Supplier name
-                  // Q (16) = ignore
+                  const orderRowNumber = String(row[16] || "").trim(); // Column Q = Order Row Number (bestradnr)
 
                   // Parse ETA dates (prefer J over K, both should be past dates)
                   let dueDate: Date | undefined = undefined;
@@ -373,6 +373,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
                     itemNo: oneMedArticleNo,
                     description: supplierArticleNo, // Using supplier article number as description
                     specification: erpComment, // Using ERP comment as comment
+                    orderRowNumber: orderRowNumber, // Order row number from column Q
                     // Additional fields for the new structure
                     internalSupplierNumber: internalSupplierNumber,
                     warehouse: warehouse,

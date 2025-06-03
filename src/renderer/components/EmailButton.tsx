@@ -43,6 +43,10 @@ const EmailButton: React.FC<EmailButtonProps> = ({
         itemNo: typeof row.itemNo === "string" ? row.itemNo : undefined,
         description:
           typeof row.description === "string" ? row.description : undefined,
+        orderRowNumber:
+          typeof row.orderRowNumber === "string"
+            ? row.orderRowNumber
+            : undefined,
       }));
   }, [excelData, selectedSupplier]);
 
