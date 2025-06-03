@@ -226,23 +226,10 @@ const DataReview: React.FC<DataReviewProps> = ({
         cell: (info) => info.getValue() || "-",
         size: 150,
       }),
-      columnHelper.accessor("orderQty", {
-        header: "Ordre antall",
+      columnHelper.accessor("orderRowNumber", {
+        header: "Ordrerad",
+        cell: (info) => info.getValue() || "-",
         size: 100,
-        cell: (info) => (
-          <div className="text-right font-medium">
-            {info.getValue() ? info.getValue().toLocaleString() : "0"}
-          </div>
-        ),
-      }),
-      columnHelper.accessor("receivedQty", {
-        header: "Mottatt antall",
-        size: 100,
-        cell: (info) => (
-          <div className="text-right font-medium">
-            {info.getValue() ? info.getValue().toLocaleString() : "0"}
-          </div>
-        ),
       }),
       columnHelper.accessor((row) => row.orderQty - row.receivedQty, {
         id: "outstandingQty",

@@ -25,6 +25,7 @@ export interface EmailData {
     outstandingQty: number;
     itemNo?: string;
     description?: string;
+    orderRowNumber?: string;
   }>;
   language?: "no" | "en"; // Add language option
   subject: string; // Make required
@@ -50,8 +51,7 @@ export class EmailService {
 <td><b>PO-nummer</b></td>
 <td><b>OneMed varenummer</b></td>
 <td><b>Leverandørs artikkelnummer</b></td>
-<td><b>Ordre antall</b></td>
-<td><b>Mottatt antall</b></td>
+<td><b>Ordrerad</b></td>
 <td><b>Utestående antall</b></td>
 </tr>
 {{#each orders}}
@@ -59,8 +59,7 @@ export class EmailService {
 <td>{{poNumber}}</td>
 <td>{{itemNo}}</td>
 <td>{{description}}</td>
-<td>{{orderQty}}</td>
-<td>{{receivedQty}}</td>
+<td>{{orderRowNumber}}</td>
 <td><b>{{outstandingQty}}</b></td>
 </tr>
 {{/each}}
@@ -84,8 +83,7 @@ export class EmailService {
 <td><b>PO Number</b></td>
 <td><b>OneMed Item Number</b></td>
 <td><b>Supplier Article Number</b></td>
-<td><b>Order Qty</b></td>
-<td><b>Received Qty</b></td>
+<td><b>Order Row</b></td>
 <td><b>Outstanding Qty</b></td>
 </tr>
 {{#each orders}}
@@ -93,8 +91,7 @@ export class EmailService {
 <td>{{poNumber}}</td>
 <td>{{itemNo}}</td>
 <td>{{description}}</td>
-<td>{{orderQty}}</td>
-<td>{{receivedQty}}</td>
+<td>{{orderRowNumber}}</td>
 <td><b>{{outstandingQty}}</b></td>
 </tr>
 {{/each}}
