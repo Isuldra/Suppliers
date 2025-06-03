@@ -10,6 +10,7 @@ export interface ExcelRow {
   itemNo?: string; // Explicitly add itemNo as optional string
   description?: string; // Explicitly add description as optional string
   specification?: string; // Explicitly add specification as optional string
+  orderRowNumber?: string; // Add orderRowNumber property
   date?: Date; // Keep date as optional if needed for other logic
   // New fields for BP sheet structure
   internalSupplierNumber?: string; // Column D - Internal supplier number

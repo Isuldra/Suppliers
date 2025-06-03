@@ -231,6 +231,7 @@ export class DatabaseService {
         { name: "supplier_name", type: "TEXT" },
         { name: "warehouse", type: "TEXT" },
         { name: "outstanding_qty", type: "REAL DEFAULT 0" },
+        { name: "order_row_number", type: "TEXT" },
       ];
 
       for (const col of poColumns) {
@@ -716,7 +717,8 @@ export class DatabaseService {
         received_qty AS receivedQty,
         COALESCE(outstanding_qty, (order_qty - COALESCE(received_qty, 0))) AS outstandingQty,
         purchaser,
-        warehouse
+        warehouse,
+        order_row_number AS orderRowNumber
       FROM purchase_order
       WHERE COALESCE(supplier_name, ftgnavn) LIKE ? 
         AND (outstanding_qty > 0 OR (order_qty - COALESCE(received_qty, 0)) > 0)
