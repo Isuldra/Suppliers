@@ -156,7 +156,31 @@ export class EmailService {
           ? `Purring på manglende leveranser - ${data.supplier}`
           : `Reminder for Outstanding Orders - ${data.supplier}`;
 
-      // Use the API exposed by preload to send via mailto:
+      // Try automatic Outlook sending first (Windows only)
+      try {
+        const autoResult = await window.electron.sendEmailAutomatically({
+          to: supplierEmail,
+          subject,
+          html,
+        });
+
+        if (autoResult.success) {
+          console.log("Email sent automatically via Outlook");
+          return autoResult;
+        } else {
+          console.warn(
+            "Automatic Outlook failed, falling back to .eml method:",
+            autoResult.error
+          );
+        }
+      } catch (error) {
+        console.warn(
+          "Automatic Outlook failed, falling back to .eml method:",
+          error
+        );
+      }
+
+      // Fallback to .eml file method
       const result = await window.electron.sendEmail({
         to: supplierEmail, // Use the actual email address
         subject,

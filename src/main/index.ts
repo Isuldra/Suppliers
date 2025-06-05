@@ -15,7 +15,7 @@ import { checkForUpdatesManually } from "./auto-updater";
 import fs from "fs";
 import * as Database from "better-sqlite3"; // Import better-sqlite3
 import { importAlleArk } from "./importer"; // Import the Excel importer
-import child_process from "child_process"; // Added for send-logs-to-support
+import child_process, { spawn } from "child_process"; // Added for send-logs-to-support
 import { autoUpdater } from "electron-updater"; // Added for update:install
 import type { ExcelData } from "../renderer/types/ExcelData";
 
@@ -601,6 +601,141 @@ ipcMain.handle(
       const errorMessage =
         error instanceof Error ? error.message : "Unknown error occurred";
       log.error("Error creating email draft:", errorMessage);
+      return { success: false, error: errorMessage };
+    }
+  }
+);
+
+// Handle automatic email sending via Outlook COM API
+ipcMain.handle(
+  "sendEmailAutomatically",
+  async (_, payload: { to: string; subject: string; html: string }) => {
+    try {
+      log.info(`Attempting automatic email send to: ${payload.to}`);
+      log.info(`Subject: ${payload.subject}`);
+
+      // Only available on Windows
+      if (process.platform !== "win32") {
+        log.warn("Automatic Outlook sending only available on Windows");
+        return {
+          success: false,
+          error: "Automatisk sending er kun tilgjengelig på Windows",
+        };
+      }
+
+      // Get the email address from supplier_emails table
+      const emailTo =
+        databaseService.getSupplierEmail(payload.to) || payload.to;
+      log.info(`Resolved email address: ${emailTo}`);
+
+      // Ensure we have a valid email address
+      if (!emailTo.includes("@")) {
+        log.warn(`No valid email address found for supplier: ${payload.to}`);
+        return {
+          success: false,
+          error: `Ingen e-postadresse funnet for ${payload.to}. Sjekk leverandør e-post innstillinger.`,
+        };
+      }
+
+      // Clean and escape HTML for PowerShell
+      const cleanHtml = payload.html
+        .replace(/<style>.*?<\/style>/gs, "")
+        .replace(/<head>.*?<\/head>/gs, "")
+        .replace(/<script>.*?<\/script>/gs, "")
+        .trim();
+
+      // Escape special characters for PowerShell
+      const escapedHtml = cleanHtml
+        .replace(/"/g, '""')
+        .replace(/`/g, "``")
+        .replace(/\$/g, "`$");
+
+      const escapedSubject = payload.subject
+        .replace(/"/g, '""')
+        .replace(/`/g, "``")
+        .replace(/\$/g, "`$");
+
+      // PowerShell script to send email via Outlook COM
+      const powershellScript = `
+        try {
+          # Create Outlook application object
+          $outlook = New-Object -ComObject Outlook.Application
+          
+          # Create new mail item (0 = olMailItem)
+          $mail = $outlook.CreateItem(0)
+          
+          # Set email properties
+          $mail.To = "${emailTo}"
+          $mail.Subject = "${escapedSubject}"
+          $mail.HTMLBody = @"
+${escapedHtml}
+"@
+          
+          # Set sender information
+          $mail.SentOnBehalfOfName = "supply.planning.no@onemed.com"
+          
+          # Send the email
+          $mail.Send()
+          
+          Write-Output "SUCCESS: Email sent successfully to ${emailTo}"
+        } catch {
+          Write-Output "ERROR: $($_.Exception.Message)"
+        }
+      `;
+
+      return new Promise((resolve) => {
+        const process = spawn("powershell", ["-Command", powershellScript], {
+          windowsHide: true,
+          stdio: ["pipe", "pipe", "pipe"],
+        });
+
+        let output = "";
+        let errorOutput = "";
+
+        process.stdout.on("data", (data: Buffer) => {
+          output += data.toString();
+        });
+
+        process.stderr.on("data", (data: Buffer) => {
+          errorOutput += data.toString();
+        });
+
+        process.on("close", (code: number | null) => {
+          log.info(`PowerShell process exited with code: ${code}`);
+          log.info(`PowerShell output: ${output}`);
+
+          if (errorOutput) {
+            log.warn(`PowerShell stderr: ${errorOutput}`);
+          }
+
+          if (output.includes("SUCCESS")) {
+            log.info(`Email sent automatically via Outlook to: ${emailTo}`);
+            resolve({ success: true });
+          } else {
+            const errorMsg = output.includes("ERROR:")
+              ? output.split("ERROR:")[1].trim()
+              : `PowerShell failed with code ${code}. Output: ${output}`;
+
+            log.error("PowerShell automation failed:", errorMsg);
+            resolve({
+              success: false,
+              error: `Automatisk sending feilet: ${errorMsg}`,
+            });
+          }
+        });
+
+        process.on("error", (error: Error) => {
+          log.error("PowerShell process error:", error);
+          resolve({
+            success: false,
+            error: `PowerShell prosess feil: ${error.message}`,
+          });
+        });
+      });
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error occurred";
+      log.error("Automatic email sending error:", errorMessage);
       return { success: false, error: errorMessage };
     }
   }

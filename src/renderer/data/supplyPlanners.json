@@ -1,7 +1,7 @@
 {
   "planners": [
     {
-      "name": "Joakim",
+      "name": "Innkjøper",
       "weekdaySuppliers": {
         "Mandag": [
           "Abena Norge AS",
@@ -29,7 +29,10 @@
           "3M Norge AS",
           "Lyreco Norway AS",
           "Medivatus AS",
-          "Smith & Nephew AS"
+          "Smith & Nephew AS",
+          "DMedical AS",
+          "Lilleborg AS",
+          "OneMed A/S"
         ],
         "Onsdag": [
           "ICU Medical BV",
@@ -43,32 +46,7 @@
           "Smiths Medical International Ltd",
           "VERNACARE LTD/Frontier Plastics",
           "Wilhelmsen Chemicals AS",
-          "Karo Pharma AS"
-        ],
-        "Torsdag": [
-          "Medidyne AS",
-          "Bactiguard AB",
-          "Codan Norge AS",
-          "Colia AS",
-          "ConvaTec Norway AS",
-          "Jahpron AS",
-          "Julius Zorn GmbH",
-          "Norgesplaster AS"
-        ],
-        "Fredag": [
-          "MPS Techline of PA, Inc.",
-          "Drammen Papier Engros as",
-          "HOREKA AS",
-          "VERNACARE LTD"
-        ]
-      }
-    },
-    {
-      "name": "Tony",
-      "weekdaySuppliers": {
-        "Mandag": [],
-        "Tirsdag": ["DMedical AS", "Lilleborg AS", "OneMed A/S"],
-        "Onsdag": [
+          "Karo Pharma AS",
           "Aidian OY",
           "Attends AS",
           "Brage Medical AS",
@@ -85,6 +63,14 @@
           "Swann-Morton Limited"
         ],
         "Torsdag": [
+          "Medidyne AS",
+          "Bactiguard AB",
+          "Codan Norge AS",
+          "Colia AS",
+          "ConvaTec Norway AS",
+          "Jahpron AS",
+          "Julius Zorn GmbH",
+          "Norgesplaster AS",
           "AP Services A/S EUR",
           "AP Services A/S USD",
           "Apokjeden AS",
@@ -101,6 +87,10 @@
           "XboXLab AS"
         ],
         "Fredag": [
+          "MPS Techline of PA, Inc.",
+          "Drammen Papier Engros as",
+          "HOREKA AS",
+          "VERNACARE LTD",
           "Abbott Rapid Diagnostics AS",
           "Ascensia Diabetes Care Norway AS",
           "Danone AS (Nutricia)",
@@ -108,7 +98,6 @@
           "Fresenius Kabi AS",
           "Julius Zorn GmbH",
           "KiiltoClean AS",
-          "MPS Techline of PA, Inc.",
           "PartnerMed AS",
           "Puls AS",
           "Triolab AS",

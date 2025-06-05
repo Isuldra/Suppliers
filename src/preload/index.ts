@@ -27,6 +27,11 @@ interface ElectronAPI {
     subject: string;
     html: string;
   }) => Promise<{ success: boolean; error?: string }>;
+  sendEmailAutomatically: (payload: {
+    to: string;
+    subject: string;
+    html: string;
+  }) => Promise<{ success: boolean; error?: string }>;
   getSuppliers: () => Promise<{
     success: boolean;
     data?: string[];
@@ -118,6 +123,7 @@ const validSendChannels = [
   "excel:error",
   "validateData",
   "sendEmail",
+  "sendEmailAutomatically",
   "getSuppliers",
   "saveOrdersToDatabase",
   "getOutstandingOrders",
@@ -156,6 +162,7 @@ const validReceiveChannels = [
   "excel:error",
   "validateData",
   "sendEmail",
+  "sendEmailAutomatically",
   "getSuppliers",
   "saveOrdersToDatabase",
   "getOutstandingOrders",
@@ -232,6 +239,14 @@ contextBridge.exposeInMainWorld("electron", {
   // Email sending
   sendEmail: async (payload: { to: string; subject: string; html: string }) => {
     return await ipcRenderer.invoke("sendEmail", payload);
+  },
+  // Automatic email sending via Outlook COM
+  sendEmailAutomatically: async (payload: {
+    to: string;
+    subject: string;
+    html: string;
+  }) => {
+    return await ipcRenderer.invoke("sendEmailAutomatically", payload);
   },
   // Get suppliers
   getSuppliers: async () => {

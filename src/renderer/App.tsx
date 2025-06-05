@@ -15,13 +15,13 @@ import {
   WizardState,
 } from "./types/ExcelData";
 import { HashRouter as Router, Routes, Route } from "react-router-dom";
+import supplyPlannersData from "./data/supplyPlanners.json";
 
 // Import the OneMed logo
 import onemedLogo from "./assets/onemed-logo.webp";
 
 const steps = [
   { id: "upload" as WizardStep, label: "Last opp fil" },
-  { id: "planner" as WizardStep, label: "Velg innkjøpsplanlegger" },
   { id: "weekday" as WizardStep, label: "Velg ukedag" },
   { id: "supplier" as WizardStep, label: "Velg leverandør" },
   { id: "review" as WizardStep, label: "Gjennomgå data" },
@@ -42,10 +42,13 @@ const MainApp: React.FC = () => {
 
   const handleDataParsed = (data: ExcelData) => {
     console.log("Excel data parsed in App:", data);
+    // Automatically select the single planner and go directly to weekday selection
+    const singlePlanner = supplyPlannersData.planners[0].name;
     setWizardState((prev) => ({
       ...prev,
       excelData: data,
-      currentStep: "planner",
+      selectedPlanner: singlePlanner,
+      currentStep: "weekday",
     }));
   };
 
@@ -89,13 +92,11 @@ const MainApp: React.FC = () => {
 
   const handlePreviousStep = () => {
     setWizardState((prev) => {
-      // Determine previous step based on current step
+      // Determine previous step based on current step (planner step removed)
       let previousStep: WizardStep = "upload";
 
-      if (prev.currentStep === "planner") {
+      if (prev.currentStep === "weekday") {
         previousStep = "upload";
-      } else if (prev.currentStep === "weekday") {
-        previousStep = "planner";
       } else if (prev.currentStep === "supplier") {
         previousStep = "weekday";
       } else if (prev.currentStep === "review") {
@@ -144,7 +145,7 @@ const MainApp: React.FC = () => {
             <WeekdaySelect
               onWeekdaySelected={handleWeekdaySelected}
               currentWeekday={wizardState.selectedWeekday}
-              selectedPlanner={wizardState.selectedPlanner || "Joakim"}
+              selectedPlanner={wizardState.selectedPlanner || "Innkjøper"}
             />
             <div className="flex justify-between mt-4">
               <button
@@ -165,7 +166,7 @@ const MainApp: React.FC = () => {
               currentSupplier={wizardState.selectedSupplier}
               excelData={wizardState.excelData}
               selectedWeekday={wizardState.selectedWeekday}
-              selectedPlanner={wizardState.selectedPlanner || "Joakim"}
+              selectedPlanner={wizardState.selectedPlanner || "Innkjøper"}
             />
             <div className="flex justify-between mt-4">
               <button

@@ -11,19 +11,42 @@ export class EmailService {
     data: EmailData
   ): Promise<{ success: boolean; error?: string }> {
     try {
-      // Try MAPI first
+      // Try automatic Outlook sending first (Windows only)
+      const autoResult = await this.tryAutomaticOutlook(data);
+      if (autoResult.success) {
+        return autoResult;
+      }
+
+      // Fallback to MAPI (draft creation)
       const mapiResult = await this.tryMAPI(data);
       if (mapiResult.success) {
         return mapiResult;
       }
 
-      // Fallback to SMTP
+      // Final fallback to SMTP
       return await this.trySMTP(data);
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : "Unknown error occurred";
       log.error("Email sending failed:", errorMessage);
       return { success: false, error: errorMessage };
+    }
+  }
+
+  private async tryAutomaticOutlook(
+    data: EmailData
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      const html = generateEmailContent(data);
+      const result = await ipcRenderer.invoke("sendEmailAutomatically", {
+        to: data.supplier,
+        subject: "Purring på manglende leveranser",
+        html,
+      });
+      return result;
+    } catch (error) {
+      log.warn("Automatic Outlook failed, falling back:", error);
+      return { success: false, error: "Automatic Outlook failed" };
     }
   }
 
