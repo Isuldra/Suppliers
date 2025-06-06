@@ -1,4 +1,5 @@
 {
+  "_note": "DEPRECATED: This file is kept for backward compatibility. Use supplierData.json for new email addresses and language preferences.",
   "supplierEmails": {
     "3M Norge AS": "premiumcustomer.no@solventum.com",
     "Abena Norge AS": "ordre@abena.no",
