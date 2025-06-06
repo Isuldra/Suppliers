@@ -20,15 +20,25 @@ export interface ExcelRow {
   [key: string]: unknown; // Use unknown instead of any for better type safety
 }
 
+export interface SupplierInfo {
+  leverandor: string; // Column A - Supplier name
+  companyId: string; // Column B - Company ID/Customer number
+  sprak: string; // Column C - Language (norsk/engelsk)
+  purredag: string; // Column D - Reminder day (Mandag, Tirsdag, etc.)
+  epost: string; // Column E - Email address
+}
+
 export interface ExcelData {
   hovedliste: ExcelRow[];
   bp: ExcelRow[];
   sjekkliste?: ExcelRow[]; // Added to support Sjekkliste Leverandører sheet
+  leverandorer?: SupplierInfo[]; // New field for supplier information from Leverandør sheet
   supplier?: string; // Current selected supplier
   weekday?: string; // Current selected weekday
   validation?: {
     hovedlisteCount?: number; // Made optional since we no longer use it
     bpCount: number;
+    leverandorCount?: number; // Count of suppliers from Leverandør sheet
   }; // Validation data from ODBC check
 }
 

@@ -20,11 +20,16 @@ const EmailButton: React.FC<EmailButtonProps> = ({
   const [isSending, setIsSending] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
   const [showPreview, setShowPreview] = useState(false);
-  const [emailData, setEmailData] = useState<EmailData>({
-    supplier: selectedSupplier || "",
-    orders: [],
-    language: "no", // Default to Norwegian
-    subject: "", // Provide a default subject
+  const [emailData, setEmailData] = useState<EmailData>(() => {
+    const preferredLanguage = emailService.getSupplierLanguage(
+      selectedSupplier || ""
+    );
+    return {
+      supplier: selectedSupplier || "",
+      orders: [],
+      language: preferredLanguage, // Use supplier's preferred language
+      subject: "", // Provide a default subject
+    };
   });
   const [previewHtml, setPreviewHtml] = useState("");
 
@@ -52,11 +57,16 @@ const EmailButton: React.FC<EmailButtonProps> = ({
 
   // Handler to prepare and show the email preview
   const handlePreview = () => {
+    // Get the preferred language for this supplier
+    const preferredLanguage = emailService.getSupplierLanguage(
+      selectedSupplier || ""
+    );
+
     // Update email data with the latest supplier and orders
     const updatedData: EmailData = {
       supplier: selectedSupplier || "",
       orders,
-      language: emailData.language,
+      language: emailData.language || preferredLanguage, // Use supplier's preferred language if not already set
       subject: emailData.subject, // Carry over existing subject
     };
     setEmailData(updatedData);

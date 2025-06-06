@@ -101,7 +101,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
       Object.keys(workbook.Sheets)
     );
 
-    // Check for required BP sheet only
+    // Check for required BP sheet
     if (!workbook.Sheets["BP"]) {
       console.log("Missing BP sheet");
       errors.push({

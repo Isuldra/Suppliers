@@ -1,0 +1,610 @@
+{
+  "oversikt": "E-post adresser for leverandører",
+  "totaltAntall": 75,
+  "språkfordeling": {
+    "norsk": 62,
+    "engelsk": 13
+  },
+  "leverandører": [
+    {
+      "leverandør": "3M Norge AS",
+      "companyId": 4960080,
+      "epost": "3m.premiumcustomer.no@mmm.com",
+      "språk": "Norsk",
+      "språkKode": "NO",
+      "purredag": "Tirsdag"
+    },
+    {
+      "leverandør": "Abbott Rapid Diagnostics AS",
+      "companyId": 4960502,
+      "epost": "kundeservice.no@abbott.com",
+      "språk": "Norsk",
+      "språkKode": "NO",
+      "purredag": "Onsdag"
+    },
+    {
+      "leverandør": "Abena Norge AS",
+      "companyId": 4960178,
+      "epost": "ordre@abena.no",
+      "språk": "Norsk",
+      "språkKode": "NO",
+      "purredag": "Mandag"
+    },
+    {
+      "leverandør": "Aidian OY",
+      "companyId": 4960542,
+      "epost": "info@aidian.no",
+      "språk": "Engelsk",
+      "språkKode": "ENG",
+      "purredag": "Mandag"
+    },
+    {
+      "leverandør": "Ambu Norge Filial",
+      "companyId": 4960291,
+      "epost": "sales.no@ambu.com",
+      "språk": "Norsk",
+      "språkKode": "NO",
+      "purredag": "Fredag"
+    },
+    {
+      "leverandør": "AP Services A/S EUR",
+      "companyId": 4960732,
+      "epost": "Info@ap-services.dk",
+      "språk": "Engelsk",
+      "språkKode": "ENG",
+      "purredag": "Tirsdag"
+    },
+    {
+      "leverandør": "AP Services A/S USD",
+      "companyId": 4960735,
+      "epost": "info@ap-services.dk",
+      "språk": "Engelsk",
+      "språkKode": "ENG",
+      "purredag": "Tirsdag"
+    },
+    {
+      "leverandør": "ASAP Norway AS",
+      "companyId": 4960275,
+      "epost": "order@asap-norway.no",
+      "språk": "Norsk",
+      "språkKode": "NO",
+      "purredag": "Onsdag"
+    },
+    {
+      "leverandør": "Ascensia Diabetes Care Norway AS",
+      "companyId": 4960218,
+      "epost": "Orders-norway@ascensia.com",
+      "språk": "Norsk",
+      "språkKode": "NO",
+      "purredag": "Mandag"
+    },
+    {
+      "leverandør": "Atos Medical AS",
+      "companyId": 4960343,
+      "epost": "kundeservice@atosmedical.com",
+      "språk": "Norsk",
+      "språkKode": "NO",
+      "purredag": "Fredag"
+    },
+    {
+      "leverandør": "Attends AS",
+      "companyId": 4960955,
+      "epost": "carin.bright@attindas.com",
+      "språk": "Norsk",
+      "språkKode": "NO",
+      "purredag": "Mandag"
+    },
+    {
+      "leverandør": "Becton Dickison Norway AS",
+      "companyId": 4960238,
+      "epost": "bdnorge@bd.com",
+      "språk": "Norsk",
+      "språkKode": "NO",
+      "purredag": "Torsdag"
+    },
+    {
+      "leverandør": "Brage Medical AS",
+      "companyId": 4960778,
+      "epost": "info@bragemedical.no",
+      "språk": "Norsk",
+      "språkKode": "NO",
+      "purredag": "Torsdag"
+    },
+    {
+      "leverandør": "CHEMENCE Sp z o.o.",
+      "companyId": 4960359,
+      "epost": "KPielarz@chemence.com",
+      "språk": "Engelsk",
+      "språkKode": "ENG",
+      "purredag": "Torsdag"
+    },
+    {
+      "leverandør": "Coloplast Norge",
+      "companyId": 4960513,
+      "epost": "kundeservice@coloplast.com",
+      "språk": "Norsk",
+      "språkKode": "NO",
+      "purredag": "Mandag"
+    },
+    {
+      "leverandør": "ConvaTec Norway AS",
+      "companyId": 4960795,
+      "epost": "customerservicenordic@convatec.com",
+      "språk": "Norsk",
+      "språkKode": "NO",
+      "purredag": "Tirsdag"
+    },
+    {
+      "leverandør": "Cryno AS",
+      "companyId": 4960256,
+      "epost": "ordre@cryno.no",
+      "språk": "Norsk",
+      "språkKode": "NO",
+      "purredag": "Fredag"
+    },
+    {
+      "leverandør": "Danone AS (Nutricia)",
+      "companyId": 4960540,
+      "epost": "ordre@nutricia.no",
+      "språk": "Norsk",
+      "språkKode": "NO",
+      "purredag": "Fredag"
+    },
+    {
+      "leverandør": "Diacor AS",
+      "companyId": 4960634,
+      "epost": "ordre@diacor.no",
+      "språk": "Norsk",
+      "språkKode": "NO",
+      "purredag": "Tirsdag"
+    },
+    {
+      "leverandør": "Diagnostica AS",
+      "companyId": 4960179,
+      "epost": "salg@spirare.com",
+      "språk": "Norsk",
+      "språkKode": "NO",
+      "purredag": "Torsdag"
+    },
+    {
+      "leverandør": "DMedical AS",
+      "companyId": 4960741,
+      "epost": "ordre@dmedical.no",
+      "språk": "Norsk",
+      "språkKode": "NO",
+      "purredag": "Onsdag"
+    },
+    {
+      "leverandør": "Drammen Papier Engros as",
+      "companyId": 4960740,
+      "epost": "dpe@norengros.no",
+      "språk": "Norsk",
+      "språkKode": "NO",
+      "purredag": "Fredag"
+    },
+    {
+      "leverandør": "Døvigen AS",
+      "companyId": 4960193,
+      "epost": "kundeservice@dovigen.no",
+      "språk": "Norsk",
+      "språkKode": "NO",
+      "purredag": "Fredag"
+    },
+    {
+      "leverandør": "Ecolab a.s",
+      "companyId": 4960253,
+      "epost": "no-kundeservice@ecolab.com",
+      "språk": "Norsk",
+      "språkKode": "NO",
+      "purredag": "Torsdag"
+    },
+    {
+      "leverandør": "Essity Norway AS",
+      "companyId": 4960782,
+      "epost": "kundeservice.no@essity.com",
+      "språk": "Norsk",
+      "språkKode": "NO",
+      "purredag": "Fredag"
+    },
+    {
+      "leverandør": "Fresenius Kabi AS",
+      "companyId": 4960523,
+      "epost": "bestilling@fresenius-kabi.com",
+      "språk": "Norsk",
+      "språkKode": "NO",
+      "purredag": "Torsdag"
+    },
+    {
+      "leverandør": "Grimas B.V.",
+      "companyId": 4960151,
+      "epost": "grimas@grimas.nl",
+      "språk": "Engelsk",
+      "språkKode": "ENG",
+      "purredag": "Mandag"
+    },
+    {
+      "leverandør": "Gymo as",
+      "companyId": 4960738,
+      "epost": "post@gymo.no",
+      "språk": "Norsk",
+      "språkKode": "NO",
+      "purredag": "Onsdag"
+    },
+    {
+      "leverandør": "HEBUmedical GmbH",
+      "companyId": 4960236,
+      "epost": "Rebekka.Hagen@hebumedical.de",
+      "språk": "Engelsk",
+      "språkKode": "ENG",
+      "purredag": "Torsdag"
+    },
+    {
+      "leverandør": "HOREKA AS",
+      "companyId": 4960169,
+      "epost": "Post@horeka.no",
+      "språk": "Norsk",
+      "språkKode": "NO",
+      "purredag": "Tirsdag"
+    },
+    {
+      "leverandør": "Houm AS",
+      "companyId": 4960700,
+      "epost": "firmapost@houm.no",
+      "språk": "Norsk",
+      "språkKode": "NO",
+      "purredag": "Fredag"
+    },
+    {
+      "leverandør": "Huntleigh Healthcare Ltd",
+      "companyId": 4960258,
+      "epost": "simona.browningcukerova@arjo.com",
+      "språk": "Engelsk",
+      "språkKode": "ENG",
+      "purredag": "Mandag"
+    },
+    {
+      "leverandør": "Insyd Invest AS",
+      "companyId": 4960203,
+      "epost": "ordre@insyd.no",
+      "språk": "Norsk",
+      "språkKode": "NO",
+      "purredag": "Tirsdag"
+    },
+    {
+      "leverandør": "Jahpron AS",
+      "companyId": 4960233,
+      "epost": "jahpron@jahpron.no",
+      "språk": "Norsk",
+      "språkKode": "NO",
+      "purredag": "Onsdag"
+    },
+    {
+      "leverandør": "Julius Zorn GmbH",
+      "companyId": 4960212,
+      "epost": "norway@juzo.com",
+      "språk": "Engelsk",
+      "språkKode": "ENG",
+      "purredag": "Onsdag"
+    },
+    {
+      "leverandør": "Karo Pharma AS",
+      "companyId": 4960254,
+      "epost": "Support.Order@tamro.com",
+      "språk": "Norsk",
+      "språkKode": "NO",
+      "purredag": "Onsdag"
+    },
+    {
+      "leverandør": "KCI Medical AS",
+      "companyId": 4960261,
+      "epost": "premiumcustomer.no@solventum.com",
+      "språk": "Norsk",
+      "språkKode": "NO",
+      "purredag": "Tirsdag"
+    },
+    {
+      "leverandør": "KiiltoClean AS",
+      "companyId": 4960559,
+      "epost": "ordre.no@kiilto.com",
+      "språk": "Norsk",
+      "språkKode": "NO",
+      "purredag": "Torsdag"
+    },
+    {
+      "leverandør": "Laerdal Medical AS",
+      "companyId": 4960729,
+      "epost": "kundeservice@laerdal.no",
+      "språk": "Norsk",
+      "språkKode": "NO",
+      "purredag": "Torsdag"
+    },
+    {
+      "leverandør": "LHL",
+      "companyId": 4960099,
+      "epost": "ordre.forstehjelp@lhl.no",
+      "språk": "Norsk",
+      "språkKode": "NO",
+      "purredag": "Mandag"
+    },
+    {
+      "leverandør": "Lilleborg AS",
+      "companyId": 4960627,
+      "epost": "ordre@lilleborg.no",
+      "språk": "Norsk",
+      "språkKode": "NO",
+      "purredag": "Torsdag"
+    },
+    {
+      "leverandør": "Lyreco Norway AS",
+      "companyId": 4960103,
+      "epost": "rim.tesfu@lyreco.com",
+      "språk": "Norsk",
+      "språkKode": "NO",
+      "purredag": "Fredag"
+    },
+    {
+      "leverandør": "Med-Kjemi AS",
+      "companyId": 4960653,
+      "epost": "bestilling@med-kjemi.no",
+      "språk": "Norsk",
+      "språkKode": "NO",
+      "purredag": "Torsdag"
+    },
+    {
+      "leverandør": "Medidyne AS",
+      "companyId": 4960294,
+      "epost": "ordre@medidyne.no",
+      "språk": "Norsk",
+      "språkKode": "NO",
+      "purredag": "Fredag"
+    },
+    {
+      "leverandør": "Mediplast AS",
+      "companyId": 4960766,
+      "epost": "mediplast@mediplast.no",
+      "språk": "Norsk",
+      "språkKode": "NO",
+      "purredag": "Mandag"
+    },
+    {
+      "leverandør": "Mediq Norge AS",
+      "companyId": 4960762,
+      "epost": "kundeservice.no@mediq.com",
+      "språk": "Norsk",
+      "språkKode": "NO",
+      "purredag": "Mandag"
+    },
+    {
+      "leverandør": "Medivatus AS",
+      "companyId": 4960672,
+      "epost": "kundeservice@medivatus.com",
+      "språk": "Norsk",
+      "språkKode": "NO",
+      "purredag": "Tirsdag"
+    },
+    {
+      "leverandør": "Microwarm ApS",
+      "companyId": 4960338,
+      "epost": "s.badstue@microwarm.com",
+      "språk": "Engelsk",
+      "språkKode": "ENG",
+      "purredag": "Mandag"
+    },
+    {
+      "leverandør": "MPS Techline of PA, Inc.",
+      "companyId": 4960231,
+      "epost": "sales@techlinetrauma.com",
+      "språk": "Engelsk",
+      "språkKode": "ENG",
+      "purredag": "Torsdag"
+    },
+    {
+      "leverandør": "Nestlé AS",
+      "companyId": 4960537,
+      "epost": "kundeservice@no.nestle.com",
+      "språk": "Norsk",
+      "språkKode": "NO",
+      "purredag": "Fredag"
+    },
+    {
+      "leverandør": "Norgesplaster AS",
+      "companyId": 4960539,
+      "epost": "post@norgesplaster.no",
+      "språk": "Norsk",
+      "språkKode": "NO",
+      "purredag": "Mandag"
+    },
+    {
+      "leverandør": "NorMors AS",
+      "companyId": 4960109,
+      "epost": "office@normors.no",
+      "språk": "Norsk",
+      "språkKode": "NO",
+      "purredag": "Mandag"
+    },
+    {
+      "leverandør": "NORSK LABEX AS",
+      "companyId": 4960201,
+      "epost": "order@labex.com",
+      "språk": "Norsk",
+      "språkKode": "NO",
+      "purredag": "Mandag"
+    },
+    {
+      "leverandør": "OneMed A/S",
+      "companyId": 4960855,
+      "epost": "info.dk@onemed.com",
+      "språk": "Norsk",
+      "språkKode": "NO",
+      "purredag": "Tirsdag"
+    },
+    {
+      "leverandør": "PartnerMed AS",
+      "companyId": 4960172,
+      "epost": "ordre@partnermed.no",
+      "språk": "Norsk",
+      "språkKode": "NO",
+      "purredag": "Onsdag"
+    },
+    {
+      "leverandør": "Qufora A/S",
+      "companyId": 4960342,
+      "epost": "SupplyChain@qufora.com",
+      "språk": "Norsk",
+      "språkKode": "NO",
+      "purredag": "Torsdag"
+    },
+    {
+      "leverandør": "Roche Diagnostics Norge AS",
+      "companyId": 4960684,
+      "epost": "norway.customer_support@roche.com",
+      "språk": "Norsk",
+      "språkKode": "NO",
+      "purredag": "Onsdag"
+    },
+    {
+      "leverandør": "Rudolf Riester GmbH",
+      "companyId": 4960181,
+      "epost": "merz@riester.de",
+      "språk": "Engelsk",
+      "språkKode": "ENG",
+      "purredag": "Torsdag"
+    },
+    {
+      "leverandør": "Sarstedt AS",
+      "companyId": 4960263,
+      "epost": "info.no@sarstedt.com",
+      "språk": "Norsk",
+      "språkKode": "NO",
+      "purredag": "Tirsdag"
+    },
+    {
+      "leverandør": "Scan-Med as Norway",
+      "companyId": 4960182,
+      "epost": "scan-med@scan-med.no",
+      "språk": "Norsk",
+      "språkKode": "NO",
+      "purredag": "Torsdag"
+    },
+    {
+      "leverandør": "Skandinavisk Batteriimport AS",
+      "companyId": 4960787,
+      "epost": "post@skanbatt.no",
+      "språk": "Norsk",
+      "språkKode": "NO",
+      "purredag": "Fredag"
+    },
+    {
+      "leverandør": "Smith & Nephew AS",
+      "companyId": 4960177,
+      "epost": "cs.no@smith-nephew.com",
+      "språk": "Norsk",
+      "språkKode": "NO",
+      "purredag": "Tirsdag"
+    },
+    {
+      "leverandør": "Stryker Norge NUF",
+      "companyId": 4960344,
+      "epost": "strykernorway@stryker.com",
+      "språk": "Norsk",
+      "språkKode": "NO",
+      "purredag": "Onsdag"
+    },
+    {
+      "leverandør": "Sysmex Hvamsvingen 24",
+      "companyId": 4960237,
+      "epost": "order@sysmex-nordic.com",
+      "språk": "Norsk",
+      "språkKode": "NO",
+      "purredag": "Mandag"
+    },
+    {
+      "leverandør": "Timik AS",
+      "companyId": 4960270,
+      "epost": "bestilling@timik.no",
+      "språk": "Norsk",
+      "språkKode": "NO",
+      "purredag": "Tirsdag"
+    },
+    {
+      "leverandør": "Triolab AS",
+      "companyId": 4960644,
+      "epost": "ordre@triolab.no",
+      "språk": "Norsk",
+      "språkKode": "NO",
+      "purredag": "Torsdag"
+    },
+    {
+      "leverandør": "TØFT AS",
+      "companyId": 4960102,
+      "epost": "frank@tcb365.no",
+      "språk": "Norsk",
+      "språkKode": "NO",
+      "purredag": "Torsdag"
+    },
+    {
+      "leverandør": "Unomedical AS/ConvaTec Norway AS",
+      "companyId": 4960008,
+      "epost": "Customerservicenordic@Convatec.com",
+      "språk": "Norsk",
+      "språkKode": "NO",
+      "purredag": "Fredag"
+    },
+    {
+      "leverandør": "VERNACARE LTD",
+      "companyId": 4960186,
+      "epost": "hilde.hunsager@vernagroup.com",
+      "språk": "Engelsk",
+      "språkKode": "ENG",
+      "purredag": "Onsdag"
+    },
+    {
+      "leverandør": "VERNACARE LTD/Frontier Plastics",
+      "companyId": 4960255,
+      "epost": "EXPORT.VCI@Vernacare.com",
+      "språk": "Engelsk",
+      "språkKode": "ENG",
+      "purredag": "Onsdag"
+    },
+    {
+      "leverandør": "Vygon Norge AS",
+      "companyId": 4960219,
+      "epost": "ordre@vygon.no",
+      "språk": "Norsk",
+      "språkKode": "NO",
+      "purredag": "Mandag"
+    },
+    {
+      "leverandør": "Wilhelmsen Chemicals AS",
+      "companyId": 4960147,
+      "epost": "orders.chemicals@wilhelmsen.com",
+      "språk": "Norsk",
+      "språkKode": "NO",
+      "purredag": "Tirsdag"
+    },
+    {
+      "leverandør": "XboXLab AS",
+      "companyId": 4960260,
+      "epost": "ordernorge@xboxlab.no",
+      "språk": "Norsk",
+      "språkKode": "NO",
+      "purredag": "Onsdag"
+    },
+    {
+      "leverandør": "Ynolens AS",
+      "companyId": 4960758,
+      "epost": "post@ynolens.no",
+      "språk": "Norsk",
+      "språkKode": "NO",
+      "purredag": "Onsdag"
+    },
+    {
+      "leverandør": "Zafena AS",
+      "companyId": 4960790,
+      "epost": "post@zafena.no",
+      "språk": "Norsk",
+      "språkKode": "NO",
+      "purredag": "Fredag"
+    }
+  ]
+}
