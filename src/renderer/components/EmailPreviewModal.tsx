@@ -25,8 +25,15 @@ const EmailPreviewModal: React.FC<EmailPreviewModalProps> = ({
     const loadSupplierEmail = async () => {
       setIsLoadingEmail(true);
       try {
-        const email = await emailService.getSupplierEmail(emailData.supplier);
-        setRecipientEmail(email);
+        // Try to get email from the new structured data first
+        const supplierInfo = emailService.getSupplierInfo(emailData.supplier);
+        if (supplierInfo) {
+          setRecipientEmail(supplierInfo.epost);
+        } else {
+          // Fallback to database lookup
+          const email = await emailService.getSupplierEmail(emailData.supplier);
+          setRecipientEmail(email);
+        }
       } catch (error) {
         console.error("Error loading supplier email:", error);
         setRecipientEmail(null);

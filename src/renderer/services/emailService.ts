@@ -1,5 +1,5 @@
 import Handlebars from "handlebars";
-import supplierEmailsData from "../data/supplierEmails.json";
+import supplierData from "../data/supplierData.json";
 
 // Register Handlebars helpers
 Handlebars.registerHelper("gt", function (a, b) {
@@ -10,10 +10,15 @@ Handlebars.registerHelper("eq", function (a, b) {
   return a === b;
 });
 
-// Type for supplier emails
-type SupplierEmails = {
-  [key: string]: string;
-};
+// Type for supplier data
+interface SupplierInfo {
+  leverandør: string;
+  companyId: number;
+  epost: string;
+  språk: string;
+  språkKode: "NO" | "ENG";
+  purredag: string;
+}
 
 export interface EmailData {
   supplier: string;
@@ -42,9 +47,8 @@ export class EmailService {
     const noTemplate = `<!DOCTYPE html>
 <html>
 <body>
-<h3>Purring på manglende leveranser</h3>
-<p>Hei {{supplier}},</p>
-<p>Dette er en påminnelse om følgende manglende leveranser:</p>
+<p>Hei,</p>
+<p>Vi ser at følgende bestillinger fortsatt står som utestående hos dere:</p>
 
 <table border="1" cellpadding="4" cellspacing="0" width="100%">
 <tr bgcolor="#f0f0f0">
@@ -65,7 +69,7 @@ export class EmailService {
 {{/each}}
 </table>
 
-<p>Vennligst bekreft mottak av denne meldingen og oppdater leveringsstatus.</p>
+<p>Vi ber dere bekrefte mottak av denne meldingen og oppdatere oss på forventet leveringsstatus for de åpne ordrelinjene.</p>
 <p>Med vennlig hilsen,<br>OneMed Norge AS</p>
 </body>
 </html>`;
@@ -74,9 +78,8 @@ export class EmailService {
     const enTemplate = `<!DOCTYPE html>
 <html>
 <body>
-<h3>Reminder for Outstanding Orders</h3>
-<p>Hello {{supplier}},</p>
-<p>This is a reminder regarding the following outstanding orders:</p>
+<p>Hello,</p>
+<p>The following purchase orders are still listed as outstanding on our side:</p>
 
 <table border="1" cellpadding="4" cellspacing="0" width="100%">
 <tr bgcolor="#f0f0f0">
@@ -97,7 +100,7 @@ export class EmailService {
 {{/each}}
 </table>
 
-<p>Please confirm receipt of this message and provide updated delivery status.</p>
+<p>Please confirm receipt of this message and update us with the current delivery status of the outstanding order lines.</p>
 <p>Kind regards,<br>OneMed Norge AS</p>
 </body>
 </html>`;
@@ -108,7 +111,20 @@ export class EmailService {
     };
   }
 
-  // Get supplier email from the database
+  // Get supplier info from the new structured data
+  getSupplierInfo(supplierName: string): SupplierInfo | null {
+    const supplier = supplierData.leverandører.find(
+      (s) => s.leverandør === supplierName
+    );
+    return supplier
+      ? {
+          ...supplier,
+          språkKode: supplier.språkKode as "NO" | "ENG",
+        }
+      : null;
+  }
+
+  // Get supplier email from the database (fallback)
   async getSupplierEmail(supplierName: string): Promise<string | null> {
     try {
       const result = await window.electron.getSupplierEmail(supplierName);
@@ -120,6 +136,12 @@ export class EmailService {
       console.error("Error getting supplier email from database:", error);
       return null;
     }
+  }
+
+  // Get the preferred language for a supplier
+  getSupplierLanguage(supplierName: string): "no" | "en" {
+    const supplierInfo = this.getSupplierInfo(supplierName);
+    return supplierInfo?.språkKode === "ENG" ? "en" : "no";
   }
 
   // New method to generate email preview HTML
@@ -134,27 +156,38 @@ export class EmailService {
     data: EmailData
   ): Promise<{ success: boolean; error?: string }> {
     try {
-      // Get supplier email address
-      const supplierEmail = await this.getSupplierEmail(data.supplier);
+      // Get supplier info from the new structured data
+      const supplierInfo = this.getSupplierInfo(data.supplier);
+      let supplierEmail: string | null = null;
+      let language: "no" | "en" = "no"; // Default to Norwegian
+
+      if (supplierInfo) {
+        supplierEmail = supplierInfo.epost;
+        // Set language based on supplier's preference
+        language = supplierInfo.språkKode === "ENG" ? "en" : "no";
+      } else {
+        // Fallback to database lookup
+        supplierEmail = await this.getSupplierEmail(data.supplier);
+      }
 
       if (!supplierEmail) {
         return {
           success: false,
-          error: `Ingen e-postadresse funnet for ${data.supplier}. Sjekk supplierEmails.json for manglende leverandør.`,
+          error: `Ingen e-postadresse funnet for ${data.supplier}. Sjekk leverandørdata for manglende leverandør.`,
         };
       }
 
-      // Generate the HTML using the appropriate language template
-      const language = data.language || "no"; // Default to Norwegian
-      const template = this.templates[language];
+      // Use the language from supplier data or the provided language
+      const finalLanguage = data.language || language;
+      const template = this.templates[finalLanguage];
       const compiledTemplate = Handlebars.compile(template);
       const html = compiledTemplate(data);
 
       // Set the subject based on language
       const subject =
-        language === "no"
-          ? `Purring på manglende leveranser - ${data.supplier}`
-          : `Reminder for Outstanding Orders - ${data.supplier}`;
+        finalLanguage === "no"
+          ? `Purring på manglende leveranser – ${data.supplier}`
+          : `Reminder: Outstanding Deliveries – ${data.supplier}`;
 
       // Try automatic Outlook sending first (Windows only)
       try {
