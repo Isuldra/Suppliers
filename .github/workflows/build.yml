@@ -4,6 +4,7 @@ name: 🏗️ Build Electron App for Windows
 on:
   push:
     branches: [main]
+    tags: ["v*"] # Trigger on version tags
   pull_request:
     branches: [main]
 
@@ -60,18 +61,20 @@ jobs:
       - name: Package Application (Windows)
         shell: pwsh
         run: |
-          # Use the dedicated script for portable builds
-          npm run dist:portable
-          # Build Windows ZIP installer package
-          npm run dist:win
+          # Build for release if this is a tag
+          if ($env:GITHUB_REF -like "refs/tags/*") {
+            Write-Host "Building for release (tag detected)"
+            npm run release
+          } else {
+            Write-Host "Building for development"
+            # Use the dedicated script for portable builds
+            npm run dist:portable
+            # Build Windows ZIP installer package
+            npm run dist:win
+          }
           # Verify the output exists using Get-ChildItem
           if (-not (Get-ChildItem -Path release -Filter '*Portable.exe')) {
             Write-Error "Portable executable not found in release directory"
-            exit 1
-          }
-          # Verify the zip installer package exists
-          if (-not (Get-ChildItem -Path release -Filter '*.zip')) {
-            Write-Error "Windows zip package not found in release directory"
             exit 1
           }
 
@@ -103,3 +106,28 @@ jobs:
           name: SupplyChain-OneMed-Windows-Zip
           path: release\*.zip
           retention-days: 3
+
+  # New job for creating GitHub releases
+  release:
+    name: Create GitHub Release
+    runs-on: windows-latest
+    needs: build-windows
+    if: startsWith(github.ref, 'refs/tags/')
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Build and Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npm run release
