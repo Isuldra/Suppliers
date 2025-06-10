@@ -1,6 +1,6 @@
 {
   "name": "one-med-supplychain-app",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Desktop application for managing OneMed supply chain and vendor relations",
   "main": "dist/main/main.cjs",
   "private": true,
@@ -48,7 +48,11 @@
       "output": "release",
       "app": "dist"
     },
-    "publish": null,
+    "publish": {
+      "provider": "github",
+      "owner": "Isuldra",
+      "repo": "Suppliers"
+    },
     "win": {
       "target": [
         {
