@@ -18,12 +18,12 @@
     "test:coverage": "vitest run --coverage",
     "pack": "electron-builder --dir",
     "create-minimal-manifest": "node scripts/create-minimal-manifest.js",
-    "dist": "electron-vite build && npm run create-minimal-manifest && npm run prepare-deps && electron-builder",
+    "dist": "electron-vite build && npm run create-minimal-manifest && npm run prepare-deps && electron-builder --publish never",
     "clean-dist": "node scripts/clean-build.js",
-    "dist:win": "electron-vite build && npm run create-minimal-manifest && npm run prepare-deps && electron-builder --win zip",
-    "dist:portable": "electron-vite build && npm run create-minimal-manifest && npm run prepare-deps && electron-builder --win portable",
-    "dist:msi": "electron-vite build && npm run create-minimal-manifest && npm run prepare-deps && electron-builder --win msi",
-    "dist:nsis": "electron-vite build && npm run create-minimal-manifest && npm run prepare-deps && electron-builder --win nsis",
+    "dist:win": "electron-vite build && npm run create-minimal-manifest && npm run prepare-deps && electron-builder --win zip --publish never",
+    "dist:portable": "electron-vite build && npm run create-minimal-manifest && npm run prepare-deps && electron-builder --win portable --publish never",
+    "dist:msi": "electron-vite build && npm run create-minimal-manifest && npm run prepare-deps && electron-builder --win msi --publish never",
+    "dist:nsis": "electron-vite build && npm run create-minimal-manifest && npm run prepare-deps && electron-builder --win nsis --publish never",
     "release": "electron-vite build && npm run create-minimal-manifest && npm run prepare-deps && electron-builder --win --publish always",
     "test-sqlite": "node scripts/test-sqlite-dependencies.js",
     "build-x64-portable": "node scripts/build-x64-portable.js",
@@ -164,5 +164,8 @@
   "overrides": {
     "@electron-toolkit/utils": "^2.0.1",
     "electron-builder": "^24.9.1"
+  },
+  "optionalDependencies": {
+    "@rollup/rollup-win32-x64-msvc": "^4.42.0"
   }
 }
