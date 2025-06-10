@@ -19,6 +19,8 @@ jobs:
   build-windows:
     name: Build for Windows (x64)
     runs-on: windows-latest
+    permissions:
+      contents: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -60,6 +62,8 @@ jobs:
 
       - name: Package Application (Windows)
         shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           # Build for release if this is a tag
           if ($env:GITHUB_REF -like "refs/tags/*") {
@@ -106,28 +110,3 @@ jobs:
           name: SupplyChain-OneMed-Windows-Zip
           path: release\*.zip
           retention-days: 3
-
-  # New job for creating GitHub releases
-  release:
-    name: Create GitHub Release
-    runs-on: windows-latest
-    needs: build-windows
-    if: startsWith(github.ref, 'refs/tags/')
-    permissions:
-      contents: write
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-
-      - name: Install dependencies
-        run: npm ci --ignore-scripts
-
-      - name: Build and Release
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npm run release
