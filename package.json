@@ -1,7 +1,7 @@
 {
   "name": "one-med-supplychain-app",
-  "version": "1.1.1",
-  "description": "Desktop application for managing OneMed supply chain and vendor relations",
+  "version": "1.1.2",
+  "description": "OneMed SupplyChain - Supplier Reminder Pro",
   "main": "dist/main/main.cjs",
   "private": true,
   "type": "module",
