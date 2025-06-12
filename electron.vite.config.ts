@@ -98,10 +98,6 @@ export default defineConfig({
         // Do NOT alias 'better-sqlite3' here
         odbc: path.resolve(__dirname, "src/main/shims/odbc-shim.js"),
         sqlite3: path.resolve(__dirname, "src/main/shims/sqlite3-shim.js"),
-        "electron-updater": path.resolve(
-          __dirname,
-          "src/main/shims/electron-updater-shim.js"
-        ),
       },
     },
   },
@@ -123,13 +119,7 @@ export default defineConfig({
           externalizeDepsPlugin(),
           // Fix: rollup-plugin-ignore expects string array
           // After looking at the source: https://github.com/jackmellis/rollup-plugin-ignore/blob/master/src/index.js
-          ignore([
-            "mock-aws-s3",
-            "odbc",
-            "sqlite3",
-            "better-sqlite3",
-            "electron-updater",
-          ]),
+          ignore(["mock-aws-s3", "odbc", "sqlite3", "better-sqlite3"]),
         ],
         output: {
           format: "cjs",
@@ -147,10 +137,6 @@ export default defineConfig({
         "better-sqlite3": path.resolve(
           __dirname,
           "src/main/shims/better-sqlite3-shim.js"
-        ),
-        "electron-updater": path.resolve(
-          __dirname,
-          "src/main/shims/electron-updater-shim.js"
         ),
       },
     },
@@ -184,10 +170,6 @@ export default defineConfig({
         "better-sqlite3": path.resolve(
           __dirname,
           "src/main/shims/better-sqlite3-shim.js"
-        ),
-        "electron-updater": path.resolve(
-          __dirname,
-          "src/main/shims/electron-updater-shim.js"
         ),
       },
     },
