@@ -54,6 +54,7 @@ declare module "electron-updater" {
       versionInfo: Record<string, unknown>; // Use Record<string, unknown>
       updateAvailable: boolean;
     }>;
+    downloadUpdate(): Promise<string[]>;
     quitAndInstall(isSilent?: boolean, isForceRunAfter?: boolean): void;
     on(event: string, _callback: (...args: unknown[]) => void): this;
     once(event: string, _callback: (...args: unknown[]) => void): this;

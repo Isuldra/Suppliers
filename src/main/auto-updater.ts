@@ -2,14 +2,230 @@ import { dialog } from "electron";
 import { autoUpdater, type AppUpdater as _AppUpdater } from "electron-updater";
 import log from "electron-log";
 import type { UpdateInfo, ProgressInfo } from "electron-updater";
+import { app, shell } from "electron";
+import path from "path";
+import fs from "fs";
 
 // Create a logger instance specifically for the auto-updater
 const updateLogger = log.scope("autoUpdater");
 autoUpdater.logger = updateLogger;
 
-// Disable auto download
-autoUpdater.autoDownload = false;
-autoUpdater.autoInstallOnAppQuit = true;
+/**
+ * Detect if the app is running as a portable version
+ * Portable apps typically run from a temporary or user-defined location
+ * and don't have the standard installation structure
+ */
+function isPortableVersion(): boolean {
+  try {
+    const appPath = app.getAppPath();
+    const execPath = process.execPath;
+
+    // Check if running from a portable executable
+    // Portable versions often have "Portable" in the filename
+    if (execPath.includes("Portable") || execPath.includes("portable")) {
+      return true;
+    }
+
+    // Check if app is running from a non-standard location
+    // Standard installations are usually in Program Files or AppData
+    const normalizedPath = path.normalize(appPath).toLowerCase();
+    const isInProgramFiles = normalizedPath.includes("program files");
+    const isInAppData = normalizedPath.includes("appdata");
+    const isInUserProfile =
+      normalizedPath.includes("users") &&
+      (isInAppData || normalizedPath.includes("local"));
+
+    // If not in standard installation paths, likely portable
+    if (!isInProgramFiles && !isInUserProfile) {
+      return true;
+    }
+
+    // Additional check: portable versions often run from Downloads, Desktop, or removable drives
+    const portableIndicators = [
+      "downloads",
+      "desktop",
+      "documents",
+      "temp",
+      "tmp",
+    ];
+
+    if (
+      portableIndicators.some((indicator) => normalizedPath.includes(indicator))
+    ) {
+      return true;
+    }
+
+    return false;
+  } catch (error) {
+    updateLogger.warn("Error detecting portable version:", error);
+    return false;
+  }
+}
+
+/**
+ * Setup auto-updater for portable versions with manual download approach
+ */
+function setupPortableUpdater() {
+  updateLogger.info("Konfigurerer portable auto-updater...");
+
+  // Configure for portable - disable automatic installation
+  autoUpdater.autoDownload = false;
+  autoUpdater.autoInstallOnAppQuit = false;
+
+  // Handle update check
+  autoUpdater.on("checking-for-update", () => {
+    updateLogger.info("Sjekker for oppdateringer (portable modus)...");
+  });
+
+  // No updates available
+  autoUpdater.on("update-not-available", ((info: UpdateInfo) => {
+    updateLogger.info("Ingen nye oppdateringer tilgjengelig (portable):", info);
+  }) as (...args: unknown[]) => void);
+
+  // Update available - show custom dialog for portable
+  autoUpdater.on("update-available", ((info: UpdateInfo) => {
+    updateLogger.info("Ny oppdatering tilgjengelig (portable):", info);
+
+    dialog
+      .showMessageBox({
+        type: "info",
+        title: "Oppdatering tilgjengelig",
+        message: `En ny versjon (${info.version}) av OneMed SupplyChain er tilgjengelig`,
+        detail:
+          "Vil du laste ned oppdateringen nå? Du kan installere den manuelt når nedlastingen er ferdig.",
+        buttons: ["Last ned nå", "Last ned senere", "Åpne nedlastingsside"],
+        defaultId: 0,
+        cancelId: 1,
+      })
+      .then((result) => {
+        if (result.response === 0) {
+          // Download update
+          updateLogger.info("Starter nedlasting av oppdatering...");
+          autoUpdater.downloadUpdate().catch((err: Error) => {
+            updateLogger.error("Feil ved nedlasting:", err);
+            showPortableUpdateError(err);
+          });
+        } else if (result.response === 2) {
+          // Open download page
+          const downloadUrl =
+            "https://github.com/Isuldra/Suppliers/releases/latest";
+          shell.openExternal(downloadUrl).catch((err) => {
+            updateLogger.error("Kunne ikke åpne nedlastingsside:", err);
+          });
+        }
+      });
+  }) as (...args: unknown[]) => void);
+
+  // Handle download progress
+  autoUpdater.on("download-progress", ((progressObj: ProgressInfo) => {
+    const message = `Laster ned oppdatering: ${Math.round(
+      progressObj.percent
+    )}%`;
+    updateLogger.info(message);
+    // Could show progress notification here if needed
+  }) as (...args: unknown[]) => void);
+
+  // Update downloaded - provide manual installation instructions
+  autoUpdater.on("update-downloaded", ((info: UpdateInfo) => {
+    updateLogger.info("Oppdatering lastet ned (portable):", info);
+
+    // Get the download location
+    const downloadPath = getPortableUpdatePath();
+
+    dialog
+      .showMessageBox({
+        type: "info",
+        title: "Oppdatering klar",
+        message: `Versjon ${info.version} er lastet ned`,
+        detail: `Oppdateringen er lagret i:\n${downloadPath}\n\nFor å installere:\n1. Lukk denne applikasjonen\n2. Erstatt den gamle .exe-filen med den nye\n3. Start applikasjonen på nytt\n\nVil du åpne mappen med den nye filen?`,
+        buttons: ["Åpne mappe", "Lukk app og installer", "Senere"],
+        defaultId: 0,
+      })
+      .then((result) => {
+        if (result.response === 0) {
+          // Open folder containing the update
+          try {
+            shell.showItemInFolder(downloadPath);
+          } catch (err) {
+            // Fallback to opening the directory
+            shell.openPath(path.dirname(downloadPath)).catch((openErr) => {
+              updateLogger.error("Kunne ikke åpne mappe:", openErr);
+            });
+          }
+        } else if (result.response === 1) {
+          // Quit app for manual installation
+          updateLogger.info("Avslutter app for manuell installasjon...");
+          app.quit();
+        }
+      });
+  }) as (...args: unknown[]) => void);
+
+  // Handle errors
+  autoUpdater.on("error", ((error: Error) => {
+    updateLogger.error("Feil ved oppdatering (portable):", error);
+    showPortableUpdateError(error);
+  }) as (...args: unknown[]) => void);
+}
+
+/**
+ * Get the expected path for portable update downloads
+ */
+function getPortableUpdatePath(): string {
+  const userDataPath = app.getPath("userData");
+  const updatesDir = path.join(userDataPath, "updates");
+
+  // Ensure updates directory exists
+  try {
+    if (!fs.existsSync(updatesDir)) {
+      fs.mkdirSync(updatesDir, { recursive: true });
+    }
+  } catch (error) {
+    updateLogger.warn("Could not create updates directory:", error);
+  }
+
+  return path.join(updatesDir, "OneMed SupplyChain-Portable.exe");
+}
+
+/**
+ * Show error dialog for portable update issues
+ */
+function showPortableUpdateError(error: Error) {
+  const isNetworkError =
+    error.message.includes("net::") || error.message.includes("ENOTFOUND");
+  const isFileError =
+    error.message.includes("ENOENT") ||
+    error.message.includes("app-update.yml");
+
+  let message = "Det oppstod en feil under oppdatering";
+  let detail = `Detaljer: ${error.message}`;
+
+  if (isNetworkError) {
+    message = "Nettverksfeil ved oppdatering";
+    detail = "Sjekk internettforbindelsen og prøv igjen senere.";
+  } else if (isFileError) {
+    message = "Oppdateringsfiler ikke tilgjengelige";
+    detail = "Du kan laste ned den nyeste versjonen manuelt fra GitHub.";
+  }
+
+  dialog
+    .showMessageBox({
+      type: "error",
+      title: "Oppdateringsfeil",
+      message,
+      detail,
+      buttons: ["OK", "Åpne nedlastingsside"],
+      defaultId: 0,
+    })
+    .then((result) => {
+      if (result.response === 1) {
+        const downloadUrl =
+          "https://github.com/Isuldra/Suppliers/releases/latest";
+        shell.openExternal(downloadUrl).catch((err) => {
+          updateLogger.error("Kunne ikke åpne nedlastingsside:", err);
+        });
+      }
+    });
+}
 
 export function setupAutoUpdater() {
   // Ikke kjør auto-oppdatering i utviklingsmodus
@@ -20,7 +236,48 @@ export function setupAutoUpdater() {
     return;
   }
 
-  updateLogger.info("Auto-updater initialisert");
+  // Check if running as portable version
+  const isPortable = isPortableVersion();
+
+  if (isPortable) {
+    updateLogger.info(
+      "Portable versjon oppdaget - bruker portable auto-updater"
+    );
+    setupPortableUpdater();
+  } else {
+    updateLogger.info(
+      "Installert versjon oppdaget - bruker standard auto-updater"
+    );
+    setupStandardUpdater();
+  }
+
+  // Start checking for updates after a delay
+  setTimeout(() => {
+    autoUpdater
+      .checkForUpdates()
+      .catch((err: Error) =>
+        updateLogger.error("Feil ved sjekk for oppdateringer:", err)
+      );
+  }, 10000);
+
+  // Check for updates every hour
+  const ONE_HOUR = 60 * 60 * 1000;
+  setInterval(() => {
+    autoUpdater
+      .checkForUpdates()
+      .catch((err: Error) =>
+        updateLogger.error("Feil ved periodisk sjekk for oppdateringer:", err)
+      );
+  }, ONE_HOUR);
+}
+
+/**
+ * Setup standard auto-updater for installed versions
+ */
+function setupStandardUpdater() {
+  // Standard configuration for installed versions
+  autoUpdater.autoDownload = false;
+  autoUpdater.autoInstallOnAppQuit = true;
 
   // Handle update-sjekk
   autoUpdater.on("checking-for-update", () => {
@@ -87,26 +344,6 @@ export function setupAutoUpdater() {
       buttons: ["OK"],
     });
   }) as (...args: unknown[]) => void);
-
-  // Sjekk for oppdateringer umiddelbart, men med forsinkelse for å sikre at
-  // applikasjonen har startet fullstendig først
-  setTimeout(() => {
-    autoUpdater
-      .checkForUpdates()
-      .catch((err: Error) =>
-        updateLogger.error("Feil ved sjekk for oppdateringer:", err)
-      );
-  }, 10000);
-
-  // Sjekk for oppdateringer hver time
-  const ONE_HOUR = 60 * 60 * 1000;
-  setInterval(() => {
-    autoUpdater
-      .checkForUpdates()
-      .catch((err: Error) =>
-        updateLogger.error("Feil ved periodisk sjekk for oppdateringer:", err)
-      );
-  }, ONE_HOUR);
 }
 
 // Funksjon for å manuelt sjekke for oppdateringer
