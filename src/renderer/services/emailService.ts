@@ -1,5 +1,6 @@
 import Handlebars from "handlebars";
 import supplierData from "../data/supplierData.json";
+import juice from "juice";
 
 // Register Handlebars helpers
 Handlebars.registerHelper("gt", function (a, b) {
@@ -210,7 +211,18 @@ export class EmailService {
     const language = data.language || "no"; // Default to Norwegian
     const template = this.templates[language];
     const compiledTemplate = Handlebars.compile(template);
-    return compiledTemplate(data);
+    const rawHtml = compiledTemplate(data);
+
+    // Inline CSS styles for preview (same as what will be sent)
+    return juice(rawHtml, {
+      removeStyleTags: true, // Remove <style> tags after inlining
+      preserveMediaQueries: true, // Keep media queries for responsive design
+      preserveFontFaces: true, // Keep @font-face declarations
+      applyStyleTags: true, // Apply styles from <style> tags
+      applyWidthAttributes: true, // Convert CSS widths to width attributes
+      applyHeightAttributes: true, // Convert CSS heights to height attributes
+      preserveImportant: true, // Keep !important declarations
+    });
   }
 
   async sendReminder(
@@ -246,7 +258,18 @@ export class EmailService {
       const finalLanguage = data.language || language;
       const template = this.templates[finalLanguage];
       const compiledTemplate = Handlebars.compile(template);
-      const html = compiledTemplate(data);
+      const rawHtml = compiledTemplate(data);
+
+      // Inline CSS styles for better email client compatibility
+      const html = juice(rawHtml, {
+        removeStyleTags: true, // Remove <style> tags after inlining
+        preserveMediaQueries: true, // Keep media queries for responsive design
+        preserveFontFaces: true, // Keep @font-face declarations
+        applyStyleTags: true, // Apply styles from <style> tags
+        applyWidthAttributes: true, // Convert CSS widths to width attributes
+        applyHeightAttributes: true, // Convert CSS heights to height attributes
+        preserveImportant: true, // Keep !important declarations
+      });
 
       // Set the subject based on language
       const subject =
