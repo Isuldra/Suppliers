@@ -22,6 +22,7 @@ interface SupplierInfo {
 
 export interface EmailData {
   supplier: string;
+  recipientEmail?: string; // Optional override for recipient email
   orders: Array<{
     key: string;
     poNumber: string;
@@ -216,18 +217,22 @@ export class EmailService {
     data: EmailData
   ): Promise<{ success: boolean; error?: string }> {
     try {
-      // Get supplier info from the new structured data
-      const supplierInfo = this.getSupplierInfo(data.supplier);
-      let supplierEmail: string | null = null;
+      // Use manually overridden email if provided, otherwise get from supplier data
+      let supplierEmail: string | null = data.recipientEmail || null;
       let language: "no" | "en" = "no"; // Default to Norwegian
 
-      if (supplierInfo) {
-        supplierEmail = supplierInfo.epost;
-        // Set language based on supplier's preference
-        language = supplierInfo.språkKode === "ENG" ? "en" : "no";
-      } else {
-        // Fallback to database lookup
-        supplierEmail = await this.getSupplierEmail(data.supplier);
+      if (!supplierEmail) {
+        // Get supplier info from the new structured data
+        const supplierInfo = this.getSupplierInfo(data.supplier);
+
+        if (supplierInfo) {
+          supplierEmail = supplierInfo.epost;
+          // Set language based on supplier's preference
+          language = supplierInfo.språkKode === "ENG" ? "en" : "no";
+        } else {
+          // Fallback to database lookup
+          supplierEmail = await this.getSupplierEmail(data.supplier);
+        }
       }
 
       if (!supplierEmail) {

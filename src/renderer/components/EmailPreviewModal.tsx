@@ -7,6 +7,7 @@ interface EmailPreviewModalProps {
   onSend: () => void;
   onCancel: () => void;
   onChangeLanguage: (language: "no" | "en") => void;
+  onChangeRecipient: (email: string) => void;
 }
 
 const EmailPreviewModal: React.FC<EmailPreviewModalProps> = ({
@@ -15,35 +16,66 @@ const EmailPreviewModal: React.FC<EmailPreviewModalProps> = ({
   onSend,
   onCancel,
   onChangeLanguage,
+  onChangeRecipient,
 }) => {
   const emailService = new EmailService();
   const [recipientEmail, setRecipientEmail] = useState<string | null>(null);
   const [isLoadingEmail, setIsLoadingEmail] = useState(true);
+  const [isEditingEmail, setIsEditingEmail] = useState(false);
+  const [editableEmail, setEditableEmail] = useState("");
 
   // Load supplier email when component mounts or supplier changes
   useEffect(() => {
     const loadSupplierEmail = async () => {
       setIsLoadingEmail(true);
       try {
-        // Try to get email from the new structured data first
-        const supplierInfo = emailService.getSupplierInfo(emailData.supplier);
-        if (supplierInfo) {
-          setRecipientEmail(supplierInfo.epost);
+        // Use manually overridden email if provided
+        if (emailData.recipientEmail) {
+          setRecipientEmail(emailData.recipientEmail);
+          setEditableEmail(emailData.recipientEmail);
         } else {
-          // Fallback to database lookup
-          const email = await emailService.getSupplierEmail(emailData.supplier);
-          setRecipientEmail(email);
+          // Try to get email from the new structured data first
+          const supplierInfo = emailService.getSupplierInfo(emailData.supplier);
+          if (supplierInfo) {
+            setRecipientEmail(supplierInfo.epost);
+            setEditableEmail(supplierInfo.epost);
+          } else {
+            // Fallback to database lookup
+            const email = await emailService.getSupplierEmail(
+              emailData.supplier
+            );
+            setRecipientEmail(email);
+            setEditableEmail(email || "");
+          }
         }
       } catch (error) {
         console.error("Error loading supplier email:", error);
         setRecipientEmail(null);
+        setEditableEmail("");
       } finally {
         setIsLoadingEmail(false);
       }
     };
 
     loadSupplierEmail();
-  }, [emailData.supplier]);
+  }, [emailData.supplier, emailData.recipientEmail]);
+
+  const handleEmailEdit = () => {
+    setIsEditingEmail(true);
+  };
+
+  const handleEmailSave = () => {
+    if (editableEmail.trim() && editableEmail.includes("@")) {
+      setRecipientEmail(editableEmail.trim());
+      onChangeRecipient(editableEmail.trim());
+      setIsEditingEmail(false);
+    }
+  };
+
+  const handleEmailCancel = () => {
+    setEditableEmail(recipientEmail || "");
+    setIsEditingEmail(false);
+  };
 
   return (
     <div className="fixed inset-0 bg-neutral bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -77,22 +109,68 @@ const EmailPreviewModal: React.FC<EmailPreviewModalProps> = ({
         </div>
 
         <div className="p-6 border-b">
-          <div className="mb-2">
-            <span className="font-medium">Til:</span> {emailData.supplier}
+          <div className="mb-4">
+            <div className="flex items-center justify-between mb-2">
+              <span className="font-medium">Til:</span>
+              <span className="text-sm text-neutral-secondary">
+                {emailData.supplier}
+              </span>
+            </div>
+
             {isLoadingEmail && (
-              <span className="ml-2 text-neutral-secondary">
-                (Laster e-postadresse...)
-              </span>
+              <div className="text-neutral-secondary">
+                Laster e-postadresse...
+              </div>
             )}
-            {!isLoadingEmail && recipientEmail && (
-              <span className="ml-2 text-neutral-secondary">
-                ({recipientEmail})
-              </span>
+
+            {!isLoadingEmail && !isEditingEmail && (
+              <div className="flex items-center space-x-2">
+                <span className="text-neutral-dark font-mono bg-neutral-light px-3 py-2 rounded border flex-1">
+                  {recipientEmail || "Ingen e-postadresse funnet"}
+                </span>
+                <button
+                  onClick={handleEmailEdit}
+                  className="px-3 py-2 text-sm bg-primary text-white rounded hover:bg-primary-dark transition-colors"
+                  title="Rediger e-postadresse"
+                >
+                  ✏️ Rediger
+                </button>
+              </div>
             )}
-            {!isLoadingEmail && !recipientEmail && (
-              <span className="ml-2 text-accent">
-                (Ingen e-postadresse funnet)
-              </span>
+
+            {!isLoadingEmail && isEditingEmail && (
+              <div className="flex items-center space-x-2">
+                <input
+                  type="email"
+                  value={editableEmail}
+                  onChange={(e) => setEditableEmail(e.target.value)}
+                  className="flex-1 px-3 py-2 border border-neutral-light rounded focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                  placeholder="skriv@epostadresse.no"
+                  autoFocus
+                />
+                <button
+                  onClick={handleEmailSave}
+                  disabled={
+                    !editableEmail.trim() || !editableEmail.includes("@")
+                  }
+                  className="px-3 py-2 text-sm bg-green-600 text-white rounded hover:bg-green-700 disabled:bg-neutral-secondary disabled:cursor-not-allowed transition-colors"
+                >
+                  ✓ Lagre
+                </button>
+                <button
+                  onClick={handleEmailCancel}
+                  className="px-3 py-2 text-sm bg-neutral-secondary text-neutral-dark rounded hover:bg-neutral transition-colors"
+                >
+                  ✕ Avbryt
+                </button>
+              </div>
+            )}
+
+            {!isLoadingEmail && !recipientEmail && !isEditingEmail && (
+              <div className="text-accent text-sm">
+                ⚠️ Ingen e-postadresse funnet. Klikk &quot;Rediger&quot; for å
+                legge til manuelt.
+              </div>
             )}
           </div>
           <div>
