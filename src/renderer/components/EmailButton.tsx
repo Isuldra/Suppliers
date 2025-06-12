@@ -89,6 +89,12 @@ const EmailButton: React.FC<EmailButtonProps> = ({
     setPreviewHtml(html);
   };
 
+  // Handle recipient email change
+  const handleRecipientChange = (recipientEmail: string) => {
+    const updatedData = { ...emailData, recipientEmail };
+    setEmailData(updatedData);
+  };
+
   const handleSendEmail = async () => {
     if (!selectedSupplier) {
       console.error("No supplier selected, cannot send email.");
@@ -100,7 +106,8 @@ const EmailButton: React.FC<EmailButtonProps> = ({
       const result = await emailService.sendReminder(emailData);
 
       if (result.success) {
-        toast.success(`E-post sendt til ${selectedSupplier}`);
+        const recipientDisplay = emailData.recipientEmail || selectedSupplier;
+        toast.success(`E-post sendt til ${recipientDisplay}`);
         setRetryCount(0);
         setShowPreview(false); // Close the preview modal
 
@@ -214,6 +221,7 @@ const EmailButton: React.FC<EmailButtonProps> = ({
           onSend={handleSendEmail}
           onCancel={() => setShowPreview(false)}
           onChangeLanguage={handleLanguageChange}
+          onChangeRecipient={handleRecipientChange}
         />
       )}
     </div>

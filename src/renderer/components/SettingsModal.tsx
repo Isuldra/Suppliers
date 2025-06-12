@@ -24,10 +24,12 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
 
   const loadSettings = async () => {
     try {
-      const result = await window.electron.getSettings();
-      if (result.success && result.data) {
-        setSettings(result.data.user);
-      }
+      // TODO: Implement getSettings in electron API
+      // const result = await window.electron.getSettings();
+      // if (result.success && result.data) {
+      //   setSettings(result.data.user);
+      // }
+      console.log("Settings loading not implemented yet");
     } catch (error) {
       console.error("Error loading settings:", error);
     }
