@@ -638,113 +638,138 @@ ipcMain.handle(
       }
 
       // 🔍 DEBUG: Log the HTML content being sent to PowerShell
-      log.info("HTML content length:", payload.html.length);
+      log.info("HTML content length (before escaping):", payload.html.length);
       log.info(
         "HTML preview (first 200 chars):",
         payload.html.substring(0, 200)
       );
 
-      // Escape special characters for PowerShell
-      // Note: HTML is already processed by juice with inline CSS, so we only escape for PowerShell
+      // Escape special characters for PowerShell script embedding
+      // Order matters: escape backticks first, then dollar signs, then quotes
       const escapedHtml = payload.html
-        .replace(/"/g, '""')
-        .replace(/`/g, "``")
-        .replace(/\$/g, "`$");
+        .replace(/`/g, "``") // Escape backticks first (PowerShell escape char)
+        .replace(/\$/g, "`$") // Escape dollar signs (PowerShell variables)
+        .replace(/"/g, '""'); // Escape double quotes (PowerShell strings)
 
       const escapedSubject = payload.subject
-        .replace(/"/g, '""')
         .replace(/`/g, "``")
-        .replace(/\$/g, "`$");
+        .replace(/\$/g, "`$")
+        .replace(/"/g, '""');
 
-      // 🔍 DEBUG: Log escaped HTML preview
+      // 🔍 DEBUG: Log escaped HTML info
+      log.info(
+        "HTML content length (after escaping, for PS script):",
+        escapedHtml.length
+      );
       log.info(
         "Escaped HTML preview (first 200 chars):",
         escapedHtml.substring(0, 200)
       );
 
-      // PowerShell script to send email via Outlook COM with enhanced debugging
+      // PowerShell script to send email via Outlook COM
+      // This script will be sent via stdin to avoid command-line length limits
       const powershellScript = `
-        try {
-          Write-Output "DEBUG: Starting Outlook COM automation..."
-          
-          # Create Outlook application object
-          $outlook = New-Object -ComObject Outlook.Application
-          Write-Output "DEBUG: Outlook application object created"
-          
-          # Create new mail item (0 = olMailItem)
-          $mail = $outlook.CreateItem(0)
-          Write-Output "DEBUG: Mail item created"
-          
-          # Set email properties
-          $mail.To = "${emailTo}"
-          Write-Output "DEBUG: Recipient set to ${emailTo}"
-          
-          $mail.Subject = "${escapedSubject}"
-          Write-Output "DEBUG: Subject set"
-          
-          # Set HTML body with debugging
-          $htmlContent = @"
+try {
+  Write-Output "DEBUG: Starting Outlook COM automation..."
+  $outlook = New-Object -ComObject Outlook.Application
+  Write-Output "DEBUG: Outlook application object created"
+  $mail = $outlook.CreateItem(0)
+  Write-Output "DEBUG: Mail item created"
+
+  $mail.To = "${emailTo}"
+  Write-Output "DEBUG: Recipient set to ${emailTo}"
+
+  $mail.Subject = @"
+${escapedSubject}
+"@
+  Write-Output "DEBUG: Subject set"
+
+  # Using here-string for HTMLBody to handle multi-line content robustly
+  $htmlContent = @"
 ${escapedHtml}
 "@
-          Write-Output "DEBUG: HTML content length: $($htmlContent.Length)"
-          Write-Output "DEBUG: HTML preview: $($htmlContent.Substring(0, [Math]::Min(100, $htmlContent.Length)))"
-          
-          $mail.HTMLBody = $htmlContent
-          Write-Output "DEBUG: HTML body set successfully"
-          
-          # Set sender information
-          $mail.SentOnBehalfOfName = "supply.planning.no@onemed.com"
-          Write-Output "DEBUG: Sender information set"
-          
-          # Optional: Save as draft first for debugging (uncomment to enable)
-          # $mail.Save()
-          # Write-Output "DEBUG: Email saved as draft"
-          
-          # Send the email
-          $mail.Send()
-          Write-Output "DEBUG: Send command executed"
-          
-          Write-Output "SUCCESS: Email sent successfully to ${emailTo}"
-        } catch {
-          Write-Output "ERROR: $($_.Exception.Message)"
-          Write-Output "ERROR_DETAILS: $($_.Exception.ToString())"
-        }
-      `;
+  Write-Output "DEBUG: HTML content length in PS: $($htmlContent.Length)"
+  Write-Output "DEBUG: HTML preview in PS: $($htmlContent.Substring(0, [Math]::Min(100, $htmlContent.Length)))"
+  $mail.HTMLBody = $htmlContent
+  Write-Output "DEBUG: HTML body set successfully"
+
+  $mail.SentOnBehalfOfName = "supply.planning.no@onemed.com"
+  Write-Output "DEBUG: Sender information set"
+
+  $mail.Send()
+  Write-Output "DEBUG: Send command executed"
+  Write-Output "SUCCESS: Email sent successfully to ${emailTo}"
+} catch {
+  Write-Output "ERROR: $($_.Exception.Message)"
+  Write-Output "ERROR_DETAILS: $($_.Exception.ToString())"
+  Write-Output "ERROR_TYPE: $($_.Exception.GetType().FullName)"
+}
+`;
 
       return new Promise((resolve) => {
-        const process = spawn("powershell", ["-Command", powershellScript], {
-          windowsHide: true,
-          stdio: ["pipe", "pipe", "pipe"],
-        });
+        // 🚀 CRITICAL FIX: Use stdin to avoid command-line length limits and escaping issues
+        // -NoProfile: Clean environment, avoids Conda profile issues
+        // -ExecutionPolicy Bypass: Bypasses execution policy for this session
+        // -Command -: Read script from stdin
+        const psProcess = spawn(
+          "powershell",
+          ["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", "-"],
+          {
+            windowsHide: true,
+            stdio: ["pipe", "pipe", "pipe"], // stdin, stdout, stderr
+          }
+        );
 
         let output = "";
         let errorOutput = "";
 
-        process.stdout.on("data", (data: Buffer) => {
+        // Write the PowerShell script to stdin
+        if (psProcess.stdin) {
+          psProcess.stdin.write(powershellScript + "\r\n"); // Add newline for safety
+          psProcess.stdin.end();
+        } else {
+          log.error("PowerShell process stdin is not available.");
+          resolve({
+            success: false,
+            error: "PowerShell stdin utilgjengelig.",
+          });
+          return;
+        }
+
+        psProcess.stdout.on("data", (data: Buffer) => {
           output += data.toString();
         });
 
-        process.stderr.on("data", (data: Buffer) => {
+        psProcess.stderr.on("data", (data: Buffer) => {
           errorOutput += data.toString();
         });
 
-        process.on("close", (code: number | null) => {
+        psProcess.on("close", (code: number | null) => {
           log.info(`PowerShell process exited with code: ${code}`);
-          log.info(`PowerShell output: ${output}`);
+          log.info(`PowerShell output:\n${output}`); // Log full output
 
           if (errorOutput) {
-            log.warn(`PowerShell stderr: ${errorOutput}`);
+            log.warn(`PowerShell stderr:\n${errorOutput}`); // Log full stderr
           }
 
           if (output.includes("SUCCESS")) {
             log.info(`Email sent automatically via Outlook to: ${emailTo}`);
             resolve({ success: true });
           } else {
-            const errorMsg = output.includes("ERROR:")
-              ? output.split("ERROR:")[1].trim()
-              : `PowerShell failed with code ${code}. Output: ${output}`;
+            const errorMatch = output.match(/ERROR:\s*(.*)/);
+            const errorMsg =
+              errorMatch && errorMatch[1]
+                ? errorMatch[1].trim()
+                : `PowerShell failed. Code: ${code}. See logs.`;
 
-            log.error("PowerShell automation failed:", errorMsg);
+            log.error(
+              "PowerShell automation failed:",
+              errorMsg,
+              "Full output:",
+              output,
+              "Full stderr:",
+              errorOutput
+            );
             resolve({
               success: false,
               error: `Automatisk sending feilet: ${errorMsg}`,
@@ -752,8 +777,11 @@ ${escapedHtml}
           }
         });
 
-        process.on("error", (error: Error) => {
-          log.error("PowerShell process error:", error);
+        psProcess.on("error", (error: Error) => {
+          log.error(
+            "PowerShell process failed to spawn or other error:",
+            error
+          );
           resolve({
             success: false,
             error: `PowerShell prosess feil: ${error.message}`,
@@ -1157,6 +1185,8 @@ ipcMain.handle(
         # Open the .eml file using Session.OpenSharedItem
         $emlPath = "${escapedFilePath}"
         Write-Output "🚀 DIRECT: Opening .eml file: $emlPath"
+        Write-Output "🚀 DIRECT: File exists check: $(Test-Path $emlPath)"
+        Write-Output "🚀 DIRECT: File size: $((Get-Item $emlPath -ErrorAction SilentlyContinue).Length) bytes"
         
         # This opens the .eml file and creates a MailItem (may briefly show window)
         $mailItem = $outlook.Session.OpenSharedItem($emlPath)
