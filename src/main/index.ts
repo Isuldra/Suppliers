@@ -637,15 +637,9 @@ ipcMain.handle(
         };
       }
 
-      // Clean and escape HTML for PowerShell
-      const cleanHtml = payload.html
-        .replace(/<style>.*?<\/style>/gs, "")
-        .replace(/<head>.*?<\/head>/gs, "")
-        .replace(/<script>.*?<\/script>/gs, "")
-        .trim();
-
       // Escape special characters for PowerShell
-      const escapedHtml = cleanHtml
+      // Note: HTML is already processed by juice with inline CSS, so we only escape for PowerShell
+      const escapedHtml = payload.html
         .replace(/"/g, '""')
         .replace(/`/g, "``")
         .replace(/\$/g, "`$");
