@@ -31,11 +31,7 @@ interface ElectronAPI {
     subject: string;
     html: string;
   }) => Promise<{ success: boolean; error?: string }>;
-  sendEmailViaEmlAndCOM: (payload: {
-    to: string;
-    subject: string;
-    html: string;
-  }) => Promise<{ success: boolean; error?: string }>;
+
   getSuppliers: () => Promise<{
     success: boolean;
     data?: string[];

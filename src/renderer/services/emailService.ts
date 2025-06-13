@@ -352,39 +352,10 @@ export class EmailService {
           ? `Purring på manglende leveranser – ${data.supplier}`
           : `Reminder: Outstanding Deliveries – ${data.supplier}`;
 
-      // ATTEMPT 1: sendEmailViaEmlAndCOM (Primary Method - EML+COM)
+      // ATTEMPT 1: sendEmailAutomatically (Primary Method - Robust HTML+COM via temp file)
       try {
         console.log(
-          "ATTEMPT 1: Trying sendEmailViaEmlAndCOM (EML+COM method)..."
-        );
-        const result = await window.electron.sendEmailViaEmlAndCOM({
-          to: supplierEmail,
-          subject,
-          html,
-        });
-
-        if (result.success) {
-          console.log(
-            "SUCCESS: Email sent via sendEmailViaEmlAndCOM (EML+COM)"
-          );
-          return result;
-        } else {
-          console.warn(
-            "ATTEMPT 1 FAILED: sendEmailViaEmlAndCOM failed, falling back to sendEmailAutomatically:",
-            result.error
-          );
-        }
-      } catch (error) {
-        console.warn(
-          "ATTEMPT 1 FAILED: sendEmailViaEmlAndCOM threw error, falling back to sendEmailAutomatically:",
-          error
-        );
-      }
-
-      // ATTEMPT 2: sendEmailAutomatically (First Fallback - HTML-String+COM)
-      try {
-        console.log(
-          "ATTEMPT 2: Trying sendEmailAutomatically (HTML-String+COM method)..."
+          "ATTEMPT 1: Trying sendEmailAutomatically (Robust HTML+COM via temp file)..."
         );
         const result = await window.electron.sendEmailAutomatically({
           to: supplierEmail,
@@ -394,24 +365,24 @@ export class EmailService {
 
         if (result.success) {
           console.log(
-            "SUCCESS: Email sent via sendEmailAutomatically (HTML-String+COM)"
+            "SUCCESS: Email sent via sendEmailAutomatically (Robust HTML+COM)"
           );
           return result;
         } else {
           console.warn(
-            "ATTEMPT 2 FAILED: sendEmailAutomatically failed, falling back to sendEmail:",
+            "ATTEMPT 1 FAILED: sendEmailAutomatically failed, falling back to sendEmail:",
             result.error
           );
         }
       } catch (error) {
         console.warn(
-          "ATTEMPT 2 FAILED: sendEmailAutomatically threw error, falling back to sendEmail:",
+          "ATTEMPT 1 FAILED: sendEmailAutomatically threw error, falling back to sendEmail:",
           error
         );
       }
 
-      // ATTEMPT 3: sendEmail (Final Fallback - .eml file-open)
-      console.log("ATTEMPT 3: Trying sendEmail (.eml file-open method)...");
+      // ATTEMPT 2: sendEmail (Final Fallback - .eml file-open method)
+      console.log("ATTEMPT 2: Trying sendEmail (.eml file-open method)...");
       const result = await window.electron.sendEmail({
         to: supplierEmail,
         subject,
@@ -485,53 +456,22 @@ export class EmailService {
         console.warn("Could not save test HTML:", debugError);
       }
 
-      // TEST ATTEMPT 1: sendEmailViaEmlAndCOM (Primary Method - EML+COM)
-      try {
-        console.log(
-          "🧪 TEST ATTEMPT 1: Trying sendEmailViaEmlAndCOM (EML+COM method)..."
-        );
-        const result = await window.electron.sendEmailViaEmlAndCOM({
-          to: recipientEmail,
-          subject: "🧪 CSS Styling Test (EML+COM) - OneMed SupplyChain",
-          html: testHtml,
-        });
-
-        if (result.success) {
-          console.log(
-            "🧪 TEST SUCCESS: Email sent via sendEmailViaEmlAndCOM (EML+COM)"
-          );
-          return result;
-        } else {
-          console.warn(
-            "🧪 TEST ATTEMPT 1 FAILED: sendEmailViaEmlAndCOM failed, falling back to sendEmailAutomatically:",
-            result.error
-          );
-        }
-      } catch (error) {
-        console.warn(
-          "🧪 TEST ATTEMPT 1 FAILED: sendEmailViaEmlAndCOM threw error, falling back to sendEmailAutomatically:",
-          error
-        );
-      }
-
-      // TEST ATTEMPT 2: sendEmailAutomatically (First Fallback - HTML-String+COM)
+      // TEST ATTEMPT 1: sendEmailAutomatically (Primary Method - Robust HTML+COM via temp file)
       console.log(
-        "🧪 TEST ATTEMPT 2: Trying sendEmailAutomatically (HTML-String+COM method)..."
+        "🧪 TEST ATTEMPT 1: Trying sendEmailAutomatically (Robust HTML+COM via temp file)..."
       );
       const result = await window.electron.sendEmailAutomatically({
         to: recipientEmail,
-        subject: "🧪 CSS Styling Test (HTML-String+COM) - OneMed SupplyChain",
+        subject: "🧪 CSS Styling Test (Robust HTML+COM) - OneMed SupplyChain",
         html: testHtml,
       });
 
       if (result.success) {
         console.log(
-          "🧪 TEST SUCCESS: Email sent via sendEmailAutomatically (HTML-String+COM)"
+          "🧪 TEST SUCCESS: Email sent via sendEmailAutomatically (Robust HTML+COM)"
         );
       } else {
-        console.error(
-          "🧪 TEST FINAL ATTEMPT FAILED: sendEmailAutomatically failed"
-        );
+        console.error("🧪 TEST FAILED: sendEmailAutomatically failed");
       }
 
       return result;
