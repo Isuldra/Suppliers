@@ -26,12 +26,16 @@ export interface EmailData {
   recipientEmail?: string; // Optional override for recipient email
   orders: Array<{
     key: string;
-    poNumber: string;
-    orderQty: number;
-    receivedQty: number;
-    outstandingQty: number;
-    itemNo?: string;
-    description?: string;
+    poNumber: string; // PO-nr
+    itemNo: string; // OneMed nr
+    supplierItemNo: string; // Lev. art.nr
+    description: string; // Beskrivelse/Description
+    specification: string; // Spesifikasjon/Specification
+    orderQty: number; // Bestilt ant./Order qty
+    receivedQty: number; // Mottatt ant./Received qty
+    estReceiptDate: string; // Forventet ETA/Expected ETA
+    // Legacy fields for backward compatibility
+    outstandingQty?: number;
     orderRowNumber?: string;
   }>;
   language?: "no" | "en"; // Add language option
@@ -45,125 +49,165 @@ export class EmailService {
   };
 
   constructor() {
-    // Norwegian template - compact design for many order lines
+    // Norwegian template - Excel-like design with maximum Outlook compatibility
     const noTemplate = `<!DOCTYPE html>
 <html>
-<body style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.4; color: #333; max-width: 1000px; margin: 0 auto; padding: 15px; background-color: #f8f9fa; font-size: 13px;">
-<div style="background-color: #ffffff; border-radius: 6px; box-shadow: 0 1px 6px rgba(0,0,0,0.1); overflow: hidden;">
-  <div style="background: linear-gradient(135deg, #2c5aa0 0%, #1e3a5f 100%); color: white; padding: 20px; text-align: center;">
-    <h1 style="margin: 0; font-size: 20px; font-weight: 300;">Purring på manglende leveranser</h1>
-    <div style="color: #ffffff; font-weight: bold; font-size: 14px; margin-top: 8px;">OneMed Norge AS</div>
-  </div>
-  
-  <div style="padding: 20px;">
-    <div style="font-size: 14px; margin-bottom: 15px; color: #555;">Hei,</div>
-    
-    <div style="font-size: 14px; margin-bottom: 20px; color: #555; background-color: #f8f9fa; padding: 12px; border-left: 3px solid #2c5aa0; border-radius: 3px;">
-      Vi ser at følgende bestillinger fortsatt står som utestående hos dere. Vennligst gjennomgå listen og gi oss tilbakemelding på forventet leveringsstatus.
-    </div>
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+  <title>Purring på utestående ordre</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f6f6f6; font-family: Arial, Helvetica, sans-serif;">
 
-    <table style="width: 100%; border-collapse: collapse; margin: 15px 0; font-size: 11px; box-shadow: 0 1px 4px rgba(0,0,0,0.1); border-radius: 4px; overflow: hidden;">
-      <thead>
-        <tr style="background: linear-gradient(135deg, #2c5aa0 0%, #1e3a5f 100%); color: white;">
-          <th style="padding: 8px 6px; text-align: left; font-weight: 600; font-size: 10px; text-transform: uppercase; letter-spacing: 0.3px; width: 12%;">PO-nr</th>
-          <th style="padding: 8px 6px; text-align: left; font-weight: 600; font-size: 10px; text-transform: uppercase; letter-spacing: 0.3px; width: 15%;">OneMed nr</th>
-          <th style="padding: 8px 6px; text-align: left; font-weight: 600; font-size: 10px; text-transform: uppercase; letter-spacing: 0.3px; width: 20%;">Lev. art.nr</th>
-          <th style="padding: 8px 6px; text-align: left; font-weight: 600; font-size: 10px; text-transform: uppercase; letter-spacing: 0.3px; width: 8%;">Rad</th>
-          <th style="padding: 8px 6px; text-align: center; font-weight: 600; font-size: 10px; text-transform: uppercase; letter-spacing: 0.3px; width: 10%;">Utestående</th>
-          <th style="padding: 8px 6px; text-align: left; font-weight: 600; font-size: 10px; text-transform: uppercase; letter-spacing: 0.3px; width: 35%;">Kommentar</th>
-        </tr>
-      </thead>
-      <tbody>
-        {{#each orders}}
-        <tr style="background-color: #f8f9fa; border-bottom: 1px solid #e9ecef;">
-          <td style="padding: 6px; vertical-align: top; font-size: 11px;"><strong>{{poNumber}}</strong></td>
-          <td style="padding: 6px; vertical-align: top; font-size: 11px;">{{itemNo}}</td>
-          <td style="padding: 6px; vertical-align: top; font-size: 11px; word-break: break-word;">{{description}}</td>
-          <td style="padding: 6px; vertical-align: top; font-size: 11px;">{{orderRowNumber}}</td>
-          <td style="padding: 6px; vertical-align: top; text-align: center; font-weight: bold; color: #d32f2f; font-size: 12px;">{{outstandingQty}}</td>
-          <td style="padding: 6px; vertical-align: top; background-color: #fff; border: 1px dashed #ccc; border-radius: 2px; color: #999; font-style: italic; font-size: 10px; min-height: 25px;">Skriv kommentar her...</td>
-        </tr>
-        {{/each}}
-      </tbody>
-    </table>
+  <table width="100%" border="0" cellpadding="0" cellspacing="0" bgcolor="#f6f6f6">
+    <tr>
+      <td>
+        <table align="center" width="100%" border="0" cellpadding="0" cellspacing="0" style="max-width: 900px; margin: 20px auto; background-color: #ffffff; border: 1px solid #e0e0e0; border-radius: 4px; padding: 20px;">
+          
+          <!-- Introduksjon -->
+          <tr>
+            <td style="padding: 10px 10px 20px 10px; font-family: Arial, Helvetica, sans-serif; font-size: 14px; color: #333333;">
+              <p>Hei,</p>
+              <p>Vi viser til vår bestilling og ser at følgende ordrelinjer fortsatt står som utestående hos dere. Vi ber om en tilbakemelding med ny forventet leveringsdato (ETA) for hver linje.</p>
+              <p>Vennligst svar på denne e-posten med den utfylte informasjonen i <b>"Ny ETA"</b>-kolonnen.</p>
+            </td>
+          </tr>
 
-    <div style="margin-top: 20px; padding: 15px; background-color: #f8f9fa; border-radius: 4px; border-left: 3px solid #2c5aa0; font-size: 13px;">
-      <strong>Hva trenger vi fra dere:</strong>
-      <ul style="margin: 8px 0; padding-left: 18px;">
-        <li>Bekreft mottak av denne meldingen</li>
-        <li>Fyll ut kommentarfeltet for hver ordrelinje med forventet leveringsdato eller status</li>
-        <li>Send tilbake denne e-posten med utfylte kommentarer</li>
-      </ul>
-    </div>
+          <!-- Ordretabell -->
+          <tr>
+            <td>
+              <table width="100%" border="0" cellpadding="0" cellspacing="0" style="border-collapse: collapse; font-size: 12px; border: 1px solid #cccccc;">
 
-    <div style="margin-top: 20px; font-weight: 500; color: #2c5aa0; font-size: 13px;">
-      Med vennlig hilsen,<br>
-      <strong>OneMed Norge AS</strong><br>
-      Supply Chain Team
-    </div>
-  </div>
-</div>
+                <!-- Tabelloverskrifter -->
+                <thead>
+                  <tr style="background-color: #003366; color: #ffffff; text-align: left;">
+                    <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">PO-nr</th>
+                    <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">OneMed nr</th>
+                    <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">Lev. art.nr</th>
+                    <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">Beskrivelse</th>
+                    <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">Spesifikasjon</th>
+                    <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">Bestilt ant.</th>
+                    <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">Mottatt ant.</th>
+                    <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">Forventet ETA</th>
+                    <th style="padding: 8px 10px; background-color: #008000; border: 1px solid #4A7AAB;">Ny ETA</th>
+                  </tr>
+                </thead>
+
+                <!-- Tabellinnhold -->
+                <tbody>
+                  {{#each orders}}
+                  <tr style="background-color: {{#if @even}}#f7f7f7{{else}}#ffffff{{/if}}; border-bottom: 1px solid #e0e0e0;">
+                    <td style="padding: 6px 10px; border: 1px solid #e0e0e0; font-weight: bold;">{{poNumber}}</td>
+                    <td style="padding: 6px 10px; border: 1px solid #e0e0e0;">{{itemNo}}</td>
+                    <td style="padding: 6px 10px; border: 1px solid #e0e0e0;">{{supplierItemNo}}</td>
+                    <td style="padding: 6px 10px; border: 1px solid #e0e0e0;">{{description}}</td>
+                    <td style="padding: 6px 10px; border: 1px solid #e0e0e0;">{{specification}}</td>
+                    <td style="padding: 6px 10px; border: 1px solid #e0e0e0; text-align: center;">{{orderQty}}</td>
+                    <td style="padding: 6px 10px; border: 1px solid #e0e0e0; text-align: center;">{{receivedQty}}</td>
+                    <td style="padding: 6px 10px; border: 1px solid #e0e0e0;">{{estReceiptDate}}</td>
+                    <td style="padding: 6px 10px; border: 1px solid #e0e0e0; background-color: #E8F5E9;">&nbsp;</td>
+                  </tr>
+                  {{/each}}
+                </tbody>
+
+              </table>
+            </td>
+          </tr>
+
+          <!-- Avslutning -->
+          <tr>
+            <td style="padding: 30px 10px 10px 10px; font-family: Arial, Helvetica, sans-serif; font-size: 14px; color: #333333;">
+              <p>Med vennlig hilsen,<br>
+              <b>OneMed Norge AS</b><br>
+              Supply Chain Team</p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+
 </body>
 </html>`;
 
-    // English template - compact design for many order lines
+    // English template - Excel-like design with maximum Outlook compatibility
     const enTemplate = `<!DOCTYPE html>
 <html>
-<body style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.4; color: #333; max-width: 1000px; margin: 0 auto; padding: 15px; background-color: #f8f9fa; font-size: 13px;">
-<div style="background-color: #ffffff; border-radius: 6px; box-shadow: 0 1px 6px rgba(0,0,0,0.1); overflow: hidden;">
-  <div style="background: linear-gradient(135deg, #2c5aa0 0%, #1e3a5f 100%); color: white; padding: 20px; text-align: center;">
-    <h1 style="margin: 0; font-size: 20px; font-weight: 300;">Outstanding Deliveries Reminder</h1>
-    <div style="color: #ffffff; font-weight: bold; font-size: 14px; margin-top: 8px;">OneMed Norge AS</div>
-  </div>
-  
-  <div style="padding: 20px;">
-    <div style="font-size: 14px; margin-bottom: 15px; color: #555;">Hello,</div>
-    
-    <div style="font-size: 14px; margin-bottom: 20px; color: #555; background-color: #f8f9fa; padding: 12px; border-left: 3px solid #2c5aa0; border-radius: 3px;">
-      The following purchase orders are still listed as outstanding on our side. Please review the list and provide us with feedback on expected delivery status.
-    </div>
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+  <title>Outstanding Orders Reminder</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f6f6f6; font-family: Arial, Helvetica, sans-serif;">
 
-    <table style="width: 100%; border-collapse: collapse; margin: 15px 0; font-size: 11px; box-shadow: 0 1px 4px rgba(0,0,0,0.1); border-radius: 4px; overflow: hidden;">
-      <thead>
-        <tr style="background: linear-gradient(135deg, #2c5aa0 0%, #1e3a5f 100%); color: white;">
-          <th style="padding: 8px 6px; text-align: left; font-weight: 600; font-size: 10px; text-transform: uppercase; letter-spacing: 0.3px; width: 12%;">PO No.</th>
-          <th style="padding: 8px 6px; text-align: left; font-weight: 600; font-size: 10px; text-transform: uppercase; letter-spacing: 0.3px; width: 15%;">OneMed No.</th>
-          <th style="padding: 8px 6px; text-align: left; font-weight: 600; font-size: 10px; text-transform: uppercase; letter-spacing: 0.3px; width: 20%;">Supplier Art.No.</th>
-          <th style="padding: 8px 6px; text-align: left; font-weight: 600; font-size: 10px; text-transform: uppercase; letter-spacing: 0.3px; width: 8%;">Row</th>
-          <th style="padding: 8px 6px; text-align: center; font-weight: 600; font-size: 10px; text-transform: uppercase; letter-spacing: 0.3px; width: 10%;">Outstanding</th>
-          <th style="padding: 8px 6px; text-align: left; font-weight: 600; font-size: 10px; text-transform: uppercase; letter-spacing: 0.3px; width: 35%;">Commentary</th>
-        </tr>
-      </thead>
-      <tbody>
-        {{#each orders}}
-        <tr style="background-color: #f8f9fa; border-bottom: 1px solid #e9ecef;">
-          <td style="padding: 6px; vertical-align: top; font-size: 11px;"><strong>{{poNumber}}</strong></td>
-          <td style="padding: 6px; vertical-align: top; font-size: 11px;">{{itemNo}}</td>
-          <td style="padding: 6px; vertical-align: top; font-size: 11px; word-break: break-word;">{{description}}</td>
-          <td style="padding: 6px; vertical-align: top; font-size: 11px;">{{orderRowNumber}}</td>
-          <td style="padding: 6px; vertical-align: top; text-align: center; font-weight: bold; color: #d32f2f; font-size: 12px;">{{outstandingQty}}</td>
-          <td style="padding: 6px; vertical-align: top; background-color: #fff; border: 1px dashed #ccc; border-radius: 2px; color: #999; font-style: italic; font-size: 10px; min-height: 25px;">Write comment here...</td>
-        </tr>
-        {{/each}}
-      </tbody>
-    </table>
+  <table width="100%" border="0" cellpadding="0" cellspacing="0" bgcolor="#f6f6f6">
+    <tr>
+      <td>
+        <table align="center" width="100%" border="0" cellpadding="0" cellspacing="0" style="max-width: 900px; margin: 20px auto; background-color: #ffffff; border: 1px solid #e0e0e0; border-radius: 4px; padding: 20px;">
+          
+          <!-- Introduction -->
+          <tr>
+            <td style="padding: 10px 10px 20px 10px; font-family: Arial, Helvetica, sans-serif; font-size: 14px; color: #333333;">
+              <p>Hello,</p>
+              <p>We refer to our purchase order and see that the following order lines are still outstanding on your side. We request feedback with new expected delivery date (ETA) for each line.</p>
+              <p>Please reply to this email with the completed information in the <b>"New ETA"</b> column.</p>
+            </td>
+          </tr>
 
-    <div style="margin-top: 20px; padding: 15px; background-color: #f8f9fa; border-radius: 4px; border-left: 3px solid #2c5aa0; font-size: 13px;">
-      <strong>What we need from you:</strong>
-      <ul style="margin: 8px 0; padding-left: 18px;">
-        <li>Confirm receipt of this message</li>
-        <li>Fill out the commentary field for each order line with expected delivery date or status</li>
-        <li>Reply to this email with completed comments</li>
-      </ul>
-    </div>
+          <!-- Order table -->
+          <tr>
+            <td>
+              <table width="100%" border="0" cellpadding="0" cellspacing="0" style="border-collapse: collapse; font-size: 12px; border: 1px solid #cccccc;">
 
-    <div style="margin-top: 20px; font-weight: 500; color: #2c5aa0; font-size: 13px;">
-      Kind regards,<br>
-      <strong>OneMed Norge AS</strong><br>
-      Supply Chain Team
-    </div>
-  </div>
-</div>
+                <!-- Table headers -->
+                <thead>
+                  <tr style="background-color: #003366; color: #ffffff; text-align: left;">
+                    <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">PO No.</th>
+                    <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">OneMed No.</th>
+                    <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">Supplier Art. No.</th>
+                    <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">Description</th>
+                    <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">Specification</th>
+                    <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">Order Qty</th>
+                    <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">Received Qty</th>
+                    <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">Expected ETA</th>
+                    <th style="padding: 8px 10px; background-color: #008000; border: 1px solid #4A7AAB;">New ETA</th>
+                  </tr>
+                </thead>
+
+                <!-- Table content -->
+                <tbody>
+                  {{#each orders}}
+                  <tr style="background-color: {{#if @even}}#f7f7f7{{else}}#ffffff{{/if}}; border-bottom: 1px solid #e0e0e0;">
+                    <td style="padding: 6px 10px; border: 1px solid #e0e0e0; font-weight: bold;">{{poNumber}}</td>
+                    <td style="padding: 6px 10px; border: 1px solid #e0e0e0;">{{itemNo}}</td>
+                    <td style="padding: 6px 10px; border: 1px solid #e0e0e0;">{{supplierItemNo}}</td>
+                    <td style="padding: 6px 10px; border: 1px solid #e0e0e0;">{{description}}</td>
+                    <td style="padding: 6px 10px; border: 1px solid #e0e0e0;">{{specification}}</td>
+                    <td style="padding: 6px 10px; border: 1px solid #e0e0e0; text-align: center;">{{orderQty}}</td>
+                    <td style="padding: 6px 10px; border: 1px solid #e0e0e0; text-align: center;">{{receivedQty}}</td>
+                    <td style="padding: 6px 10px; border: 1px solid #e0e0e0;">{{estReceiptDate}}</td>
+                    <td style="padding: 6px 10px; border: 1px solid #e0e0e0; background-color: #E8F5E9;">&nbsp;</td>
+                  </tr>
+                  {{/each}}
+                </tbody>
+
+              </table>
+            </td>
+          </tr>
+
+          <!-- Closing -->
+          <tr>
+            <td style="padding: 30px 10px 10px 10px; font-family: Arial, Helvetica, sans-serif; font-size: 14px; color: #333333;">
+              <p>Kind regards,<br>
+              <b>OneMed Norge AS</b><br>
+              Supply Chain Team</p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+
 </body>
 </html>`;
 
