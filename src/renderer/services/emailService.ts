@@ -304,6 +304,21 @@ export class EmailService {
       const compiledTemplate = Handlebars.compile(template);
       const rawHtml = compiledTemplate(data);
 
+      // 🔍 DEBUG: Log raw HTML before juice processing
+      console.log("=== RAW HTML BEFORE JUICE ===");
+      console.log(rawHtml.substring(0, 500) + "...");
+
+      // Save raw HTML to file for debugging
+      try {
+        await window.electron.saveDebugHtml({
+          filename: `raw-html-${Date.now()}.html`,
+          content: rawHtml,
+          description: "Raw HTML before juice processing",
+        });
+      } catch (debugError) {
+        console.warn("Could not save debug HTML:", debugError);
+      }
+
       // Inline CSS styles for better email client compatibility
       const html = juice(rawHtml, {
         removeStyleTags: true, // Remove <style> tags after inlining
@@ -315,48 +330,215 @@ export class EmailService {
         preserveImportant: true, // Keep !important declarations
       });
 
+      // 🔍 DEBUG: Log processed HTML after juice
+      console.log("=== PROCESSED HTML AFTER JUICE ===");
+      console.log(html.substring(0, 500) + "...");
+
+      // Save processed HTML to file for debugging
+      try {
+        await window.electron.saveDebugHtml({
+          filename: `juiced-html-${Date.now()}.html`,
+          content: html,
+          description:
+            "HTML after juice processing (what gets sent to PowerShell)",
+        });
+      } catch (debugError) {
+        console.warn("Could not save debug HTML:", debugError);
+      }
+
       // Set the subject based on language
       const subject =
         finalLanguage === "no"
           ? `Purring på manglende leveranser – ${data.supplier}`
           : `Reminder: Outstanding Deliveries – ${data.supplier}`;
 
-      // Try automatic PowerShell sending first (Windows only) - PRIORITIZED
+      // ATTEMPT 1: sendEmailViaEmlAndCOM (Primary Method - EML+COM)
       try {
-        const autoResult = await window.electron.sendEmailAutomatically({
+        console.log(
+          "ATTEMPT 1: Trying sendEmailViaEmlAndCOM (EML+COM method)..."
+        );
+        const result = await window.electron.sendEmailViaEmlAndCOM({
           to: supplierEmail,
           subject,
           html,
         });
 
-        if (autoResult.success) {
-          console.log("Email sent automatically via PowerShell/Outlook");
-          return autoResult;
+        if (result.success) {
+          console.log(
+            "SUCCESS: Email sent via sendEmailViaEmlAndCOM (EML+COM)"
+          );
+          return result;
         } else {
           console.warn(
-            "Automatic PowerShell sending failed, falling back to .eml method:",
-            autoResult.error
+            "ATTEMPT 1 FAILED: sendEmailViaEmlAndCOM failed, falling back to sendEmailAutomatically:",
+            result.error
           );
         }
       } catch (error) {
         console.warn(
-          "Automatic PowerShell sending failed, falling back to .eml method:",
+          "ATTEMPT 1 FAILED: sendEmailViaEmlAndCOM threw error, falling back to sendEmailAutomatically:",
           error
         );
       }
 
-      // Fallback to .eml file method
+      // ATTEMPT 2: sendEmailAutomatically (First Fallback - HTML-String+COM)
+      try {
+        console.log(
+          "ATTEMPT 2: Trying sendEmailAutomatically (HTML-String+COM method)..."
+        );
+        const result = await window.electron.sendEmailAutomatically({
+          to: supplierEmail,
+          subject,
+          html,
+        });
+
+        if (result.success) {
+          console.log(
+            "SUCCESS: Email sent via sendEmailAutomatically (HTML-String+COM)"
+          );
+          return result;
+        } else {
+          console.warn(
+            "ATTEMPT 2 FAILED: sendEmailAutomatically failed, falling back to sendEmail:",
+            result.error
+          );
+        }
+      } catch (error) {
+        console.warn(
+          "ATTEMPT 2 FAILED: sendEmailAutomatically threw error, falling back to sendEmail:",
+          error
+        );
+      }
+
+      // ATTEMPT 3: sendEmail (Final Fallback - .eml file-open)
+      console.log("ATTEMPT 3: Trying sendEmail (.eml file-open method)...");
       const result = await window.electron.sendEmail({
-        to: supplierEmail, // Use the actual email address
+        to: supplierEmail,
         subject,
         html,
       });
+
+      if (result.success) {
+        console.log("SUCCESS: Email sent via sendEmail (.eml file-open)");
+      } else {
+        console.error("FINAL ATTEMPT FAILED: All email sending methods failed");
+      }
 
       return result;
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : "Unknown error occurred";
       console.error("Email sending failed:", errorMessage);
+      return { success: false, error: errorMessage };
+    }
+  }
+
+  // 🧪 DEBUG: Test method to send simple HTML with basic inline styles
+  async sendTestEmail(
+    recipientEmail: string
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      // Create a very simple HTML email with basic inline styles
+      const testHtml = `<!DOCTYPE html>
+<html>
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+  <title>Test Email</title>
+</head>
+<body style="margin: 0; padding: 20px; background-color: #f0f0f0; font-family: Arial, sans-serif;">
+  <div style="background-color: #ffffff; padding: 20px; border: 2px solid #ff0000; border-radius: 8px;">
+    <h1 style="color: #0066cc; font-size: 24px; margin-bottom: 10px;">Test Email</h1>
+    <p style="color: #333333; font-size: 16px; line-height: 1.5;">
+      This is a test email to verify if inline CSS styles work with PowerShell/Outlook.
+    </p>
+    <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
+      <tr style="background-color: #0066cc;">
+        <th style="color: #ffffff; padding: 10px; border: 1px solid #004499;">Column 1</th>
+        <th style="color: #ffffff; padding: 10px; border: 1px solid #004499;">Column 2</th>
+      </tr>
+      <tr style="background-color: #f7f7f7;">
+        <td style="padding: 8px; border: 1px solid #cccccc;">Test Data 1</td>
+        <td style="padding: 8px; border: 1px solid #cccccc;">Test Data 2</td>
+      </tr>
+      <tr style="background-color: #ffffff;">
+        <td style="padding: 8px; border: 1px solid #cccccc; background-color: #ffff99;">Highlighted Cell</td>
+        <td style="padding: 8px; border: 1px solid #cccccc;">Normal Cell</td>
+      </tr>
+    </table>
+    <p style="color: #666666; font-size: 14px; margin-top: 20px; font-style: italic;">
+      If you can see colors, borders, and styling, then inline CSS works with your email client.
+    </p>
+  </div>
+</body>
+</html>`;
+
+      console.log("🧪 Sending test email with basic inline styles");
+
+      // Save test HTML for debugging
+      try {
+        await window.electron.saveDebugHtml({
+          filename: `test-email-${Date.now()}.html`,
+          content: testHtml,
+          description: "Simple test email with basic inline styles",
+        });
+      } catch (debugError) {
+        console.warn("Could not save test HTML:", debugError);
+      }
+
+      // TEST ATTEMPT 1: sendEmailViaEmlAndCOM (Primary Method - EML+COM)
+      try {
+        console.log(
+          "🧪 TEST ATTEMPT 1: Trying sendEmailViaEmlAndCOM (EML+COM method)..."
+        );
+        const result = await window.electron.sendEmailViaEmlAndCOM({
+          to: recipientEmail,
+          subject: "🧪 CSS Styling Test (EML+COM) - OneMed SupplyChain",
+          html: testHtml,
+        });
+
+        if (result.success) {
+          console.log(
+            "🧪 TEST SUCCESS: Email sent via sendEmailViaEmlAndCOM (EML+COM)"
+          );
+          return result;
+        } else {
+          console.warn(
+            "🧪 TEST ATTEMPT 1 FAILED: sendEmailViaEmlAndCOM failed, falling back to sendEmailAutomatically:",
+            result.error
+          );
+        }
+      } catch (error) {
+        console.warn(
+          "🧪 TEST ATTEMPT 1 FAILED: sendEmailViaEmlAndCOM threw error, falling back to sendEmailAutomatically:",
+          error
+        );
+      }
+
+      // TEST ATTEMPT 2: sendEmailAutomatically (First Fallback - HTML-String+COM)
+      console.log(
+        "🧪 TEST ATTEMPT 2: Trying sendEmailAutomatically (HTML-String+COM method)..."
+      );
+      const result = await window.electron.sendEmailAutomatically({
+        to: recipientEmail,
+        subject: "🧪 CSS Styling Test (HTML-String+COM) - OneMed SupplyChain",
+        html: testHtml,
+      });
+
+      if (result.success) {
+        console.log(
+          "🧪 TEST SUCCESS: Email sent via sendEmailAutomatically (HTML-String+COM)"
+        );
+      } else {
+        console.error(
+          "🧪 TEST FINAL ATTEMPT FAILED: sendEmailAutomatically failed"
+        );
+      }
+
+      return result;
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error occurred";
+      console.error("Test email sending failed:", errorMessage);
       return { success: false, error: errorMessage };
     }
   }
