@@ -31,6 +31,11 @@ interface ElectronAPI {
     subject: string;
     html: string;
   }) => Promise<{ success: boolean; error?: string }>;
+  sendEmailViaEmlAndCOM: (payload: {
+    to: string;
+    subject: string;
+    html: string;
+  }) => Promise<{ success: boolean; error?: string }>;
   getSuppliers: () => Promise<{
     success: boolean;
     data?: string[];
@@ -108,6 +113,35 @@ interface ElectronAPI {
   getSupplierEmail: (
     supplierName: string
   ) => Promise<{ success: boolean; data?: string | null; error?: string }>;
+
+  // Settings methods
+  getSettings: () => Promise<{
+    success: boolean;
+    data?: import("../renderer/types/Settings").SettingsData;
+    error?: string;
+  }>;
+  saveSettings: (
+    settings: import("../renderer/types/Settings").SettingsData
+  ) => Promise<{
+    success: boolean;
+    error?: string;
+  }>;
+
+  // Debug methods
+  saveDebugHtml: (payload: {
+    filename: string;
+    content: string;
+    description: string;
+  }) => Promise<{
+    success: boolean;
+    filePath?: string;
+    error?: string;
+  }>;
+  openDebugFolder: () => Promise<{
+    success: boolean;
+    path?: string;
+    error?: string;
+  }>;
 }
 
 // Extend the global Window interface

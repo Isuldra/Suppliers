@@ -637,6 +637,13 @@ ipcMain.handle(
         };
       }
 
+      // 🔍 DEBUG: Log the HTML content being sent to PowerShell
+      log.info("HTML content length:", payload.html.length);
+      log.info(
+        "HTML preview (first 200 chars):",
+        payload.html.substring(0, 200)
+      );
+
       // Escape special characters for PowerShell
       // Note: HTML is already processed by juice with inline CSS, so we only escape for PowerShell
       const escapedHtml = payload.html
@@ -649,31 +656,58 @@ ipcMain.handle(
         .replace(/`/g, "``")
         .replace(/\$/g, "`$");
 
-      // PowerShell script to send email via Outlook COM
+      // 🔍 DEBUG: Log escaped HTML preview
+      log.info(
+        "Escaped HTML preview (first 200 chars):",
+        escapedHtml.substring(0, 200)
+      );
+
+      // PowerShell script to send email via Outlook COM with enhanced debugging
       const powershellScript = `
         try {
+          Write-Output "DEBUG: Starting Outlook COM automation..."
+          
           # Create Outlook application object
           $outlook = New-Object -ComObject Outlook.Application
+          Write-Output "DEBUG: Outlook application object created"
           
           # Create new mail item (0 = olMailItem)
           $mail = $outlook.CreateItem(0)
+          Write-Output "DEBUG: Mail item created"
           
           # Set email properties
           $mail.To = "${emailTo}"
+          Write-Output "DEBUG: Recipient set to ${emailTo}"
+          
           $mail.Subject = "${escapedSubject}"
-          $mail.HTMLBody = @"
+          Write-Output "DEBUG: Subject set"
+          
+          # Set HTML body with debugging
+          $htmlContent = @"
 ${escapedHtml}
 "@
+          Write-Output "DEBUG: HTML content length: $($htmlContent.Length)"
+          Write-Output "DEBUG: HTML preview: $($htmlContent.Substring(0, [Math]::Min(100, $htmlContent.Length)))"
+          
+          $mail.HTMLBody = $htmlContent
+          Write-Output "DEBUG: HTML body set successfully"
           
           # Set sender information
           $mail.SentOnBehalfOfName = "supply.planning.no@onemed.com"
+          Write-Output "DEBUG: Sender information set"
+          
+          # Optional: Save as draft first for debugging (uncomment to enable)
+          # $mail.Save()
+          # Write-Output "DEBUG: Email saved as draft"
           
           # Send the email
           $mail.Send()
+          Write-Output "DEBUG: Send command executed"
           
           Write-Output "SUCCESS: Email sent successfully to ${emailTo}"
         } catch {
           Write-Output "ERROR: $($_.Exception.Message)"
+          Write-Output "ERROR_DETAILS: $($_.Exception.ToString())"
         }
       `;
 
@@ -968,3 +1002,306 @@ ipcMain.handle("getSupplierEmail", async (event, supplierName: string) => {
     return { success: false, error: String(error) };
   }
 });
+
+// Add IPC handler for saving debug HTML files
+ipcMain.handle(
+  "saveDebugHtml",
+  async (
+    _,
+    payload: {
+      filename: string;
+      content: string;
+      description: string;
+    }
+  ) => {
+    try {
+      log.info(`Saving debug HTML: ${payload.description}`);
+
+      // Create debug directory in user data
+      const debugDir = path.join(app.getPath("userData"), "debug");
+      if (!fs.existsSync(debugDir)) {
+        fs.mkdirSync(debugDir, { recursive: true });
+      }
+
+      // Create full file path
+      const filePath = path.join(debugDir, payload.filename);
+
+      // Write HTML content to file
+      await fs.promises.writeFile(filePath, payload.content, "utf8");
+
+      log.info(`Debug HTML saved to: ${filePath}`);
+      return { success: true, filePath };
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error";
+      log.error("Error saving debug HTML:", errorMessage);
+      return { success: false, error: errorMessage };
+    }
+  }
+);
+
+// Add IPC handler for opening debug folder
+ipcMain.handle("openDebugFolder", async () => {
+  try {
+    const debugDir = path.join(app.getPath("userData"), "debug");
+
+    // Ensure the directory exists
+    if (!fs.existsSync(debugDir)) {
+      fs.mkdirSync(debugDir, { recursive: true });
+    }
+
+    // Open the directory in the default file explorer
+    const errorMsg = await shell.openPath(debugDir);
+    if (errorMsg) {
+      log.error(`Failed to open debug folder: ${errorMsg}`);
+      throw new Error(errorMsg);
+    }
+
+    log.info(`Opened debug folder: ${debugDir}`);
+    return { success: true, path: debugDir };
+  } catch (error) {
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown error";
+    log.error("Error opening debug folder:", errorMessage);
+    return { success: false, error: errorMessage };
+  }
+});
+
+// 🚀 NEW: Hybrid method - Create .eml file and send via PowerShell COM
+ipcMain.handle(
+  "sendEmailViaEmlAndCOM",
+  async (
+    _,
+    payload: {
+      to: string;
+      subject: string;
+      html: string;
+    }
+  ) => {
+    try {
+      log.info(
+        `🚀 DIRECT: Creating .eml file and sending via Direct Open-and-Send method to: ${payload.to}`
+      );
+
+      // Only available on Windows
+      if (process.platform !== "win32") {
+        log.warn("Direct .eml + COM sending only available on Windows");
+        return {
+          success: false,
+          error: "Direct .eml sending er kun tilgjengelig på Windows",
+        };
+      }
+
+      // Get the email address from supplier_emails table
+      const emailTo =
+        databaseService.getSupplierEmail(payload.to) || payload.to;
+      log.info(`Resolved email address: ${emailTo}`);
+
+      // Ensure we have a valid email address
+      if (!emailTo.includes("@")) {
+        log.warn(`No valid email address found for supplier: ${payload.to}`);
+        return {
+          success: false,
+          error: `Ingen e-postadresse funnet for ${payload.to}. Sjekk leverandør e-post innstillinger.`,
+        };
+      }
+
+      // 1. Create .eml file with proper MIME headers (same as existing method)
+      const senderEmail = "supply.planning.no@onemed.com";
+      const EOL = "\r\n";
+      const headers = [
+        `From: OneMed Norge AS <${senderEmail}>`,
+        `Reply-To: ${senderEmail}`,
+        `Sender: ${senderEmail}`,
+        `Return-Path: ${senderEmail}`,
+        `To: ${emailTo}`,
+        `Subject: ${payload.subject}`,
+        `MIME-Version: 1.0`,
+        `Content-Type: text/html; charset=UTF-8`,
+        `Content-Transfer-Encoding: 8bit`,
+        `X-Mailer: OneMed SupplyChain`,
+        ``,
+      ].join(EOL);
+
+      // Clean up the HTML (remove any remaining style tags, scripts, etc.)
+      const cleanHtml = payload.html
+        .replace(/<style>.*?<\/style>/gs, "")
+        .replace(/<head>.*?<\/head>/gs, "")
+        .replace(/<script>.*?<\/script>/gs, "")
+        .trim();
+
+      const body = cleanHtml.replace(/\r?\n/g, EOL);
+      const emlContent = headers + body;
+
+      // Write to temp file
+      const tempDir = app.getPath("temp");
+      const fileName = `onemed-direct-${Date.now()}.eml`;
+      const filePath = path.join(tempDir, fileName);
+
+      fs.writeFileSync(filePath, emlContent, "utf8");
+      log.info(`🚀 DIRECT: Created .eml file: ${filePath}`);
+
+      // 2. Use PowerShell COM to open .eml file and send it directly (Possibility 1)
+      const escapedFilePath = filePath
+        .replace(/\\/g, "\\\\")
+        .replace(/"/g, '""');
+
+      const powershellScript = `
+      try {
+        Write-Output "🚀 DIRECT: Starting Direct Open-and-Send method..."
+        
+        # Create Outlook application object
+        $outlook = New-Object -ComObject Outlook.Application
+        Write-Output "🚀 DIRECT: Outlook application object created"
+        
+        # Open the .eml file using Session.OpenSharedItem
+        $emlPath = "${escapedFilePath}"
+        Write-Output "🚀 DIRECT: Opening .eml file: $emlPath"
+        
+        # This opens the .eml file and creates a MailItem (may briefly show window)
+        $mailItem = $outlook.Session.OpenSharedItem($emlPath)
+        Write-Output "🚀 DIRECT: .eml file opened as MailItem"
+        
+        # Verify the mail item was created successfully
+        if ($mailItem -eq $null) {
+          throw "Failed to open .eml file as MailItem"
+        }
+        
+        # Log mail item properties for debugging
+        Write-Output "🚀 DIRECT: Mail item properties:"
+        Write-Output "  - To: $($mailItem.To)"
+        Write-Output "  - Subject: $($mailItem.Subject)"
+        Write-Output "  - HTML Body Length: $($mailItem.HTMLBody.Length)"
+        Write-Output "  - Body Format: $($mailItem.BodyFormat)"
+        
+        # Send the email directly (this is the critical moment for security prompts)
+        Write-Output "🚀 DIRECT: Attempting to send email..."
+        $mailItem.Send()
+        Write-Output "🚀 DIRECT: Send command executed successfully"
+        
+        # Close the mail item window (if it was opened) - olDiscard = 2
+        try {
+          $mailItem.Close(2)
+          Write-Output "🚀 DIRECT: Mail item window closed"
+        } catch {
+          Write-Output "🚀 DIRECT: Note: Could not close mail item window (may not have been visible): $($_.Exception.Message)"
+        }
+        
+        # Clean up the temporary .eml file after a brief delay
+        Start-Sleep -Seconds 2
+        if (Test-Path $emlPath) {
+          Remove-Item $emlPath -Force
+          Write-Output "🚀 DIRECT: Temporary .eml file cleaned up"
+        }
+        
+        Write-Output "SUCCESS: Direct .eml email sent successfully to ${emailTo}"
+      } catch {
+        Write-Output "ERROR: $($_.Exception.Message)"
+        Write-Output "ERROR_DETAILS: $($_.Exception.ToString())"
+        Write-Output "ERROR_TYPE: $($_.Exception.GetType().FullName)"
+        
+        # If we have a mail item reference, try to close it
+        if ($mailItem -ne $null) {
+          try {
+            $mailItem.Close(2)  # olDiscard
+            Write-Output "🚀 DIRECT: Closed mail item after error"
+          } catch {
+            Write-Output "🚀 DIRECT: Could not close mail item after error"
+          }
+        }
+        
+        # Clean up .eml file on error
+        if (Test-Path "${escapedFilePath}") {
+          try {
+            Remove-Item "${escapedFilePath}" -Force
+            Write-Output "🚀 DIRECT: Cleaned up .eml file after error"
+          } catch {
+            Write-Output "🚀 DIRECT: Could not clean up .eml file: $($_.Exception.Message)"
+          }
+        }
+      }
+    `;
+
+      return new Promise((resolve) => {
+        const process = spawn("powershell", ["-Command", powershellScript], {
+          windowsHide: true,
+          stdio: ["pipe", "pipe", "pipe"],
+        });
+
+        let output = "";
+        let errorOutput = "";
+
+        process.stdout.on("data", (data: Buffer) => {
+          output += data.toString();
+        });
+
+        process.stderr.on("data", (data: Buffer) => {
+          errorOutput += data.toString();
+        });
+
+        process.on("close", (code: number | null) => {
+          log.info(`🚀 DIRECT: PowerShell process exited with code: ${code}`);
+          log.info(`🚀 DIRECT: PowerShell output: ${output}`);
+
+          if (errorOutput) {
+            log.warn(`🚀 DIRECT: PowerShell stderr: ${errorOutput}`);
+          }
+
+          // Clean up .eml file if it still exists (backup cleanup)
+          try {
+            if (fs.existsSync(filePath)) {
+              fs.unlinkSync(filePath);
+              log.info(`🚀 DIRECT: Backup cleanup of .eml file completed`);
+            }
+          } catch (cleanupError) {
+            log.warn(`🚀 DIRECT: Backup cleanup failed:`, cleanupError);
+          }
+
+          if (output.includes("SUCCESS")) {
+            log.info(
+              `🚀 DIRECT: Email sent successfully via Direct Open-and-Send method to: ${emailTo}`
+            );
+            resolve({ success: true });
+          } else {
+            const errorMsg = output.includes("ERROR:")
+              ? output.split("ERROR:")[1].trim()
+              : `PowerShell failed with code ${code}. Output: ${output}`;
+
+            log.error("🚀 DIRECT: PowerShell automation failed:", errorMsg);
+            resolve({
+              success: false,
+              error: `Direct sending feilet: ${errorMsg}`,
+            });
+          }
+        });
+
+        process.on("error", (error: Error) => {
+          log.error("🚀 DIRECT: PowerShell process error:", error);
+
+          // Clean up .eml file on process error
+          try {
+            if (fs.existsSync(filePath)) {
+              fs.unlinkSync(filePath);
+              log.info(`🚀 DIRECT: Cleaned up .eml file after process error`);
+            }
+          } catch (cleanupError) {
+            log.warn(
+              `🚀 DIRECT: Cleanup after process error failed:`,
+              cleanupError
+            );
+          }
+
+          resolve({
+            success: false,
+            error: `Direct PowerShell prosess feil: ${error.message}`,
+          });
+        });
+      });
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error occurred";
+      log.error("🚀 DIRECT: Email sending error:", errorMessage);
+      return { success: false, error: errorMessage };
+    }
+  }
+);
