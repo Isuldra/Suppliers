@@ -33,25 +33,33 @@ const EmailButton: React.FC<EmailButtonProps> = ({
   });
   const [previewHtml, setPreviewHtml] = useState("");
 
-  // Create order list from excel data
+  // Create order list from excel data with language-aware date formatting
   const orders = useMemo(() => {
     if (!excelData?.bp || !selectedSupplier) return [];
+
+    // Get the preferred language for date formatting
+    const preferredLanguage = emailService.getSupplierLanguage(
+      selectedSupplier || ""
+    );
+    const dateLocale = preferredLanguage === "en" ? "en-GB" : "no-NO"; // Use British format for English
 
     return excelData.bp
       .filter((row) => row.supplier === selectedSupplier)
       .map((row: ExcelRow) => ({
         key: row.key,
         poNumber: String(row.poNumber || ""),
+        itemNo: String(row.itemNo || ""),
+        supplierItemNo: String(row.supplierArticleNo || row.description || ""), // Use supplier article number or fallback to description
+        description: String(row.description || ""),
+        specification: String(row.specification || ""),
         orderQty: Number(row.orderQty || 0),
         receivedQty: Number(row.receivedQty || 0),
+        estReceiptDate: row.dueDate
+          ? row.dueDate.toLocaleDateString(dateLocale)
+          : "", // Format date based on supplier's language preference
+        // Legacy fields for backward compatibility
         outstandingQty: Number(row.outstandingQty || 0),
-        itemNo: typeof row.itemNo === "string" ? row.itemNo : undefined,
-        description:
-          typeof row.description === "string" ? row.description : undefined,
-        orderRowNumber:
-          typeof row.orderRowNumber === "string"
-            ? row.orderRowNumber
-            : undefined,
+        orderRowNumber: String(row.orderRowNumber || ""),
       }));
   }, [excelData, selectedSupplier]);
 
