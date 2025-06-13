@@ -32,11 +32,6 @@ interface ElectronAPI {
     subject: string;
     html: string;
   }) => Promise<{ success: boolean; error?: string }>;
-  sendEmailViaEmlAndCOM: (payload: {
-    to: string;
-    subject: string;
-    html: string;
-  }) => Promise<{ success: boolean; error?: string }>;
   getSuppliers: () => Promise<{
     success: boolean;
     data?: string[];
@@ -173,7 +168,6 @@ const validSendChannels = [
   "saveSettings",
   "saveDebugHtml",
   "openDebugFolder",
-  "sendEmailViaEmlAndCOM",
 ] as const;
 
 // Valid receive channels for IPC communication
@@ -215,7 +209,6 @@ const validReceiveChannels = [
   "saveSettings",
   "saveDebugHtml",
   "openDebugFolder",
-  "sendEmailViaEmlAndCOM",
 ] as const;
 
 // Expose the API to the renderer process
@@ -274,14 +267,6 @@ contextBridge.exposeInMainWorld("electron", {
     html: string;
   }) => {
     return await ipcRenderer.invoke("sendEmailAutomatically", payload);
-  },
-  // Hybrid email sending via .eml file + Outlook COM
-  sendEmailViaEmlAndCOM: async (payload: {
-    to: string;
-    subject: string;
-    html: string;
-  }) => {
-    return await ipcRenderer.invoke("sendEmailViaEmlAndCOM", payload);
   },
   // Get suppliers
   getSuppliers: async () => {
