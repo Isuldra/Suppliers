@@ -16,11 +16,14 @@ env:
   NODE_VERSION: "22.x"
 
 jobs:
-  build-windows:
-    name: Build for Windows (x64)
-    runs-on: windows-latest
+  build:
+    name: Build for ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
     permissions:
-      contents: write
+      contents: read
+    strategy:
+      matrix:
+        os: [windows-latest]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -34,9 +37,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.npm
-          key: ${{ runner.os }}-npm-cache-${{ hashFiles('**/package-lock.json') }}
+          key: ${{ matrix.os }}-npm-cache-${{ hashFiles('**/package-lock.json') }}
           restore-keys: |
-            ${{ runner.os }}-npm-cache-
+            ${{ matrix.os }}-npm-cache-
 
       - name: Cache electron-builder
         uses: actions/cache@v4
@@ -44,9 +47,9 @@ jobs:
           path: |
             ~/.cache/electron
             ~/.cache/electron-builder
-          key: ${{ runner.os }}-electron-builder-cache-${{ hashFiles('**/package-lock.json') }}
+          key: ${{ matrix.os }}-electron-builder-cache-${{ hashFiles('**/package-lock.json') }}
           restore-keys: |
-            ${{ runner.os }}-electron-builder-cache-
+            ${{ matrix.os }}-electron-builder-cache-
 
       - name: Install dependencies
         run: npm ci
@@ -55,41 +58,47 @@ jobs:
         shell: pwsh
         run: |
           $pkg = Get-Content package.json | ConvertFrom-Json
-          Write-Host "Windows build configuration: $($pkg.build.win | ConvertTo-Json)"
+          Write-Host "Build configuration for ${{ matrix.os }}: $($pkg.build.win | ConvertTo-Json)"
 
-      - name: Build Application (Windows x64)
+      - name: Build Application
         run: npm run build
 
-      - name: Create minimal manifest in dist (Windows)
+      - name: Create minimal manifest in dist
         shell: pwsh
         run: npm run create-minimal-manifest
 
-      - name: Prepare Dependencies (Windows)
+      - name: Prepare Dependencies
         run: npm run prepare-deps
 
-      - name: Package Application (Windows)
+      - name: Exclude build directories from Windows Defender
+        if: runner.os == 'Windows'
         shell: pwsh
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Build for release if this is a tag
-          if ($env:GITHUB_REF -like "refs/tags/*") {
-            Write-Host "Building for release (tag detected)"
-            npm run release
-          } else {
-            Write-Host "Building for development"
-            # Use the dedicated script for portable builds
-            npm run dist:portable
-            # Build Windows ZIP installer package
-            npm run dist:win
-          }
-          # Verify the output exists using Get-ChildItem
+          Add-MpPreference -ExclusionPath "${{ github.workspace }}\\dist"
+          Add-MpPreference -ExclusionPath "${{ github.workspace }}\\node_modules"
+
+      - name: Package for Development Build
+        if: "!startsWith(github.ref, 'refs/tags/')"
+        shell: pwsh
+        run: |
+          Write-Host "Building for development (non-tag build)"
+          npm run dist:portable
+          npm run dist:win
           if (-not (Get-ChildItem -Path release -Filter '*Portable.exe')) {
             Write-Error "Portable executable not found in release directory"
             exit 1
           }
 
-      - name: List ASAR Contents on Failure (Windows)
+      - name: Package and Release for Tag
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: pwsh
+        run: |
+          Write-Host "Building and publishing for release (tag detected)"
+          npm run release
+
+      - name: List ASAR Contents on Failure
         if: failure()
         shell: pwsh
         run: |
@@ -98,22 +107,22 @@ jobs:
           if ($asarPath) {
             npx asar list $asarPath.FullName
           } else {
-            Write-Host "app.asar not found in release directory."
+            Write-Host "app.asar not found."
           }
           Write-Host "--- End ASAR contents list ---"
 
-      - name: Upload Windows Artifact
+      - name: Upload Windows Portable Artifact
+        if: "!startsWith(github.ref, 'refs/tags/')"
         uses: actions/upload-artifact@v4
-        continue-on-error: true # Won't fail the build if quota is hit
         with:
           name: SupplyChain-OneMed-Windows-x64
-          path: release\*Portable.exe
-          retention-days: 3 # Reduced retention period
+          path: release/*Portable.exe
+          retention-days: 3
 
       - name: Upload Windows ZIP Artifact
+        if: "!startsWith(github.ref, 'refs/tags/')"
         uses: actions/upload-artifact@v4
-        continue-on-error: true
         with:
           name: SupplyChain-OneMed-Windows-Zip
-          path: release\*.zip
+          path: release/*.zip
           retention-days: 3
