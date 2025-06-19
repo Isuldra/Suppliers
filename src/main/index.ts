@@ -1202,53 +1202,47 @@ ipcMain.handle(
 
       // PowerShell script to load .eml, extract HTML, and send via new MailItem
       const powershellScript = `
-$OutputEncoding = [System.Text.Encoding]::UTF8
-[Console]::InputEncoding = [System.Text.Encoding]::UTF8
-[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+        $tempEmlPath = '${tempEmlFilePath.replace(/'/g, "''")}'
+        $sender = 'supply.planning.no@onemed.com'
+        
+        try {
+            Write-Output "STAGE 1: Loading .eml via OpenSharedItem..."
+            $outlook = New-Object -ComObject Outlook.Application
+            $sourceMail = $outlook.Session.OpenSharedItem($tempEmlPath)
+            if ($null -eq $sourceMail) { throw "Failed to load .eml into an Outlook item." }
 
-$tempEmlPath = '${tempEmlFilePath.replace(/'/g, "''")}'
-$recipient = '${emailTo.replace(/'/g, "''")}'
-$subject = '${payload.subject
-        .replace(/'/g, "''")
-        .replace(/`/g, "``")
-        .replace(/\$/g, "`$")}'
-$sender = 'supply.planning.no@onemed.com'
+            # Action 6: Extract all required properties from the source mail item
+            Write-Output "STAGE 1: .eml loaded. Extracting properties..."
+            $recipient = $sourceMail.To
+            $subject = $sourceMail.Subject
+            $cleanHtml = $sourceMail.HTMLBody
+            Write-Output "STAGE 1: Properties extracted. Subject: '$subject'"
 
-try {
-  Write-Output "STAGE 1: Loading .eml via OpenSharedItem..."
-  $outlook = New-Object -ComObject Outlook.Application
-  $namespace = $outlook.GetNamespace("MAPI")
-  $sourceMail = $namespace.OpenSharedItem($tempEmlPath)
-  Write-Output "STAGE 1: .eml loaded. Extracting HTMLBody..."
-  $cleanHtml = $sourceMail.HTMLBody
-  Write-Output "STAGE 1: HTMLBody extracted. Closing source mail item..."
-  $sourceMail.Close(2) # 2 = olDiscard
-  Write-Output "STAGE 1: Source mail item closed."
+            Write-Output "STAGE 1: Closing source mail item..."
+            $sourceMail.Close(2) # 2 = olDiscard
 
-  Write-Output "STAGE 2: Creating new MailItem..."
-  $finalMail = $outlook.CreateItem(0)
-  $finalMail.To = $recipient
-  $finalMail.Subject = $subject
-  $finalMail.SentOnBehalfOfName = $sender
-  $finalMail.HTMLBody = $cleanHtml
-  Write-Output "STAGE 2: Properties set. Sending mail..."
-  $finalMail.Send()
-  Write-Output "SUCCESS: Email sent successfully to $recipient"
-} catch {
-  Write-Output "ERROR: $($_.Exception.Message)"
-  Write-Output "ERROR_DETAILS: $($_.Exception.ToString())"
-  Write-Output "ERROR_TYPE: $($_.Exception.GetType().FullName)"
-} finally {
-  if ($tempEmlPath -and (Test-Path $tempEmlPath)) {
-    try {
-      Remove-Item -Path $tempEmlPath -Force
-      Write-Output "CLEANUP: Temporary .eml file deleted: $tempEmlPath"
-    } catch {
-      Write-Output "WARN: Failed to clean up temporary .eml file '$tempEmlPath': $($_.Exception.Message)"
-    }
-  }
-}
-`;
+            Write-Output "STAGE 2: Creating new, final MailItem..."
+            $finalMail = $outlook.CreateItem(0)
+
+            # Action 7: Populate the new mail item with the extracted properties
+            $finalMail.To = $recipient
+            $finalMail.Subject = $subject
+            $finalMail.SentOnBehalfOfName = $sender
+            $finalMail.HTMLBody = $cleanHtml
+            
+            Write-Output "STAGE 2: Sending final email..."
+            $finalMail.Send()
+            Write-Output "SUCCESS: Email sent successfully to $recipient"
+        } catch {
+            Write-Output "ERROR: $($_.Exception.Message)"
+            Write-Output "ERROR_DETAILS: $($_.Exception.ToString())"
+        } finally {
+            if ($tempEmlPath -and (Test-Path $tempEmlPath)) {
+                try { Remove-Item -Path $tempEmlPath -Force }
+                catch { Write-Output "WARN: Failed to cleanup temporary file." }
+            }
+        }
+      `;
 
       return await new Promise((resolve) => {
         const psProcess = spawn(
