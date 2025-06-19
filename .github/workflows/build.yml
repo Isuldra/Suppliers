@@ -30,19 +30,26 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
 
-      # Explicitly install potentially missing optional dependencies FIRST
-      - name: Preinstall Windows native modules
-        run: |
-          npm install --save-optional @rollup/rollup-win32-x64-msvc
-          npm install --save-optional @esbuild/win32-x64
-          # Verify installations
-          npm list @rollup/rollup-win32-x64-msvc @esbuild/win32-x64 || exit 1
+      - name: Cache npm dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-npm-cache-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-npm-cache-
+
+      - name: Cache electron-builder
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/electron
+            ~/.cache/electron-builder
+          key: ${{ runner.os }}-electron-builder-cache-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-electron-builder-cache-
 
       - name: Install dependencies
-        run: |
-          npm ci --ignore-scripts
-          # Verify core dependencies
-          npm list better-sqlite3 electron-builder electron-vite || exit 1
+        run: npm ci
 
       - name: Verify build configuration
         shell: pwsh
