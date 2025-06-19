@@ -5,3 +5,17 @@ declare module "*.png";
 declare module "*.gif";
 declare module "*.svg";
 declare module "*.webp";
+
+declare global {
+  interface ElectronAPI {
+    sendEmailViaEmlAndCOM: (payload: {
+      to: string;
+      subject: string;
+      html: string;
+    }) => Promise<{ success: boolean; error?: string }>;
+  }
+
+  interface Window {
+    electron: ElectronAPI;
+  }
+}
