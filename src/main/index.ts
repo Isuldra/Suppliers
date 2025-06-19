@@ -1136,3 +1136,205 @@ ipcMain.handle("openDebugFolder", async () => {
     return { success: false, error: errorMessage };
   }
 });
+
+// Handle automatic email sending via Outlook COM using .eml and OpenSharedItem
+ipcMain.handle(
+  "sendEmailViaEmlAndCOM",
+  async (_, payload: { to: string; subject: string; html: string }) => {
+    let tempEmlFilePath: string | null = null;
+    try {
+      log.info(
+        `Attempting automatic email send via .eml/COM to: ${payload.to}`
+      );
+      log.info(`Subject: ${payload.subject}`);
+
+      if (process.platform !== "win32") {
+        log.warn(
+          "Automatic Outlook sending via .eml/COM only available on Windows"
+        );
+        return {
+          success: false,
+          error: "Automatisk sending via .eml er kun tilgjengelig på Windows",
+        };
+      }
+
+      // Get the email address from supplier_emails table or use provided
+      const emailTo =
+        databaseService.getSupplierEmail(payload.to) || payload.to;
+      log.info(`Resolved email address: ${emailTo}`);
+
+      if (!emailTo.includes("@")) {
+        log.warn(`No valid email address found for supplier: ${payload.to}`);
+        return {
+          success: false,
+          error: `Ingen e-postadresse funnet for ${payload.to}. Sjekk leverandør e-post innstillinger.`,
+        };
+      }
+
+      // Create .eml file with proper MIME headers for HTML
+      const senderEmail = "supply.planning.no@onemed.com";
+      const EOL = "\r\n";
+      const headers = [
+        `From: OneMed Norge AS <${senderEmail}>`,
+        `To: ${emailTo}`,
+        `Subject: ${payload.subject}`,
+        `MIME-Version: 1.0`,
+        `Content-Type: text/html; charset=UTF-8`,
+        `Content-Transfer-Encoding: 8bit`,
+        `X-Mailer: OneMed SupplyChain`,
+        ``,
+      ].join(EOL);
+
+      const cleanHtml = payload.html
+        .replace(/<style>.*?<\/style>/gs, "")
+        .replace(/<head>.*?<\/head>/gs, "")
+        .replace(/<script>.*?<\/script>/gs, "")
+        .trim();
+      const body = cleanHtml.replace(/\r?\n/g, EOL);
+      const emlContent = headers + body;
+
+      // Write to temp .eml file
+      const tempDir = app.getPath("temp");
+      const fileName = `onemed-reminder-${Date.now()}.eml`;
+      tempEmlFilePath = path.join(tempDir, fileName);
+      fs.writeFileSync(tempEmlFilePath, emlContent, "utf8");
+      log.info(`Created .eml file: ${tempEmlFilePath}`);
+
+      // PowerShell script to load .eml, extract HTML, and send via new MailItem
+      const powershellScript = `
+$OutputEncoding = [System.Text.Encoding]::UTF8
+[Console]::InputEncoding = [System.Text.Encoding]::UTF8
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+
+$tempEmlPath = '${tempEmlFilePath.replace(/'/g, "''")}'
+$recipient = '${emailTo.replace(/'/g, "''")}'
+$subject = '${payload.subject
+        .replace(/'/g, "''")
+        .replace(/`/g, "``")
+        .replace(/\$/g, "`$")}'
+$sender = 'supply.planning.no@onemed.com'
+
+try {
+  Write-Output "STAGE 1: Loading .eml via OpenSharedItem..."
+  $outlook = New-Object -ComObject Outlook.Application
+  $namespace = $outlook.GetNamespace("MAPI")
+  $sourceMail = $namespace.OpenSharedItem($tempEmlPath)
+  Write-Output "STAGE 1: .eml loaded. Extracting HTMLBody..."
+  $cleanHtml = $sourceMail.HTMLBody
+  Write-Output "STAGE 1: HTMLBody extracted. Closing source mail item..."
+  $sourceMail.Close(2) # 2 = olDiscard
+  Write-Output "STAGE 1: Source mail item closed."
+
+  Write-Output "STAGE 2: Creating new MailItem..."
+  $finalMail = $outlook.CreateItem(0)
+  $finalMail.To = $recipient
+  $finalMail.Subject = $subject
+  $finalMail.SentOnBehalfOfName = $sender
+  $finalMail.HTMLBody = $cleanHtml
+  Write-Output "STAGE 2: Properties set. Sending mail..."
+  $finalMail.Send()
+  Write-Output "SUCCESS: Email sent successfully to $recipient"
+} catch {
+  Write-Output "ERROR: $($_.Exception.Message)"
+  Write-Output "ERROR_DETAILS: $($_.Exception.ToString())"
+  Write-Output "ERROR_TYPE: $($_.Exception.GetType().FullName)"
+} finally {
+  if ($tempEmlPath -and (Test-Path $tempEmlPath)) {
+    try {
+      Remove-Item -Path $tempEmlPath -Force
+      Write-Output "CLEANUP: Temporary .eml file deleted: $tempEmlPath"
+    } catch {
+      Write-Output "WARN: Failed to clean up temporary .eml file '$tempEmlPath': $($_.Exception.Message)"
+    }
+  }
+}
+`;
+
+      return await new Promise((resolve) => {
+        const psProcess = spawn(
+          "powershell",
+          ["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", "-"],
+          {
+            windowsHide: true,
+            stdio: ["pipe", "pipe", "pipe"],
+          }
+        );
+        let output = "";
+        let errorOutput = "";
+        if (psProcess.stdin) {
+          psProcess.stdin.setDefaultEncoding("utf-8");
+          psProcess.stdin.write(powershellScript + "\r\n", "utf-8");
+          psProcess.stdin.end();
+        } else {
+          log.error("PowerShell process stdin is not available.");
+          resolve({ success: false, error: "PowerShell stdin utilgjengelig." });
+          return;
+        }
+        psProcess.stdout.on("data", (data: Buffer) => {
+          output += data.toString();
+        });
+        psProcess.stderr.on("data", (data: Buffer) => {
+          errorOutput += data.toString();
+        });
+        psProcess.on("close", (code: number | null) => {
+          log.info(`PowerShell process exited with code: ${code}`);
+          log.info(`PowerShell output:\n${output}`);
+          if (errorOutput) {
+            log.warn(`PowerShell stderr:\n${errorOutput}`);
+          }
+          if (output.includes("SUCCESS")) {
+            log.info(`Email sent automatically via .eml/COM to: ${emailTo}`);
+            resolve({ success: true });
+          } else {
+            const errorMatch = output.match(/ERROR:\s*(.*)/);
+            const errorMsg =
+              errorMatch && errorMatch[1]
+                ? errorMatch[1].trim()
+                : `PowerShell failed. Code: ${code}. See logs.`;
+            log.error(
+              "PowerShell automation via .eml/COM failed:",
+              errorMsg,
+              "Full output:",
+              output,
+              "Full stderr:",
+              errorOutput
+            );
+            resolve({
+              success: false,
+              error: `Automatisk sending via .eml feilet: ${errorMsg}`,
+            });
+          }
+        });
+        psProcess.on("error", (error: Error) => {
+          log.error(
+            "PowerShell process failed to spawn or other error:",
+            error
+          );
+          resolve({
+            success: false,
+            error: `PowerShell prosess feil: ${error.message}`,
+          });
+        });
+      });
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error occurred";
+      log.error("Automatic email sending via .eml/COM error:", errorMessage);
+      // Ensure temp file is cleaned up if created before an outer error
+      if (tempEmlFilePath) {
+        try {
+          if (fs.existsSync(tempEmlFilePath)) {
+            fs.unlinkSync(tempEmlFilePath);
+            log.info("Outer catch: Cleaned up temp .eml file");
+          }
+        } catch (cleanupError) {
+          log.warn(
+            "Outer catch: Failed to cleanup temp .eml file",
+            cleanupError
+          );
+        }
+      }
+      return { success: false, error: errorMessage };
+    }
+  }
+);

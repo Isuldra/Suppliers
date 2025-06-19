@@ -352,10 +352,37 @@ export class EmailService {
           ? `Purring på manglende leveranser – ${data.supplier}`
           : `Reminder: Outstanding Deliveries – ${data.supplier}`;
 
-      // ATTEMPT 1: sendEmailAutomatically (Primary Method - Robust HTML+COM via temp file)
+      // ATTEMPT 1: sendEmailViaEmlAndCOM (Preferred Method - .eml + COM)
+      try {
+        console.log("ATTEMPT 1: Trying sendEmailViaEmlAndCOM (.eml + COM)...");
+        const result = await window.electron.sendEmailViaEmlAndCOM({
+          to: supplierEmail,
+          subject,
+          html,
+        });
+
+        if (result.success) {
+          console.log(
+            "SUCCESS: Email sent via sendEmailViaEmlAndCOM (.eml + COM)"
+          );
+          return result;
+        } else {
+          console.warn(
+            "ATTEMPT 1 FAILED: sendEmailViaEmlAndCOM failed, falling back to sendEmailAutomatically:",
+            result.error
+          );
+        }
+      } catch (error) {
+        console.warn(
+          "ATTEMPT 1 FAILED: sendEmailViaEmlAndCOM threw error, falling back to sendEmailAutomatically:",
+          error
+        );
+      }
+
+      // ATTEMPT 2: sendEmailAutomatically (Robust HTML+COM via temp file)
       try {
         console.log(
-          "ATTEMPT 1: Trying sendEmailAutomatically (Robust HTML+COM via temp file)..."
+          "ATTEMPT 2: Trying sendEmailAutomatically (Robust HTML+COM via temp file)..."
         );
         const result = await window.electron.sendEmailAutomatically({
           to: supplierEmail,
@@ -370,19 +397,19 @@ export class EmailService {
           return result;
         } else {
           console.warn(
-            "ATTEMPT 1 FAILED: sendEmailAutomatically failed, falling back to sendEmail:",
+            "ATTEMPT 2 FAILED: sendEmailAutomatically failed, falling back to sendEmail:",
             result.error
           );
         }
       } catch (error) {
         console.warn(
-          "ATTEMPT 1 FAILED: sendEmailAutomatically threw error, falling back to sendEmail:",
+          "ATTEMPT 2 FAILED: sendEmailAutomatically threw error, falling back to sendEmail:",
           error
         );
       }
 
-      // ATTEMPT 2: sendEmail (Final Fallback - .eml file-open method)
-      console.log("ATTEMPT 2: Trying sendEmail (.eml file-open method)...");
+      // ATTEMPT 3: sendEmail (Final Fallback - .eml file-open method)
+      console.log("ATTEMPT 3: Trying sendEmail (.eml file-open method)...");
       const result = await window.electron.sendEmail({
         to: supplierEmail,
         subject,
