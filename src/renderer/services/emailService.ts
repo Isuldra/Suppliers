@@ -272,7 +272,16 @@ export class EmailService {
       let supplierEmail: string | null = data.recipientEmail || null;
       let language: "no" | "en" = "no"; // Default to Norwegian
 
+      console.log("EmailService: sendReminder called with data:", {
+        supplier: data.supplier,
+        recipientEmail: data.recipientEmail,
+        language: data.language,
+      });
+
       if (!supplierEmail) {
+        console.log(
+          "EmailService: No recipientEmail provided, looking up supplier email"
+        );
         // Get supplier info from the new structured data
         const supplierInfo = this.getSupplierInfo(data.supplier);
 
@@ -280,10 +289,20 @@ export class EmailService {
           supplierEmail = supplierInfo.epost;
           // Set language based on supplier's preference
           language = supplierInfo.språkKode === "ENG" ? "en" : "no";
+          console.log("EmailService: Found supplier info:", supplierInfo);
         } else {
           // Fallback to database lookup
           supplierEmail = await this.getSupplierEmail(data.supplier);
+          console.log(
+            "EmailService: Fallback to database lookup, result:",
+            supplierEmail
+          );
         }
+      } else {
+        console.log(
+          "EmailService: Using provided recipientEmail:",
+          supplierEmail
+        );
       }
 
       if (!supplierEmail) {

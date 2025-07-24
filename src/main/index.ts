@@ -665,7 +665,9 @@ ipcMain.handle(
       const escapedSubject = payload.subject
         .replace(/"/g, '""')
         .replace(/`/g, "``")
-        .replace(/\$/g, "`$");
+        .replace(/\$/g, "`$")
+        .replace(/–/g, "-") // Replace en dash with regular dash for PowerShell
+        .replace(/—/g, "-"); // Replace em dash with regular dash for PowerShell
 
       const escapedTempHtmlFilePath = tempHtmlFilePath.replace(/'/g, "''"); // Escape single quotes for PS literal string
 

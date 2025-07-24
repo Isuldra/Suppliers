@@ -66,8 +66,14 @@ const EmailPreviewModal: React.FC<EmailPreviewModalProps> = ({
 
   const handleEmailSave = () => {
     if (editableEmail.trim() && editableEmail.includes("@")) {
-      setRecipientEmail(editableEmail.trim());
-      onChangeRecipient(editableEmail.trim());
+      const trimmedEmail = editableEmail.trim();
+      setRecipientEmail(trimmedEmail);
+      // Update the emailData with the new recipient email
+      const updatedEmailData = {
+        ...emailData,
+        recipientEmail: trimmedEmail,
+      };
+      onChangeRecipient(trimmedEmail);
       setIsEditingEmail(false);
     }
   };
