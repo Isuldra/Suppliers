@@ -34,9 +34,6 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
 
-      - name: Clean npm cache
-        run: npm cache clean --force
-
       - name: Cache npm dependencies
         uses: actions/cache@v4
         with:
@@ -62,30 +59,11 @@ jobs:
       - name: Build Application
         run: npm run build
 
-      - name: Create minimal manifest in dist
-        shell: pwsh
-        run: npm run create-minimal-manifest
-
-      # This is the key step to fix the sharp build issue
-      - name: Create .npmrc for electron-builder
+      - name: Create minimal manifest and .npmrc for electron-builder
         shell: pwsh
         run: |
-          Write-Host "Creating .npmrc in dist directory for electron-builder..."
-          echo "sharp_binary_host=https://github.com/lovell/sharp-libvips/releases/download" >> dist/.npmrc
-          echo "sharp_libvips_binary_host=https://github.com/lovell/sharp-libvips/releases/download" >> dist/.npmrc
-          echo "sharp_dist_base_url=https://github.com/lovell/sharp-libvips/releases/download" >> dist/.npmrc
-          echo "sharp_ignore_global_libvips=1" >> dist/.npmrc
-          echo "sharp_prebuild_platform=win32" >> dist/.npmrc
-          echo "sharp_prebuild_arch=x64" >> dist/.npmrc
-          Write-Host "Created .npmrc in dist directory"
-
-      - name: Install production dependencies in dist
-        shell: pwsh
-        run: |
-          Write-Host "Installing production dependencies in dist directory..."
-          cd dist
-          npm ci --only=production
-          Write-Host "Production dependencies installed in dist directory"
+          Write-Host "Creating minimal manifest and .npmrc for electron-builder..."
+          node scripts/create-minimal-manifest.js
 
       - name: Exclude build directories from Windows Defender
         if: runner.os == 'Windows'
@@ -130,20 +108,11 @@ jobs:
           }
           Write-Host "--- End ASAR contents list ---"
 
-      - name: Upload Windows Portable Artifact
+      - name: Upload Windows Builds
         if: >
           !startsWith(github.ref, 'refs/tags/')
         uses: actions/upload-artifact@v4
         with:
-          name: SupplyChain-OneMed-Windows-x64
-          path: release/*Portable.exe
-          retention-days: 3
-
-      - name: Upload Windows ZIP Artifact
-        if: >
-          !startsWith(github.ref, 'refs/tags/')
-        uses: actions/upload-artifact@v4
-        with:
-          name: SupplyChain-OneMed-Windows-Zip
-          path: release/*.zip
+          name: windows-builds
+          path: release/
           retention-days: 3
