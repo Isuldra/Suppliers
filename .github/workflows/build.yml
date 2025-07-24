@@ -79,6 +79,14 @@ jobs:
           echo "sharp_prebuild_arch=x64" >> dist/.npmrc
           Write-Host "Created .npmrc in dist directory"
 
+      - name: Install production dependencies in dist
+        shell: pwsh
+        run: |
+          Write-Host "Installing production dependencies in dist directory..."
+          cd dist
+          npm ci --only=production
+          Write-Host "Production dependencies installed in dist directory"
+
       - name: Exclude build directories from Windows Defender
         if: runner.os == 'Windows'
         shell: pwsh
