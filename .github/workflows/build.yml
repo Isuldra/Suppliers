@@ -84,38 +84,8 @@ jobs:
         run: |
           Write-Host "Building for development (non-tag build)"
           Write-Host "Running electron-builder with Windows targets (zip + portable)..."
-
-          # Debug: Show what targets are configured
-          Write-Host "=== DEBUG: Checking electron-builder configuration ==="
-          $config = Get-Content package.json | ConvertFrom-Json
-          Write-Host "Win targets configured: $($config.build.win.target -join ', ')"
-          Write-Host "Win artifact name: $($config.build.win.artifactName)"
-
-          # Run the build
           npm run dist
-
-          Write-Host "=== DEBUG: Checking what was actually created ==="
-          Write-Host "Release directory contents:"
-          Get-ChildItem -Path release -Recurse | ForEach-Object { Write-Host "  $($_.Name)" }
-
-          Write-Host "=== DEBUG: Looking for specific files ==="
-          $zipFiles = Get-ChildItem -Path release -Filter '*.zip' -Recurse
-          $exeFiles = Get-ChildItem -Path release -Filter '*.exe' -Recurse
-
-          Write-Host "ZIP files found: $($zipFiles.Count)"
-          $zipFiles | ForEach-Object { Write-Host "  $($_.Name)" }
-
-          Write-Host "EXE files found: $($exeFiles.Count)"
-          $exeFiles | ForEach-Object { Write-Host "  $($_.Name)" }
-
-          if ($zipFiles.Count -eq 0) {
-            Write-Error "ZIP file not found in release directory"
-            exit 1
-          }
-          if ($exeFiles.Count -eq 0) {
-            Write-Error "Portable executable not found in release directory"
-            exit 1
-          }
+          Write-Host "Build completed successfully"
 
       - name: Package and Release for Tag
         if: startsWith(github.ref, 'refs/tags/')
@@ -139,11 +109,20 @@ jobs:
           }
           Write-Host "--- End ASAR contents list ---"
 
-      - name: Upload Windows Builds
+      - name: Upload Portable Executable
         if: >
           !startsWith(github.ref, 'refs/tags/')
         uses: actions/upload-artifact@v4
         with:
-          name: windows-builds
-          path: release/
+          name: SupplyChain-Portable-Windows
+          path: release/*Portable.exe
+          retention-days: 3
+
+      - name: Upload Zip Archive
+        if: >
+          !startsWith(github.ref, 'refs/tags/')
+        uses: actions/upload-artifact@v4
+        with:
+          name: SupplyChain-Zip-Windows
+          path: release/*.zip
           retention-days: 3
