@@ -84,14 +84,35 @@ jobs:
         run: |
           Write-Host "Building for development (non-tag build)"
           Write-Host "Running electron-builder with Windows targets (zip + portable)..."
+
+          # Debug: Show what targets are configured
+          Write-Host "=== DEBUG: Checking electron-builder configuration ==="
+          $config = Get-Content package.json | ConvertFrom-Json
+          Write-Host "Win targets configured: $($config.build.win.target -join ', ')"
+          Write-Host "Win artifact name: $($config.build.win.artifactName)"
+
+          # Run the build
           npm run dist
-          Write-Host "Checking for generated artifacts..."
-          Get-ChildItem -Path release -Recurse | ForEach-Object { Write-Host "Found: $($_.Name)" }
-          if (-not (Get-ChildItem -Path release -Filter '*.zip')) {
+
+          Write-Host "=== DEBUG: Checking what was actually created ==="
+          Write-Host "Release directory contents:"
+          Get-ChildItem -Path release -Recurse | ForEach-Object { Write-Host "  $($_.Name)" }
+
+          Write-Host "=== DEBUG: Looking for specific files ==="
+          $zipFiles = Get-ChildItem -Path release -Filter '*.zip' -Recurse
+          $exeFiles = Get-ChildItem -Path release -Filter '*.exe' -Recurse
+
+          Write-Host "ZIP files found: $($zipFiles.Count)"
+          $zipFiles | ForEach-Object { Write-Host "  $($_.Name)" }
+
+          Write-Host "EXE files found: $($exeFiles.Count)"
+          $exeFiles | ForEach-Object { Write-Host "  $($_.Name)" }
+
+          if ($zipFiles.Count -eq 0) {
             Write-Error "ZIP file not found in release directory"
             exit 1
           }
-          if (-not (Get-ChildItem -Path release -Filter '*Portable.exe')) {
+          if ($exeFiles.Count -eq 0) {
             Write-Error "Portable executable not found in release directory"
             exit 1
           }
