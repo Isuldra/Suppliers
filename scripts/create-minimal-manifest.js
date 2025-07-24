@@ -6,6 +6,7 @@
 import { writeFileSync, existsSync, mkdirSync } from "fs";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
+import { createRequire } from "module";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -17,12 +18,17 @@ if (!existsSync(distDir)) {
   mkdirSync(distDir, { recursive: true });
 }
 
-// Create minimal package.json for electron-builder
+// Read the root package.json to get dependencies
+const require = createRequire(import.meta.url);
+const rootPackageJson = require("../package.json");
+
+// Create minimal package.json for electron-builder with production dependencies
 const minimalPackageJson = {
   name: "one-med-supplychain-app",
   version: "1.1.7",
   main: "main/main.cjs",
   private: true,
+  dependencies: rootPackageJson.dependencies || {},
 };
 
 // Create .npmrc for electron-builder to use prebuilt sharp binaries
@@ -42,7 +48,9 @@ try {
     join(distDir, "package.json"),
     JSON.stringify(minimalPackageJson, null, 2)
   );
-  console.log("✅ Created minimal package.json in dist/");
+  console.log(
+    "✅ Created minimal package.json in dist/ with production dependencies"
+  );
 
   // Write .npmrc for electron-builder
   writeFileSync(join(distDir, ".npmrc"), npmrcContent);
