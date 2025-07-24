@@ -106,6 +106,12 @@ interface ElectronAPI {
     error?: string;
   }>;
 
+  getSuppliersWithOutstandingOrders: () => Promise<{
+    success: boolean;
+    data?: string[];
+    error?: string;
+  }>;
+
   getSupplierEmail: (
     supplierName: string
   ) => Promise<{ success: boolean; data?: string | null; error?: string }>;

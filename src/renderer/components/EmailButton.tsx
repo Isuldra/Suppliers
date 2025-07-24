@@ -7,7 +7,7 @@ import { ExcelData, ExcelRow } from "../types/ExcelData";
 interface EmailButtonProps {
   excelData?: ExcelData;
   selectedSupplier: string;
-  onPrevious: () => void;
+  onPrevious?: () => void;
 }
 
 const emailService = new EmailService();
@@ -49,7 +49,6 @@ const EmailButton: React.FC<EmailButtonProps> = ({
         key: row.key,
         poNumber: String(row.poNumber || ""),
         itemNo: String(row.itemNo || ""),
-        supplierItemNo: String(row.supplierArticleNo || row.description || ""), // Use supplier article number or fallback to description
         description: String(row.description || ""),
         specification: String(row.specification || ""),
         orderQty: Number(row.orderQty || 0),
@@ -178,9 +177,6 @@ const EmailButton: React.FC<EmailButtonProps> = ({
         <p className="text-neutral">
           Ingen data tilgjengelig. Vennligst velg en leverandør først.
         </p>
-        <button onClick={onPrevious} className="btn btn-secondary mt-4">
-          Tilbake
-        </button>
       </div>
     );
   }
@@ -189,7 +185,7 @@ const EmailButton: React.FC<EmailButtonProps> = ({
     <div className="w-full">
       <h2 className="text-xl font-bold mb-4 text-neutral">Send e-post</h2>
 
-      <div className="bg-primary-light bg-opacity-10 p-6 mb-6 rounded-md shadow-sm">
+      <div className="bg-primary-light bg-opacity-10 p-6 mb-6 rounded-md shadow-sm w-full">
         <h3 className="font-medium text-primary mb-2">
           Valgt leverandør: {selectedSupplier}
         </h3>
@@ -198,22 +194,19 @@ const EmailButton: React.FC<EmailButtonProps> = ({
         </p>
       </div>
 
-      <div className="flex flex-col space-y-4">
+      <div className="flex flex-col space-y-4 w-full">
         <button
           onClick={handlePreview}
           disabled={isSending}
-          className={`btn ${
+          className={`btn px-4 py-2 font-medium ease-in-out ${
             isSending
               ? "bg-neutral-secondary cursor-not-allowed"
-              : "btn-primary"
+              : "bg-primary text-neutral-white hover:bg-primary-dark"
           }`}
           aria-label={`Forbered e-post til ${selectedSupplier}`}
           aria-busy={isSending}
         >
           {isSending ? "Forbereder e-post..." : "Forbered e-post"}
-        </button>
-        <button onClick={onPrevious} className="btn btn-secondary">
-          Tilbake
         </button>
       </div>
 

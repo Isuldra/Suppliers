@@ -2,7 +2,8 @@
  * Database module for handling IPC communication with the renderer process
  */
 import { ipcMain } from "electron";
-import log from "electron-log";
+// eslint-disable-next-line @typescript-eslint/no-var-requires, @typescript-eslint/no-require-imports
+const log = require("electron-log/main");
 // Import the already initialized singleton databaseService
 import { databaseService } from "../services/databaseService"; // Adjust path/extension if build process changes this
 
@@ -13,7 +14,7 @@ let handlersInstalled = false;
 export function setupDatabaseHandlers() {
   // Add check for the guard flag
   if (handlersInstalled) {
-    log.warn(
+    log.info(
       "Attempted to call setupDatabaseHandlers more than once. Skipping."
     );
     return;

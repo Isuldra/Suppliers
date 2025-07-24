@@ -12,8 +12,14 @@ export default defineConfig({
   build: {
     outDir: path.resolve(__dirname, "dist/renderer"),
     emptyOutDir: true,
+    commonjsOptions: {
+      defaultIsModuleExports: true,
+    },
   },
   server: {
     port: 5173,
+  },
+  optimizeDeps: {
+    include: ["electron-log"],
   },
 });

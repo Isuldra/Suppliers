@@ -1,6 +1,7 @@
 import ExcelJS, { Worksheet } from "exceljs";
 import Database from "better-sqlite3";
-import log from "electron-log"; // Added for logging
+// eslint-disable-next-line @typescript-eslint/no-var-requires, @typescript-eslint/no-require-imports
+const log = require("electron-log"); // Added for logging
 import { parse as parseDateFns, isValid } from "date-fns"; // Import date-fns functions
 import * as XLSX from "xlsx";
 import { join } from "path";

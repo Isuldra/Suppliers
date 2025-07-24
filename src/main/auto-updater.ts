@@ -1,6 +1,7 @@
 import { dialog } from "electron";
 import { autoUpdater, type AppUpdater as _AppUpdater } from "electron-updater";
-import log from "electron-log";
+// eslint-disable-next-line @typescript-eslint/no-var-requires, @typescript-eslint/no-require-imports
+const log = require("electron-log/main");
 import type { UpdateInfo, ProgressInfo } from "electron-updater";
 import { app, shell } from "electron";
 import path from "path";

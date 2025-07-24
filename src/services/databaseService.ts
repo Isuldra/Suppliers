@@ -8,7 +8,8 @@ import path from "path";
 import fs from "fs";
 import { app } from "electron";
 import { ExcelRow } from "../types/ExcelRow";
-import log from "electron-log";
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const log = require("electron-log/main");
 
 // Types
 export interface DbOrder extends ExcelRow {
@@ -41,7 +42,7 @@ export class DatabaseService {
 
   public connect(dbInstance: Database.Database): void {
     if (this.db) {
-      log.warn(
+      log.info(
         "DatabaseService already connected. Ignoring new connection attempt."
       );
       return;
@@ -802,6 +803,50 @@ export class DatabaseService {
       return suppliers;
     } catch (error) {
       log.error("Error getting supplier names:", error);
+      return [];
+    }
+  }
+
+  public getSuppliersWithOutstandingOrders(): string[] {
+    if (!this.db) {
+      log.warn(
+        "getSuppliersWithOutstandingOrders called but DB is not connected."
+      );
+      return [];
+    }
+
+    try {
+      const sql = `
+        SELECT DISTINCT COALESCE(supplier_name, ftgnavn) AS supplier
+        FROM purchase_order
+        WHERE COALESCE(supplier_name, ftgnavn) IS NOT NULL 
+          AND COALESCE(supplier_name, ftgnavn) != ''
+          AND COALESCE(supplier_name, ftgnavn) != '[object Object]'
+          AND (outstanding_qty > 0 OR (order_qty - COALESCE(received_qty, 0)) > 0)
+          AND eta_supplier IS NOT NULL 
+          AND eta_supplier != ''
+        ORDER BY supplier
+      `;
+      const stmt = this.db.prepare(sql);
+      const rows = stmt.all() as { supplier: string }[];
+      const suppliers = rows
+        .map((row) => row.supplier)
+        .filter(
+          (supplier) =>
+            supplier &&
+            supplier.trim() !== "" &&
+            supplier !== "[object Object]" &&
+            !supplier.includes("[object Object]")
+        );
+
+      log.info(`Found ${suppliers.length} suppliers with outstanding orders`);
+      if (process.env.NODE_ENV === "development") {
+        log.info("Suppliers with outstanding orders:", suppliers.slice(0, 10)); // Log first 10
+      }
+
+      return suppliers;
+    } catch (error) {
+      log.error("Error getting suppliers with outstanding orders:", error);
       return [];
     }
   }

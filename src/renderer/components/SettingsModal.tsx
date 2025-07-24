@@ -72,7 +72,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
               type="email"
               value={settings.senderEmail}
               onChange={(e) => handleInputChange("senderEmail", e.target.value)}
-              className="w-full px-3 py-2 border border-neutral-light rounded-sm focus:outline-none focus:ring-2 focus:ring-primary"
+              className="w-full px-3 py-2 border border-neutral-light form-control rounded-sm focus:outline-none focus:ring-2 focus:ring-primary"
               placeholder="din.epost@onemed.com"
               required
             />
@@ -89,7 +89,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
               type="text"
               value={settings.senderName || ""}
               onChange={(e) => handleInputChange("senderName", e.target.value)}
-              className="w-full px-3 py-2 border border-neutral-light rounded-sm focus:outline-none focus:ring-2 focus:ring-primary"
+              className="w-full px-3 py-2 border border-neutral-light form-control rounded-sm focus:outline-none focus:ring-2 focus:ring-primary"
               placeholder="OneMed Norge AS"
             />
             <p className="text-xs text-neutral-secondary mt-1">
@@ -100,14 +100,14 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
 
         <div className="p-6 border-t flex justify-end space-x-4">
           <button
-            className="btn btn-secondary"
+            className="btn btn-secondary px-4 py-2 rounded-sm font-medium ease-in-out bg-neutral-white text-primary border border-primary hover:bg-primary-light hover:text-neutral-white"
             onClick={onClose}
             disabled={isSaving}
           >
             Avbryt
           </button>
           <button
-            className="btn btn-primary"
+            className="btn btn-primary px-4 py-2 rounded-sm font-medium ease-in-out bg-primary text-neutral-white hover:bg-primary-dark"
             onClick={handleSave}
             disabled={isSaving || !settings.senderEmail.includes("@")}
           >
