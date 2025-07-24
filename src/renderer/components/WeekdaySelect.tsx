@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import supplyPlannersData from "../data/supplyPlanners.json";
 
 interface WeekdaySelectProps {
@@ -27,6 +27,13 @@ const WeekdaySelect: React.FC<WeekdaySelectProps> = ({
     currentWeekday || ""
   );
 
+  // Auto-select when component mounts or currentWeekday changes
+  useEffect(() => {
+    if (currentWeekday && currentWeekday !== selectedWeekday) {
+      setSelectedWeekday(currentWeekday);
+    }
+  }, [currentWeekday]);
+
   // Get available weekdays for the selected planner
   const availableWeekdays = useMemo<Weekday[]>(() => {
     const planner = supplyPlannersData.planners.find(
@@ -44,12 +51,7 @@ const WeekdaySelect: React.FC<WeekdaySelectProps> = ({
 
   const handleWeekdaySelect = (weekday: string) => {
     setSelectedWeekday(weekday);
-  };
-
-  const handleNext = () => {
-    if (selectedWeekday) {
-      onWeekdaySelected(selectedWeekday);
-    }
+    onWeekdaySelected(weekday); // Automatically call the callback
   };
 
   // Handle keyboard navigation for weekday selection
@@ -62,22 +64,9 @@ const WeekdaySelect: React.FC<WeekdaySelectProps> = ({
 
   return (
     <div className="w-full">
-      <h2
-        className="text-xl font-bold mb-4 text-neutral"
-        id="weekday-select-heading"
-      >
-        Velg ukedag
-      </h2>
-
-      <div className="mb-4 p-4 bg-primary-light bg-opacity-10 border border-primary-light rounded-md">
-        <p className="text-primary">
-          <span className="font-medium">Innkjøpsplanlegger:</span>{" "}
-          {selectedPlanner}
-        </p>
-        <p className="text-sm text-neutral-secondary mt-2">
-          Velg en ukedag for å se leverandører som er planlagt for den dagen.
-        </p>
-      </div>
+      <p className="mb-4 text-neutral-secondary">
+        Velg en ukedag for å se leverandører som er planlagt for den dagen.
+      </p>
 
       <div className="mb-6">
         <div className="bg-neutral-light p-4 rounded-md shadow-sm">
@@ -88,7 +77,7 @@ const WeekdaySelect: React.FC<WeekdaySelectProps> = ({
           </p>
 
           <div
-            className="space-y-2 max-w-md mx-auto"
+            className="space-y-2 w-full"
             role="radiogroup"
             aria-labelledby="weekday-select-heading"
           >
@@ -130,26 +119,6 @@ const WeekdaySelect: React.FC<WeekdaySelectProps> = ({
             </p>
           )}
         </div>
-      </div>
-
-      <div className="flex justify-end">
-        <button
-          onClick={handleNext}
-          disabled={!selectedWeekday}
-          className={`btn ${
-            selectedWeekday
-              ? "btn-primary"
-              : "bg-neutral-secondary text-neutral-light cursor-not-allowed"
-          }`}
-          aria-disabled={!selectedWeekday}
-          aria-label={
-            selectedWeekday
-              ? `Velg ${selectedWeekday} og gå videre`
-              : "Velg en ukedag for å fortsette"
-          }
-        >
-          Neste
-        </button>
       </div>
     </div>
   );

@@ -8,7 +8,8 @@ import {
   IpcMainInvokeEvent,
 } from "electron";
 import path from "path";
-import * as log from "electron-log";
+// eslint-disable-next-line @typescript-eslint/no-var-requires, @typescript-eslint/no-require-imports
+const log = require("electron-log/main"); // Required for CJS interop in Electron main process
 import { databaseService } from "../services/databaseService";
 import { setupDatabaseHandlers } from "./database";
 import { checkForUpdatesManually } from "./auto-updater";
@@ -561,13 +562,18 @@ ipcMain.handle(
       // Use the official supply planning email address for all communications
       const senderEmail = "supply.planning.no@onemed.com";
       const EOL = "\r\n";
+
+      // Properly encode the subject for UTF-8
+      const encodedSubject = Buffer.from(payload.subject, "utf8").toString(
+        "base64"
+      );
       const headers = [
         `From: OneMed Norge AS <${senderEmail}>`,
         `Reply-To: ${senderEmail}`,
         `Sender: ${senderEmail}`,
         `Return-Path: ${senderEmail}`,
         `To: ${emailTo}`,
-        `Subject: ${payload.subject}`,
+        `Subject: =?UTF-8?B?${encodedSubject}?=`,
         `MIME-Version: 1.0`,
         `Content-Type: text/html; charset=UTF-8`,
         `Content-Transfer-Encoding: 8bit`,
@@ -655,6 +661,7 @@ ipcMain.handle(
       );
 
       // Escape subject for PowerShell string, and tempFilePath for PowerShell string
+      // PowerShell will handle UTF-8 properly when reading from file
       const escapedSubject = payload.subject
         .replace(/"/g, '""')
         .replace(/`/g, "``")
@@ -1051,6 +1058,24 @@ ipcMain.handle("getOutstandingOrders", async (_event, supplier: string) => {
   }
 });
 
+// Expose suppliers with outstanding orders to the renderer
+ipcMain.handle("getSuppliersWithOutstandingOrders", async () => {
+  try {
+    const dbsvc = databaseService;
+    if (!dbsvc.getDbInstance()) {
+      return { success: false, error: "Database not connected" };
+    }
+    const suppliers = dbsvc.getSuppliersWithOutstandingOrders();
+    return { success: true, data: suppliers };
+  } catch (err) {
+    log.error("IPC getSuppliersWithOutstandingOrders error:", err);
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : String(err),
+    };
+  }
+});
+
 // Add new IPC handler to get all supplier names for debugging
 ipcMain.handle("getAllSupplierNames", async () => {
   try {
@@ -1174,10 +1199,15 @@ ipcMain.handle(
       // Create .eml file with proper MIME headers for HTML
       const senderEmail = "supply.planning.no@onemed.com";
       const EOL = "\r\n";
+
+      // Properly encode the subject for UTF-8
+      const encodedSubject = Buffer.from(payload.subject, "utf8").toString(
+        "base64"
+      );
       const headers = [
         `From: OneMed Norge AS <${senderEmail}>`,
         `To: ${emailTo}`,
-        `Subject: ${payload.subject}`,
+        `Subject: =?UTF-8?B?${encodedSubject}?=`,
         `MIME-Version: 1.0`,
         `Content-Type: text/html; charset=UTF-8`,
         `Content-Transfer-Encoding: 8bit`,

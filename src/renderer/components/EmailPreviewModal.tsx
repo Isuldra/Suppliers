@@ -189,13 +189,16 @@ const EmailPreviewModal: React.FC<EmailPreviewModalProps> = ({
         </div>
 
         <div className="p-6 border-t flex justify-end space-x-4">
-          <button className="btn btn-secondary" onClick={onCancel}>
+          <button
+            className="btn btn-secondary px-4 py-2 font-medium ease-in-out bg-neutral-white text-primary border border-primary hover:bg-primary-light hover:text-neutral-white"
+            onClick={onCancel}
+          >
             Avbryt
           </button>
           <button
-            className={`btn ${
+            className={`btn px-4 py-2 font-medium ease-in-out ${
               !isLoadingEmail && recipientEmail
-                ? "btn-primary"
+                ? "bg-primary text-neutral-white hover:bg-primary-dark"
                 : "bg-neutral-secondary text-neutral-light cursor-not-allowed"
             }`}
             onClick={onSend}
