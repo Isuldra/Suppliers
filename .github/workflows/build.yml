@@ -83,6 +83,7 @@ jobs:
         shell: pwsh
         run: |
           Write-Host "Building for development (non-tag build)"
+          Write-Host "Running electron-builder with Windows targets (zip + portable)..."
           npm run dist
           Write-Host "Checking for generated artifacts..."
           Get-ChildItem -Path release -Recurse | ForEach-Object { Write-Host "Found: $($_.Name)" }
