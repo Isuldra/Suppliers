@@ -15,6 +15,9 @@ concurrency:
 env:
   NODE_VERSION: "22.x"
   SHARP_IGNORE_GLOBAL_LIBVIPS: "1"
+  npm_config_sharp_binary_host: "https://github.com/lovell/sharp-libvips/releases/download"
+  npm_config_sharp_libvips_binary_host: "https://github.com/lovell/sharp-libvips/releases/download"
+  npm_config_sharp_dist_base_url: "https://github.com/lovell/sharp-libvips/releases/download"
 
 jobs:
   build:
@@ -56,17 +59,25 @@ jobs:
             ${{ matrix.os }}-electron-builder-cache-
 
       - name: Install dependencies
-        run: npm ci
-
-      - name: Rebuild sharp for Electron
         shell: pwsh
         run: |
-          Write-Host "Rebuilding sharp for Electron..."
-          npm rebuild sharp --runtime=electron --target=36.5.0 --dist-url=https://electronjs.org/headers
-          if ($LASTEXITCODE -ne 0) {
-            Write-Host "Sharp rebuild failed, trying alternative approach..."
-            npm rebuild sharp --ignore-scripts
-          }
+          Write-Host "Installing dependencies..."
+          npm ci
+          Write-Host "Dependencies installed successfully"
+
+      - name: Install sharp prebuilt binaries
+        shell: pwsh
+        run: |
+          Write-Host "Installing sharp prebuilt binaries..."
+          npm install sharp@0.34.2 --platform=win32 --arch=x64 --target=36.5.0 --runtime=electron --dist-url=https://electronjs.org/headers
+          Write-Host "Sharp prebuilt binaries installed"
+
+      - name: Rebuild native dependencies for Electron
+        shell: pwsh
+        run: |
+          Write-Host "Rebuilding native dependencies for Electron..."
+          npx electron-rebuild --version=36.5.0 --only=better-sqlite3
+          Write-Host "Native dependencies rebuilt"
 
       - name: Verify build configuration
         shell: pwsh
@@ -81,15 +92,13 @@ jobs:
         shell: pwsh
         run: npm run create-minimal-manifest
 
-      - name: Prepare Dependencies
+      - name: Prepare Dependencies (Skip sharp rebuild)
         shell: pwsh
         run: |
-          Write-Host "Preparing dependencies for Electron..."
-          npm run prepare-deps
-          if ($LASTEXITCODE -ne 0) {
-            Write-Host "prepare-deps failed, trying manual rebuild..."
-            npx electron-rebuild --version=36.5.0
-          }
+          Write-Host "Preparing dependencies for Electron (skipping sharp rebuild)..."
+          # Skip the problematic prepare-deps step and manually handle what's needed
+          Write-Host "Skipping electron-builder install-app-deps to avoid sharp build issues"
+          Write-Host "Dependencies are already prepared from previous steps"
 
       - name: Exclude build directories from Windows Defender
         if: runner.os == 'Windows'
