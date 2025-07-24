@@ -28,6 +28,7 @@
     "test-sqlite": "node scripts/test-sqlite-dependencies.js",
     "build-x64-portable": "node scripts/build-x64-portable.js",
     "prepare-deps": "electron-builder install-app-deps",
+    "rebuild-sharp": "npm rebuild sharp --runtime=electron --target=36.5.0 --dist-url=https://electronjs.org/headers",
     "prebuild": "npm run build:email-template",
     "build:email-template": "node --loader ts-node/esm scripts/buildEmailTemplate.ts"
   },
