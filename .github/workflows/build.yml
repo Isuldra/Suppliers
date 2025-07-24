@@ -34,11 +34,15 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
 
+      - name: Get npm cache directory
+        id: npm-cache-dir
+        shell: pwsh
+        run: echo "dir=$(npm config get cache)" >> ${env:GITHUB_OUTPUT}
+
       - name: Cache npm dependencies
         uses: actions/cache@v4
         with:
-          path: |
-            %APPDATA%\npm-cache
+          path: ${{ steps.npm-cache-dir.outputs.dir }}
           key: ${{ runner.os }}-npm-${{ hashFiles('**/package-lock.json') }}
           restore-keys: |
             ${{ runner.os }}-npm-
@@ -79,8 +83,13 @@ jobs:
         shell: pwsh
         run: |
           Write-Host "Building for development (non-tag build)"
-          npm run dist:portable
-          npm run dist:win
+          npm run dist
+          Write-Host "Checking for generated artifacts..."
+          Get-ChildItem -Path release -Recurse | ForEach-Object { Write-Host "Found: $($_.Name)" }
+          if (-not (Get-ChildItem -Path release -Filter '*.zip')) {
+            Write-Error "ZIP file not found in release directory"
+            exit 1
+          }
           if (-not (Get-ChildItem -Path release -Filter '*Portable.exe')) {
             Write-Error "Portable executable not found in release directory"
             exit 1
