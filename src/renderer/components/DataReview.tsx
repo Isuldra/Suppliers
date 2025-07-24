@@ -19,7 +19,7 @@ interface DataReviewProps {
   selectedSupplier?: string;
   selectedWeekday?: string;
   onNext: () => void;
-  onPrevious: () => void;
+  onPrevious?: () => void;
 }
 
 const columnHelper = createColumnHelper<ExcelRow>();
@@ -334,7 +334,10 @@ const DataReview: React.FC<DataReviewProps> = ({
         <p className="text-neutral">
           Ingen data tilgjengelig. Vennligst velg en leverandør først.
         </p>
-        <button onClick={onPrevious} className="btn btn-secondary mt-4">
+        <button
+          onClick={onPrevious}
+          className="btn btn-secondary px-4 py-2 mt-4 rounded-sm font-medium ease-in-out bg-neutral-white text-primary border border-primary hover:bg-primary-light hover:text-neutral-white"
+        >
           Tilbake
         </button>
       </div>
@@ -350,7 +353,7 @@ const DataReview: React.FC<DataReviewProps> = ({
         Gjennomgang av utestående ordre for {selectedSupplier}
       </h2>
 
-      <div className="bg-neutral-white p-4 rounded-md shadow-sm mb-6 border border-neutral-light">
+      <div className="bg-neutral-white p-4 rounded-md shadow-sm mb-6 border border-neutral-light w-full">
         <div className="flex flex-wrap justify-between items-center mb-4">
           <div>
             <p className="text-neutral">
@@ -383,13 +386,13 @@ const DataReview: React.FC<DataReviewProps> = ({
         <div className="flex flex-wrap gap-2 mb-4">
           <button
             onClick={() => table.toggleAllRowsSelected(true)}
-            className="btn btn-sm btn-secondary"
+            className="btn btn-sm btn-secondary px-4 py-2 rounded-sm font-medium ease-in-out bg-neutral-white text-primary border border-primary hover:bg-primary-light hover:text-neutral-white"
           >
             Velg alle
           </button>
           <button
             onClick={() => table.toggleAllRowsSelected(false)}
-            className="btn btn-sm btn-secondary"
+            className="btn btn-sm btn-secondary px-4 py-2 rounded-sm font-medium ease-in-out bg-neutral-white text-primary border border-primary hover:bg-primary-light hover:text-neutral-white"
           >
             Velg ingen
           </button>
@@ -403,17 +406,17 @@ const DataReview: React.FC<DataReviewProps> = ({
               });
               setRowSelection(newSelection);
             }}
-            className="btn btn-sm btn-secondary"
+            className="btn btn-sm btn-secondary px-4 py-2 rounded-sm font-medium ease-in-out bg-neutral-white text-primary border border-primary hover:bg-primary-light hover:text-neutral-white"
           >
             Velg kun utestående
           </button>
         </div>
       </div>
 
-      <div className="overflow-hidden shadow-sm rounded-lg border border-neutral-light mb-6">
-        <div className="overflow-x-auto">
+      <div className="overflow-hidden shadow-sm rounded-lg border border-neutral-light mb-6 w-full">
+        <div className="overflow-x-auto w-full">
           <table
-            className="min-w-full divide-y divide-neutral-light"
+            className="min-w-full divide-y divide-neutral-light w-full"
             aria-labelledby="data-review-heading"
             role="grid"
           >
@@ -542,7 +545,7 @@ const DataReview: React.FC<DataReviewProps> = ({
           <button
             onClick={() => table.setPageIndex(0)}
             disabled={!table.getCanPreviousPage()}
-            className="px-2 py-1 border border-neutral rounded-sm disabled:opacity-50 disabled:cursor-not-allowed text-neutral"
+            className="px-2 py-1 border border-neutral rounded-sm disabled:opacity-50 disabled:cursor-not-allowed text-neutral font-medium ease-in-out"
             aria-label="Gå til første side"
             aria-disabled={!table.getCanPreviousPage()}
           >
@@ -551,7 +554,7 @@ const DataReview: React.FC<DataReviewProps> = ({
           <button
             onClick={() => table.previousPage()}
             disabled={!table.getCanPreviousPage()}
-            className="px-2 py-1 border border-neutral rounded-sm disabled:opacity-50 disabled:cursor-not-allowed text-neutral"
+            className="px-2 py-1 border border-neutral rounded-sm disabled:opacity-50 disabled:cursor-not-allowed text-neutral font-medium ease-in-out"
             aria-label="Gå til forrige side"
             aria-disabled={!table.getCanPreviousPage()}
           >
@@ -566,7 +569,7 @@ const DataReview: React.FC<DataReviewProps> = ({
           <button
             onClick={() => table.nextPage()}
             disabled={!table.getCanNextPage()}
-            className="px-2 py-1 border border-neutral rounded-sm disabled:opacity-50 disabled:cursor-not-allowed text-neutral"
+            className="px-2 py-1 border border-neutral rounded-sm disabled:opacity-50 disabled:cursor-not-allowed text-neutral font-medium ease-in-out"
             aria-label="Gå til neste side"
             aria-disabled={!table.getCanNextPage()}
           >
@@ -575,7 +578,7 @@ const DataReview: React.FC<DataReviewProps> = ({
           <button
             onClick={() => table.setPageIndex(table.getPageCount() - 1)}
             disabled={!table.getCanNextPage()}
-            className="px-2 py-1 border border-neutral rounded-sm disabled:opacity-50 disabled:cursor-not-allowed text-neutral"
+            className="px-2 py-1 border border-neutral rounded-sm disabled:opacity-50 disabled:cursor-not-allowed text-neutral font-medium ease-in-out"
             aria-label="Gå til siste side"
             aria-disabled={!table.getCanNextPage()}
           >
@@ -584,14 +587,7 @@ const DataReview: React.FC<DataReviewProps> = ({
         </div>
       </div>
 
-      <div className="flex justify-between mt-6">
-        <button
-          onClick={onPrevious}
-          className="btn btn-secondary"
-          aria-label="Gå tilbake til leverandørvalg"
-        >
-          Tilbake
-        </button>
+      <div className="flex justify-end mt-6">
         <button
           onClick={() => {
             // Get selected rows and pass them to the next step
@@ -606,7 +602,7 @@ const DataReview: React.FC<DataReviewProps> = ({
 
             onNext();
           }}
-          className="btn btn-primary"
+          className="btn btn-primary px-4 py-2 bg-primary text-neutral-white rounded-sm font-medium ease-in-out hover:bg-primary-dark"
           aria-label="Gå videre til e-post"
           disabled={Object.values(rowSelection).filter(Boolean).length === 0}
         >

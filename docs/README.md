@@ -1,34 +1,89 @@
-# SupplyChain OneMed - Documentation Hub
+# OneMed SupplyChain - Dokumentasjon
 
-Welcome to the central documentation hub for SupplyChain OneMed. This file provides links to the key guides and resources for installing, using, and developing the application.
+Velkommen til dokumentasjonen for OneMed SupplyChain, en moderne desktop-applikasjon for effektiv leverandørstyring og ordreoppfølging.
 
-## Key Documentation Areas
+## 🚀 Oversikt
 
-- **[Installation Guide](installation/installation-guide.md)**: Detailed steps for installing the application, including system requirements.
-- **[Features Overview](features/README.md)**: Descriptions of the application's core features and functionalities.
-- **Development Guides**:
-  - [CI/CD Pipeline](development/ci-cd-pipeline.md): Information on the continuous integration and deployment setup.
-  - [Publishing Updates](development/publishing-updates.md): Details on how application updates are managed and published.
+OneMed SupplyChain er en Electron-basert desktop-applikasjon bygget for OneMed for å effektivt administrere leverandørdata og interaksjoner. Applikasjonen tilbyr en strømlinjeformet brukeropplevelse med moderne UI/UX-prinsipper.
 
-## About SupplyChain OneMed
+### Hovedfunksjoner
 
-SupplyChain OneMed is a desktop application built for OneMed to efficiently manage supplier data and interactions. It provides:
+- 📊 **Dashboard**: Oversikt over leverandørstatistikk og ordreanalyse
+- 📁 **Excel Import**: Enkel import av ordredata fra Excel-filer
+- 📧 **E-post Reminders**: Automatisk generering av påminnelser til leverandører
+- 🔍 **Progress Tracking**: Visuell progress indikator for workflow
+- ⌨️ **Keyboard Shortcuts**: Hurtigtaster for effektiv navigasjon
+- 💾 **Local Database**: SQLite-database for lokal datalagring
+- 🎨 **Modern UI**: Responsivt design med Tailwind CSS
 
-- Tracking of outstanding orders
-- Automated email communications to suppliers
-- Excel file import and validation
-- Local database storage
-- Customizable email templates
-- Reporting and status tracking
+## 🛠️ Teknisk Stack
 
-The application is built using:
+- **Electron**: Cross-platform desktop support
+- **React**: Moderne brukergrensesnitt
+- **TypeScript**: Type-safe utvikling
+- **SQLite**: Lokal database
+- **Tailwind CSS**: Utility-first styling
+- **Vite**: Rask utvikling og bygging
 
-- Electron for cross-platform desktop support
-- React for the user interface
-- SQLite for local database storage
-- TypeScript for type-safe development
-- Tailwind CSS for styling
+## 📚 Dokumentasjon
 
-## Support
+### Brukerguider
 
-For additional support, contact the application administrator or developer team.
+- **[Kom i gang](getting-started.md)**: Installasjon og første bruk
+- **[Brukerguide](user-guide.md)**: Detaljert brukerguide for alle funksjoner
+- **[Dashboard](dashboard.md)**: Bruk av dashboard og statistikk
+- **[E-post System](email-system.md)**: Sending av påminnelser til leverandører
+
+### Utviklerguider
+
+- **[Utviklingsmiljø](development/setup.md)**: Sette opp utviklingsmiljø
+- **[Arkitektur](architecture.md)**: Applikasjonsarkitektur og komponenter
+- **[API Dokumentasjon](api/README.md)**: IPC API og database operasjoner
+- **[Bygging og Distribusjon](distribution/README.md)**: Pakking og distribusjon
+
+### Funksjoner
+
+- **[Excel Import](features/excel-import.md)**: Import av ordredata
+- **[Database](features/database.md)**: Datastruktur og lagring
+- **[E-post Templates](features/email-templates.md)**: E-post maler og tilpasning
+- **[Sikkerhet](features/security.md)**: Sikkerhetsfunksjoner
+
+## 🎯 Hovedarbeidsflyt
+
+1. **Last opp Excel-fil** med ordredata
+2. **Velg ukedag** for leverandører
+3. **Velg leverandør** fra listen
+4. **Gjennomgå data** og ordre
+5. **Send e-post** påminnelse
+
+## ⌨️ Hurtigtaster
+
+- **Ctrl/Cmd + R**: Start på nytt
+- **Ctrl/Cmd + ?**: Vis hurtigtaster
+- **Escape**: Gå tilbake ett steg
+- **Enter**: Bekreft valg
+- **Tab**: Naviger mellom felter
+
+## 📊 Dashboard
+
+Dashboard gir oversikt over:
+
+- Totalt antall leverandører
+- Leverandører med åpne ordre
+- Totalt antall åpne ordre
+- Restantall per leverandør
+- Topp 5 leverandører etter restantall
+- Ordrer per ukedag
+
+## 🔧 Konfigurasjon
+
+Applikasjonen bruker en lokal SQLite-database (`app.sqlite`) som opprettes automatisk ved første bruk. Alle innstillinger og data lagres lokalt på brukerens maskin.
+
+## 📞 Support
+
+For teknisk support eller spørsmål, kontakt utviklingsteamet eller administrator.
+
+---
+
+**Versjon**: 1.1.7  
+**Sist oppdatert**: Juli 2024

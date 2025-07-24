@@ -1,93 +1,184 @@
-# Excel Import
+# Excel Import - OneMed SupplyChain
 
-This document provides detailed information about the Excel import functionality in SupplyChain OneMed.
+Denne dokumentasjonen beskriver Excel import funksjonaliteten i OneMed SupplyChain.
 
-## Overview
+## 📋 Oversikt
 
-Excel import is a core feature that allows users to upload order and supplier status data from specific Excel spreadsheets. This functionality enables the primary workflow of loading data into the SupplyChain OneMed application for review and generating email reminders.
+Excel import er en kjernefunksjon som lar brukere laste opp ordre- og leverandørstatusdata fra spesifikke Excel-regneark. Denne funksjonaliteten muliggjør hovedarbeidsflyten for å laste data inn i OneMed SupplyChain for gjennomgang og generering av e-post påminnelser.
 
-## Supported File Format
+## 📁 Støttede Filformater
 
-The application currently supports importing data only from:
+Applikasjonen støtter for øyeblikket kun import av data fra:
 
-- **.xlsx** (Excel 2007 and newer) files via the drag-and-drop interface.
+- **.xlsx** (Excel 2007 og nyere) filer via drag-and-drop grensesnittet
 
-_(Support for `.xls` or `.csv` is not currently enabled in the UI.)_
+_(Støtte for `.xls` eller `.csv` er ikke aktivert i grensesnittet.)_
 
-## Required Sheets and Fields
+## 📊 Påkrevde Ark og Felter
 
-The Excel import expects specific sheets and fields to be present in the uploaded `.xlsx` file:
+Excel import forventer spesifikke ark og felter å være tilstede i den opplastede `.xlsx` filen:
 
-### Required Sheets Check
+### Påkrevde Ark
 
-The application validates the presence of the following sheets:
+Applikasjonen validerer tilstedeværelsen av følgende ark:
 
-1.  **Hovedliste**: Contains the main order information used throughout the wizard.
-2.  **BP**: Required for the file to be accepted, but **its data is not currently processed or stored** by the application.
+1. **BP**: Hovedarket som inneholder ordreinformasjonen som brukes i hele applikasjonen
+2. **Sjekkliste Leverandører**: Inneholder leverandørinformasjon og e-postadresser
 
-### Processed Sheets & Data Usage
+### Behandlede Ark og Data Bruk
 
-- **Hovedliste**: Data from this sheet is parsed and used in the main wizard flow (Data Review, Email). It is likely saved to the `orders` table in the database.
-  - **Key Mapped Fields**: The parser attempts to map columns to internal fields using flexible header names (e.g., `key` from 'Key'/'ID'/'Nøkkel'/'A', `supplier` from 'Supplier'/'Leverandør'/'I', `poNumber` from 'PO'/'B', `itemNo` from 'Item No.'/'E', `description` from 'Item description'/'J', `specification` from 'Specification'/'K', `orderQty` from 'OrdQtyPO'/'O').
-- **Sjekkliste Leverandører \***: Any sheets starting with this name are processed _during initial database creation only_. Data (supplier, day, week, status, email) is extracted and stored in the `weekly_status` table.
+- **BP**: Data fra dette arket parses og brukes i hovedarbeidsflyten (Data Review, E-post). Den lagres i `purchase_order` tabellen i databasen.
 
-## Import Process (Wizard Flow)
+  - **Nøkkelfelter**: Parseren mapper kolonner til interne felter med fleksible headernavn:
+    - `nøkkel` fra 'Nøkkel'/'Key'/'ID'/'A'
+    - `ordreNr` fra 'PO'/'Purchase Order'/'C'
+    - `itemNo` fra 'Item No.'/'Artikkelnummer'/'H'
+    - `beskrivelse` fra 'Beskrivelse'/'Description'/'I'
+    - `order_qty` fra 'OrdQtyPO'/'Bestilt antall'/'M'
+    - `received_qty` fra 'Delivered'/'Levert'/'N'
+    - `outstanding_qty` fra 'Outstanding'/'Restantall'/'O'
+    - `supplier_name` fra 'Supplier'/'Leverandør'/'P'
+    - `eta_supplier` fra 'ETA'/'Expected Date'/'J' eller 'K'
 
-The import process follows these steps within the application's main wizard:
+- **Sjekkliste Leverandører**: Behandles under initial database opprettelse. Data (leverandør, dag, uke, status, e-post) ekstraheres og lagres i `supplier_emails` tabellen.
 
-1.  **File Selection (`FileUpload.tsx`)**: User drags or selects an `.xlsx` file.
-2.  **Parsing & Initial Validation (`FileUpload.tsx`)**:
-    - The application parses the `.xlsx` file using the `xlsx` library.
-    - It validates the file format (`.xlsx` only).
-    - It validates the presence of `Hovedliste` and `BP` sheets.
-    - It validates the presence of key column headers (`key`, `supplier`, `poNumber`) in `Hovedliste` using flexible matching.
-    - If initial validation fails, errors are shown via toast notifications.
-3.  **Wizard Progression**: If parsing and initial validation succeed, the parsed data (primarily from `Hovedliste`) is passed to the next steps of the wizard (Planner Selection, Weekday Selection, Supplier Selection).
-4.  **Data Review (`DataReview.tsx`)**: User reviews the filtered order data from `Hovedliste` for the selected supplier.
-5.  **Email Preparation (`EmailButton.tsx`)**: User proceeds to prepare an email reminder based on the reviewed data.
-6.  **Database Storage**:
-    - _Initial Import_: If the database file (`app.sqlite`) doesn't exist when the application starts, the `importAlleArk` function is called, which parses the selected Excel file and populates the `weekly_status` and `purchase_order` tables.
-    - _Subsequent Imports_: The `FileUpload.tsx` component calls `window.electron.saveOrdersToDatabase` after successful parsing, likely intended to update the `orders` table (requires verification of the handler logic).
+## 🔄 Import Prosess
 
-## Validation Rules
+Import prosessen følger disse stegene i applikasjonen:
 
-The application performs the following validations primarily within the `FileUpload.tsx` component during parsing:
+### Steg 1: Fil Opplasting
 
-1.  **File Format**: Checks if the dropped file is `.xlsx`.
-2.  **Required Sheets**: Checks for the existence of `Hovedliste` and `BP` sheets.
-3.  **Column Headers**: Checks for the presence of essential column headers (`key`, `supplier`, `poNumber`) in `Hovedliste` using alternative names.
-4.  _(Note: The `window.electron.validateData` IPC call mentioned in previous examples performs an unrelated ODBC check and is not part of the core Excel file validation.)_
+1. **Fil Valg** (`FileUpload.tsx`): Bruker drar eller velger en `.xlsx` fil
+2. **Parsing & Validering** (`FileUpload.tsx`):
+   - Applikasjonen parser `.xlsx` filen ved hjelp av `exceljs` biblioteket
+   - Den validerer filformatet (`.xlsx` kun)
+   - Den validerer tilstedeværelsen av `BP` og `Sjekkliste Leverandører` ark
+   - Den validerer tilstedeværelsen av nøkkelkolonne-headere i `BP` ved hjelp av fleksibel matching
+   - Hvis initial validering feiler, vises feil via toast-meldinger
 
-## Error Handling
+### Steg 2: Progress Tracking
 
-When parsing or initial validation errors occur:
+3. **Progress Indikator**: Hvis parsing og initial validering lykkes, vises en progress indikator som viser hvor brukeren er i prosessen
+4. **Automatisk Overgang**: Parsed data (primært fra `BP`) sendes til neste steg (Ukedag Valg, Leverandør Valg)
 
-1.  Error messages are displayed using toast notifications.
-2.  Detailed console logs may provide more information for debugging.
-3.  Highlighting problematic data within the file or allowing partial imports is **not** currently supported.
+### Steg 3: Data Behandling
 
-## Usage Example
+5. **Data Review** (`DataReview.tsx`): Bruker gjennomgår den filtrerte ordredataen fra `BP` for den valgte leverandøren
+6. **E-post Forberedelse** (`EmailButton.tsx`): Bruker fortsetter til å forberede en e-post påminnelse basert på gjennomgått data
 
-_(The previous code example involving `window.electron.validateData` was misleading regarding file validation and has been removed. The core logic involves the `useDropzone` hook and the internal `parseExcelData` and `validateExcelData` functions within `FileUpload.tsx`.)_
+### Steg 4: Database Lagring
 
-## Best Practices
+- **Initial Import**: Hvis databasefilen (`app.sqlite`) ikke eksisterer når applikasjonen starter, kalles `importAlleArk` funksjonen, som parser den valgte Excel-filen og fyller `supplier_emails` og `purchase_order` tabellene
+- **Etterfølgende Imports**: `FileUpload.tsx` komponenten kaller `window.electron.saveOrdersToDatabase` etter vellykket parsing for å oppdatere `purchase_order` tabellen
 
-1.  **Use `.xlsx` Format**: Ensure your file is saved in the `.xlsx` format.
-2.  **Correct Sheets**: Verify the file contains sheets named exactly `Hovedliste` and `BP`.
-3.  **Consistent Headers**: Use clear and consistent headers in `Hovedliste` that match one of the expected alternatives (e.g., 'Leverandør' or 'Supplier').
-4.  **Manual Update**: **Crucially, ensure the data within the Excel file is up-to-date before uploading.** The application reads the file as-is and does not connect to external sources to refresh it.
-5.  **Backup**: Keep backups of your original Excel files.
+## ✅ Valideringsregler
 
-## Troubleshooting
+Applikasjonen utfører følgende valideringer primært innenfor `FileUpload.tsx` komponenten under parsing:
 
-Common issues and their solutions:
+1. **Fil Format**: Sjekker om den droppede filen er `.xlsx`
+2. **Påkrevde Ark**: Sjekker for eksistensen av `BP` og `Sjekkliste Leverandører` ark
+3. **Kolonne Headere**: Sjekker for tilstedeværelsen av essensielle kolonne-headere (`nøkkel`, `supplier_name`, `ordreNr`) i `BP` ved hjelp av alternative navn
+4. **Data Kvalitet**: Validerer at kritiske felter ikke er tomme
 
-1.  **File Not Recognized**: Ensure you're uploading an `.xlsx` file.
-2.  **Missing Sheets Error**: Check that sheets named `Hovedliste` and `BP` exist in your workbook.
-3.  **Column Not Found Error**: Verify essential column headers (Supplier, PO Number, Key/ID) are present in `Hovedliste`.
-4.  **Parsing Errors**: The file might be corrupted, password-protected, or have an unusual internal structure. Try resaving the file in Excel.
+## ❌ Feilhåndtering
 
-## Related Features
+Når parsing eller initial valideringsfeil oppstår:
 
-- [Order Tracking](order-tracking.md) - Displays data imported from the `Hovedliste` sheet.
-- [Database Storage](database-storage.md) - Describes where imported data is stored.
+1. Feilmeldinger vises ved hjelp av toast-meldinger
+2. Detaljerte konsollogger kan gi mer informasjon for debugging
+3. Fremheving av problematiske data innenfor filen eller tillatelse av delvise imports støttes **ikke** for øyeblikket
+
+## 📝 Bruk Eksempel
+
+```typescript
+// Eksempel på fil opplasting i FileUpload komponenten
+const onDrop = useCallback((acceptedFiles: File[]) => {
+  const file = acceptedFiles[0];
+  if (file && file.name.endsWith(".xlsx")) {
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      const buffer = e.target?.result as ArrayBuffer;
+      try {
+        const success = await window.electron.saveOrdersToDatabase(buffer);
+        if (success) {
+          onDataParsed(parsedData);
+        }
+      } catch (error) {
+        console.error("Import failed:", error);
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  }
+}, []);
+```
+
+## 💡 Beste Praksis
+
+1. **Bruk `.xlsx` Format**: Sørg for at filen din er lagret i `.xlsx` formatet
+2. **Korrekte Ark**: Verifiser at filen inneholder ark med nøyaktig navn `BP` og `Sjekkliste Leverandører`
+3. **Konsistente Headere**: Bruk tydelige og konsistente headere i `BP` som matcher en av de forventede alternativene (f.eks. 'Leverandør' eller 'Supplier')
+4. **Manuell Oppdatering**: **Kritisk, sørg for at dataene innenfor Excel-filen er oppdatert før opplasting.** Applikasjonen leser filen som den er og kobler ikke til eksterne kilder for å oppdatere den
+5. **Backup**: Behold sikkerhetskopier av dine originale Excel-filer
+
+## 🔧 Feilsøking
+
+Vanlige problemer og deres løsninger:
+
+### Fil Gjenkjennes Ikke
+
+- **Løsning**: Sørg for at du laster opp en `.xlsx` fil
+- **Sjekk**: Filnavn og filtype
+
+### Manglende Ark Feil
+
+- **Løsning**: Sjekk at ark med navn `BP` og `Sjekkliste Leverandører` eksisterer i arbeidsboken
+- **Sjekk**: Arknavn må være nøyaktig som forventet
+
+### Kolonne Ikke Funnet Feil
+
+- **Løsning**: Verifiser at essensielle kolonne-headere (Leverandør, PO Number, Nøkkel/ID) er tilstede i `BP`
+- **Sjekk**: Header-navn og kolonneplassering
+
+### Parsing Feil
+
+- **Løsning**: Filen kan være korrupt, passordbeskyttet, eller ha en uvanlig intern struktur
+- **Sjekk**: Prøv å lagre filen på nytt i Excel
+
+### Database Feil
+
+- **Løsning**: Sjekk at applikasjonen har skrivetillatelse til databasemappen
+- **Sjekk**: Diskplass og tillatelser
+
+## 🔗 Relaterte Funksjoner
+
+- [Brukerguide](../user-guide.md) - Detaljert brukerguide for alle funksjoner
+- [Database](database.md) - Beskriver hvor importerte data lagres
+- [Arkitektur](../architecture.md) - Teknisk arkitektur og dataflyt
+
+## 📊 Data Struktur
+
+### BP Ark Struktur
+
+| Kolonne | Beskrivelse    | Eksempel           |
+| ------- | -------------- | ------------------ |
+| A       | Nøkkel/ID      | "PO123-ITEM456"    |
+| C       | Ordrenummer    | "PO123"            |
+| H       | Artikkelnummer | "ITEM456"          |
+| I       | Beskrivelse    | "Medisinsk utstyr" |
+| J/K     | ETA Dato       | "2024-01-15"       |
+| M       | Bestilt Antall | 100                |
+| N       | Levert Antall  | 50                 |
+| O       | Restantall     | 50                 |
+| P       | Leverandør     | "OneMed AS"        |
+
+### Sjekkliste Leverandører Ark Struktur
+
+| Kolonne | Beskrivelse    | Eksempel          |
+| ------- | -------------- | ----------------- |
+| A       | Leverandørnavn | "OneMed AS"       |
+| J       | E-postadresse  | "ordre@onemed.no" |
+
+---
+
+**Sist oppdatert**: Juli 2024  
+**Versjon**: 1.1.7

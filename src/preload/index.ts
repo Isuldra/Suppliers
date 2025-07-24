@@ -46,6 +46,11 @@ interface ElectronAPI {
     fileBuffer: ArrayBuffer;
   }) => Promise<{ success: boolean; message?: string; error?: string }>;
   getOutstandingOrders: (supplier: string) => Promise<ExcelRow[]>;
+  getSuppliersWithOutstandingOrders: () => Promise<{
+    success: boolean;
+    data?: string[];
+    error?: string;
+  }>;
   recordEmailSent: (
     supplier: string,
     recipient: string,
@@ -293,6 +298,9 @@ contextBridge.exposeInMainWorld("electron", {
   },
   getOutstandingOrders: async (supplier: string) => {
     return await ipcRenderer.invoke("getOutstandingOrders", supplier);
+  },
+  getSuppliersWithOutstandingOrders: async () => {
+    return await ipcRenderer.invoke("getSuppliersWithOutstandingOrders");
   },
   recordEmailSent: async (
     supplier: string,

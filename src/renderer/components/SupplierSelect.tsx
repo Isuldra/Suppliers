@@ -33,7 +33,41 @@ const SupplierSelect: React.FC<SupplierSelectProps> = ({
     currentSupplier || ""
   );
 
-  // Get suppliers based on selected planner and weekday
+  // Get suppliers based on selected planner and weekday, filtered to only show those with outstanding orders
+  const [suppliersWithOutstandingOrders, setSuppliersWithOutstandingOrders] =
+    useState<string[]>([]);
+  const [isLoadingSuppliers, setIsLoadingSuppliers] = useState(false);
+
+  // Fetch suppliers with outstanding orders
+  useEffect(() => {
+    const fetchSuppliersWithOutstandingOrders = async () => {
+      setIsLoadingSuppliers(true);
+      try {
+        const response =
+          await window.electron.getSuppliersWithOutstandingOrders();
+        if (response.success && response.data) {
+          setSuppliersWithOutstandingOrders(response.data);
+        } else {
+          console.error(
+            "Failed to fetch suppliers with outstanding orders:",
+            response.error
+          );
+          setSuppliersWithOutstandingOrders([]);
+        }
+      } catch (error) {
+        console.error(
+          "Error fetching suppliers with outstanding orders:",
+          error
+        );
+        setSuppliersWithOutstandingOrders([]);
+      } finally {
+        setIsLoadingSuppliers(false);
+      }
+    };
+
+    fetchSuppliersWithOutstandingOrders();
+  }, []);
+
   const suppliers = useMemo<string[]>(() => {
     // Find the planner data
     const planner = supplyPlannersData.planners.find(
@@ -45,8 +79,13 @@ const SupplierSelect: React.FC<SupplierSelectProps> = ({
     }
 
     // Get suppliers for the selected weekday
-    return planner.weekdaySuppliers[selectedWeekday] || [];
-  }, [selectedPlanner, selectedWeekday]);
+    const weekdaySuppliers = planner.weekdaySuppliers[selectedWeekday] || [];
+
+    // Filter to only include suppliers that have outstanding orders
+    return weekdaySuppliers.filter((supplier) =>
+      suppliersWithOutstandingOrders.includes(supplier)
+    );
+  }, [selectedPlanner, selectedWeekday, suppliersWithOutstandingOrders]);
 
   // Filter suppliers based on search term
   const filteredSuppliers = useMemo(() => {
@@ -66,12 +105,8 @@ const SupplierSelect: React.FC<SupplierSelectProps> = ({
 
   const handleSupplierSelect = (supplier: string) => {
     setSelectedSupplier(supplier);
-  };
-
-  const handleNext = () => {
-    if (selectedSupplier) {
-      onSupplierSelected(selectedSupplier);
-    }
+    // Automatically trigger the callback when supplier is selected
+    onSupplierSelected(supplier);
   };
 
   // Auto-select if there's only one supplier after filtering
@@ -81,8 +116,9 @@ const SupplierSelect: React.FC<SupplierSelectProps> = ({
       filteredSuppliers[0] !== selectedSupplier
     ) {
       setSelectedSupplier(filteredSuppliers[0]);
+      onSupplierSelected(filteredSuppliers[0]);
     }
-  }, [filteredSuppliers, selectedSupplier]);
+  }, [filteredSuppliers, selectedSupplier, onSupplierSelected]);
 
   return (
     <div className="w-full">
@@ -106,12 +142,12 @@ const SupplierSelect: React.FC<SupplierSelectProps> = ({
         </p>
         <p className="text-sm text-neutral-secondary mt-1">
           Viser kun leverandører som er planlagt for{" "}
-          {selectedWeekday?.toLowerCase()}.
+          {selectedWeekday?.toLowerCase()} og som har åpne ordre.
         </p>
       </div>
 
-      <div className="mb-6">
-        <div className="flex mb-2">
+      <div className="mb-6 w-full">
+        <div className="flex mb-2 w-full">
           <label htmlFor="supplier-search" className="sr-only">
             Søk etter leverandør
           </label>
@@ -119,7 +155,7 @@ const SupplierSelect: React.FC<SupplierSelectProps> = ({
             type="text"
             id="supplier-search"
             placeholder="Søk etter leverandør..."
-            className="form-control"
+            className="form-control w-full"
             value={searchTerm}
             onChange={handleSearch}
             aria-label="Søk etter leverandør"
@@ -127,18 +163,34 @@ const SupplierSelect: React.FC<SupplierSelectProps> = ({
           />
         </div>
 
-        <div className="bg-neutral-light p-4 rounded-md shadow-sm">
-          <p className="text-sm text-neutral-secondary mb-2" aria-live="polite">
-            {filteredSuppliers.length} leverandører funnet
-          </p>
+        <div className="bg-neutral-light p-4 rounded-md shadow-sm w-full">
+          {isLoadingSuppliers ? (
+            <p
+              className="text-sm text-neutral-secondary mb-2"
+              aria-live="polite"
+            >
+              Laster leverandører med åpne ordre...
+            </p>
+          ) : (
+            <p
+              className="text-sm text-neutral-secondary mb-2"
+              aria-live="polite"
+            >
+              {filteredSuppliers.length} leverandører med åpne ordre funnet
+            </p>
+          )}
 
-          {filteredSuppliers.length === 0 ? (
+          {isLoadingSuppliers ? (
             <p className="text-neutral-secondary italic" aria-live="polite">
-              Ingen leverandører funnet
+              Laster...
+            </p>
+          ) : filteredSuppliers.length === 0 ? (
+            <p className="text-neutral-secondary italic" aria-live="polite">
+              Ingen leverandører med åpne ordre funnet for denne ukedagen
             </p>
           ) : (
             <div
-              className="max-h-96 overflow-y-auto border border-neutral-light rounded-sm bg-neutral-white"
+              className="h-64 overflow-y-auto border border-neutral-light rounded-sm bg-neutral-white w-full"
               id="supplier-list"
               role="listbox"
               aria-labelledby="supplier-select-heading"
@@ -161,26 +213,6 @@ const SupplierSelect: React.FC<SupplierSelectProps> = ({
             </div>
           )}
         </div>
-      </div>
-
-      <div className="flex justify-end">
-        <button
-          onClick={handleNext}
-          disabled={!selectedSupplier}
-          className={`btn ${
-            selectedSupplier
-              ? "btn-primary"
-              : "bg-neutral-secondary text-neutral-light cursor-not-allowed"
-          }`}
-          aria-label={
-            selectedSupplier
-              ? `Velg leverandør ${selectedSupplier} og gå videre`
-              : "Velg en leverandør for å fortsette"
-          }
-          aria-disabled={!selectedSupplier}
-        >
-          Neste
-        </button>
       </div>
     </div>
   );

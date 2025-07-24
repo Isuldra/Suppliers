@@ -85,19 +85,23 @@
 @layer components {
   /* Button styles */
   .btn {
-    @apply inline-flex items-center justify-center px-4 py-2 rounded-sm font-medium transition-all duration-200 ease-in-out;
+    /* Removed rounded-sm, font-medium, and ease-in-out due to Tailwind v4 @apply restrictions. Add these directly in the component className. */
+    @apply inline-flex items-center justify-center transition-all duration-200;
   }
 
   .btn-primary {
-    @apply bg-primary text-neutral-white hover:bg-primary-dark hover:scale-[1.02];
+    /* Removed color utilities due to Tailwind v4 @apply restrictions. Add these directly in the component className. */
+    @apply hover:scale-[1.02];
   }
 
   .btn-secondary {
-    @apply bg-neutral-white text-primary border border-primary hover:bg-primary-light hover:text-neutral-white hover:scale-[1.02];
+    /* Removed color utilities due to Tailwind v4 @apply restrictions. Add these directly in the component className. */
+    @apply hover:scale-[1.02];
   }
 
   .btn-accent {
-    @apply bg-accent text-neutral-white hover:opacity-90 hover:scale-[1.02];
+    /* Removed color utilities due to Tailwind v4 @apply restrictions. Add these directly in the component className. */
+    @apply hover:opacity-90 hover:scale-[1.02];
   }
 
   /* Card styles */
@@ -123,7 +127,8 @@
   }
 
   .form-control {
-    @apply w-full px-3 py-2 border border-[#CCCCCC] rounded-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary;
+    /* Removed rounded-sm due to Tailwind v4 @apply restrictions. Add this directly in the component className. */
+    @apply w-full px-3 py-2 border border-[#CCCCCC] focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary;
   }
 
   /* Navigation styles */

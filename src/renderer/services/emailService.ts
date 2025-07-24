@@ -28,7 +28,6 @@ export interface EmailData {
     key: string;
     poNumber: string; // PO-nr
     itemNo: string; // OneMed nr
-    supplierItemNo: string; // Lev. art.nr
     description: string; // Beskrivelse/Description
     specification: string; // Spesifikasjon/Specification
     orderQty: number; // Bestilt ant./Order qty
@@ -82,7 +81,6 @@ export class EmailService {
                   <tr style="background-color: #003366; color: #ffffff; text-align: left;">
                     <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">PO-nr</th>
                     <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">OneMed nr</th>
-                    <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">Lev. art.nr</th>
                     <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">Beskrivelse</th>
                     <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">Spesifikasjon</th>
                     <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">Bestilt ant.</th>
@@ -98,7 +96,6 @@ export class EmailService {
                   <tr style="background-color: {{#if @even}}#f7f7f7{{else}}#ffffff{{/if}}; border-bottom: 1px solid #e0e0e0;">
                     <td style="padding: 6px 10px; border: 1px solid #e0e0e0; font-weight: bold;">{{poNumber}}</td>
                     <td style="padding: 6px 10px; border: 1px solid #e0e0e0;">{{itemNo}}</td>
-                    <td style="padding: 6px 10px; border: 1px solid #e0e0e0;">{{supplierItemNo}}</td>
                     <td style="padding: 6px 10px; border: 1px solid #e0e0e0;">{{description}}</td>
                     <td style="padding: 6px 10px; border: 1px solid #e0e0e0;">{{specification}}</td>
                     <td style="padding: 6px 10px; border: 1px solid #e0e0e0; text-align: center;">{{orderQty}}</td>
@@ -163,7 +160,6 @@ export class EmailService {
                   <tr style="background-color: #003366; color: #ffffff; text-align: left;">
                     <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">PO No.</th>
                     <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">OneMed No.</th>
-                    <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">Supplier Art. No.</th>
                     <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">Description</th>
                     <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">Specification</th>
                     <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">Order Qty</th>
@@ -179,7 +175,6 @@ export class EmailService {
                   <tr style="background-color: {{#if @even}}#f7f7f7{{else}}#ffffff{{/if}}; border-bottom: 1px solid #e0e0e0;">
                     <td style="padding: 6px 10px; border: 1px solid #e0e0e0; font-weight: bold;">{{poNumber}}</td>
                     <td style="padding: 6px 10px; border: 1px solid #e0e0e0;">{{itemNo}}</td>
-                    <td style="padding: 6px 10px; border: 1px solid #e0e0e0;">{{supplierItemNo}}</td>
                     <td style="padding: 6px 10px; border: 1px solid #e0e0e0;">{{description}}</td>
                     <td style="padding: 6px 10px; border: 1px solid #e0e0e0;">{{specification}}</td>
                     <td style="padding: 6px 10px; border: 1px solid #e0e0e0; text-align: center;">{{orderQty}}</td>
@@ -346,7 +341,7 @@ export class EmailService {
         console.warn("Could not save debug HTML:", debugError);
       }
 
-      // Set the subject based on language
+      // Set the subject based on language with proper UTF-8 encoding
       const subject =
         finalLanguage === "no"
           ? `Purring på manglende leveranser – ${data.supplier}`
@@ -419,7 +414,7 @@ export class EmailService {
       if (result.success) {
         console.log("SUCCESS: Email sent via sendEmail (.eml file-open)");
       } else {
-        console.error("FINAL ATTEMPT FAILED: All email sending methods failed");
+        console.error("ALL ATTEMPTS FAILED: Email sending failed completely");
       }
 
       return result;
