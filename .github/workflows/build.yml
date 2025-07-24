@@ -15,9 +15,6 @@ concurrency:
 env:
   NODE_VERSION: "22.x"
   SHARP_IGNORE_GLOBAL_LIBVIPS: "1"
-  npm_config_sharp_binary_host: "https://github.com/lovell/sharp-libvips/releases/download"
-  npm_config_sharp_libvips_binary_host: "https://github.com/lovell/sharp-libvips/releases/download"
-  npm_config_sharp_dist_base_url: "https://github.com/lovell/sharp-libvips/releases/download"
 
 jobs:
   build:
@@ -59,31 +56,7 @@ jobs:
             ${{ matrix.os }}-electron-builder-cache-
 
       - name: Install dependencies
-        shell: pwsh
-        run: |
-          Write-Host "Installing dependencies..."
-          npm ci
-          Write-Host "Dependencies installed successfully"
-
-      - name: Install sharp prebuilt binaries
-        shell: pwsh
-        run: |
-          Write-Host "Installing sharp prebuilt binaries..."
-          npm install sharp@0.34.2 --platform=win32 --arch=x64 --target=36.5.0 --runtime=electron --dist-url=https://electronjs.org/headers
-          Write-Host "Sharp prebuilt binaries installed"
-
-      - name: Rebuild native dependencies for Electron
-        shell: pwsh
-        run: |
-          Write-Host "Rebuilding native dependencies for Electron..."
-          npx electron-rebuild --version=36.5.0 --only=better-sqlite3
-          Write-Host "Native dependencies rebuilt"
-
-      - name: Verify build configuration
-        shell: pwsh
-        run: |
-          $pkg = Get-Content package.json | ConvertFrom-Json
-          Write-Host "Build configuration for ${{ matrix.os }}: $($pkg.build.win | ConvertTo-Json)"
+        run: npm ci
 
       - name: Build Application
         run: npm run build
@@ -92,13 +65,18 @@ jobs:
         shell: pwsh
         run: npm run create-minimal-manifest
 
-      - name: Prepare Dependencies (Skip sharp rebuild)
+      # This is the key step to fix the sharp build issue
+      - name: Create .npmrc for electron-builder
         shell: pwsh
         run: |
-          Write-Host "Preparing dependencies for Electron (skipping sharp rebuild)..."
-          # Skip the problematic prepare-deps step and manually handle what's needed
-          Write-Host "Skipping electron-builder install-app-deps to avoid sharp build issues"
-          Write-Host "Dependencies are already prepared from previous steps"
+          Write-Host "Creating .npmrc in dist directory for electron-builder..."
+          echo "sharp_binary_host=https://github.com/lovell/sharp-libvips/releases/download" >> dist/.npmrc
+          echo "sharp_libvips_binary_host=https://github.com/lovell/sharp-libvips/releases/download" >> dist/.npmrc
+          echo "sharp_dist_base_url=https://github.com/lovell/sharp-libvips/releases/download" >> dist/.npmrc
+          echo "sharp_ignore_global_libvips=1" >> dist/.npmrc
+          echo "sharp_prebuild_platform=win32" >> dist/.npmrc
+          echo "sharp_prebuild_arch=x64" >> dist/.npmrc
+          Write-Host "Created .npmrc in dist directory"
 
       - name: Exclude build directories from Windows Defender
         if: runner.os == 'Windows'
@@ -106,6 +84,7 @@ jobs:
         run: |
           Add-MpPreference -ExclusionPath "${{ github.workspace }}\\dist"
           Add-MpPreference -ExclusionPath "${{ github.workspace }}\\node_modules"
+          Add-MpPreference -ExclusionPath "${{ github.workspace }}\\release"
 
       - name: Package for Development Build
         if: >
