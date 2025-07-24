@@ -98,8 +98,13 @@ const EmailButton: React.FC<EmailButtonProps> = ({
 
   // Handle recipient email change
   const handleRecipientChange = (recipientEmail: string) => {
+    console.log(
+      "EmailButton: handleRecipientChange called with:",
+      recipientEmail
+    );
     const updatedData = { ...emailData, recipientEmail };
     setEmailData(updatedData);
+    console.log("EmailButton: Updated emailData:", updatedData);
   };
 
   const handleSendEmail = async () => {
