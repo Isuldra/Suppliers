@@ -79,10 +79,56 @@ function getSafeWorksheet(wb: ExcelJS.Workbook, name: string): Worksheet {
   return ws;
 }
 
+/**
+ * Clean up any old temporary files from previous operations
+ */
+function cleanupOldTempFiles(): void {
+  try {
+    const tempDir = app.getPath("temp");
+    const files = readdirSync(tempDir);
+
+    // Clean up old OneMed temp files
+    const oneMedTempFiles = files.filter(
+      (file) =>
+        file.startsWith("onemed-") &&
+        (file.includes("outlook-") ||
+          file.includes("subject-") ||
+          file.includes("reminder-"))
+    );
+
+    let cleanedCount = 0;
+    for (const file of oneMedTempFiles) {
+      try {
+        const filePath = join(tempDir, file);
+        const stats = statSync(filePath);
+        // Delete files older than 1 hour
+        const oneHourAgo = Date.now() - 60 * 60 * 1000;
+        if (stats.mtime.getTime() < oneHourAgo) {
+          unlinkSync(filePath);
+          cleanedCount++;
+        }
+      } catch (fileError) {
+        // Ignore individual file errors (file might be in use)
+      }
+    }
+
+    if (cleanedCount > 0) {
+      log.info(
+        `Cleaned up ${cleanedCount} old temporary files from previous operations`
+      );
+    }
+  } catch (error) {
+    log.warn("Failed to cleanup old temp files:", error);
+  }
+}
+
 export async function importAlleArk(
   source: string | ArrayBuffer,
   db: Database.Database
 ): Promise<boolean> {
+  // Clean up old temp files before starting new import
+  cleanupOldTempFiles();
+
   // Let DatabaseService own the schema; importer just writes into existing tables
   log.info(`Starting Excel import...`);
 
