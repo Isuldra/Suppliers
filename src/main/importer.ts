@@ -1,6 +1,6 @@
 import ExcelJS, { Worksheet } from "exceljs";
 import Database from "better-sqlite3";
-// eslint-disable-next-line @typescript-eslint/no-var-requires, @typescript-eslint/no-require-imports
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 const log = require("electron-log"); // Added for logging
 import { parse as parseDateFns, isValid } from "date-fns"; // Import date-fns functions
 import * as XLSX from "xlsx";
@@ -97,7 +97,7 @@ export async function importAlleArk(
   }
 
   const purchaseInsert = db.prepare(
-    `INSERT INTO purchase_order (
+    `INSERT OR REPLACE INTO purchase_order (
       nøkkel, ordreNr, itemNo, beskrivelse, dato, ftgnavn,
       status, producer_item, specification, note, inventory_balance, order_qty, received_qty, purchaser,
       incoming_date, eta_supplier, supplier_name, warehouse, outstanding_qty, order_row_number
@@ -117,6 +117,10 @@ export async function importAlleArk(
     )`
   );
 
+  // Declare counters outside transaction scope for later use
+  let processedCount = 0;
+  let duplicateCount = 0;
+
   const tx = db.transaction(() => {
     // Clear existing purchase order data before importing new data
     // This ensures that removed/changed POs from the Excel file don't persist in the database
@@ -127,7 +131,7 @@ export async function importAlleArk(
     // BP sheet import (new structure) - data starts from row 6
     const bpSheet = getSafeWorksheet(wb, "BP");
     const startRow = 6; // Data starts from row 6 (1-based)
-    let processedCount = 0;
+    const seenKeys = new Set<string>(); // Track keys we've seen to count duplicates
 
     log.info(`Processing BP sheet starting from row ${startRow}`);
 
@@ -188,9 +192,28 @@ export async function importAlleArk(
         );
       }
 
+      const uniqueKey = `${poNumber}-${oneMedArticleNo}`;
+
+      // Check for duplicates and log them
+      if (seenKeys.has(uniqueKey)) {
+        duplicateCount++;
+        log.warn(
+          `⚠️ Duplicate key detected: '${uniqueKey}' (row ${r}) - will replace previous entry`
+        );
+      } else {
+        seenKeys.add(uniqueKey);
+      }
+
+      // Log potential duplicates for debugging
+      if (processedCount < 10) {
+        log.info(
+          `Processing row ${r}: Key='${uniqueKey}', Supplier='${supplierName}', Outstanding=${outstandingQty}`
+        );
+      }
+
       // Insert into database using the exact column names from schema
       purchaseInsert.run({
-        nøkkel: `${poNumber}-${oneMedArticleNo}`,
+        nøkkel: uniqueKey,
         ordreNr: poNumber,
         itemNo: oneMedArticleNo,
         beskrivelse: supplierArticleNo, // Using supplier article number as description
@@ -228,11 +251,21 @@ export async function importAlleArk(
     }
 
     log.info(`Processed ${processedCount} rows from BP sheet`);
+    if (duplicateCount > 0) {
+      log.warn(
+        `Found and replaced ${duplicateCount} duplicate entries during import`
+      );
+    }
   });
 
   try {
     tx();
     log.info("Excel import successful.");
+    log.info(
+      `Import summary: ${processedCount} total records processed${
+        duplicateCount > 0 ? `, ${duplicateCount} duplicates replaced` : ""
+      }`
+    );
 
     // Import supplier emails from "Sjekkliste Leverandører" sheet if it exists
     try {
