@@ -8,7 +8,7 @@ import {
   IpcMainInvokeEvent,
 } from "electron";
 import path from "path";
-// eslint-disable-next-line @typescript-eslint/no-var-requires, @typescript-eslint/no-require-imports
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 const log = require("electron-log/main"); // Required for CJS interop in Electron main process
 import { databaseService } from "../services/databaseService";
 import { setupDatabaseHandlers } from "./database";
@@ -618,6 +618,7 @@ ipcMain.handle(
   "sendEmailAutomatically",
   async (_, payload: { to: string; subject: string; html: string }) => {
     let tempHtmlFilePath: string | null = null; // To ensure cleanup
+    let tempSubjectFilePath: string | null = null; // To ensure cleanup
 
     try {
       log.info(`Attempting automatic email send to: ${payload.to}`);
@@ -660,40 +661,58 @@ ipcMain.handle(
         `HTML content written to temporary file: ${tempHtmlFilePath} (Length: ${payload.html.length})`
       );
 
-      // Escape subject for PowerShell string, and tempFilePath for PowerShell string
-      // PowerShell will handle UTF-8 properly when reading from file
-      const escapedSubject = payload.subject
-        .replace(/"/g, '""')
-        .replace(/`/g, "``")
-        .replace(/\$/g, "`$")
-        .replace(/–/g, "-") // Replace en dash with regular dash for PowerShell
-        .replace(/—/g, "-"); // Replace em dash with regular dash for PowerShell
+      // Write subject to a separate temp file to avoid PowerShell encoding issues
+      tempSubjectFilePath = path.join(
+        os.tmpdir(),
+        `onemed-subject-${Date.now()}.txt`
+      );
+      await fs.promises.writeFile(tempSubjectFilePath, payload.subject, {
+        encoding: "utf-8",
+      });
+      log.info(`Subject written to temp file: ${tempSubjectFilePath}`);
+
+      // Escape tempFilePath for PowerShell string
+      const escapedTempSubjectFilePath = tempSubjectFilePath.replace(
+        /'/g,
+        "''"
+      );
 
       const escapedTempHtmlFilePath = tempHtmlFilePath.replace(/'/g, "''"); // Escape single quotes for PS literal string
 
-      // PowerShell script will now READ HTML from the temp file.
-      // This script is much shorter and doesn't embed the large HTML.
+      // PowerShell script will now READ HTML and SUBJECT from temp files.
+      // This avoids all encoding issues with Norwegian characters.
       const powershellScript = `
 $OutputEncoding = [System.Text.Encoding]::UTF8
 [Console]::InputEncoding = [System.Text.Encoding]::UTF8
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 
 $tempHtmlPath = '${escapedTempHtmlFilePath}' # Use single quotes for literal path
+$tempSubjectPath = '${escapedTempSubjectFilePath}' # Subject file path
 $htmlFileReadError = $null
+$subjectFileReadError = $null
 
 try {
   Write-Output "DEBUG: Starting Outlook COM automation..."
+  
   # Check if temp HTML file exists before trying to read
   if (-not (Test-Path $tempHtmlPath)) {
     throw "Temporary HTML file not found at: $tempHtmlPath"
   }
+  
+  # Check if temp subject file exists before trying to read
+  if (-not (Test-Path $tempSubjectPath)) {
+    throw "Temporary subject file not found at: $tempSubjectPath"
+  }
 
   # Read HTML content from the temporary file as UTF-8
-  # Get-Content -Raw is efficient for reading entire file
-  # Specify -Encoding UTF8 to be explicit
   $htmlContent = Get-Content -Path $tempHtmlPath -Raw -Encoding UTF8
   Write-Output "DEBUG: HTML content read from file. Length in PS: $($htmlContent.Length)"
-  Write-Output "DEBUG: HTML preview from file (first 100 chars): $($htmlContent.Substring(0, [Math]::Min(100, $htmlContent.Length)))"
+  
+  # Read subject from the temporary file as UTF-8
+  $subjectContent = Get-Content -Path $tempSubjectPath -Raw -Encoding UTF8
+  # Trim any trailing whitespace/newlines from the subject
+  $subjectContent = $subjectContent.Trim()
+  Write-Output "DEBUG: Subject read from file: '$subjectContent'"
 
   $outlook = New-Object -ComObject Outlook.Application
   Write-Output "DEBUG: Outlook application object created"
@@ -703,10 +722,8 @@ try {
   $mail.To = "${emailTo}"
   Write-Output "DEBUG: Recipient set to ${emailTo}"
 
-  $mail.Subject = @"
-${escapedSubject}
-"@
-  Write-Output "DEBUG: Subject set"
+  $mail.Subject = $subjectContent
+  Write-Output "DEBUG: Subject set from file"
 
   $mail.HTMLBody = $htmlContent # Assign the content read from file
   Write-Output "DEBUG: HTML body set successfully from file content."
@@ -732,6 +749,16 @@ ${escapedSubject}
       Write-Output "DEBUG: Temporary HTML file cleaned up: $tempHtmlPath"
     } catch {
       Write-Output "WARN: Failed to clean up temporary HTML file '$tempHtmlPath': $($_.Exception.Message)"
+    }
+  }
+  
+  # Clean up the temporary subject file
+  if ($tempSubjectPath -and (Test-Path $tempSubjectPath)) {
+    try {
+      Remove-Item -Path $tempSubjectPath -Force
+      Write-Output "DEBUG: Temporary subject file cleaned up: $tempSubjectPath"
+    } catch {
+      Write-Output "WARN: Failed to clean up temporary subject file '$tempSubjectPath': $($_.Exception.Message)"
     }
   }
 }
@@ -828,7 +855,7 @@ ${escapedSubject}
         errorMessage
       );
 
-      // Ensure temp file is cleaned up if created before an outer error
+      // Ensure temp files are cleaned up if created before an outer error
       if (tempHtmlFilePath) {
         try {
           if (fs.existsSync(tempHtmlFilePath)) {
@@ -838,6 +865,20 @@ ${escapedSubject}
         } catch (cleanupError) {
           log.warn(
             "Outer catch: Failed to cleanup temp HTML file",
+            cleanupError
+          );
+        }
+      }
+
+      if (tempSubjectFilePath) {
+        try {
+          if (fs.existsSync(tempSubjectFilePath)) {
+            fs.unlinkSync(tempSubjectFilePath);
+            log.info("Outer catch: Cleaned up temp subject file");
+          }
+        } catch (cleanupError) {
+          log.warn(
+            "Outer catch: Failed to cleanup temp subject file",
             cleanupError
           );
         }
