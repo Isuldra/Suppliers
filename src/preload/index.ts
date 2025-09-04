@@ -425,6 +425,18 @@ contextBridge.exposeInMainWorld("electron", {
     return await ipcRenderer.invoke("getSupplierEmail", supplierName);
   },
 
+  // Supplier planning methods
+  getSuppliersForWeekday: async (weekday: string, plannerName: string) => {
+    return await ipcRenderer.invoke(
+      "getSuppliersForWeekday",
+      weekday,
+      plannerName
+    );
+  },
+  getAllSupplierPlanning: async () => {
+    return await ipcRenderer.invoke("getAllSupplierPlanning");
+  },
+
   // Settings methods
   getSettings: async () => {
     return await ipcRenderer.invoke("getSettings");

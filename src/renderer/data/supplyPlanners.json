@@ -26,11 +26,11 @@
           "Smith & Nephew AS",
           "DMedical AS",
           "Lilleborg AS",
-          "OneMed A/S"
+          "OneMed A/S",
+          "AP Services A/S EUR",
+          "AP Services A/S USD"
         ],
         "Onsdag": [
-          "AP Services A/S EUR",
-          "AP Services A/S USD",
           "Becton Dickison Norway AS",
           "Coloplast Norge",
           "HEBUmedical GmbH",
@@ -51,8 +51,6 @@
           "Jahpron AS",
           "Julius Zorn GmbH",
           "Norgesplaster AS",
-          "AP Services A/S EUR",
-          "AP Services A/S USD",
           "Cryno AS",
           "Essity Norway AS",
           "Huntleigh Healthcare Ltd",
@@ -61,7 +59,8 @@
           "Roche Diagnostics Norge AS",
           "Sysmex Hvamsvingen 24",
           "Wilhelmsen Chemicals AS",
-          "XboXLab AS"
+          "XboXLab AS",
+          "Sarstedt AS"
         ],
         "Fredag": [
           "MPS Techline of PA, Inc.",
