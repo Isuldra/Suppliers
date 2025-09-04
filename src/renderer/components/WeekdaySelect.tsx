@@ -26,6 +26,7 @@ const WeekdaySelect: React.FC<WeekdaySelectProps> = ({
   const [selectedWeekday, setSelectedWeekday] = useState<string>(
     currentWeekday || ""
   );
+  const [importedWeekdays, setImportedWeekdays] = useState<string[]>([]);
 
   // Auto-select when component mounts or currentWeekday changes
   useEffect(() => {
@@ -34,20 +35,78 @@ const WeekdaySelect: React.FC<WeekdaySelectProps> = ({
     }
   }, [currentWeekday]);
 
+  // Fetch imported weekdays for the selected planner
+  useEffect(() => {
+    const fetchImportedWeekdays = async () => {
+      if (!selectedPlanner) {
+        setImportedWeekdays([]);
+        return;
+      }
+
+      try {
+        const response = await window.electron.getAllSupplierPlanning();
+        if (response.success && response.data) {
+          // Get unique weekdays for the selected planner
+          const weekdays = new Set<string>();
+          response.data.forEach((planning) => {
+            if (planning.planner_name === selectedPlanner) {
+              weekdays.add(planning.weekday);
+            }
+          });
+          setImportedWeekdays(Array.from(weekdays));
+        } else {
+          console.error("Failed to fetch imported weekdays:", response.error);
+          setImportedWeekdays([]);
+        }
+      } catch (error) {
+        console.error("Error fetching imported weekdays:", error);
+        setImportedWeekdays([]);
+      }
+    };
+
+    fetchImportedWeekdays();
+  }, [selectedPlanner]);
+
   // Get available weekdays for the selected planner
   const availableWeekdays = useMemo<Weekday[]>(() => {
+    const weekdayOrder: Weekday[] = [
+      "Mandag",
+      "Tirsdag",
+      "Onsdag",
+      "Torsdag",
+      "Fredag",
+    ];
+
+    // Use imported weekdays if available, otherwise fall back to hardcoded data
+    if (importedWeekdays.length > 0) {
+      const filteredWeekdays = importedWeekdays.filter((weekday) =>
+        weekdayOrder.includes(weekday as Weekday)
+      ) as Weekday[];
+
+      // Sort by the natural weekday order
+      return filteredWeekdays.sort(
+        (a, b) => weekdayOrder.indexOf(a) - weekdayOrder.indexOf(b)
+      );
+    }
+
+    // Fallback to hardcoded supplyPlanners.json data
     const planner = supplyPlannersData.planners.find(
       (p) => p.name === selectedPlanner
     ) as Planner | undefined;
 
     if (!planner) return [];
 
-    return Object.keys(planner.weekdaySuppliers).filter(
+    const weekdays = Object.keys(planner.weekdaySuppliers).filter(
       (weekday) =>
         Array.isArray(planner.weekdaySuppliers[weekday as Weekday]) &&
         planner.weekdaySuppliers[weekday as Weekday]!.length > 0
     ) as Weekday[];
-  }, [selectedPlanner]);
+
+    // Sort by the natural weekday order
+    return weekdays.sort(
+      (a, b) => weekdayOrder.indexOf(a) - weekdayOrder.indexOf(b)
+    );
+  }, [selectedPlanner, importedWeekdays]);
 
   const handleWeekdaySelect = (weekday: string) => {
     setSelectedWeekday(weekday);

@@ -214,6 +214,20 @@ export class DatabaseService {
           updated_at TEXT DEFAULT CURRENT_TIMESTAMP
         );
         CREATE INDEX IF NOT EXISTS idx_supplier_emails_name ON supplier_emails(supplier_name);
+
+        -- Add supplier planning table for ark 6 (Leverandør) data
+        CREATE TABLE IF NOT EXISTS supplier_planning (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          supplier_name TEXT NOT NULL,
+          weekday TEXT NOT NULL,
+          planner_name TEXT NOT NULL,
+          created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+          updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+          UNIQUE(supplier_name, weekday, planner_name) ON CONFLICT REPLACE
+        );
+        CREATE INDEX IF NOT EXISTS idx_supplier_planning_supplier ON supplier_planning(supplier_name);
+        CREATE INDEX IF NOT EXISTS idx_supplier_planning_weekday ON supplier_planning(weekday);
+        CREATE INDEX IF NOT EXISTS idx_supplier_planning_planner ON supplier_planning(planner_name);
       `); // End of initial CREATE TABLE/INDEX statements
 
       // --- Migrations for purchase_order table ---
@@ -859,7 +873,7 @@ export class DatabaseService {
       // First, add the email_sent_at column if it doesn't exist
       try {
         this.db!.exec(`ALTER TABLE orders ADD COLUMN email_sent_at TEXT;`);
-      } catch (_e: unknown) {
+      } catch {
         // Column might already exist, ignore the error
       }
 
@@ -1051,6 +1065,97 @@ export class DatabaseService {
       }
     } catch (error) {
       log.error("Error cleaning up corrupted supplier data:", error);
+    }
+  }
+
+  // Supplier planning methods for ark 6 (Leverandør) data
+  public clearSupplierPlanning(): void {
+    if (!this.db) {
+      log.warn("clearSupplierPlanning called but DB is not connected.");
+      return;
+    }
+
+    try {
+      const deleteStmt = this.db.prepare("DELETE FROM supplier_planning");
+      const result = deleteStmt.run();
+      log.info(`Cleared ${result.changes} supplier planning records`);
+    } catch (error) {
+      log.error("Error clearing supplier planning:", error);
+    }
+  }
+
+  public insertSupplierPlanning(
+    supplierName: string,
+    weekday: string,
+    plannerName: string
+  ): void {
+    if (!this.db) {
+      log.warn("insertSupplierPlanning called but DB is not connected.");
+      return;
+    }
+
+    try {
+      const insertStmt = this.db.prepare(`
+        INSERT OR REPLACE INTO supplier_planning 
+        (supplier_name, weekday, planner_name, updated_at)
+        VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+      `);
+      insertStmt.run(supplierName, weekday, plannerName);
+    } catch (error) {
+      log.error("Error inserting supplier planning:", error);
+    }
+  }
+
+  public getSuppliersForWeekday(
+    weekday: string,
+    plannerName: string
+  ): string[] {
+    if (!this.db) {
+      log.warn("getSuppliersForWeekday called but DB is not connected.");
+      return [];
+    }
+
+    try {
+      const stmt = this.db.prepare(`
+        SELECT DISTINCT supplier_name 
+        FROM supplier_planning 
+        WHERE weekday = ? AND planner_name = ?
+        ORDER BY supplier_name
+      `);
+      const rows = stmt.all(weekday, plannerName) as {
+        supplier_name: string;
+      }[];
+      return rows.map((row) => row.supplier_name);
+    } catch (error) {
+      log.error("Error getting suppliers for weekday:", error);
+      return [];
+    }
+  }
+
+  public getAllSupplierPlanning(): Array<{
+    supplier_name: string;
+    weekday: string;
+    planner_name: string;
+  }> {
+    if (!this.db) {
+      log.warn("getAllSupplierPlanning called but DB is not connected.");
+      return [];
+    }
+
+    try {
+      const stmt = this.db.prepare(`
+        SELECT supplier_name, weekday, planner_name 
+        FROM supplier_planning 
+        ORDER BY planner_name, weekday, supplier_name
+      `);
+      return stmt.all() as Array<{
+        supplier_name: string;
+        weekday: string;
+        planner_name: string;
+      }>;
+    } catch (error) {
+      log.error("Error getting all supplier planning:", error);
+      return [];
     }
   }
 }

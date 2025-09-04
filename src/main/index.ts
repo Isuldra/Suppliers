@@ -1141,6 +1141,33 @@ ipcMain.handle("getSupplierEmail", async (event, supplierName: string) => {
   }
 });
 
+// Add IPC handlers for supplier planning
+ipcMain.handle(
+  "getSuppliersForWeekday",
+  async (event, weekday: string, plannerName: string) => {
+    try {
+      const suppliers = databaseService.getSuppliersForWeekday(
+        weekday,
+        plannerName
+      );
+      return { success: true, data: suppliers };
+    } catch (error) {
+      log.error("Error getting suppliers for weekday:", error);
+      return { success: false, error: String(error) };
+    }
+  }
+);
+
+ipcMain.handle("getAllSupplierPlanning", async () => {
+  try {
+    const planning = databaseService.getAllSupplierPlanning();
+    return { success: true, data: planning };
+  } catch (error) {
+    log.error("Error getting all supplier planning:", error);
+    return { success: false, error: String(error) };
+  }
+});
+
 // Add IPC handler for saving debug HTML files
 ipcMain.handle(
   "saveDebugHtml",
