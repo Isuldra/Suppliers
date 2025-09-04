@@ -107,7 +107,7 @@ function cleanupOldTempFiles(): void {
           unlinkSync(filePath);
           cleanedCount++;
         }
-      } catch (fileError) {
+      } catch {
         // Ignore individual file errors (file might be in use)
       }
     }
@@ -407,6 +407,142 @@ export async function importAlleArk(
       }
     } catch (emailError) {
       log.error("Error processing supplier emails:", emailError);
+    }
+
+    // Import supplier planning from "Leverandør" sheet (ark 6) if it exists
+    try {
+      const leverandorSheet = wb.getWorksheet("Leverandør");
+      if (leverandorSheet) {
+        log.info("Processing Leverandør sheet for supplier planning");
+        log.info(
+          `Sheet has ${leverandorSheet.rowCount} rows and ${leverandorSheet.columnCount} columns`
+        );
+
+        const planningTx = db.transaction(() => {
+          let planningCount = 0;
+
+          // Log first few rows to understand structure
+          for (let r = 1; r <= Math.min(10, leverandorSheet.rowCount); r++) {
+            const row = leverandorSheet.getRow(r);
+            const rowData: string[] = [];
+            for (
+              let c = 1;
+              c <= Math.min(10, leverandorSheet.columnCount);
+              c++
+            ) {
+              const cell = row.getCell(c);
+              rowData.push(`[${c}]="${getCellStringValue(cell)}"`);
+            }
+            log.info(`Leverandør Row ${r}: ${rowData.join(", ")}`);
+          }
+
+          // Clear existing supplier planning data
+          const clearStmt = db.prepare("DELETE FROM supplier_planning");
+          const clearResult = clearStmt.run();
+          log.info(
+            `Cleared ${clearResult.changes} existing supplier planning records`
+          );
+
+          // Insert statement for supplier planning
+          const planningInsert = db.prepare(`
+            INSERT OR REPLACE INTO supplier_planning 
+            (supplier_name, weekday, planner_name, updated_at)
+            VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+          `);
+
+          // Process rows starting from row 2 (row 1 is headers)
+          // Structure: Column A = Supplier name, Column B = Company ID, Column C = Language, Column D = Weekday, Column F = Email
+          for (let r = 2; r <= leverandorSheet.rowCount; r++) {
+            const row = leverandorSheet.getRow(r);
+
+            const supplierName = getCellStringValue(row.getCell(1)).trim(); // Column A
+            const companyId = getCellStringValue(row.getCell(2)).trim(); // Column B
+            const language = getCellStringValue(row.getCell(3)).trim(); // Column C
+            const weekday = getCellStringValue(row.getCell(4)).trim(); // Column D
+            const email = getCellStringValue(row.getCell(6)).trim(); // Column F
+
+            // Skip rows with no meaningful data
+            if (
+              !supplierName ||
+              !weekday ||
+              supplierName === "" ||
+              weekday === ""
+            ) {
+              continue;
+            }
+
+            // Normalize weekday names to match the expected format
+            const normalizedWeekday = weekday
+              .toLowerCase()
+              .replace(/[^a-zæøå]/g, "")
+              .replace(/mandag|monday/, "Mandag")
+              .replace(/tirsdag|tuesday/, "Tirsdag")
+              .replace(/onsdag|wednesday/, "Onsdag")
+              .replace(/torsdag|thursday/, "Torsdag")
+              .replace(/fredag|friday/, "Fredag");
+
+            // Only process if we have a valid weekday
+            if (
+              ["Mandag", "Tirsdag", "Onsdag", "Torsdag", "Fredag"].includes(
+                normalizedWeekday
+              )
+            ) {
+              try {
+                // Insert supplier planning
+                planningInsert.run(
+                  supplierName,
+                  normalizedWeekday,
+                  "Innkjøper"
+                );
+                planningCount++;
+
+                // Also insert/update supplier email if available
+                if (email && email.includes("@")) {
+                  try {
+                    supplierEmailInsert.run({
+                      supplier_name: supplierName,
+                      email_address: email,
+                      updated_at: new Date().toISOString(),
+                    });
+                  } catch (emailError) {
+                    log.warn(
+                      `Failed to insert email for ${supplierName}:`,
+                      emailError
+                    );
+                  }
+                }
+
+                if (planningCount <= 10) {
+                  log.info(
+                    `✅ Imported planning: ${supplierName} -> ${normalizedWeekday} (${language}, ${email})`
+                  );
+                }
+              } catch (insertError) {
+                log.error(
+                  `❌ Error inserting planning for ${supplierName}:`,
+                  insertError
+                );
+              }
+            } else {
+              if (r <= 10) {
+                log.info(
+                  `⏭️ Skipping row ${r}: Invalid weekday "${weekday}" for supplier "${supplierName}"`
+                );
+              }
+            }
+          }
+
+          log.info(`Imported ${planningCount} supplier planning records`);
+        });
+
+        planningTx();
+      } else {
+        log.info(
+          "Leverandør sheet not found - using existing supplyPlanners.json data"
+        );
+      }
+    } catch (planningError) {
+      log.error("Error processing supplier planning:", planningError);
     }
 
     // Ensure indexes for faster queries

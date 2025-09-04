@@ -116,6 +116,21 @@ interface ElectronAPI {
     supplierName: string
   ) => Promise<{ success: boolean; data?: string | null; error?: string }>;
 
+  // Supplier planning methods
+  getSuppliersForWeekday: (
+    weekday: string,
+    plannerName: string
+  ) => Promise<{ success: boolean; data?: string[]; error?: string }>;
+  getAllSupplierPlanning: () => Promise<{
+    success: boolean;
+    data?: Array<{
+      supplier_name: string;
+      weekday: string;
+      planner_name: string;
+    }>;
+    error?: string;
+  }>;
+
   // Settings methods
   getSettings: () => Promise<{
     success: boolean;
