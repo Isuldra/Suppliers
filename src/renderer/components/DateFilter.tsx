@@ -104,7 +104,7 @@ const DateFilter: React.FC<DateFilterProps> = ({
     setDateFilterSettings((prev) => ({
       ...prev,
       selectAll: checked,
-      selectedValues: checked ? [] : [],
+      selectedValues: checked ? [...uniqueYears, ...uniqueMonths] : [],
     }));
   };
 
