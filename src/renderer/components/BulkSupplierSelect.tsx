@@ -57,6 +57,7 @@ const BulkSupplierSelect: React.FC<BulkSupplierSelectProps> = ({
   const [excludedOrderLines, setExcludedOrderLines] = useState<Set<string>>(
     new Set()
   );
+  const [userHasManuallySelected, setUserHasManuallySelected] = useState(false);
   const [supplierOrders, setSupplierOrders] = useState<Map<string, ExcelRow[]>>(
     new Map()
   );
@@ -153,15 +154,29 @@ const BulkSupplierSelect: React.FC<BulkSupplierSelectProps> = ({
     const allSupplierNames = suppliers.map((s) => s.supplier);
     const newSelection =
       selectedSuppliers.length === suppliers.length ? [] : allSupplierNames;
+    setUserHasManuallySelected(true); // Mark that user has manually selected
     onSuppliersSelected(newSelection);
   };
 
-  // Auto-select all suppliers when component loads
+  // Auto-select all suppliers when suppliers change (new weekday selected)
+  // But only if user hasn't manually selected anything yet
   useEffect(() => {
-    if (suppliers.length > 0 && selectedSuppliers.length === 0) {
-      onSuppliersSelected(suppliers.map((s) => s.supplier));
+    if (suppliers.length > 0 && !userHasManuallySelected) {
+      const allSupplierNames = suppliers.map((s) => s.supplier);
+      // Only auto-select if the current selection is different
+      if (
+        JSON.stringify(selectedSuppliers.sort()) !==
+        JSON.stringify(allSupplierNames.sort())
+      ) {
+        onSuppliersSelected(allSupplierNames);
+      }
     }
-  }, [suppliers, selectedSuppliers.length]);
+  }, [
+    suppliers,
+    selectedSuppliers,
+    onSuppliersSelected,
+    userHasManuallySelected,
+  ]);
 
   // Send filtered order lines to parent component
   useEffect(() => {
@@ -204,6 +219,9 @@ const BulkSupplierSelect: React.FC<BulkSupplierSelectProps> = ({
     console.log("🔵 New selection will be:", newSelection);
     console.log("🔵 New selection length:", newSelection.length);
     console.log("🔵 Calling onSuppliersSelected with:", newSelection);
+
+    // Mark that user has manually selected
+    setUserHasManuallySelected(true);
 
     // Force a small delay to see if it's a timing issue
     setTimeout(() => {
@@ -341,32 +359,6 @@ const BulkSupplierSelect: React.FC<BulkSupplierSelectProps> = ({
           </div>
         </div>
       )}
-
-      {/* Debug info */}
-      <div className="mb-4 p-3 bg-yellow-100 border border-yellow-300 rounded">
-        <h4 className="font-bold text-yellow-800">Debug Info:</h4>
-        <p className="text-sm text-yellow-700">
-          Suppliers count: {suppliers.length}
-        </p>
-        <p className="text-sm text-yellow-700">
-          Selected suppliers: {JSON.stringify(selectedSuppliers)}
-        </p>
-        <p className="text-sm text-yellow-700">
-          Selected suppliers length: {selectedSuppliers.length}
-        </p>
-        <p className="text-sm text-yellow-700">
-          Is loading: {isLoading.toString()}
-        </p>
-        <p className="text-sm text-yellow-700">
-          Selected weekday: {selectedWeekday}
-        </p>
-        <p className="text-sm text-yellow-700">
-          Selected planner: {selectedPlanner}
-        </p>
-        <p className="text-sm text-yellow-700">
-          Last update: {new Date().toLocaleTimeString()}
-        </p>
-      </div>
 
       {/* Select all button */}
       <div className="mb-4">
