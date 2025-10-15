@@ -1,5 +1,5 @@
 import { dialog } from "electron";
-import { autoUpdater, type AppUpdater as _AppUpdater } from "electron-updater";
+import { autoUpdater } from "electron-updater";
 // eslint-disable-next-line @typescript-eslint/no-var-requires, @typescript-eslint/no-require-imports
 const log = require("electron-log/main");
 import type { UpdateInfo, ProgressInfo } from "electron-updater";
@@ -147,7 +147,7 @@ function setupPortableUpdater() {
           // Open folder containing the update
           try {
             shell.showItemInFolder(downloadPath);
-          } catch (err) {
+          } catch {
             // Fallback to opening the directory
             shell.openPath(path.dirname(downloadPath)).catch((openErr) => {
               updateLogger.error("Kunne ikke åpne mappe:", openErr);
