@@ -571,19 +571,26 @@ export class DatabaseService {
     try {
       const stmt = this.db!.prepare(`
         SELECT 
-          id,
-          reference,
-          supplier,
-          orderNumber AS poNumber,
-          orderDate,
-          dueDate,
-          category,
-          description,
-          value,
-          currency,
-          confirmed
-        FROM orders
-        ORDER BY dueDate ASC
+          nøkkel AS key,
+          ordreNr AS poNumber,
+          status,
+          itemNo,
+          incoming_date AS dueDate,
+          eta_supplier AS supplierETA,
+          producer_item AS producerItemNo,
+          COALESCE(supplier_name, ftgnavn) AS supplier,
+          beskrivelse AS description,
+          specification,
+          note,
+          inventory_balance AS inventoryBalance,
+          order_qty AS orderQty,
+          received_qty AS receivedQty,
+          COALESCE(outstanding_qty, (order_qty - COALESCE(received_qty, 0))) AS outstandingQty,
+          purchaser,
+          warehouse,
+          order_row_number AS orderRowNumber
+        FROM purchase_order
+        ORDER BY date(eta_supplier) ASC, ordreNr ASC, itemNo ASC
       `);
 
       const rows = stmt.all() as DbOrder[];
@@ -596,21 +603,22 @@ export class DatabaseService {
       return rows.map(
         (row) =>
           ({
-            key: String(row.id || ""),
+            key: String(row.key || ""),
             poNumber: row.poNumber,
-            status: "",
-            itemNo: "",
+            status: row.status || "",
+            itemNo: row.itemNo || "",
             supplier: row.supplier,
             description: row.description || "",
-            orderQty: row.value || 0,
-            receivedQty: 0,
-            reference: row.reference,
-            orderDate: row.orderDate ? new Date(row.orderDate) : undefined,
+            orderQty: row.orderQty || 0,
+            receivedQty: row.receivedQty || 0,
+            outstandingQty: row.outstandingQty || 0,
+            reference: "", // Not available in purchase_order table
+            orderDate: undefined, // Not available in purchase_order table
             dueDate: row.dueDate ? new Date(row.dueDate) : undefined,
-            category: row.category,
-            value: row.value,
-            currency: row.currency,
-            confirmed: !!row.confirmed,
+            category: "", // Not available in purchase_order table
+            value: row.orderQty || 0, // Use orderQty as value
+            currency: "", // Not available in purchase_order table
+            confirmed: false, // Not available in purchase_order table
           } as ExcelRow)
       );
     } catch (error) {

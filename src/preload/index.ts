@@ -37,6 +37,27 @@ interface ElectronAPI {
     subject: string;
     html: string;
   }) => Promise<{ success: boolean; error?: string }>;
+  sendBatchEmails: (
+    payload: Array<{
+      to: string;
+      subject: string;
+      html: string;
+    }>
+  ) => Promise<{
+    success: boolean;
+    results?: Array<{
+      supplier: string;
+      email: string;
+      success: boolean;
+      error?: string;
+    }>;
+    summary?: {
+      total: number;
+      success: number;
+      failed: number;
+    };
+    error?: string;
+  }>;
   getSuppliers: () => Promise<{
     success: boolean;
     data?: string[];
@@ -151,6 +172,7 @@ const validSendChannels = [
   "sendEmail",
   "sendEmailAutomatically",
   "sendEmailViaEmlAndCOM",
+  "sendBatchEmails",
   "getSuppliers",
   "saveOrdersToDatabase",
   "getOutstandingOrders",
@@ -193,6 +215,7 @@ const validReceiveChannels = [
   "sendEmail",
   "sendEmailAutomatically",
   "sendEmailViaEmlAndCOM",
+  "sendBatchEmails",
   "getSuppliers",
   "saveOrdersToDatabase",
   "getOutstandingOrders",
@@ -287,6 +310,16 @@ contextBridge.exposeInMainWorld("electron", {
     html: string;
   }) => {
     return await ipcRenderer.invoke("sendEmailViaEmlAndCOM", payload);
+  },
+  // Batch email sending via PowerShell - OPTIMIZED
+  sendBatchEmails: async (
+    payload: Array<{
+      to: string;
+      subject: string;
+      html: string;
+    }>
+  ) => {
+    return await ipcRenderer.invoke("sendBatchEmails", payload);
   },
   // Get suppliers
   getSuppliers: async () => {

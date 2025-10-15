@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { ExcelRow, ExcelData, ValidationError } from "../types/ExcelData";
+import { ExcelData, ValidationError } from "../types/ExcelData";
 import onemedLogo from "../assets/onemed-logo.webp";
 
 interface SupplierStat {
@@ -30,6 +30,12 @@ interface AppState {
   isLoading: boolean;
   showDataReview: boolean;
   showEmailButton: boolean;
+  // Bulk mode state
+  isBulkMode: boolean;
+  selectedSuppliers: string[];
+  bulkEmailData: Map<string, unknown>; // Per supplier email data
+  bulkSelectedOrders: Map<string, Set<string>>; // Per supplier selected orders
+  bulkSupplierEmails: Map<string, string>; // Per supplier custom emails
 }
 
 interface DashboardProps {
@@ -40,9 +46,18 @@ interface DashboardProps {
   onSupplierSelected: (supplier: string) => void;
   onReviewComplete: () => void;
   onResetApp: () => void;
+  // Bulk mode handlers
+  onToggleBulkMode: () => void;
+  onSuppliersSelected: (suppliers: string[]) => void;
+  onBulkOrdersSelected: (supplier: string, orders: Set<string>) => void;
+  onBulkSupplierEmailChange: (supplier: string, email: string) => void;
+  onBulkComplete: () => void;
+  onBulkDataReviewNext: (selectedOrders: Map<string, Set<string>>) => void;
+  onBulkDataReviewBack: () => void;
+  onBulkEmailPreviewBack: () => void;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ appState }) => {
+const Dashboard: React.FC<DashboardProps> = ({ appState: _appState }) => {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

@@ -103,7 +103,7 @@ ipcMain.handle("get-logs", async () => {
 
 let mainWindow: BrowserWindow | null = null;
 
-function createWindow() {
+function createWindow(): BrowserWindow {
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
@@ -120,24 +120,28 @@ function createWindow() {
     mainWindow.webContents.openDevTools({ mode: "right" });
   }
 
-  // Load the index.html file
+  mainWindow.on("closed", () => {
+    mainWindow = null;
+  });
+
+  log.info("Main window created (URL not loaded yet).");
+  return mainWindow;
+}
+
+function loadWindowURL(window: BrowserWindow): void {
   const isDev = process.env.NODE_ENV === "development";
   const url = isDev
     ? "http://localhost:5173"
     : `file://${path.join(__dirname, "../renderer/index.html")}`;
 
   log.info(`Loading window URL: ${url}`);
-  mainWindow.loadURL(url).catch((err) => {
+  window.loadURL(url).catch((err) => {
     log.error("Failed to load main window URL:", url, err);
     dialog.showErrorBox(
       "Load Error",
       `Could not load the application window. Please check logs.\nError: ${err.message}`
     );
     app.quit();
-  });
-
-  mainWindow.on("closed", () => {
-    mainWindow = null;
   });
 }
 
@@ -167,10 +171,13 @@ app.whenReady().then(async () => {
     setupDatabaseHandlers();
     log.info("IPC Handlers setup complete.");
 
-    // 3. Create Main Window
+    // 3. Create Main Window (but don't load URL yet)
     log.info("Creating main window...");
-    createWindow();
-    log.info("Main window created.");
+    const mainWindow = createWindow();
+
+    // 4. Load the renderer URL after everything is set up
+    log.info("Loading renderer URL...");
+    loadWindowURL(mainWindow);
 
     // --- Added: Create Menu with "Open Log File" only ---
     try {
@@ -613,7 +620,294 @@ ipcMain.handle(
   }
 );
 
-// Handle automatic email sending via Outlook COM API
+// Handle batch email sending via PowerShell - OPTIMIZED VERSION
+ipcMain.handle(
+  "sendBatchEmails",
+  async (_, payload: Array<{ to: string; subject: string; html: string }>) => {
+    const tempFiles: string[] = [];
+
+    try {
+      log.info(`Starting batch email sending for ${payload.length} emails`);
+
+      // Only available on Windows
+      if (process.platform !== "win32") {
+        log.warn("Batch email sending only available on Windows");
+        return {
+          success: false,
+          error: "Batch sending er kun tilgjengelig på Windows",
+        };
+      }
+
+      // Create temporary files for all emails
+      const emailData: Array<{
+        to: string;
+        htmlFile: string;
+        subjectFile: string;
+        resolvedEmail: string;
+      }> = [];
+
+      for (let i = 0; i < payload.length; i++) {
+        const email = payload[i];
+
+        // Get the email address from supplier_emails table
+        const emailTo = databaseService.getSupplierEmail(email.to) || email.to;
+
+        // Ensure we have a valid email address
+        if (!emailTo.includes("@")) {
+          log.warn(`No valid email address found for supplier: ${email.to}`);
+          continue; // Skip this email
+        }
+
+        // Create temporary files for this email
+        const htmlFile = path.join(
+          os.tmpdir(),
+          `onemed-batch-${Date.now()}-${i}.html`
+        );
+        const subjectFile = path.join(
+          os.tmpdir(),
+          `onemed-batch-subject-${Date.now()}-${i}.txt`
+        );
+
+        await fs.promises.writeFile(htmlFile, email.html, {
+          encoding: "utf-8",
+        });
+        await fs.promises.writeFile(subjectFile, email.subject, {
+          encoding: "utf-8",
+        });
+
+        tempFiles.push(htmlFile, subjectFile);
+        emailData.push({
+          to: email.to,
+          htmlFile,
+          subjectFile,
+          resolvedEmail: emailTo,
+        });
+      }
+
+      if (emailData.length === 0) {
+        return {
+          success: false,
+          error: "Ingen gyldige e-postadresser funnet",
+        };
+      }
+
+      // Create batch PowerShell script
+      const batchScript = `
+$OutputEncoding = [System.Text.Encoding]::UTF8
+[Console]::InputEncoding = [System.Text.Encoding]::UTF8
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+
+$emails = @(
+${emailData
+  .map(
+    (email) => `  @{
+    to = "${email.resolvedEmail}"
+    htmlFile = "${email.htmlFile.replace(/\\/g, "\\\\")}"
+    subjectFile = "${email.subjectFile.replace(/\\/g, "\\\\")}"
+    supplier = "${email.to}"
+  }`
+  )
+  .join(",\n")}
+)
+
+$successCount = 0
+$failCount = 0
+$results = @()
+
+try {
+  Write-Output "DEBUG: Starting batch Outlook COM automation for $($emails.Count) emails..."
+  
+  $outlook = New-Object -ComObject Outlook.Application
+  Write-Output "DEBUG: Outlook application object created"
+  
+  foreach ($email in $emails) {
+    try {
+      Write-Output "DEBUG: Processing email for $($email.supplier) -> $($email.to)"
+      
+      # Check if files exist
+      if (-not (Test-Path $email.htmlFile)) {
+        throw "HTML file not found: $($email.htmlFile)"
+      }
+      if (-not (Test-Path $email.subjectFile)) {
+        throw "Subject file not found: $($email.subjectFile)"
+      }
+      
+      # Read content from files
+      $htmlContent = Get-Content -Path $email.htmlFile -Raw -Encoding UTF8
+      $subjectContent = (Get-Content -Path $email.subjectFile -Raw -Encoding UTF8).Trim()
+      
+      # Create and send email
+      $mail = $outlook.CreateItem(0)
+      $mail.To = $email.to
+      $mail.Subject = $subjectContent
+      $mail.HTMLBody = $htmlContent
+      $mail.SentOnBehalfOfName = "supply.planning.no@onemed.com"
+      
+      $mail.Send()
+      $successCount++
+      Write-Output "SUCCESS: Email sent to $($email.to)"
+      
+      $results += @{
+        supplier = $email.supplier
+        email = $email.to
+        success = $true
+        error = $null
+      }
+      
+    } catch {
+      $failCount++
+      $errorMsg = $_.Exception.Message
+      Write-Output "ERROR: Failed to send to $($email.to): $errorMsg"
+      
+      $results += @{
+        supplier = $email.supplier
+        email = $email.to
+        success = $false
+        error = $errorMsg
+      }
+    }
+  }
+  
+  Write-Output "BATCH_COMPLETE: Success: $successCount, Failed: $failCount"
+  
+} catch {
+  Write-Output "BATCH_ERROR: $($_.Exception.Message)"
+} finally {
+  # Clean up temporary files
+  foreach ($email in $emails) {
+    try {
+      if (Test-Path $email.htmlFile) {
+        Remove-Item -Path $email.htmlFile -Force
+      }
+      if (Test-Path $email.subjectFile) {
+        Remove-Item -Path $email.subjectFile -Force
+      }
+    } catch {
+      Write-Output "WARN: Failed to clean up files for $($email.supplier)"
+    }
+  }
+  
+  # Output results as JSON
+  $resultsJson = $results | ConvertTo-Json -Depth 3
+  Write-Output "RESULTS_JSON: $resultsJson"
+}
+`;
+
+      return new Promise((resolve) => {
+        const psProcess = spawn(
+          "powershell",
+          ["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", "-"],
+          {
+            windowsHide: true,
+            stdio: ["pipe", "pipe", "pipe"],
+          }
+        );
+
+        let output = "";
+        let errorOutput = "";
+
+        if (psProcess.stdin) {
+          psProcess.stdin.setDefaultEncoding("utf-8");
+          psProcess.stdin.write(batchScript + "\r\n", "utf-8");
+          psProcess.stdin.end();
+        } else {
+          log.error("PowerShell process stdin is not available.");
+          resolve({
+            success: false,
+            error: "PowerShell stdin utilgjengelig.",
+          });
+          return;
+        }
+
+        psProcess.stdout.on("data", (data: Buffer) => {
+          output += data.toString();
+        });
+
+        psProcess.stderr.on("data", (data: Buffer) => {
+          errorOutput += data.toString();
+        });
+
+        psProcess.on("close", (code: number | null) => {
+          log.info(`Batch PowerShell process exited with code: ${code}`);
+          log.info(`Batch PowerShell output:\n${output}`);
+
+          if (errorOutput) {
+            log.warn(`Batch PowerShell stderr:\n${errorOutput}`);
+          }
+
+          // Parse results
+          const resultsMatch = output.match(/RESULTS_JSON: (.+)/);
+          if (resultsMatch) {
+            try {
+              const results = JSON.parse(resultsMatch[1]);
+              const successCount = results.filter(
+                (r: { success: boolean }) => r.success
+              ).length;
+              const failCount = results.filter(
+                (r: { success: boolean }) => !r.success
+              ).length;
+
+              log.info(
+                `Batch sending completed: ${successCount} success, ${failCount} failed`
+              );
+
+              resolve({
+                success: true,
+                results: results,
+                summary: {
+                  total: results.length,
+                  success: successCount,
+                  failed: failCount,
+                },
+              });
+            } catch (parseError) {
+              log.error("Failed to parse batch results:", parseError);
+              resolve({
+                success: false,
+                error: "Failed to parse batch results",
+              });
+            }
+          } else {
+            resolve({
+              success: false,
+              error: "No results found in PowerShell output",
+            });
+          }
+        });
+
+        psProcess.on("error", (error: Error) => {
+          log.error("Batch PowerShell process failed:", error);
+          resolve({
+            success: false,
+            error: `PowerShell prosess feil: ${error.message}`,
+          });
+        });
+      });
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error occurred";
+      log.error("Batch email sending error:", errorMessage);
+
+      // Clean up temp files
+      for (const tempFile of tempFiles) {
+        try {
+          if (fs.existsSync(tempFile)) {
+            fs.unlinkSync(tempFile);
+          }
+        } catch (cleanupError) {
+          log.warn(`Failed to clean up temp file ${tempFile}:`, cleanupError);
+        }
+      }
+
+      return {
+        success: false,
+        error: errorMessage,
+      };
+    }
+  }
+);
+
+// Handle automatic email sending via Outlook COM API (LEGACY - kept for single emails)
 ipcMain.handle(
   "sendEmailAutomatically",
   async (_, payload: { to: string; subject: string; html: string }) => {
