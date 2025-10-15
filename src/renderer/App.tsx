@@ -7,6 +7,9 @@ import SupplierSelect from "./components/SupplierSelect";
 import WeekdaySelect from "./components/WeekdaySelect";
 import LogViewer from "./components/LogViewer";
 import Dashboard from "./components/Dashboard";
+import BulkSupplierSelect from "./components/BulkSupplierSelect";
+import BulkDataReview from "./components/BulkDataReview";
+import BulkEmailPreview from "./components/BulkEmailPreview";
 import { ExcelData, ValidationError } from "./types/ExcelData";
 import { HashRouter as Router, Routes, Route, Link } from "react-router-dom";
 import supplyPlannersData from "./data/supplyPlanners.json";
@@ -24,6 +27,12 @@ interface AppState {
   isLoading: boolean;
   showDataReview: boolean;
   showEmailButton: boolean;
+  // Bulk mode state
+  isBulkMode: boolean;
+  selectedSuppliers: string[];
+  bulkEmailData: Map<string, unknown>; // Per supplier email data
+  bulkSelectedOrders: Map<string, Set<string>>; // Per supplier selected orders
+  bulkSupplierEmails: Map<string, string>; // Per supplier custom emails
 }
 
 // Progress indicator component
@@ -153,6 +162,12 @@ const App: React.FC = () => {
     isLoading: false,
     showDataReview: false,
     showEmailButton: false,
+    // Bulk mode state
+    isBulkMode: false,
+    selectedSuppliers: [],
+    bulkEmailData: new Map(),
+    bulkSelectedOrders: new Map(),
+    bulkSupplierEmails: new Map(),
   });
 
   const handleDataParsed = (data: ExcelData) => {
@@ -205,7 +220,131 @@ const App: React.FC = () => {
       isLoading: false,
       showDataReview: false,
       showEmailButton: false,
+      // Bulk mode state
+      isBulkMode: false,
+      selectedSuppliers: [],
+      bulkEmailData: new Map(),
+      bulkSelectedOrders: new Map(),
+      bulkSupplierEmails: new Map(),
     });
+  };
+
+  // Bulk mode handlers
+  const handleToggleBulkMode = () => {
+    setAppState((prev) => ({
+      ...prev,
+      isBulkMode: !prev.isBulkMode,
+      // Reset single supplier state when switching to bulk mode
+      selectedSupplier: prev.isBulkMode ? prev.selectedSupplier : "",
+      showDataReview: prev.isBulkMode ? prev.showDataReview : false,
+      showEmailButton: prev.isBulkMode ? prev.showEmailButton : false,
+      // Reset bulk state when switching to single mode
+      selectedSuppliers: !prev.isBulkMode ? [] : prev.selectedSuppliers,
+      bulkEmailData: !prev.isBulkMode ? new Map() : prev.bulkEmailData,
+      bulkSelectedOrders: !prev.isBulkMode
+        ? new Map()
+        : prev.bulkSelectedOrders,
+      bulkSupplierEmails: !prev.isBulkMode
+        ? new Map()
+        : prev.bulkSupplierEmails,
+    }));
+  };
+
+  const handleSuppliersSelected = (suppliers: string[]) => {
+    console.log("🟢 App.tsx: handleSuppliersSelected called with:", suppliers);
+    console.log("🟢 suppliers type:", typeof suppliers);
+    console.log("🟢 suppliers is array:", Array.isArray(suppliers));
+    console.log("🟢 suppliers length:", suppliers.length);
+    console.log(
+      "🟢 Current appState.selectedSuppliers:",
+      appState.selectedSuppliers
+    );
+    console.log(
+      "🟢 Current appState.selectedSuppliers type:",
+      typeof appState.selectedSuppliers
+    );
+    console.log(
+      "🟢 Current appState.selectedSuppliers is array:",
+      Array.isArray(appState.selectedSuppliers)
+    );
+
+    setAppState((prev) => {
+      const newState = {
+        ...prev,
+        selectedSuppliers: suppliers,
+      };
+      console.log("🟢 New appState will be:", newState);
+      console.log(
+        "🟢 New appState.selectedSuppliers:",
+        newState.selectedSuppliers
+      );
+      return newState;
+    });
+
+    // Also log after state update
+    setTimeout(() => {
+      console.log("🟢 App state after update:", appState.selectedSuppliers);
+    }, 100);
+  };
+
+  const handleBulkOrdersSelected = (supplier: string, orders: Set<string>) => {
+    setAppState((prev) => {
+      const newBulkSelectedOrders = new Map(prev.bulkSelectedOrders);
+      newBulkSelectedOrders.set(supplier, orders);
+      return {
+        ...prev,
+        bulkSelectedOrders: newBulkSelectedOrders,
+      };
+    });
+  };
+
+  const handleBulkSupplierEmailChange = (supplier: string, email: string) => {
+    console.log(
+      "🟢 App.tsx: handleBulkSupplierEmailChange called:",
+      supplier,
+      email
+    );
+    setAppState((prev) => {
+      const newBulkSupplierEmails = new Map(prev.bulkSupplierEmails);
+      newBulkSupplierEmails.set(supplier, email);
+      return {
+        ...prev,
+        bulkSupplierEmails: newBulkSupplierEmails,
+      };
+    });
+  };
+
+  const handleBulkComplete = () => {
+    setAppState((prev) => ({
+      ...prev,
+      selectedSuppliers: [],
+      bulkEmailData: new Map(),
+      bulkSelectedOrders: new Map(),
+      bulkSupplierEmails: new Map(),
+      showDataReview: false,
+    }));
+  };
+
+  const handleBulkDataReviewNext = (
+    selectedOrders: Map<string, Set<string>>
+  ) => {
+    console.log(
+      "🟢 App.tsx: handleBulkDataReviewNext called with selectedOrders:",
+      selectedOrders
+    );
+    setAppState((prev) => ({
+      ...prev,
+      bulkSelectedOrders: selectedOrders,
+      showDataReview: true, // This will show BulkEmailPreview in bulk mode
+    }));
+  };
+
+  const handleBulkDataReviewBack = () => {
+    setAppState((prev) => ({ ...prev, selectedSuppliers: [] }));
+  };
+
+  const handleBulkEmailPreviewBack = () => {
+    setAppState((prev) => ({ ...prev, showDataReview: false }));
   };
 
   return (
@@ -222,6 +361,14 @@ const App: React.FC = () => {
               onSupplierSelected={handleSupplierSelected}
               onReviewComplete={handleReviewComplete}
               onResetApp={resetApp}
+              onToggleBulkMode={handleToggleBulkMode}
+              onSuppliersSelected={handleSuppliersSelected}
+              onBulkOrdersSelected={handleBulkOrdersSelected}
+              onBulkSupplierEmailChange={handleBulkSupplierEmailChange}
+              onBulkComplete={handleBulkComplete}
+              onBulkDataReviewNext={handleBulkDataReviewNext}
+              onBulkDataReviewBack={handleBulkDataReviewBack}
+              onBulkEmailPreviewBack={handleBulkEmailPreviewBack}
             />
           }
         />
@@ -237,6 +384,14 @@ const App: React.FC = () => {
               onSupplierSelected={handleSupplierSelected}
               onReviewComplete={handleReviewComplete}
               onResetApp={resetApp}
+              onToggleBulkMode={handleToggleBulkMode}
+              onSuppliersSelected={handleSuppliersSelected}
+              onBulkOrdersSelected={handleBulkOrdersSelected}
+              onBulkSupplierEmailChange={handleBulkSupplierEmailChange}
+              onBulkComplete={handleBulkComplete}
+              onBulkDataReviewNext={handleBulkDataReviewNext}
+              onBulkDataReviewBack={handleBulkDataReviewBack}
+              onBulkEmailPreviewBack={handleBulkEmailPreviewBack}
             />
           }
         />
@@ -254,6 +409,15 @@ interface MainAppProps {
   onSupplierSelected: (supplier: string) => void;
   onReviewComplete: () => void;
   onResetApp: () => void;
+  // Bulk mode handlers
+  onToggleBulkMode: () => void;
+  onSuppliersSelected: (suppliers: string[]) => void;
+  onBulkOrdersSelected: (supplier: string, orders: Set<string>) => void;
+  onBulkSupplierEmailChange: (supplier: string, email: string) => void;
+  onBulkComplete: () => void;
+  onBulkDataReviewNext: (selectedOrders: Map<string, Set<string>>) => void;
+  onBulkDataReviewBack: () => void;
+  onBulkEmailPreviewBack: () => void;
 }
 
 const MainApp: React.FC<MainAppProps> = ({
@@ -264,6 +428,14 @@ const MainApp: React.FC<MainAppProps> = ({
   onSupplierSelected,
   onReviewComplete,
   onResetApp,
+  onToggleBulkMode,
+  onSuppliersSelected,
+  onBulkOrdersSelected: _onBulkOrdersSelected,
+  onBulkSupplierEmailChange,
+  onBulkComplete,
+  onBulkDataReviewNext,
+  onBulkDataReviewBack,
+  onBulkEmailPreviewBack,
 }) => {
   const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false);
 
@@ -419,26 +591,91 @@ const MainApp: React.FC<MainAppProps> = ({
                 />
               </div>
 
+              {/* Bulk Mode Toggle - Only show if weekday is selected */}
+              {appState.selectedWeekday && (
+                <div className="mb-6 p-4 bg-neutral-light bg-opacity-30 rounded-md">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-lg font-medium text-neutral mb-1">
+                        Sendingsmodus
+                      </h3>
+                      <p className="text-sm text-neutral-secondary">
+                        Velg mellom enkelt leverandør eller flere leverandører
+                      </p>
+                    </div>
+                    <div className="flex items-center space-x-3">
+                      <span
+                        className={`text-sm font-medium ${
+                          !appState.isBulkMode
+                            ? "text-primary"
+                            : "text-neutral-secondary"
+                        }`}
+                      >
+                        Enkelt leverandør
+                      </span>
+                      <button
+                        onClick={onToggleBulkMode}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 ${
+                          appState.isBulkMode
+                            ? "bg-primary"
+                            : "bg-neutral-light"
+                        }`}
+                      >
+                        <span
+                          className={`inline-block h-4 w-4 transform rounded-full bg-neutral-white transition-transform ${
+                            appState.isBulkMode
+                              ? "translate-x-6"
+                              : "translate-x-1"
+                          }`}
+                        />
+                      </button>
+                      <span
+                        className={`text-sm font-medium ${
+                          appState.isBulkMode
+                            ? "text-primary"
+                            : "text-neutral-secondary"
+                        }`}
+                      >
+                        Flere leverandører
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Supplier Selection - Only show if weekday is selected */}
               {appState.selectedWeekday && (
                 <div className="mb-6">
                   <h3 className="text-lg font-medium mb-3 text-neutral">
-                    Leverandør
+                    {appState.isBulkMode ? "Leverandører" : "Leverandør"}
                   </h3>
-                  <SupplierSelect
-                    onSupplierSelected={onSupplierSelected}
-                    currentSupplier={appState.selectedSupplier}
-                    excelData={appState.excelData}
-                    selectedWeekday={appState.selectedWeekday}
-                    selectedPlanner={appState.selectedPlanner}
-                  />
+                  {appState.isBulkMode ? (
+                    <BulkSupplierSelect
+                      onSuppliersSelected={onSuppliersSelected}
+                      onOrderLinesSelected={_onBulkOrdersSelected}
+                      onSupplierEmailChange={onBulkSupplierEmailChange}
+                      selectedWeekday={appState.selectedWeekday}
+                      selectedPlanner={appState.selectedPlanner}
+                      selectedSuppliers={appState.selectedSuppliers}
+                      bulkSupplierEmails={appState.bulkSupplierEmails}
+                    />
+                  ) : (
+                    <SupplierSelect
+                      onSupplierSelected={onSupplierSelected}
+                      currentSupplier={appState.selectedSupplier}
+                      excelData={appState.excelData}
+                      selectedWeekday={appState.selectedWeekday}
+                      selectedPlanner={appState.selectedPlanner}
+                    />
+                  )}
                 </div>
               )}
             </div>
           )}
 
-          {/* Data Review Section - Only show if supplier is selected */}
-          {appState.showDataReview &&
+          {/* Data Review Section - Single supplier mode */}
+          {!appState.isBulkMode &&
+            appState.showDataReview &&
             appState.selectedSupplier &&
             appState.excelData && (
               <div className="bg-neutral-white p-6 rounded-md shadow-md mb-6 w-full">
@@ -454,8 +691,9 @@ const MainApp: React.FC<MainAppProps> = ({
               </div>
             )}
 
-          {/* Email Button Section - Only show if review is complete */}
-          {appState.showEmailButton &&
+          {/* Email Button Section - Single supplier mode */}
+          {!appState.isBulkMode &&
+            appState.showEmailButton &&
             appState.selectedSupplier &&
             appState.excelData && (
               <div className="bg-neutral-white p-6 rounded-md shadow-md mb-6 w-full">
@@ -465,6 +703,41 @@ const MainApp: React.FC<MainAppProps> = ({
                 <EmailButton
                   excelData={appState.excelData}
                   selectedSupplier={appState.selectedSupplier}
+                />
+              </div>
+            )}
+
+          {/* Bulk Data Review Section - Bulk mode */}
+          {appState.isBulkMode &&
+            appState.selectedSuppliers.length > 0 &&
+            !appState.showDataReview && (
+              <div className="bg-neutral-white p-6 rounded-md shadow-md mb-6 w-full">
+                <h2 className="text-xl font-bold mb-4 text-neutral">
+                  Gjennomgå ordrelinjer
+                </h2>
+                <BulkDataReview
+                  selectedSuppliers={appState.selectedSuppliers}
+                  selectedWeekday={appState.selectedWeekday}
+                  onNext={onBulkDataReviewNext}
+                  onBack={onBulkDataReviewBack}
+                />
+              </div>
+            )}
+
+          {/* Bulk Email Preview Section - Bulk mode */}
+          {appState.isBulkMode &&
+            appState.showDataReview &&
+            appState.selectedSuppliers.length > 0 && (
+              <div className="bg-neutral-white p-6 rounded-md shadow-md mb-6 w-full">
+                <h2 className="text-xl font-bold mb-4 text-neutral">
+                  E-post forhåndsvisning og sending
+                </h2>
+                <BulkEmailPreview
+                  selectedSuppliers={appState.selectedSuppliers}
+                  selectedOrders={appState.bulkSelectedOrders}
+                  bulkSupplierEmails={appState.bulkSupplierEmails}
+                  onBack={onBulkEmailPreviewBack}
+                  onComplete={onBulkComplete}
                 />
               </div>
             )}
