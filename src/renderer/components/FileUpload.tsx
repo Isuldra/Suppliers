@@ -680,8 +680,6 @@ const FileUpload: React.FC<FileUploadProps> = ({
   return (
     <div className="p-6">
       <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-bold text-neutral">Last opp Excel-fil</h2>
-
         <div className="relative" ref={helpMenuRef}>
           <button
             onClick={() => setHelpMenuOpen(!helpMenuOpen)}

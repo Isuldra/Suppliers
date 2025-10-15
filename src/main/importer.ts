@@ -456,7 +456,6 @@ export async function importAlleArk(
             const row = leverandorSheet.getRow(r);
 
             const supplierName = getCellStringValue(row.getCell(1)).trim(); // Column A
-            const companyId = getCellStringValue(row.getCell(2)).trim(); // Column B
             const language = getCellStringValue(row.getCell(3)).trim(); // Column C
             const weekday = getCellStringValue(row.getCell(4)).trim(); // Column D
             const email = getCellStringValue(row.getCell(6)).trim(); // Column F

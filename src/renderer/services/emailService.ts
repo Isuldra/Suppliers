@@ -1,6 +1,7 @@
 import Handlebars from "handlebars";
 import supplierData from "../data/supplierData.json";
 import juice from "juice";
+import { ExcelRow } from "../types/ExcelData";
 
 // Register Handlebars helpers
 Handlebars.registerHelper("gt", function (a, b) {
@@ -442,6 +443,105 @@ export class EmailService {
         error instanceof Error ? error.message : "Unknown error occurred";
       console.error("Email sending failed:", errorMessage);
       return { success: false, error: errorMessage };
+    }
+  }
+
+  // Send bulk reminders to multiple suppliers
+  async sendBulkReminders(
+    suppliers: Array<{
+      supplier: string;
+      orders: ExcelRow[];
+      recipientEmail?: string;
+    }>
+  ): Promise<{
+    success: boolean;
+    results: Array<{ supplier: string; success: boolean; error?: string }>;
+  }> {
+    const results: Array<{
+      supplier: string;
+      success: boolean;
+      error?: string;
+    }> = [];
+
+    try {
+      console.log(
+        `EmailService: Starting bulk send to ${suppliers.length} suppliers`
+      );
+
+      for (const supplierData of suppliers) {
+        console.log(
+          `EmailService: Processing supplier ${supplierData.supplier}`
+        );
+
+        try {
+          const emailData: EmailData = {
+            supplier: supplierData.supplier,
+            recipientEmail: supplierData.recipientEmail,
+            orders: supplierData.orders.map((order) => ({
+              key: order.key,
+              poNumber: order.poNumber,
+              itemNo: order.itemNo || "",
+              description: order.description || "",
+              specification: order.specification || "",
+              orderQty: order.orderQty,
+              receivedQty: order.receivedQty,
+              estReceiptDate: order.dueDate
+                ? new Date(order.dueDate).toLocaleDateString("nb-NO")
+                : "Ikke spesifisert",
+              outstandingQty: order.outstandingQty,
+              orderRowNumber: order.orderRowNumber,
+            })),
+            subject: "", // Will be set by sendReminder based on language
+          };
+
+          const result = await this.sendReminder(emailData);
+
+          results.push({
+            supplier: supplierData.supplier,
+            success: result.success,
+            error: result.error,
+          });
+
+          console.log(
+            `EmailService: Result for ${supplierData.supplier}:`,
+            result
+          );
+        } catch (error) {
+          const errorMessage =
+            error instanceof Error ? error.message : String(error);
+          console.error(
+            `EmailService: Error sending to ${supplierData.supplier}:`,
+            errorMessage
+          );
+
+          results.push({
+            supplier: supplierData.supplier,
+            success: false,
+            error: errorMessage,
+          });
+        }
+      }
+
+      const successCount = results.filter((r) => r.success).length;
+      const failCount = results.length - successCount;
+
+      console.log(
+        `EmailService: Bulk send completed. ${successCount} successful, ${failCount} failed`
+      );
+
+      return {
+        success: failCount === 0, // Only fully successful if all emails sent
+        results,
+      };
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      console.error("EmailService: Bulk send failed:", errorMessage);
+
+      return {
+        success: false,
+        results,
+      };
     }
   }
 
