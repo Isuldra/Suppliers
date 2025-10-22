@@ -1,5 +1,56 @@
 # Documentation Changelog
 
+## Phase 7: Email Template Column Header Updates
+
+_Completed December 2024_
+
+This phase updated the email template column headers to better reflect the actual data content, improving clarity for suppliers receiving reminder emails.
+
+### Key Changes:
+
+- **Norwegian Email Template:**
+
+  - Changed column header from "Beskrivelse" to "Lev. ArtNr" to accurately reflect supplier article numbers
+  - The column displays data from BP sheet column I (artnrlev) which contains the supplier's article number
+
+- **English Email Template:**
+
+  - Changed column header from "Description" to "Supplier ArtNo" to accurately reflect supplier article numbers
+  - The column displays data from BP sheet column I (artnrlev) which contains the supplier's article number
+
+- **Documentation Updates:**
+  - Updated `docs/features/email-templates.md` to reflect the new column names
+  - Added specification column documentation for both Norwegian and English templates
+  - Updated table structure examples to include the new column headers
+
+### Technical Implementation:
+
+- **Email Service Changes (`src/renderer/services/emailService.ts`):**
+
+  - Updated Norwegian template table header on line 85: "Beskrivelse" → "Lev. ArtNr"
+  - Updated English template table header on line 164: "Description" → "Supplier ArtNo"
+  - No changes to data mapping or template logic required
+
+- **Data Flow Verification:**
+  - BP sheet column I (artnrlev) → database field `beskrivelse` → email template `{{description}}`
+  - BP sheet column L (orpradtext) → database field `specification` → email template `{{specification}}`
+  - Data flow remains unchanged, only column header labels updated
+
+### Impact:
+
+- **Improved Clarity**: Suppliers now see clearer column names that accurately describe the content
+- **Better User Experience**: Column headers now match the actual data being displayed
+- **No Functional Changes**: Email generation and data mapping remain unchanged
+- **Consistent Documentation**: All documentation now reflects the updated column names
+
+### Files Modified:
+
+- `src/renderer/services/emailService.ts` - Updated email template column headers
+- `docs/features/email-templates.md` - Updated documentation to reflect new column names
+- `docs/CHANGELOG.md` - Added entry documenting the changes
+
+---
+
 ## Phase 6: Supplier Selection Logic Unification
 
 _Completed December 2024_
@@ -9,24 +60,27 @@ This phase focused on unifying the supplier selection logic between single and b
 ### Key Changes:
 
 - **SupplierSelect Component (Single Mode) Logic Unification:**
+
   - **Database Integration**: Now uses `getSuppliersForWeekday()` to fetch suppliers from database instead of hardcoded data
   - **Order Filtering**: Implements same filtering logic as BulkSupplierSelect - only shows suppliers with `outstandingCount > 0`
   - **Data Source Consistency**: Both components now use identical data sources and filtering criteria
   - **Outstanding Order Calculation**: Uses `getAllOrders()` to calculate outstanding orders per supplier
 
 - **BulkSupplierSelect Component (Bulk Mode) - Unchanged:**
+
   - **Existing Logic Preserved**: Maintains existing database integration and filtering logic
   - **Consistent Behavior**: Already used correct database sources and filtering
 
 - **Result - Identical Logic Implementation:**
   - ✅ **Same Database Source**: Both components use `getSuppliersForWeekday()` for supplier data
-  - ✅ **Same Order Source**: Both components use `getAllOrders()` for order data  
+  - ✅ **Same Order Source**: Both components use `getAllOrders()` for order data
   - ✅ **Same Filtering**: Both components filter suppliers based on `outstandingCount > 0`
   - ✅ **Same Calculation**: Both components use identical outstanding order calculation logic
 
 ### Technical Implementation:
 
 - **SupplierSelect.tsx Changes:**
+
   - Replaced hardcoded supplier data with database calls
   - Added `getAllOrders()` integration for outstanding order counting
   - Implemented same filtering logic as BulkSupplierSelect
