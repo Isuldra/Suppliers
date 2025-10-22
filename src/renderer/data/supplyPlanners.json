@@ -11,13 +11,13 @@
           "Coloplast Norge",
           "Grimas B.V.",
           "Huntleigh Healthcare Ltd",
-          "KCI Medical AS",
           "LHL",
           "Mediplast AS",
           "Mediq Norge AS",
           "Microwarm ApS",
-          "NorMors AS",
+          "Nestlé AS",
           "Norgesplaster AS",
+          "NorMors AS",
           "NORSK LABEX AS",
           "Sysmex Hvamsvingen 24",
           "Vygon Norge AS"
@@ -26,22 +26,25 @@
           "3M Norge AS",
           "AP Services A/S EUR",
           "AP Services A/S USD",
+          "Apokjeden AS",
           "ConvaTec Norway AS",
+          "Dale Medical Products, lnc.",
           "Diacor AS",
           "HOREKA AS",
           "Insyd Invest AS",
           "KCI Medical AS",
           "Medivatus AS",
           "OneMed A/S",
+          "Puls AS",
           "Sarstedt AS",
           "Smith & Nephew AS",
           "Timik AS",
-          "Wilhelmsen Chemicals AS"
+          "Wilhelmsen Chemicals AS",
+          "Wellspect"
         ],
         "Onsdag": [
           "Abbott Rapid Diagnostics AS",
           "ASAP Norway AS",
-          "Becton Dickison Norway AS",
           "DMedical AS",
           "Gymo as",
           "Jahpron AS",
@@ -72,7 +75,8 @@
           "Rudolf Riester GmbH",
           "Scan-Med as Norway",
           "TØFT AS",
-          "Triolab AS"
+          "Triolab AS",
+          "Viatris AS"
         ],
         "Fredag": [
           "Ambu Norge Filial",

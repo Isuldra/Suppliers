@@ -1,5 +1,57 @@
 # Documentation Changelog
 
+## Phase 6: Supplier Selection Logic Unification
+
+_Completed December 2024_
+
+This phase focused on unifying the supplier selection logic between single and bulk modes to ensure consistent data display and eliminate discrepancies.
+
+### Key Changes:
+
+- **SupplierSelect Component (Single Mode) Logic Unification:**
+  - **Database Integration**: Now uses `getSuppliersForWeekday()` to fetch suppliers from database instead of hardcoded data
+  - **Order Filtering**: Implements same filtering logic as BulkSupplierSelect - only shows suppliers with `outstandingCount > 0`
+  - **Data Source Consistency**: Both components now use identical data sources and filtering criteria
+  - **Outstanding Order Calculation**: Uses `getAllOrders()` to calculate outstanding orders per supplier
+
+- **BulkSupplierSelect Component (Bulk Mode) - Unchanged:**
+  - **Existing Logic Preserved**: Maintains existing database integration and filtering logic
+  - **Consistent Behavior**: Already used correct database sources and filtering
+
+- **Result - Identical Logic Implementation:**
+  - ✅ **Same Database Source**: Both components use `getSuppliersForWeekday()` for supplier data
+  - ✅ **Same Order Source**: Both components use `getAllOrders()` for order data  
+  - ✅ **Same Filtering**: Both components filter suppliers based on `outstandingCount > 0`
+  - ✅ **Same Calculation**: Both components use identical outstanding order calculation logic
+
+### Technical Implementation:
+
+- **SupplierSelect.tsx Changes:**
+  - Replaced hardcoded supplier data with database calls
+  - Added `getAllOrders()` integration for outstanding order counting
+  - Implemented same filtering logic as BulkSupplierSelect
+  - Added loading states and error handling for database operations
+
+- **Data Flow Consistency:**
+  - Single mode and bulk mode now show identical supplier counts
+  - Outstanding order calculations are consistent across both modes
+  - Database is the single source of truth for both components
+
+### Impact:
+
+- **Eliminated Discrepancies**: Single and bulk modes now show identical data
+- **Improved Data Accuracy**: Both modes use real-time database data
+- **Enhanced User Experience**: Consistent behavior across different selection modes
+- **Better Maintainability**: Unified logic reduces code duplication and potential bugs
+
+### Files Modified:
+
+- `src/renderer/components/SupplierSelect.tsx` - Updated to use database logic
+- `src/renderer/components/BulkSupplierSelect.tsx` - No changes (already correct)
+- `src/services/databaseService.ts` - Database service used by both components
+
+---
+
 ## Phase 5: Complete Documentation Overhaul
 
 _Completed July 2024_

@@ -142,5 +142,5 @@ async function exampleUsage() {
   }
 }
 
-// Export the example function
-export { exampleUsage };
+// Export the example functions
+export { exampleUsage, insertSampleOrders };

@@ -268,10 +268,13 @@ const App: React.FC = () => {
       Array.isArray(appState.selectedSuppliers)
     );
 
+    // Remove duplicates to prevent counting issues
+    const uniqueSuppliers = [...new Set(suppliers)];
+
     setAppState((prev) => {
       const newState = {
         ...prev,
-        selectedSuppliers: suppliers,
+        selectedSuppliers: uniqueSuppliers,
       };
       console.log("🟢 New appState will be:", newState);
       console.log(

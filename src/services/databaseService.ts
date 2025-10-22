@@ -1013,20 +1013,75 @@ export class DatabaseService {
       return null;
     }
 
+    log.info(
+      `🔍 DatabaseService: Looking for email for supplier: "${supplierName}"`
+    );
+
     try {
-      const stmt = this.db.prepare(`
+      // First try exact match
+      let stmt = this.db.prepare(`
         SELECT email_address 
         FROM supplier_emails 
-        WHERE supplier_name = ? 
-        OR supplier_name LIKE ?
-        ORDER BY 
-          CASE WHEN supplier_name = ? THEN 1 ELSE 2 END
+        WHERE supplier_name = ?
         LIMIT 1
       `);
-      const row = stmt.get(supplierName, `%${supplierName}%`, supplierName) as
-        | { email_address: string }
-        | undefined;
-      return row ? row.email_address : null;
+      let row = stmt.get(supplierName) as { email_address: string } | undefined;
+
+      if (row) {
+        log.info(
+          `✅ DatabaseService: Found exact match for "${supplierName}": ${row.email_address}`
+        );
+        return row.email_address;
+      }
+
+      // If no exact match, try case-insensitive match
+      stmt = this.db.prepare(`
+        SELECT email_address 
+        FROM supplier_emails 
+        WHERE LOWER(supplier_name) = LOWER(?)
+        LIMIT 1
+      `);
+      row = stmt.get(supplierName) as { email_address: string } | undefined;
+
+      if (row) {
+        log.info(
+          `✅ DatabaseService: Found case-insensitive match for "${supplierName}": ${row.email_address}`
+        );
+        return row.email_address;
+      }
+
+      // If still no match, try partial matching (contains)
+      stmt = this.db.prepare(`
+        SELECT email_address 
+        FROM supplier_emails 
+        WHERE LOWER(supplier_name) LIKE LOWER(?) 
+        OR LOWER(?) LIKE LOWER(supplier_name)
+        ORDER BY 
+          CASE 
+            WHEN LOWER(supplier_name) LIKE LOWER(?) THEN 1
+            WHEN LOWER(?) LIKE LOWER(supplier_name) THEN 2
+            ELSE 3
+          END
+        LIMIT 1
+      `);
+      row = stmt.get(
+        `%${supplierName}%`,
+        `%${supplierName}%`,
+        `%${supplierName}%`,
+        `%${supplierName}%`
+      ) as { email_address: string } | undefined;
+
+      if (row) {
+        log.info(
+          `✅ DatabaseService: Found partial match for "${supplierName}": ${row.email_address}`
+        );
+        return row.email_address;
+      } else {
+        log.warn(
+          `❌ DatabaseService: No email found for supplier: "${supplierName}"`
+        );
+        return null;
+      }
     } catch (error) {
       log.error("Error getting supplier email:", error);
       return null;
