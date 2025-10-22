@@ -82,7 +82,7 @@ export class EmailService {
                   <tr style="background-color: #003366; color: #ffffff; text-align: left;">
                     <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">PO-nr</th>
                     <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">OneMed nr</th>
-                    <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">Beskrivelse</th>
+                    <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">Lev. ArtNr</th>
                     <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">Spesifikasjon</th>
                     <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">Bestilt ant.</th>
                     <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">Mottatt ant.</th>
@@ -161,7 +161,7 @@ export class EmailService {
                   <tr style="background-color: #003366; color: #ffffff; text-align: left;">
                     <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">PO No.</th>
                     <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">OneMed No.</th>
-                    <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">Description</th>
+                    <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">Supplier ArtNo</th>
                     <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">Specification</th>
                     <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">Order Qty</th>
                     <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">Received Qty</th>
