@@ -551,9 +551,10 @@ ipcMain.handle(
       log.info(`Creating HTML email draft for: ${payload.to}`);
       log.info(`Subject: ${payload.subject}`);
 
-      // Get the email address from supplier_emails table
-      const emailTo =
-        databaseService.getSupplierEmail(payload.to) || payload.to;
+      // Use the provided email address directly if it contains @, otherwise lookup in database
+      const emailTo = payload.to.includes("@")
+        ? payload.to
+        : databaseService.getSupplierEmail(payload.to) || payload.to;
       log.info(`Resolved email address: ${emailTo}`);
 
       // Ensure we have a valid email address
@@ -649,8 +650,10 @@ ipcMain.handle(
       for (let i = 0; i < payload.length; i++) {
         const email = payload[i];
 
-        // Get the email address from supplier_emails table
-        const emailTo = databaseService.getSupplierEmail(email.to) || email.to;
+        // Use the provided email address directly if it contains @, otherwise lookup in database
+        const emailTo = email.to.includes("@")
+          ? email.to
+          : databaseService.getSupplierEmail(email.to) || email.to;
 
         // Ensure we have a valid email address
         if (!emailTo.includes("@")) {
@@ -738,18 +741,18 @@ try {
       
       # Create and send email
       $mail = $outlook.CreateItem(0)
-      $mail.To = $email.to
+      $mail.To = $email.resolvedEmail
       $mail.Subject = $subjectContent
       $mail.HTMLBody = $htmlContent
       $mail.SentOnBehalfOfName = "supply.planning.no@onemed.com"
       
       $mail.Send()
       $successCount++
-      Write-Output "SUCCESS: Email sent to $($email.to)"
+      Write-Output "SUCCESS: Email sent to $($email.resolvedEmail)"
       
       $results += @{
         supplier = $email.supplier
-        email = $email.to
+        email = $email.resolvedEmail
         success = $true
         error = $null
       }
@@ -757,11 +760,11 @@ try {
     } catch {
       $failCount++
       $errorMsg = $_.Exception.Message
-      Write-Output "ERROR: Failed to send to $($email.to): $errorMsg"
+      Write-Output "ERROR: Failed to send to $($email.resolvedEmail): $errorMsg"
       
       $results += @{
         supplier = $email.supplier
-        email = $email.to
+        email = $email.resolvedEmail
         success = $false
         error = $errorMsg
       }
@@ -907,6 +910,275 @@ try {
   }
 );
 
+// REMOVED: PowerShell function for macOS - using simple .eml approach instead
+/*
+async function handleEmailViaPowerShellMac(
+  payload: { to: string; subject: string; html: string },
+  emailTo: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    log.info(`Attempting PowerShell email send on macOS to: ${emailTo}`);
+    log.info(`Subject: ${payload.subject}`);
+
+    // Ensure we have a valid email address
+    if (!emailTo.includes("@")) {
+      log.warn(`No valid email address found for supplier: ${payload.to}`);
+      return {
+        success: false,
+        error: `Ingen e-postadresse funnet for ${payload.to}. Sjekk leverandør e-post innstillinger.`,
+      };
+    }
+
+    // Create a temporary HTML file for PowerShell to use
+    const tempDir = app.getPath("temp");
+    const htmlFileName = `onemed-reminder-${Date.now()}.html`;
+    const htmlFilePath = path.join(tempDir, htmlFileName);
+
+    // Clean up the HTML content
+    const cleanHtml = payload.html
+      .replace(/<style>.*?<\/style>/gs, "")
+      .replace(/<head>.*?<\/head>/gs, "")
+      .replace(/<script>.*?<\/script>/gs, "")
+      .trim();
+
+    fs.writeFileSync(htmlFilePath, cleanHtml, "utf8");
+    log.info(`Created HTML file for PowerShell: ${htmlFilePath}`);
+
+    // PowerShell script that uses Exchange Online PowerShell
+    const powershellScript = `
+      try {
+        Write-Output "Starting PowerShell email send on macOS using Exchange Online..."
+        
+        # Create HTML content from file
+        $htmlContent = Get-Content -Path '${htmlFilePath.replace(
+          /'/g,
+          "''"
+        )}' -Raw
+        
+        # Send email using Exchange Online PowerShell
+        Write-Output "Sending email via Exchange Online PowerShell..."
+        
+        # Try to establish Exchange Online session if not already connected
+        try {
+          # Check if we're already connected to Exchange Online
+          $existingSession = Get-PSSession | Where-Object { $_.ConfigurationName -eq "Microsoft.Exchange" -and $_.State -eq "Opened" }
+          
+          if ($existingSession) {
+            Write-Output "Found existing Exchange Online session, using it..."
+            $session = $existingSession
+          } else {
+            # Check if we can use existing Azure AD authentication
+            try {
+              Write-Output "Checking for existing Azure AD authentication..."
+              $context = Get-AzContext -ErrorAction SilentlyContinue
+              if ($context) {
+                Write-Output "Found existing Azure AD context, attempting to use it for Exchange Online..."
+                # Try to connect using existing Azure AD context
+                Connect-ExchangeOnline -UserPrincipalName "supply.planning.no@onemed.com" -ShowProgress:$false -ShowBanner:$false
+                Write-Output "Connected to Exchange Online using existing Azure AD authentication"
+                $session = Get-PSSession | Where-Object { $_.ConfigurationName -eq "Microsoft.Exchange" -and $_.State -eq "Opened" }
+              } else {
+                throw "No existing Azure AD context found"
+              }
+            } catch {
+              Write-Output "No existing Azure AD context available, proceeding with standard authentication..."
+            }
+            
+            Write-Output "No existing Exchange Online session found, attempting to connect..."
+            
+            # Try to connect to Exchange Online using modern authentication
+            try {
+              # Import Exchange Online module if available
+              if (Get-Module -ListAvailable -Name "ExchangeOnlineManagement") {
+                Import-Module ExchangeOnlineManagement -Force
+                Write-Output "ExchangeOnlineManagement module imported"
+                
+                # Connect to Exchange Online with proper parameters
+                # Try device code authentication first (works with SSO/MFA)
+                try {
+                  Connect-ExchangeOnline -UserPrincipalName "supply.planning.no@onemed.com" -ShowProgress:$false -ShowBanner:$false -Device
+                  Write-Output "Connected to Exchange Online successfully using device code authentication"
+                } catch {
+                  Write-Output "Device code authentication failed, trying interactive authentication..."
+                  # Fallback to interactive authentication (may not work in non-interactive environment)
+                  try {
+                    Connect-ExchangeOnline -UserPrincipalName "supply.planning.no@onemed.com" -ShowProgress:$false -ShowBanner:$false
+                    Write-Output "Connected to Exchange Online successfully using interactive authentication"
+                  } catch {
+                    Write-Output "Interactive authentication also failed: $($_.Exception.Message)"
+                    throw "All Exchange Online authentication methods failed"
+                  }
+                }
+                
+                # Get the session we just created
+                $session = Get-PSSession | Where-Object { $_.ConfigurationName -eq "Microsoft.Exchange" -and $_.State -eq "Opened" }
+                if (-not $session) {
+                  throw "Exchange Online session was not established properly"
+                }
+                Write-Output "Exchange Online session verified and ready"
+              } else {
+                Write-Output "ExchangeOnlineManagement module not available, trying alternative method..."
+                throw "ExchangeOnlineManagement module not found"
+              }
+            } catch {
+              Write-Output "Failed to connect to Exchange Online: $($_.Exception.Message)"
+              Write-Output "Falling back to SMTP method..."
+              
+              # Fallback to SMTP with non-interactive credentials using .NET SMTP client
+              # Load credentials from environment variables for security
+              $smtpUser = "supply.planning.no@onemed.com"
+              $smtpPass = $env:ONEMED_EMAIL_PASSWORD
+              
+              # Check if environment variable is set
+              if (-not $smtpPass) {
+                Write-Output "ONEMED_EMAIL_PASSWORD environment variable is not set. Trying alternative authentication methods..."
+                
+                # Try to use default credentials (Windows authentication)
+                try {
+                  Write-Output "Attempting to use default credentials for SMTP..."
+                  $smtpClient = New-Object System.Net.Mail.SmtpClient("smtp.office365.com", 587)
+                  $smtpClient.EnableSsl = $true
+                  $smtpClient.UseDefaultCredentials = $true
+                  Write-Output "Using default credentials for SMTP authentication"
+                } catch {
+                  Write-Output "Default credentials failed: $($_.Exception.Message)"
+                  throw "No valid SMTP authentication method available. Please set ONEMED_EMAIL_PASSWORD environment variable with your Office 365 email password or app password."
+                }
+              } else {
+                # Convert the password to a SecureString
+                $securePassword = ConvertTo-SecureString $smtpPass -AsPlainText -Force
+                
+                # Create the non-interactive credential object
+                $credential = New-Object System.Management.Automation.PSCredential($smtpUser, $securePassword)
+                
+                $smtpClient = New-Object System.Net.Mail.SmtpClient("smtp.office365.com", 587)
+                $smtpClient.EnableSsl = $true
+                $smtpClient.Credentials = $credential
+                Write-Output "Using provided credentials for SMTP authentication"
+              }
+              
+              # Create and send email message
+              $mailMessage = New-Object System.Net.Mail.MailMessage
+              $mailMessage.From = "supply.planning.no@onemed.com"
+              $mailMessage.To.Add("${emailTo}")
+              $mailMessage.Subject = "${payload.subject.replace(/"/g, '\\"')}"
+              $mailMessage.Body = $htmlContent
+              $mailMessage.IsBodyHtml = $true
+              
+              $smtpClient.Send($mailMessage)
+              Write-Output "SUCCESS: Email sent via .NET SMTP fallback to ${emailTo}"
+              exit 0
+            }
+          }
+        } catch {
+          Write-Output "Exchange Online connection failed: $($_.Exception.Message)"
+          Write-Output "Falling back to SMTP method..."
+          
+          # Final SMTP fallback
+          try {
+            $smtpUser = "supply.planning.no@onemed.com"
+            $smtpPass = $env:ONEMED_EMAIL_PASSWORD
+            
+            if (-not $smtpPass) {
+              throw "ONEMED_EMAIL_PASSWORD environment variable is not set. Please set this variable with your Office 365 email password or app password."
+            }
+            
+            $securePassword = ConvertTo-SecureString $smtpPass -AsPlainText -Force
+            $credential = New-Object System.Management.Automation.PSCredential($smtpUser, $securePassword)
+            
+            $smtpClient = New-Object System.Net.Mail.SmtpClient("smtp.office365.com", 587)
+            $smtpClient.EnableSsl = $true
+            $smtpClient.Credentials = $credential
+            
+            $mailMessage = New-Object System.Net.Mail.MailMessage
+            $mailMessage.From = "supply.planning.no@onemed.com"
+            $mailMessage.To.Add("${emailTo}")
+            $mailMessage.Subject = "${payload.subject.replace(/"/g, '\\"')}"
+            $mailMessage.Body = $htmlContent
+            $mailMessage.IsBodyHtml = $true
+            
+            $smtpClient.Send($mailMessage)
+            Write-Output "SUCCESS: Email sent via .NET SMTP with environment credentials to ${emailTo}"
+          } catch {
+            Write-Output "All email methods failed: $($_.Exception.Message)"
+            throw
+          }
+        }
+        
+      } catch {
+        Write-Output "ERROR: $($_.Exception.Message)"
+        Write-Output "ERROR_DETAILS: $($_.Exception.ToString())"
+        exit 1
+      } finally {
+        # Clean up HTML file
+        if (Test-Path '${htmlFilePath.replace(/'/g, "''")}') {
+          try { Remove-Item -Path '${htmlFilePath.replace(/'/g, "''")}' -Force }
+          catch { Write-Output "WARN: Failed to cleanup HTML file." }
+        }
+      }
+    `;
+
+    // Execute PowerShell script
+    const { spawn } = await import("child_process");
+
+    return new Promise((resolve) => {
+      const psProcess = spawn("pwsh", ["-Command", powershellScript], {
+        stdio: ["pipe", "pipe", "pipe"],
+      });
+
+      let stdout = "";
+      let stderr = "";
+
+      psProcess.stdout?.on("data", (data) => {
+        const output = data.toString();
+        stdout += output;
+        log.info(`PowerShell stdout: ${output.trim()}`);
+      });
+
+      psProcess.stderr?.on("data", (data) => {
+        const output = data.toString();
+        stderr += output;
+        log.warn(`PowerShell stderr: ${output.trim()}`);
+      });
+
+      psProcess.on("close", (code) => {
+        log.info(`PowerShell process exited with code: ${code}`);
+
+        if (code === 0) {
+          log.info("PowerShell email send completed successfully");
+          resolve({
+            success: true,
+            error: undefined,
+          });
+        } else {
+          log.error(`PowerShell email send failed with code ${code}`);
+          resolve({
+            success: false,
+            error: `PowerShell e-post sending feilet: ${stderr || stdout}`,
+          });
+        }
+      });
+
+      psProcess.on("error", (error) => {
+        log.error("Failed to start PowerShell process:", error);
+        resolve({
+          success: false,
+          error: `Kunne ikke starte PowerShell: ${error.message}`,
+        });
+      });
+    });
+  } catch (error) {
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown error occurred";
+    log.error("Error in PowerShell email sending on macOS:", errorMessage);
+    return {
+      success: false,
+      error: `Feil ved PowerShell e-post sending: ${errorMessage}`,
+    };
+  }
+}
+*/
+
 // Handle automatic email sending via Outlook COM API (LEGACY - kept for single emails)
 ipcMain.handle(
   "sendEmailAutomatically",
@@ -918,19 +1190,22 @@ ipcMain.handle(
       log.info(`Attempting automatic email send to: ${payload.to}`);
       log.info(`Subject: ${payload.subject}`);
 
-      // Only available on Windows
-      if (process.platform !== "win32") {
-        log.warn("Automatic Outlook sending only available on Windows");
-        return {
-          success: false,
-          error: "Automatisk sending er kun tilgjengelig på Windows",
-        };
+      // Check if payload.to is already an email address or a supplier name
+      let emailTo: string;
+      if (payload.to.includes("@")) {
+        // payload.to is already an email address
+        emailTo = payload.to;
+        log.info(`Using provided email address: ${emailTo}`);
+      } else {
+        // payload.to is a supplier name, look it up in database
+        emailTo = databaseService.getSupplierEmail(payload.to) || payload.to;
+        log.info(
+          `Resolved email address for supplier ${payload.to}: ${emailTo}`
+        );
       }
 
-      // Get the email address from supplier_emails table
-      const emailTo =
-        databaseService.getSupplierEmail(payload.to) || payload.to;
-      log.info(`Resolved email address: ${emailTo}`);
+      // For all platforms, use the simple .eml file approach
+      log.info("Using .eml file approach for email sending");
 
       // Ensure we have a valid email address
       if (!emailTo.includes("@")) {
@@ -1537,19 +1812,13 @@ ipcMain.handle(
       );
       log.info(`Subject: ${payload.subject}`);
 
-      if (process.platform !== "win32") {
-        log.warn(
-          "Automatic Outlook sending via .eml/COM only available on Windows"
-        );
-        return {
-          success: false,
-          error: "Automatisk sending via .eml er kun tilgjengelig på Windows",
-        };
-      }
+      // Use the provided email address directly if it contains @, otherwise lookup in database
+      const emailTo = payload.to.includes("@")
+        ? payload.to
+        : databaseService.getSupplierEmail(payload.to) || payload.to;
 
-      // Get the email address from supplier_emails table or use provided
-      const emailTo =
-        databaseService.getSupplierEmail(payload.to) || payload.to;
+      // For all platforms, use the simple .eml file approach
+      log.info("Using .eml file approach for email sending");
       log.info(`Resolved email address: ${emailTo}`);
 
       if (!emailTo.includes("@")) {

@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { ExcelData } from "../types/ExcelData";
-import supplyPlannersData from "../data/supplyPlanners.json";
 
 interface SupplierSelectProps {
   onSupplierSelected: (supplier: string) => void;
@@ -8,17 +7,6 @@ interface SupplierSelectProps {
   excelData?: ExcelData;
   selectedWeekday?: string;
   selectedPlanner: string;
-}
-
-// Define the type for weekday suppliers data
-interface WeekdaySuppliers {
-  [weekday: string]: string[];
-}
-
-// Define planner type
-interface Planner {
-  name: string;
-  weekdaySuppliers: WeekdaySuppliers;
 }
 
 const SupplierSelect: React.FC<SupplierSelectProps> = ({
@@ -34,105 +22,59 @@ const SupplierSelect: React.FC<SupplierSelectProps> = ({
   );
 
   // Get suppliers based on selected planner and weekday, filtered to only show those with outstanding orders
-  const [suppliersWithOutstandingOrders, setSuppliersWithOutstandingOrders] =
-    useState<string[]>([]);
-  const [importedSuppliersForWeekday, setImportedSuppliersForWeekday] =
-    useState<string[]>([]);
+  const [suppliers, setSuppliers] = useState<string[]>([]);
   const [isLoadingSuppliers, setIsLoadingSuppliers] = useState(false);
 
-  // Fetch suppliers with outstanding orders
+  // Fetch suppliers with outstanding orders for the selected weekday (same logic as BulkSupplierSelect)
   useEffect(() => {
-    const fetchSuppliersWithOutstandingOrders = async () => {
+    const fetchSuppliers = async () => {
+      if (!selectedWeekday || !selectedPlanner) {
+        setSuppliers([]);
+        return;
+      }
+
       setIsLoadingSuppliers(true);
       try {
-        const response =
-          await window.electron.getSuppliersWithOutstandingOrders();
-        if (response.success && response.data) {
-          setSuppliersWithOutstandingOrders(response.data);
-        } else {
-          console.error(
-            "Failed to fetch suppliers with outstanding orders:",
-            response.error
-          );
-          setSuppliersWithOutstandingOrders([]);
-        }
-      } catch (error) {
-        console.error(
-          "Error fetching suppliers with outstanding orders:",
-          error
+        // Get imported suppliers from database (Excel data is source of truth)
+        const suppliersResponse = await window.electron.getSuppliersForWeekday(
+          selectedWeekday,
+          selectedPlanner
         );
-        setSuppliersWithOutstandingOrders([]);
+
+        let weekdaySuppliers: string[] = [];
+        if (
+          suppliersResponse.success &&
+          suppliersResponse.data &&
+          suppliersResponse.data.length > 0
+        ) {
+          // Use imported suppliers from Excel as primary source
+          weekdaySuppliers = suppliersResponse.data;
+        }
+
+        // Get outstanding orders to count per supplier (same as BulkSupplierSelect)
+        const outstandingOrders = await window.electron.getAllOrders();
+
+        // Filter to only include suppliers that have outstanding orders (same logic as BulkSupplierSelect)
+        const suppliersWithOutstandingOrders = weekdaySuppliers.filter(
+          (supplier: string) => {
+            const outstandingCount = outstandingOrders.filter(
+              (order) => order.supplier === supplier
+            ).length;
+            return outstandingCount > 0;
+          }
+        );
+
+        setSuppliers(suppliersWithOutstandingOrders);
+      } catch (error) {
+        console.error("Error fetching suppliers:", error);
+        setSuppliers([]);
       } finally {
         setIsLoadingSuppliers(false);
       }
     };
 
-    fetchSuppliersWithOutstandingOrders();
-  }, []);
-
-  // Fetch imported suppliers for the selected weekday and planner
-  useEffect(() => {
-    const fetchImportedSuppliers = async () => {
-      if (!selectedWeekday || !selectedPlanner) {
-        setImportedSuppliersForWeekday([]);
-        return;
-      }
-
-      try {
-        const response = await window.electron.getSuppliersForWeekday(
-          selectedWeekday,
-          selectedPlanner
-        );
-        if (response.success && response.data) {
-          setImportedSuppliersForWeekday(response.data);
-        } else {
-          console.error(
-            "Failed to fetch imported suppliers for weekday:",
-            response.error
-          );
-          setImportedSuppliersForWeekday([]);
-        }
-      } catch (error) {
-        console.error("Error fetching imported suppliers for weekday:", error);
-        setImportedSuppliersForWeekday([]);
-      }
-    };
-
-    fetchImportedSuppliers();
+    fetchSuppliers();
   }, [selectedWeekday, selectedPlanner]);
-
-  const suppliers = useMemo<string[]>(() => {
-    if (!selectedWeekday || !selectedPlanner) {
-      return [];
-    }
-
-    // Use imported suppliers if available, otherwise fall back to hardcoded data
-    let weekdaySuppliers: string[] = [];
-
-    if (importedSuppliersForWeekday.length > 0) {
-      // Use imported suppliers from ark 6 (Leverandør)
-      weekdaySuppliers = importedSuppliersForWeekday;
-    } else {
-      // Fallback to hardcoded supplyPlanners.json data
-      const planner = supplyPlannersData.planners.find(
-        (p) => p.name === selectedPlanner
-      ) as Planner | undefined;
-
-      if (planner) {
-        weekdaySuppliers = planner.weekdaySuppliers[selectedWeekday] || [];
-      }
-    }
-
-    // Filter to only include suppliers that have outstanding orders
-    return weekdaySuppliers.filter((supplier) =>
-      suppliersWithOutstandingOrders.includes(supplier)
-    );
-  }, [
-    selectedPlanner,
-    selectedWeekday,
-    suppliersWithOutstandingOrders,
-    importedSuppliersForWeekday,
-  ]);
 
   // Filter suppliers based on search term
   const filteredSuppliers = useMemo(() => {

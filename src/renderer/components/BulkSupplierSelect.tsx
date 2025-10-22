@@ -84,7 +84,7 @@ const BulkSupplierSelect: React.FC<BulkSupplierSelectProps> = ({
       });
       setIsLoading(true);
       try {
-        // Get suppliers for the selected weekday and planner
+        // Get imported suppliers from database (Excel data is source of truth)
         const suppliersResponse = await window.electron.getSuppliersForWeekday(
           selectedWeekday,
           selectedPlanner
@@ -92,14 +92,18 @@ const BulkSupplierSelect: React.FC<BulkSupplierSelectProps> = ({
 
         console.log("🟠 Suppliers response:", suppliersResponse);
 
-        if (!suppliersResponse.success || !suppliersResponse.data) {
-          console.error("Failed to fetch suppliers:", suppliersResponse.error);
-          setSuppliers([]);
-          return;
+        let weekdaySuppliers: string[] = [];
+        if (
+          suppliersResponse.success &&
+          suppliersResponse.data &&
+          suppliersResponse.data.length > 0
+        ) {
+          // Use imported suppliers from Excel as primary source
+          weekdaySuppliers = suppliersResponse.data;
         }
+        // No fallback to hardcoded data - Excel is the only source of truth
 
-        const weekdaySuppliers = suppliersResponse.data;
-        console.log("🟠 Weekday suppliers:", weekdaySuppliers);
+        console.log("🟠 Final weekday suppliers:", weekdaySuppliers);
 
         // Get outstanding orders to count per supplier
         const outstandingOrders = await window.electron.getAllOrders();
@@ -216,16 +220,19 @@ const BulkSupplierSelect: React.FC<BulkSupplierSelectProps> = ({
       ? currentSelection.filter((s) => s !== supplier)
       : [...currentSelection, supplier];
 
-    console.log("🔵 New selection will be:", newSelection);
-    console.log("🔵 New selection length:", newSelection.length);
-    console.log("🔵 Calling onSuppliersSelected with:", newSelection);
+    // Remove any duplicates to prevent counting issues
+    const uniqueSelection = [...new Set(newSelection)];
+
+    console.log("🔵 New selection will be:", uniqueSelection);
+    console.log("🔵 New selection length:", uniqueSelection.length);
+    console.log("🔵 Calling onSuppliersSelected with:", uniqueSelection);
 
     // Mark that user has manually selected
     setUserHasManuallySelected(true);
 
     // Force a small delay to see if it's a timing issue
     setTimeout(() => {
-      onSuppliersSelected(newSelection);
+      onSuppliersSelected(uniqueSelection);
     }, 0);
   };
 
@@ -650,7 +657,8 @@ const BulkSupplierSelect: React.FC<BulkSupplierSelectProps> = ({
         <div className="mt-4 p-4 bg-primary-light bg-opacity-10 border border-primary-light rounded-md">
           <h3 className="text-sm font-medium text-primary mb-2">Sammendrag</h3>
           <p className="text-sm text-neutral">
-            <strong>{selectedSuppliers.length}</strong> leverandører valgt
+            <strong>{[...new Set(selectedSuppliers)].length}</strong>{" "}
+            leverandører valgt
           </p>
           <p className="text-sm text-neutral">
             <strong>
