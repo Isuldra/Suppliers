@@ -27,7 +27,7 @@ The core logic resides in `src/renderer/services/emailService.ts`.
 <html>
   <head>
     <style>
-      ...
+      ...;
     </style>
   </head>
   <body>
@@ -37,6 +37,8 @@ The core logic resides in `src/renderer/services/emailService.ts`.
     <table>
       <thead>
         ...
+        <th>Lev. ArtNr</th>
+        <th>Spesifikasjon</th>
         <th>Utestående antall</th>
         ...
       </thead>
@@ -46,6 +48,7 @@ The core logic resides in `src/renderer/services/emailService.ts`.
           <td>{{poNumber}}</td>
           <td>{{itemNo}}</td>
           <td>{{description}}</td>
+          <td>{{specification}}</td>
           <td>{{orderQty}}</td>
           <td>{{receivedQty}}</td>
           <td>{{outstandingQty}}</td>
@@ -68,7 +71,7 @@ The core logic resides in `src/renderer/services/emailService.ts`.
 <html>
   <head>
     <style>
-      ...
+      ...;
     </style>
   </head>
   <body>
@@ -78,6 +81,8 @@ The core logic resides in `src/renderer/services/emailService.ts`.
     <table>
       <thead>
         ...
+        <th>Supplier ArtNo</th>
+        <th>Specification</th>
         <th>Outstanding Qty</th>
         ...
       </thead>
@@ -87,6 +92,7 @@ The core logic resides in `src/renderer/services/emailService.ts`.
           <td>{{poNumber}}</td>
           <td>{{itemNo}}</td>
           <td>{{description}}</td>
+          <td>{{specification}}</td>
           <td>{{orderQty}}</td>
           <td>{{receivedQty}}</td>
           <td>{{outstandingQty}}</td>
