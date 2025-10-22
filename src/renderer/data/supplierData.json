@@ -1,9 +1,9 @@
 {
   "oversikt": "E-post adresser for leverandører",
-  "totaltAntall": 75,
+  "totaltAntall": 82,
   "språkfordeling": {
-    "norsk": 62,
-    "engelsk": 13
+    "norsk": 70,
+    "engelsk": 12
   },
   "leverandører": [
     {
@@ -553,7 +553,7 @@
     {
       "leverandør": "VERNACARE LTD",
       "companyId": 4960186,
-      "epost": "hilde.hunsager@vernagroup.com",
+      "epost": "EXPORT.VCI@Vernacare.com",
       "språk": "Engelsk",
       "språkKode": "ENG",
       "purredag": "Onsdag"
@@ -605,6 +605,94 @@
       "språk": "Norsk",
       "språkKode": "NO",
       "purredag": "Fredag"
+    },
+    {
+      "leverandør": "Apokjeden AS",
+      "companyId": 4960624,
+      "epost": "kundeservice@apotek1.no",
+      "språk": "Norsk",
+      "språkKode": "NO",
+      "purredag": "Tirsdag"
+    },
+    {
+      "leverandør": "Dale Medical Products, Inc.",
+      "companyId": 4960240,
+      "epost": "internationalorders@dalemed.net",
+      "språk": "Engelsk",
+      "språkKode": "EN",
+      "purredag": "Tirsdag"
+    },
+    {
+      "leverandør": "Huntleigh Healthcare Ltd",
+      "companyId": 4960258,
+      "epost": "simona.browningcukerova@arjo.com",
+      "språk": "Engelsk",
+      "språkKode": "EN",
+      "purredag": "Tirsdag"
+    },
+    {
+      "leverandør": "Laerdal Medical AS",
+      "companyId": 4960729,
+      "epost": "kundeservice@laerdal.no",
+      "språk": "Norsk",
+      "språkKode": "NO",
+      "purredag": "Tirsdag"
+    },
+    {
+      "leverandør": "Sysmex Hvamsvingen 24",
+      "companyId": 4960237,
+      "epost": "order@sysmex-nordic.com",
+      "språk": "Norsk",
+      "språkKode": "NO",
+      "purredag": "Tirsdag"
+    },
+    {
+      "leverandør": "Viatris AS",
+      "companyId": 4960632,
+      "epost": "ordre@viatris.com",
+      "språk": "Norsk",
+      "språkKode": "NO",
+      "purredag": "Tirsdag"
+    },
+    {
+      "leverandør": "XboXLab AS",
+      "companyId": 4960260,
+      "epost": "ordernorge@xboxlab.no",
+      "språk": "Norsk",
+      "språkKode": "NO",
+      "purredag": "Tirsdag"
+    },
+    {
+      "leverandør": "MPS Techline of PA, Inc.",
+      "companyId": 4960231,
+      "epost": "sales@techlinetrauma.com",
+      "språk": "Engelsk",
+      "språkKode": "EN",
+      "purredag": "Tirsdag"
+    },
+    {
+      "leverandør": "PartnerMed AS",
+      "companyId": 4960172,
+      "epost": "ordre@partnermed.no",
+      "språk": "Norsk",
+      "språkKode": "NO",
+      "purredag": "Tirsdag"
+    },
+    {
+      "leverandør": "Puls AS",
+      "companyId": 4015601,
+      "epost": "kundeservice@puls-norge.no",
+      "språk": "Norsk",
+      "språkKode": "NO",
+      "purredag": "Tirsdag"
+    },
+    {
+      "leverandør": "Wellspect",
+      "companyId": 4960763,
+      "epost": "ordre.no@wellspect.com",
+      "språk": "Norsk",
+      "språkKode": "NO",
+      "purredag": "Tirsdag"
     }
   ]
 }

@@ -57,16 +57,42 @@ const BulkEmailPreview: React.FC<BulkEmailPreviewProps> = ({
 
   // Get supplier info from supplierData.json
   const getSupplierInfo = (supplierName: string): SupplierInfo | null => {
-    const supplier = supplierData.leverandører.find(
+    console.log(`🔍 BulkEmailPreview: Looking for supplier: "${supplierName}"`);
+    // First try exact match
+    let supplier = supplierData.leverandører.find(
       (s) => s.leverandør === supplierName
     );
+
+    // If no exact match, try case-insensitive match
+    if (!supplier) {
+      supplier = supplierData.leverandører.find(
+        (s) => s.leverandør.toLowerCase() === supplierName.toLowerCase()
+      );
+    }
+
+    // If still no match, try partial match (contains)
+    if (!supplier) {
+      supplier = supplierData.leverandører.find(
+        (s) =>
+          s.leverandør.toLowerCase().includes(supplierName.toLowerCase()) ||
+          supplierName.toLowerCase().includes(s.leverandør.toLowerCase())
+      );
+    }
+
     if (supplier) {
+      console.log(`✅ BulkEmailPreview: Found supplier info:`, supplier);
       const customEmail = bulkSupplierEmails?.get(supplierName);
       return {
         ...supplier,
         språkKode: supplier.språkKode as "NO" | "ENG",
         epost: customEmail !== undefined ? customEmail : supplier.epost,
       };
+    } else {
+      console.log(`❌ BulkEmailPreview: Supplier not found: "${supplierName}"`);
+      console.log(
+        `Available suppliers:`,
+        supplierData.leverandører.map((s) => s.leverandør)
+      );
     }
     return null;
   };
@@ -229,7 +255,7 @@ const BulkEmailPreview: React.FC<BulkEmailPreviewProps> = ({
 
           const html = emailService.generatePreview(emailData);
           const result = await window.electron.sendEmailAutomatically({
-            to: supplierData.supplier,
+            to: recipientEmail, // Use the manually selected email address
             subject: emailData.subject,
             html: html,
           });

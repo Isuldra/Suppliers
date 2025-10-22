@@ -215,9 +215,27 @@ export class EmailService {
 
   // Get supplier info from the new structured data
   getSupplierInfo(supplierName: string): SupplierInfo | null {
-    const supplier = supplierData.leverandører.find(
+    // First try exact match
+    let supplier = supplierData.leverandører.find(
       (s) => s.leverandør === supplierName
     );
+
+    // If no exact match, try case-insensitive match
+    if (!supplier) {
+      supplier = supplierData.leverandører.find(
+        (s) => s.leverandør.toLowerCase() === supplierName.toLowerCase()
+      );
+    }
+
+    // If still no match, try partial match (contains)
+    if (!supplier) {
+      supplier = supplierData.leverandører.find(
+        (s) =>
+          s.leverandør.toLowerCase().includes(supplierName.toLowerCase()) ||
+          supplierName.toLowerCase().includes(s.leverandør.toLowerCase())
+      );
+    }
+
     return supplier
       ? {
           ...supplier,
@@ -283,16 +301,19 @@ export class EmailService {
         console.log(
           "EmailService: No recipientEmail provided, looking up supplier email"
         );
-        // Get supplier info from the new structured data
+        // Get supplier info from the new structured data (PRIORITY: JSON first)
         const supplierInfo = this.getSupplierInfo(data.supplier);
 
         if (supplierInfo) {
           supplierEmail = supplierInfo.epost;
           // Set language based on supplier's preference
           language = supplierInfo.språkKode === "ENG" ? "en" : "no";
-          console.log("EmailService: Found supplier info:", supplierInfo);
+          console.log(
+            "EmailService: Found supplier info in JSON:",
+            supplierInfo
+          );
         } else {
-          // Fallback to database lookup
+          // Fallback to database lookup (only if not found in JSON)
           supplierEmail = await this.getSupplierEmail(data.supplier);
           console.log(
             "EmailService: Fallback to database lookup, result:",
