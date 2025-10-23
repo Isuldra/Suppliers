@@ -62,7 +62,7 @@
         "portable",
         "nsis"
       ],
-      "icon": "supplychain.png",
+      "icon": "resources/icon.ico",
       "artifactName": "${productName}-${version}-setup.${ext}"
     },
     "portable": {
@@ -83,9 +83,9 @@
       "perMachine": false,
       "allowToChangeInstallationDirectory": true,
       "allowElevation": false,
-      "installerIcon": "supplychain.png",
-      "uninstallerIcon": "supplychain.png",
-      "installerHeaderIcon": "supplychain.png",
+      "installerIcon": "resources/icon.ico",
+      "uninstallerIcon": "resources/icon.ico",
+      "installerHeaderIcon": "resources/icon.ico",
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "OneMed SupplyChain",
