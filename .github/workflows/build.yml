@@ -7,6 +7,9 @@ on:
     tags: ["v*"] # Trigger on version tags
   pull_request:
     branches: [main]
+  workflow_run:
+    workflows: ["🏷️ Version Management"]
+    types: [completed]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}

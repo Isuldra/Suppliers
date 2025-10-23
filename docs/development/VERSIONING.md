@@ -125,15 +125,41 @@ TAG_PREFIX="release-" node scripts/sync-version.js sync
 
 ## CI/CD Integration
 
-### GitHub Actions
+### GitHub Actions - Manual Version Management
+
+The project includes a comprehensive GitHub Actions workflow for manual version management:
+
+#### 🏷️ Version Management Workflow
+
+**File:** `.github/workflows/version-management.yml`
+
+**Features:**
+
+- **Manual Trigger**: `workflow_dispatch` for full control
+- **Version Type Selection**: Choose patch/minor/major/pre-release
+- **Auto-push Option**: Automatically push changes and tags
+- **Custom Tag Prefix**: Configurable tag prefix (default: "v")
+- **GitHub Release**: Automatically creates GitHub releases
+- **Build Integration**: Triggers build workflow after version creation
+
+#### How to Use
+
+1. **Go to GitHub Actions tab**
+2. **Select "🏷️ Version Management" workflow**
+3. **Click "Run workflow"**
+4. **Configure options:**
+   - **Version Type**: patch, minor, major, prepatch, preminor, premajor, prerelease
+   - **Auto Push**: Automatically push changes and tags
+   - **Tag Prefix**: Custom prefix (default: "v")
+
+#### Workflow Configuration
 
 ```yaml
-name: Version Management
 on:
   workflow_dispatch:
     inputs:
       version_type:
-        description: "Version type"
+        description: "Version type to create"
         required: true
         default: "patch"
         type: choice
@@ -141,36 +167,34 @@ on:
           - patch
           - minor
           - major
+          - prepatch
+          - preminor
+          - premajor
+          - prerelease
+      push_changes:
+        description: "Automatically push changes and tags"
+        required: true
+        default: true
+        type: boolean
+      tag_prefix:
+        description: "Git tag prefix (default: v)"
+        required: false
+        default: "v"
+        type: string
+```
 
-jobs:
-  version:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+#### Build Integration
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "18"
-          cache: "npm"
+The build workflow automatically triggers after version management:
 
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Configure Git
-        run: |
-          git config user.name "GitHub Actions"
-          git config user.email "actions@github.com"
-
-      - name: Create new version
-        run: npm run version:bump:${{ github.event.inputs.version_type }}
-        env:
-          TAG_PREFIX: v
-
-      - name: Push changes
-        run: git push origin main --follow-tags
+```yaml
+on:
+  push:
+    branches: [main]
+    tags: ["v*"] # Trigger on version tags
+  workflow_run:
+    workflows: ["🏷️ Version Management"]
+    types: [completed]
 ```
 
 ### GitLab CI
