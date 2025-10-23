@@ -88,12 +88,12 @@ jobs:
           Write-Host "Generating app-update.yml for NSIS auto-updates..."
           node scripts/generate-app-update-yml.js
 
-      - name: Deploy to GitHub Pages for Simple Updates
+      - name: Deploy to Cloudflare Pages for Simple Updates
         if: startsWith(github.ref, 'refs/tags/')
         shell: pwsh
         run: |
-          Write-Host "Deploying to GitHub Pages for simple auto-updates..."
-          node scripts/deploy-to-github-pages.js
+          Write-Host "Deploying to Cloudflare Pages for simple auto-updates..."
+          npm run deploy:cloudflare
 
       - name: Upload to GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
