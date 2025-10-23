@@ -1,23 +1,31 @@
 # Publishing Updates
 
-This guide explains how to prepare and manually publish updates for SupplyChain OneMed.
+This guide explains how to publish updates for SupplyChain OneMed using the automated CI/CD pipeline.
 
 ## Overview
 
-SupplyChain OneMed uses [electron-updater](https://www.electron.build/auto-update) to handle automatic updates once a release is published. The CI pipeline builds the application artifacts (installers, portable versions), but **publishing these artifacts to GitHub Releases is a manual process.**
+SupplyChain OneMed uses [electron-updater](https://www.electron.build/auto-update) to handle automatic updates. The CI pipeline automatically builds the application artifacts and publishes them to GitHub Releases when a version tag is pushed.
+
+### Key Features
+
+- **Automated Publishing**: No manual uploads needed - just push a version tag
+- **Portable Auto-Updates**: Portable versions now receive automatic update notifications
+- **Simplified Workflow**: Single `npm run dist` command handles all builds
+- **Latest.yml Generation**: Automatically generates update metadata for portable versions
 
 ## Prerequisites
 
-Before preparing an update for manual publishing, ensure you have:
+Before publishing an update, ensure you have:
 
 1. **GitHub Access**: Write access to the GitHub repository where releases are hosted.
 2. **Version Control**: All changes for the release are committed and pushed to the main branch.
 3. **Clean Working Directory**: No uncommitted changes locally.
-4. **CI Build**: A successful CI build (e.g., from a tagged commit) has generated the required artifacts (`.exe` installer, portable `.exe`).
 
-## Manual Publishing Process
+## Automated Publishing Process
 
-### 1. Determine and Update Version Number
+The publishing process is now fully automated through GitHub Actions. Follow these steps:
+
+### 1. Update Version Number
 
 Decide on the new version number following [semantic versioning](https://semver.org/) principles:
 
@@ -29,91 +37,92 @@ Update the `version` field in `package.json`:
 
 ```json
 {
-  "name": "supplychain-onemed",
-  "version": "1.0.1",
-  "description": "Desktop application for managing supply chain data for OneMed"
+  "name": "one-med-supplychain-app",
+  "version": "1.1.8",
+  "description": "OneMed SupplyChain - Supplier Reminder Pro"
 }
 ```
 
-Commit and push this change. Optionally, create a Git tag matching the version (e.g., `v1.0.1`). Triggering the CI pipeline on this commit/tag is recommended.
+### 2. Commit and Create Release Tag
 
-### 2. Build Artifacts (Locally or via CI)
+Commit the version change and create a Git tag:
 
-Ensure the application artifacts are built with the correct version number baked in.
+```bash
+git add package.json
+git commit -m "Bump version to 1.1.8"
+git push origin main
 
-- **Using CI (Recommended):** If the CI pipeline runs on tags or the main branch after the version bump, it will automatically build the artifacts. Proceed to Step 3.
-- **Building Locally (Alternative):** If you need to build manually:
+# Create and push the release tag
+git tag v1.1.8
+git push origin v1.1.8
+```
 
-  ```bash
-  # Ensure dependencies are installed
-  npm install
+### 3. Automated Build and Release
 
-  # Build the renderer/frontend
-  npm run build
+Once you push the tag, GitHub Actions will automatically:
 
-  # Create distribution packages (installer, portable, etc.)
-  # Ensure this command builds all necessary artifacts
-  # e.g., build NSIS installer and portable
-  npm run dist:nsis
-  npm run dist:portable
-  ```
+1. **Build the application** using `npm run dist`
+2. **Generate latest.yml** for portable auto-updates
+3. **Upload to GitHub Release** with all artifacts:
+   - Portable executable (`OneMed SupplyChain-Portable.exe`)
+   - ZIP archive
+   - `latest.yml` (update metadata)
 
-  The artifacts will typically be located in the `release` folder.
+The entire process is automated - no manual intervention required!
 
-### 3. Retrieve Artifacts
+### 4. Verify the Release
 
-- **From CI:** Navigate to the successful GitHub Actions run (associated with your version commit/tag). Download the build artifacts (e.g., `Supplier-Reminder-Pro-Windows-x64` which contains the `release` folder contents).
-- **From Local Build:** Locate the generated installer (`OneMed SupplyChain-[version]-setup.exe`), the portable executable (`OneMed SupplyChain-Portable.exe`), and the update metadata file (e.g., `latest.yml`) in your local `release` directory.
+After the automated release is complete:
 
-### 4. Create GitHub Release and Upload Artifacts
+1. **Check GitHub Releases**: Navigate to the GitHub Releases page and verify the new release appears
+2. **Verify Assets**: Confirm all files are uploaded:
+   - `OneMed SupplyChain-Portable.exe`
+   - `OneMed SupplyChain-1.1.8-setup.zip`
+   - `latest.yml`
+3. **Test Auto-Update**: Install a previous version and test the auto-update functionality
 
-1. Go to your project's GitHub repository page.
-2. Click on the "Releases" link.
-3. Click "Draft a new release".
-4. **Tag version:** Choose or create the Git tag matching the version (e.g., `v1.0.1`).
-5. **Release title:** Enter a title (e.g., `v1.0.1`).
-6. **Describe this release:** Write release notes/changelog.
-7. **Attach binaries:** Drag and drop or select the built artifact files:
-   - The installer (`OneMed SupplyChain-[version]-setup.exe`).
-   - The portable executable (`OneMed SupplyChain-Portable.exe`).
-   - **Crucially, also upload the `latest.yml` file** generated alongside the installer. `electron-updater` needs this file on the release to find the update.
-   - (Optional) Upload other artifacts like `.msi` if built.
-8. **Pre-release:** Check this box if applicable.
-9. Click "Publish release".
+## Testing Auto-Update Locally
 
-### 5. Verify the Release
+To test the auto-update functionality:
 
-After publishing manually:
+1. **Install an older version** of the application
+2. **Open the application** and go to the menu
+3. **Click "Sjekk for oppdateringer"** (Check for Updates)
+4. **Verify** that the new version is detected and can be downloaded
 
-1. Check the GitHub Releases page to ensure the release looks correct.
-2. Verify all intended assets are attached.
-3. Double-check the release notes.
-4. **Crucially:** Install a previous version of the application and trigger the "Check for Updates" functionality to confirm it correctly detects and can download the new version from the manual GitHub release.
+## Troubleshooting Auto-Updates
 
-## Advanced Configuration Notes
+### Portable Version Issues
 
-- **Release Channels:** While `electron-builder` supports channels (`beta`, `alpha`), managing these with manual uploads requires careful naming conventions or separate releases if needed.
-- **Staged Rollouts:** True staged rollouts are complex with manual GitHub releases. Consider alternative deployment strategies if this is required.
+If portable users don't receive update notifications:
 
-## Troubleshooting
+1. **Check latest.yml**: Verify the file exists in the GitHub release
+2. **Verify file format**: The latest.yml should contain correct SHA512 hash and file size
+3. **Check GitHub access**: Ensure users can access GitHub.com
+4. **Review logs**: Check the application logs for update-related errors
 
 ### Common Issues
 
 #### Users Not Receiving Updates
 
-- **Version Check:** Ensure the `version` in the released `package.json` (baked into the app) is higher than the user's current version.
-- **GitHub Release:** Verify the release is published (not a draft) on GitHub.
-- **Assets:** Confirm the correct artifact files (installer, `latest.yml` generated by builder) were manually uploaded to the GitHub release. `electron-updater` relies on these specific files being present.
-- **Firewall/Network:** Ensure users can reach GitHub.com to check for updates.
+- **Version Check**: Ensure the `version` in the released `package.json` is higher than the user's current version
+- **GitHub Release**: Verify the release is published (not a draft) on GitHub
+- **Assets**: Confirm the correct artifact files (installer, `latest.yml`) are present in the GitHub release
+- **Firewall/Network**: Ensure users can reach GitHub.com to check for updates
+
+## Advanced Configuration Notes
+
+- **Release Channels:** The current setup supports stable releases. For beta/alpha channels, additional configuration would be needed.
+- **Staged Rollouts:** The current setup publishes immediately to all users. For staged rollouts, consider using GitHub release drafts or separate repositories.
 
 ## Best Practices
 
 1. **Maintain a Changelog**: Essential for release notes.
-2. **Test Artifacts**: Thoroughly test the exact artifacts generated by CI/build _before_ uploading.
+2. **Test Before Release**: Thoroughly test the application before creating a release tag.
 3. **Communicate Updates**: Inform users about new releases.
 4. **Versioning Strategy**: Stick to semantic versioning.
-5. **Backup**: Keep backups of code and release artifacts.
-6. **Rollback Plan**: Know how to unpublish a release or guide users if a rollback is needed.
+5. **Monitor CI/CD**: Watch the GitHub Actions workflow to ensure successful builds.
+6. **Rollback Plan**: Know how to handle issues if a release has problems.
 
 ## Reference
 
