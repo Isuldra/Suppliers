@@ -1,89 +1,47 @@
-#!/usr/bin/env node
+import fs from "fs";
+import path from "path";
+import crypto from "crypto";
+import { fileURLToPath } from "url";
 
-const fs = require("fs");
-const path = require("path");
-const crypto = require("crypto");
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
-/**
- * Generate latest.yml file for electron-updater
- * This is needed for portable versions since electron-builder only generates latest.yml for nsis targets
- */
+// 1. Få versjon fra package.json
+const packageJson = JSON.parse(
+  fs.readFileSync(path.join(__dirname, "..", "package.json"), "utf8")
+);
+const version = packageJson.version;
 
-function generateLatestYml() {
-  try {
-    // Read package.json to get version
-    const packagePath = path.join(__dirname, "..", "package.json");
-    const packageJson = JSON.parse(fs.readFileSync(packagePath, "utf8"));
-    const version = packageJson.version;
+// 2. Finn den portable .exe-filen
+const releaseDir = path.join(__dirname, "..", "release");
+const files = fs.readdirSync(releaseDir);
+const portableFile = files.find((f) => f.endsWith("Portable.exe"));
 
-    console.log(`Generating latest.yml for version ${version}...`);
+if (!portableFile) {
+  console.error("Portable exe not found");
+  process.exit(1);
+}
 
-    // Find portable .exe file
-    const releaseDir = path.join(__dirname, "..", "release");
-    const portableFiles = fs
-      .readdirSync(releaseDir)
-      .filter((file) => file.includes("Portable") && file.endsWith(".exe"));
+const portablePath = path.join(releaseDir, portableFile);
 
-    if (portableFiles.length === 0) {
-      throw new Error("No portable .exe file found in release directory");
-    }
+// 3. Optimalisering: Les filen kun ÉN gang
+const fileBuffer = fs.readFileSync(portablePath);
 
-    const portableFile = portableFiles[0]; // Take the first one found
-    const portablePath = path.join(releaseDir, portableFile);
+// 4. Kalkuler hash fra bufferet
+const sha512 = crypto.createHash("sha512").update(fileBuffer).digest("base64");
 
-    console.log(`Found portable file: ${portableFile}`);
+// 5. Optimalisering: Få størrelsen fra bufferet, ikke fra et nytt disk-kall
+const size = fileBuffer.length;
 
-    // Calculate file size
-    const stats = fs.statSync(portablePath);
-    const fileSize = stats.size;
-
-    // Calculate SHA512 hash
-    const fileBuffer = fs.readFileSync(portablePath);
-    const hash = crypto.createHash("sha512");
-    hash.update(fileBuffer);
-    const sha512 = hash.digest("base64");
-
-    // Get GitHub publish configuration from package.json
-    const publishConfig = packageJson.build.publish;
-    const downloadUrl = `https://github.com/${publishConfig.owner}/${publishConfig.repo}/releases/download/v${version}/${portableFile}`;
-
-    // Generate latest.yml content
-    const latestYmlContent = `version: ${version}
+// 6. KORREKSJON: Fjernet 'path' og 'sha512' fra toppnivået
+const latestYml = `version: ${version}
 files:
   - url: ${portableFile}
     sha512: ${sha512}
-    size: ${fileSize}
-path: ${portableFile}
-sha512: ${sha512}
+    size: ${size}
 releaseDate: '${new Date().toISOString()}'
 `;
 
-    // Write latest.yml to release directory
-    const latestYmlPath = path.join(releaseDir, "latest.yml");
-    fs.writeFileSync(latestYmlPath, latestYmlContent);
-
-    console.log(`✅ Generated latest.yml successfully`);
-    console.log(`   File: ${latestYmlPath}`);
-    console.log(`   Version: ${version}`);
-    console.log(`   Portable file: ${portableFile}`);
-    console.log(`   Download URL: ${downloadUrl}`);
-
-    return {
-      success: true,
-      version,
-      portableFile,
-      downloadUrl,
-      latestYmlPath,
-    };
-  } catch (error) {
-    console.error("❌ Error generating latest.yml:", error.message);
-    process.exit(1);
-  }
-}
-
-// Run the script if called directly
-if (require.main === module) {
-  generateLatestYml();
-}
-
-module.exports = { generateLatestYml };
+// 7. Skriv filen
+fs.writeFileSync(path.join(releaseDir, "latest.yml"), latestYml);
+console.log("latest.yml generated:", portableFile);
