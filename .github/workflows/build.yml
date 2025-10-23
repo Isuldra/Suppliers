@@ -61,13 +61,7 @@ jobs:
         run: npm ci
 
       - name: Build Application
-        run: npm run build
-
-      - name: Create minimal manifest and .npmrc for electron-builder
-        shell: pwsh
-        run: |
-          Write-Host "Creating minimal manifest and .npmrc for electron-builder..."
-          node scripts/create-minimal-manifest.js
+        run: npm run dist
 
       - name: Exclude build directories from Windows Defender
         if: runner.os == 'Windows'
@@ -77,24 +71,25 @@ jobs:
           Add-MpPreference -ExclusionPath "${{ github.workspace }}\\node_modules"
           Add-MpPreference -ExclusionPath "${{ github.workspace }}\\release"
 
-      - name: Package for Development Build
-        if: >
-          !startsWith(github.ref, 'refs/tags/')
+      - name: Generate latest.yml for Portable Auto-Updates
+        if: startsWith(github.ref, 'refs/tags/')
         shell: pwsh
         run: |
-          Write-Host "Building for development (non-tag build)"
-          Write-Host "Running electron-builder with Windows targets (zip + portable)..."
-          npm run dist
-          Write-Host "Build completed successfully"
+          Write-Host "Generating latest.yml for portable auto-updates..."
+          node scripts/generate-latest-yml.js
 
-      - name: Package and Release for Tag
+      - name: Upload to GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        shell: pwsh
-        run: |
-          Write-Host "Building and publishing for release (tag detected)"
-          npm run release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            release/*Portable.exe
+            release/*.zip
+            release/latest.yml
+          draft: false
+          prerelease: false
 
       - name: List ASAR Contents on Failure
         if: failure()
