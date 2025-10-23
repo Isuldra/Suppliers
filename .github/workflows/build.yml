@@ -87,6 +87,7 @@ jobs:
           files: |
             release/*Portable.exe
             release/*.zip
+            release/*.exe
             release/latest.yml
           draft: false
           prerelease: false
