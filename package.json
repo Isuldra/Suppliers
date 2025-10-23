@@ -59,7 +59,8 @@
     "win": {
       "target": [
         "zip",
-        "portable"
+        "portable",
+        "nsis"
       ],
       "icon": "supplychain.png",
       "artifactName": "${productName}-${version}-setup.${ext}"
