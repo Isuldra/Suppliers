@@ -26,35 +26,45 @@ const indexHtml = `<!DOCTYPE html>
     <title>OneMed SupplyChain - Downloads</title>
     <style>
         body { 
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+            font-family: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; 
             margin: 0; 
             padding: 40px; 
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #497886 0%, #366573 100%);
             min-height: 100vh;
         }
         .container {
             max-width: 800px;
             margin: 0 auto;
-            background: white;
+            background: #FFFFFF;
             border-radius: 12px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            box-shadow: 0 8px 16px rgba(0,0,0,0.15);
             overflow: hidden;
         }
         .header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
+            background: linear-gradient(135deg, #497886 0%, #366573 100%);
+            color: #FFFFFF;
             padding: 40px;
             text-align: center;
         }
         .header h1 {
             margin: 0;
             font-size: 2.5em;
-            font-weight: 300;
+            font-weight: 600;
+            color: #FFFFFF;
         }
         .header p {
             margin: 10px 0 0 0;
             opacity: 0.9;
             font-size: 1.2em;
+            color: #FFFFFF;
+        }
+        .version-badge {
+            background: rgba(255,255,255,0.2);
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            display: inline-block;
+            margin-left: 10px;
         }
         .content {
             padding: 40px;
@@ -70,13 +80,35 @@ const indexHtml = `<!DOCTYPE html>
         .status h3 {
             color: #2e7d32;
             margin: 0 0 10px 0;
+            font-weight: 600;
+        }
+        .info-text {
+            text-align: center;
+            color: #666666;
+            font-size: 1em;
+            line-height: 1.5;
         }
         .footer {
-            background: #f8f9fa;
+            background: #F5F5F5;
             padding: 20px 40px;
             text-align: center;
-            color: #6c757d;
+            color: #666666;
             border-top: 1px solid #e1e5e9;
+        }
+        .footer strong {
+            color: #333333;
+        }
+        .footer small {
+            color: #666666;
+        }
+        .update-url {
+            color: #497886;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        .update-url:hover {
+            color: #366573;
+            text-decoration: underline;
         }
     </style>
 </head>
@@ -84,7 +116,7 @@ const indexHtml = `<!DOCTYPE html>
     <div class="container">
         <div class="header">
             <h1>OneMed SupplyChain</h1>
-            <p>Supplier Reminder Pro <span style="background: rgba(255,255,255,0.2); padding: 4px 12px; border-radius: 20px; font-size: 0.9em;">v${version}</span></p>
+            <p>Supplier Reminder Pro <span class="version-badge">v${version}</span></p>
         </div>
         
         <div class="content">
@@ -93,13 +125,13 @@ const indexHtml = `<!DOCTYPE html>
                 <p>Automatiske oppdateringer er nå tilgjengelige via Cloudflare Pages.</p>
             </div>
             
-            <p style="text-align: center; color: #6c757d;">
+            <p class="info-text">
                 Oppdateringsfiler vil bli generert automatisk når du lager en ny release.
             </p>
         </div>
         
         <div class="footer">
-            <p><strong>Update URL:</strong> https://suppliers-anx.pages.dev/</p>
+            <p><strong>Update URL:</strong> <a href="https://suppliers-anx.pages.dev/" class="update-url">https://suppliers-anx.pages.dev/</a></p>
             <p><small>Levert av Cloudflare Pages • Rask og pålitelig distribusjon</small></p>
         </div>
     </div>
@@ -123,5 +155,9 @@ fs.writeFileSync(path.join(cloudflareDir, "_redirects"), redirectsContent);
 console.log("✅ Generated _redirects for Cloudflare Pages");
 
 console.log("\n🎉 Cloudflare Pages setup complete!");
-console.log("📝 Your site should now be available at: https://suppliers-anx.pages.dev/");
-console.log("📝 Update files will be generated automatically when you create releases.");
+console.log(
+  "📝 Your site should now be available at: https://suppliers-anx.pages.dev/"
+);
+console.log(
+  "📝 Update files will be generated automatically when you create releases."
+);
