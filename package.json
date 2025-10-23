@@ -91,7 +91,8 @@
       "shortcutName": "OneMed SupplyChain",
       "deleteAppDataOnUninstall": false,
       "displayLanguageSelector": false,
-      "include": "resources/installer.nsh"
+      "include": "resources/installer.nsh",
+      "warningsAsErrors": false
     }
   },
   "keywords": [],
