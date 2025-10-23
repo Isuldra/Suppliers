@@ -31,7 +31,7 @@
     "rebuild-sharp": "npm rebuild sharp --runtime=electron --target=36.5.0 --dist-url=https://electronjs.org/headers",
     "prebuild": "npm run build:email-template",
     "build:email-template": "node --loader ts-node/esm scripts/buildEmailTemplate.ts",
-    "deploy:cloudflare": "node scripts/deploy-to-cloudflare.js",
+    "deploy:cloudflare": "node scripts/simple-cloudflare-deploy.js",
     "security-check": "node scripts/security-check.js",
     "security-audit": "npm audit --audit-level=moderate"
   },

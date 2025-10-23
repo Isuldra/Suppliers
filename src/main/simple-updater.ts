@@ -1,11 +1,8 @@
 import { dialog } from "electron";
 import { app, shell } from "electron";
-import path from "path";
-import fs from "fs";
 import https from "https";
 import http from "http";
-// eslint-disable-next-line @typescript-eslint/no-var-requires, @typescript-eslint/no-require-imports
-const log = require("electron-log/main");
+import log from "electron-log/main";
 
 const updateLogger = log.scope("simpleUpdater");
 
@@ -124,7 +121,13 @@ export class SimpleUpdater {
               const json = JSON.parse(data);
               resolve(json);
             } catch (error) {
-              reject(new Error("Invalid JSON response"));
+              reject(
+                new Error(
+                  `Invalid JSON response: ${
+                    error instanceof Error ? error.message : "Unknown error"
+                  }`
+                )
+              );
             }
           });
         })
