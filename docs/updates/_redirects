@@ -1,0 +1,7 @@
+# Cloudflare Pages redirects
+# Serve JSON files with correct content type
+/latest.json /latest.json 200
+/app-update.json /app-update.json 200
+
+# Redirect root to index.html
+/ /index.html 200
