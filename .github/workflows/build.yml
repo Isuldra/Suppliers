@@ -61,7 +61,10 @@ jobs:
         run: npm ci
 
       - name: Build Application
-        run: npm run dist
+        shell: pwsh
+        run: |
+          Write-Host "Building application..."
+          npm run dist
 
       - name: Exclude build directories from Windows Defender
         if: runner.os == 'Windows'

@@ -20,6 +20,7 @@ Before publishing an update, ensure you have:
 1. **GitHub Access**: Write access to the GitHub repository where releases are hosted.
 2. **Version Control**: All changes for the release are committed and pushed to the main branch.
 3. **Clean Working Directory**: No uncommitted changes locally.
+4. **Node.js 22**: The CI/CD pipeline uses Node.js 22 to avoid EBADENGINE warnings with modern dependencies.
 
 ## Automated Publishing Process
 
@@ -100,6 +101,7 @@ If portable users don't receive update notifications:
 2. **Verify file format**: The latest.yml should contain correct SHA512 hash and file size
 3. **Check GitHub access**: Ensure users can access GitHub.com
 4. **Review logs**: Check the application logs for update-related errors
+5. **Verify Node.js version**: Ensure CI/CD uses Node.js 22 (check GitHub Actions logs for EBADENGINE warnings)
 
 ### Common Issues
 
