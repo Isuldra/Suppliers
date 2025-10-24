@@ -69,8 +69,8 @@ function isPortableVersion(): boolean {
 function setupPortableUpdater() {
   updateLogger.info("Konfigurerer portable auto-updater...");
 
-  // Configure for portable - disable automatic installation
-  autoUpdater.autoDownload = false;
+  // Configure for portable - enable automatic download but manual installation
+  autoUpdater.autoDownload = true;
   autoUpdater.autoInstallOnAppQuit = false;
   // Disable differential downloads to avoid 404 errors with missing old versions
   (
@@ -87,30 +87,23 @@ function setupPortableUpdater() {
     updateLogger.info("Ingen nye oppdateringer tilgjengelig (portable):", info);
   }) as (...args: unknown[]) => void);
 
-  // Update available - show custom dialog for portable
+  // Update available - automatically download for portable
   autoUpdater.on("update-available", ((info: UpdateInfo) => {
     updateLogger.info("Ny oppdatering tilgjengelig (portable):", info);
 
+    // Show notification that download is starting
     dialog
       .showMessageBox({
         type: "info",
         title: "Oppdatering tilgjengelig",
         message: `En ny versjon (${info.version}) av OneMed SupplyChain er tilgjengelig`,
         detail:
-          "Vil du laste ned oppdateringen nå? Du kan installere den manuelt når nedlastingen er ferdig.",
-        buttons: ["Last ned nå", "Last ned senere", "Åpne nedlastingsside"],
+          "Oppdateringen lastes ned automatisk. Du kan installere den manuelt når nedlastingen er ferdig.",
+        buttons: ["OK", "Åpne nedlastingsside"],
         defaultId: 0,
-        cancelId: 1,
       })
       .then((result) => {
-        if (result.response === 0) {
-          // Download update
-          updateLogger.info("Starter nedlasting av oppdatering...");
-          autoUpdater.downloadUpdate().catch((err: Error) => {
-            updateLogger.error("Feil ved nedlasting:", err);
-            showPortableUpdateError(err);
-          });
-        } else if (result.response === 2) {
+        if (result.response === 1) {
           // Open download page
           const downloadUrl =
             "https://github.com/Isuldra/Suppliers/releases/latest";
@@ -119,6 +112,9 @@ function setupPortableUpdater() {
           });
         }
       });
+
+    // Automatically start download
+    updateLogger.info("Starter automatisk nedlasting av oppdatering...");
   }) as (...args: unknown[]) => void);
 
   // Handle download progress
@@ -241,6 +237,15 @@ export function setupAutoUpdater() {
     return;
   }
 
+  // Configure update server URL to use Cloudflare Pages
+  autoUpdater.setFeedURL({
+    provider: "generic",
+    url: "https://suppliers-anx.pages.dev/",
+  });
+  updateLogger.info(
+    "Update server configured to use Cloudflare Pages: https://suppliers-anx.pages.dev/"
+  );
+
   // Check if running as portable version
   const isPortable = isPortableVersion();
 
@@ -281,7 +286,7 @@ export function setupAutoUpdater() {
  */
 function setupStandardUpdater() {
   // Standard configuration for installed versions
-  autoUpdater.autoDownload = false;
+  autoUpdater.autoDownload = true;
   autoUpdater.autoInstallOnAppQuit = true;
   // Disable differential downloads to avoid 404 errors with missing old versions
   (
@@ -310,6 +315,9 @@ function setupStandardUpdater() {
       detail: "Oppdateringen lastes ned og installeres automatisk...",
       buttons: ["OK"],
     });
+
+    // Automatically start download
+    updateLogger.info("Starter automatisk nedlasting av oppdatering...");
   }) as (...args: unknown[]) => void);
 
   // Håndtere nedlastningsfremdrift
@@ -324,19 +332,27 @@ function setupStandardUpdater() {
   autoUpdater.on("update-downloaded", ((info: UpdateInfo) => {
     updateLogger.info("Oppdatering lastet ned:", info);
 
+    // Show notification that update is ready and will install on next restart
     dialog
       .showMessageBox({
         type: "info",
-        title: "Installere oppdatering?",
-        message: `En ny versjon (${info.version}) er klar til å installeres`,
+        title: "Oppdatering klar",
+        message: `Versjon ${info.version} er lastet ned og klar`,
         detail:
-          "Vil du installere oppdateringen nå? Applikasjonen vil starte på nytt.",
-        buttons: ["Installer og restart", "Installer senere"],
+          "Oppdateringen vil installeres automatisk når du lukker applikasjonen. Du kan også installere nå.",
+        buttons: ["Installer nå", "Installer ved neste lukking"],
         defaultId: 0,
       })
       .then((returnValue) => {
         if (returnValue.response === 0) {
+          // Install immediately
+          updateLogger.info("Installerer oppdatering nå...");
           autoUpdater.quitAndInstall(false, true);
+        } else {
+          // Will install on app quit (autoInstallOnAppQuit is already true)
+          updateLogger.info(
+            "Oppdatering vil installeres ved neste lukking av applikasjonen"
+          );
         }
       });
   }) as (...args: unknown[]) => void);

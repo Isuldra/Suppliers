@@ -85,5 +85,5 @@ For teknisk support eller spørsmål, kontakt utviklingsteamet eller administrat
 
 ---
 
-**Versjon**: 1.1.7  
+**Versjon**: Se package.json for gjeldende versjon  
 **Sist oppdatert**: Juli 2024

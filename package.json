@@ -103,9 +103,13 @@
       "createStartMenuShortcut": true,
       "shortcutName": "OneMed SupplyChain",
       "deleteAppDataOnUninstall": false,
-      "displayLanguageSelector": false,
+      "displayLanguageSelector": true,
       "include": "resources/installer.nsh",
-      "warningsAsErrors": false
+      "warningsAsErrors": false,
+      "languages": [
+        "Norwegian",
+        "English"
+      ]
     }
   },
   "keywords": [],
