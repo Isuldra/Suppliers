@@ -1,0 +1,6 @@
+# Cloudflare Pages redirects
+# Serve latest.yml for auto-updates
+/latest.yml /latest.yml 200
+
+# Serve all other files normally
+/* /index.html 200
