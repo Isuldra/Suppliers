@@ -64,8 +64,9 @@
       "app": "dist"
     },
     "publish": {
-      "provider": "generic",
-      "url": "https://suppliers-anx.pages.dev/"
+      "provider": "github",
+      "owner": "Isuldra",
+      "repo": "Suppliers"
     },
     "win": {
       "target": [
