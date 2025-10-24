@@ -10,6 +10,7 @@ import {
   ColumnDef,
   getFilteredRowModel,
 } from "@tanstack/react-table";
+import { useTranslation } from "react-i18next";
 import { ExcelData, ExcelRow } from "../types/ExcelData";
 // import knownSuppliersData from "../data/suppliers.json"; // Unused for now
 import { DateFilterSettings } from "./DateFilter";
@@ -31,6 +32,7 @@ const DataReview: React.FC<DataReviewProps> = ({
   onNext,
   onPrevious,
 }) => {
+  const { t } = useTranslation();
   // Enhanced sorting state to support multiple columns
   const [sorting, setSorting] = React.useState<SortingState>([
     { id: "status", desc: true }, // Primary sort by status
@@ -154,7 +156,7 @@ const DataReview: React.FC<DataReviewProps> = ({
             checked={table.getIsAllRowsSelected()}
             onChange={table.getToggleAllRowsSelectedHandler()}
             className="rounded border-gray-300 text-primary focus:ring-primary"
-            aria-label="Velg alle rader"
+            aria-label={t("table.selectAllRows")}
           />
         ),
         cell: ({ row }) => (
@@ -163,7 +165,9 @@ const DataReview: React.FC<DataReviewProps> = ({
             checked={row.getIsSelected()}
             onChange={row.getToggleSelectedHandler()}
             className="rounded border-gray-300 text-primary focus:ring-primary"
-            aria-label={`Velg rad ${row.original.poNumber}`}
+            aria-label={t("table.selectRow", {
+              poNumber: row.original.poNumber,
+            })}
           />
         ),
         size: 50,
@@ -172,7 +176,7 @@ const DataReview: React.FC<DataReviewProps> = ({
       // Status column (new)
       columnHelper.accessor((row) => getOrderStatus(row), {
         id: "status",
-        header: "Status",
+        header: t("table.status"),
         size: 100,
         cell: (info) => (
           <div
@@ -185,10 +189,10 @@ const DataReview: React.FC<DataReviewProps> = ({
             }`}
           >
             {info.getValue() === "critical"
-              ? "Kritisk"
+              ? t("table.critical")
               : info.getValue() === "overdue"
-              ? "Forfalt"
-              : "Normal"}
+              ? t("table.overdue")
+              : t("table.normal")}
           </div>
         ),
       }),
@@ -196,7 +200,7 @@ const DataReview: React.FC<DataReviewProps> = ({
       // Due Date column (enhanced)
       columnHelper.accessor((row) => row.dueDate, {
         id: "dueDate",
-        header: "Forfallsdato",
+        header: t("table.dueDate"),
         size: 120,
         cell: (info) => {
           const date = info.getValue();
@@ -207,33 +211,33 @@ const DataReview: React.FC<DataReviewProps> = ({
       }),
 
       columnHelper.accessor("poNumber", {
-        header: "PO-nummer",
+        header: t("table.poNumber"),
         size: 100,
         cell: (info) => info.getValue() || "-",
       }),
       columnHelper.accessor("itemNo", {
-        header: "OneMed varenummer",
+        header: t("table.itemNumber"),
         cell: (info) => info.getValue() || "-",
         size: 120,
       }),
       columnHelper.accessor("description", {
-        header: "Leverandørs artikkelnummer",
+        header: t("table.supplierArticleNumber"),
         cell: (info) => info.getValue() || "-",
         size: 150,
       }),
       columnHelper.accessor("specification", {
-        header: "Kommentar",
+        header: t("table.comment"),
         cell: (info) => info.getValue() || "-",
         size: 150,
       }),
       columnHelper.accessor("orderRowNumber", {
-        header: "Ordrerad",
+        header: t("table.orderRow"),
         cell: (info) => info.getValue() || "-",
         size: 100,
       }),
       columnHelper.accessor((row) => row.orderQty - row.receivedQty, {
         id: "outstandingQty",
-        header: "Utestående",
+        header: t("table.outstanding"),
         size: 100,
         cell: (info) => (
           <div
@@ -246,7 +250,7 @@ const DataReview: React.FC<DataReviewProps> = ({
         ),
       }),
       columnHelper.accessor("key", {
-        header: "Nøkkel",
+        header: t("table.key"),
         size: 150,
         cell: (info) => (
           <div className="truncate max-w-[150px]" title={info.getValue()}>
@@ -331,14 +335,12 @@ const DataReview: React.FC<DataReviewProps> = ({
   if (!excelData || !selectedSupplier) {
     return (
       <div className="p-6 bg-neutral-light border border-accent rounded-md shadow-sm">
-        <p className="text-neutral">
-          Ingen data tilgjengelig. Vennligst velg en leverandør først.
-        </p>
+        <p className="text-neutral">{t("dataReview.noDataAvailable")}</p>
         <button
           onClick={onPrevious}
           className="btn btn-secondary px-4 py-2 mt-4 rounded-sm font-medium ease-in-out bg-neutral-white text-primary border border-primary hover:bg-primary-light hover:text-neutral-white"
         >
-          Tilbake
+          {t("dataReview.back")}
         </button>
       </div>
     );
@@ -350,31 +352,36 @@ const DataReview: React.FC<DataReviewProps> = ({
         className="text-xl font-bold mb-4 text-neutral"
         id="data-review-heading"
       >
-        Gjennomgang av utestående ordre for {selectedSupplier}
+        {t("dataReview.reviewForSupplier", { supplier: selectedSupplier })}
       </h2>
 
       <div className="bg-neutral-white p-4 rounded-md shadow-sm mb-6 border border-neutral-light w-full">
         <div className="flex flex-wrap justify-between items-center mb-4">
           <div>
             <p className="text-neutral">
-              <span className="font-medium">Leverandør:</span>{" "}
+              <span className="font-medium">{t("dataReview.supplier")}</span>{" "}
               {selectedSupplier}
             </p>
             <p className="text-neutral mt-1">
-              <span className="font-medium">Ukedag:</span> {selectedWeekday}
+              <span className="font-medium">{t("dataReview.weekday")}</span>{" "}
+              {selectedWeekday}
             </p>
           </div>
           <div className="mt-2 sm:mt-0">
             <p className="text-neutral">
-              <span className="font-medium">Totalt antall:</span>{" "}
+              <span className="font-medium">{t("dataReview.totalCount")}</span>{" "}
               <span className="font-bold">{totalItems}</span>
             </p>
             <p className="text-neutral mt-1">
-              <span className="font-medium">Utestående ordre:</span>{" "}
+              <span className="font-medium">
+                {t("dataReview.outstandingOrders")}
+              </span>{" "}
               <span className="font-bold text-accent">{outstandingCount}</span>
             </p>
             <p className="text-neutral mt-1">
-              <span className="font-medium">Valgte for e-post:</span>{" "}
+              <span className="font-medium">
+                {t("dataReview.selectedForEmail")}
+              </span>{" "}
               <span className="font-bold text-primary">
                 {Object.values(rowSelection).filter(Boolean).length}
               </span>
@@ -388,13 +395,13 @@ const DataReview: React.FC<DataReviewProps> = ({
             onClick={() => table.toggleAllRowsSelected(true)}
             className="btn btn-sm btn-secondary px-4 py-2 rounded-sm font-medium ease-in-out bg-neutral-white text-primary border border-primary hover:bg-primary-light hover:text-neutral-white"
           >
-            Velg alle
+            {t("dataReview.selectAll")}
           </button>
           <button
             onClick={() => table.toggleAllRowsSelected(false)}
             className="btn btn-sm btn-secondary px-4 py-2 rounded-sm font-medium ease-in-out bg-neutral-white text-primary border border-primary hover:bg-primary-light hover:text-neutral-white"
           >
-            Velg ingen
+            {t("dataReview.selectNone")}
           </button>
           <button
             onClick={() => {
@@ -408,7 +415,7 @@ const DataReview: React.FC<DataReviewProps> = ({
             }}
             className="btn btn-sm btn-secondary px-4 py-2 rounded-sm font-medium ease-in-out bg-neutral-white text-primary border border-primary hover:bg-primary-light hover:text-neutral-white"
           >
-            Velg kun utestående
+            {t("dataReview.selectOutstandingOnly")}
           </button>
         </div>
       </div>
@@ -491,7 +498,7 @@ const DataReview: React.FC<DataReviewProps> = ({
                     colSpan={table.getAllColumns().length}
                     className="px-3 py-4 text-center text-neutral"
                   >
-                    Ingen data tilgjengelig
+                    {t("dataReview.noDataAvailable")}
                   </td>
                 </tr>
               ) : (
@@ -524,14 +531,16 @@ const DataReview: React.FC<DataReviewProps> = ({
       {/* Pagination controls */}
       <div className="flex items-center justify-between p-4 border border-neutral-light rounded-md bg-neutral-light">
         <div className="flex items-center space-x-2">
-          <span className="text-sm text-neutral">Vis</span>
+          <span className="text-sm text-neutral">
+            {t("dataReview.rowsPerPage")}
+          </span>
           <select
             value={table.getState().pagination.pageSize}
             onChange={(e) => {
               table.setPageSize(Number(e.target.value));
             }}
             className="form-control py-1 px-2 text-sm"
-            aria-label="Antall rader per side"
+            aria-label={t("dataReview.rowsPerPage")}
           >
             {[10, 25, 50, 100].map((pageSize) => (
               <option key={pageSize} value={pageSize}>
@@ -539,14 +548,16 @@ const DataReview: React.FC<DataReviewProps> = ({
               </option>
             ))}
           </select>
-          <span className="text-sm text-neutral">per side</span>
+          <span className="text-sm text-neutral">
+            {t("dataReview.perPage")}
+          </span>
         </div>
         <div className="flex items-center space-x-2">
           <button
             onClick={() => table.setPageIndex(0)}
             disabled={!table.getCanPreviousPage()}
             className="px-2 py-1 border border-neutral rounded-sm disabled:opacity-50 disabled:cursor-not-allowed text-neutral font-medium ease-in-out"
-            aria-label="Gå til første side"
+            aria-label={t("dataReview.goToFirst")}
             aria-disabled={!table.getCanPreviousPage()}
           >
             {"<<"}
@@ -555,7 +566,7 @@ const DataReview: React.FC<DataReviewProps> = ({
             onClick={() => table.previousPage()}
             disabled={!table.getCanPreviousPage()}
             className="px-2 py-1 border border-neutral rounded-sm disabled:opacity-50 disabled:cursor-not-allowed text-neutral font-medium ease-in-out"
-            aria-label="Gå til forrige side"
+            aria-label={t("dataReview.goToPrevious")}
             aria-disabled={!table.getCanPreviousPage()}
           >
             {"<"}
@@ -564,13 +575,14 @@ const DataReview: React.FC<DataReviewProps> = ({
             <span className="font-medium">
               {table.getState().pagination.pageIndex + 1}
             </span>{" "}
-            av <span className="font-medium">{table.getPageCount()}</span>
+            {t("dataReview.pageOf")}{" "}
+            <span className="font-medium">{table.getPageCount()}</span>
           </span>
           <button
             onClick={() => table.nextPage()}
             disabled={!table.getCanNextPage()}
             className="px-2 py-1 border border-neutral rounded-sm disabled:opacity-50 disabled:cursor-not-allowed text-neutral font-medium ease-in-out"
-            aria-label="Gå til neste side"
+            aria-label={t("dataReview.goToNext")}
             aria-disabled={!table.getCanNextPage()}
           >
             {">"}
@@ -579,7 +591,7 @@ const DataReview: React.FC<DataReviewProps> = ({
             onClick={() => table.setPageIndex(table.getPageCount() - 1)}
             disabled={!table.getCanNextPage()}
             className="px-2 py-1 border border-neutral rounded-sm disabled:opacity-50 disabled:cursor-not-allowed text-neutral font-medium ease-in-out"
-            aria-label="Gå til siste side"
+            aria-label={t("dataReview.goToLast")}
             aria-disabled={!table.getCanNextPage()}
           >
             {">>"}
@@ -603,11 +615,12 @@ const DataReview: React.FC<DataReviewProps> = ({
             onNext();
           }}
           className="btn btn-primary px-4 py-2 bg-primary text-neutral-white rounded-sm font-medium ease-in-out hover:bg-primary-dark"
-          aria-label="Gå videre til e-post"
+          aria-label={t("dataReview.sendEmail")}
           disabled={Object.values(rowSelection).filter(Boolean).length === 0}
         >
-          Send e-post ({Object.values(rowSelection).filter(Boolean).length}{" "}
-          valgte)
+          {t("dataReview.sendEmailSelected", {
+            count: Object.values(rowSelection).filter(Boolean).length,
+          })}
         </button>
       </div>
     </div>

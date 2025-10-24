@@ -1,0 +1,243 @@
+{
+  "app": {
+    "title": "OneMed SupplyChain",
+    "welcome": {
+      "title": "Välkommen till OneMed SupplyChain",
+      "description": "Ett verktyg för att skicka påminnelser till leverantörer om leveransdatum",
+      "getStarted": "Kom igång"
+    }
+  },
+  "navigation": {
+    "dashboard": "Instrumentpanel",
+    "keyboardShortcuts": "Kortkommandon",
+    "settings": "Inställningar"
+  },
+  "progress": {
+    "uploadFile": "Ladda upp fil",
+    "selectWeekday": "Välj veckodag",
+    "selectSupplier": "Välj leverantör",
+    "reviewData": "Granska data",
+    "sendEmail": "Skicka e-post"
+  },
+  "fileUpload": {
+    "title": "Ladda upp Excel-fil",
+    "fileLoaded": "Excel-fil uppladdad",
+    "rowsReady": "rader med data är redo för behandling",
+    "uploadNewFile": "Ladda upp ny fil",
+    "help": "Hjälp",
+    "helpAndResources": "Hjälp och resurser",
+    "documentation": "Dokumentation",
+    "checkUpdates": "Kontrollera uppdateringar",
+    "contactSupport": "Kontakta support",
+    "about": "Om OneMed SupplyChain",
+    "showLogs": "Visa loggar (felsökning)",
+    "dropFile": "Dra och släpp Excel-filen här, eller klicka för att välja fil",
+    "dropFileHere": "Släpp filen här...",
+    "fileRequirement": "Filen måste innehålla arket \"BP\" med data från rad 6",
+    "whatToDo": "Vad måste jag göra?",
+    "instruction1": "Ladda ner den senaste versionen av \"BP\"-arket från systemet.",
+    "instruction2": "Se till att du exporterar \"BP\"-arket som en .xlsx-fil med data från rad 6.",
+    "instruction3": "Arket måste innehålla kolumnerna C-P med PO-nummer, leverantörsinfo, ETA-datum och kvantiteter.",
+    "instruction4": "Dra och släpp filen här, eller klicka för att välja den.",
+    "errors": {
+      "couldNotOpenDocs": "Kunde inte öppna dokumentationen",
+      "errorOpeningDocs": "Fel vid öppning av dokumentation",
+      "couldNotOpenEmail": "Kunde inte öppna e-postklient",
+      "errorOpeningEmail": "Fel vid öppning av e-postklient",
+      "noFileSelected": "Ingen fil vald eller filtypen är ogiltig",
+      "validationError": "Valideringsfel",
+      "validationSuccessButDatabaseFailed": "Data validerat men databaslagring misslyckades",
+      "dataValidatedButNotSaved": "Data validerat men inte sparat i lokal databas"
+    },
+    "processing": {
+      "readingFile": "Läser fil...",
+      "validatingData": "Validerar data mot databas..."
+    },
+    "success": {
+      "importCompleted": "Import lyckades och data sparades i databasen"
+    }
+  },
+  "configuration": {
+    "title": "Konfiguration",
+    "weekday": "Veckodag",
+    "sendingMode": "Sändningsläge",
+    "singleSupplier": "Enskild leverantör",
+    "multipleSuppliers": "Flera leverantörer",
+    "supplier": "Leverantör",
+    "suppliers": "Leverantörer",
+    "sendingModeDescription": "Välj mellan enskild leverantör eller flera leverantörer"
+  },
+  "validation": {
+    "errors": "Fel vid validering:"
+  },
+  "keyboardShortcuts": {
+    "title": "Kortkommandon",
+    "reset": "Starta om",
+    "goBack": "Gå tillbaka ett steg",
+    "confirm": "Bekräfta val",
+    "navigate": "Navigera mellan fält",
+    "close": "Stäng"
+  },
+  "buttons": {
+    "close": "Stäng",
+    "save": "Spara",
+    "cancel": "Avbryt",
+    "next": "Nästa",
+    "back": "Tillbaka",
+    "complete": "Slutför"
+  },
+  "languages": {
+    "norwegian": "Norska",
+    "swedish": "Svenska",
+    "danish": "Danska",
+    "finnish": "Finska",
+    "english": "Engelska"
+  },
+  "weekdays": {
+    "monday": "Måndag",
+    "tuesday": "Tisdag",
+    "wednesday": "Onsdag",
+    "thursday": "Torsdag",
+    "friday": "Fredag"
+  },
+  "weekdaySelect": {
+    "title": "Välj veckodag",
+    "description": "Välj en veckodag för att se leverantörer som är planerade för den dagen.",
+    "noWeekdays": "Inga veckodagar hittades för denna planerare",
+    "weekdaysAvailable": "veckodagar tillgängliga",
+    "noSuppliersPlanned": "Det finns inga leverantörer planerade för denna planerare."
+  },
+  "supplierSelect": {
+    "title": "Välj leverantör",
+    "planner": "Inköpsplanerare:",
+    "selectedWeekday": "Vald veckodag:",
+    "description": "Visar endast leverantörer som är planerade för {weekday} och som har öppna beställningar.",
+    "searchPlaceholder": "Sök efter leverantör...",
+    "loadingSuppliers": "Laddar leverantörer med öppna beställningar...",
+    "loading": "Laddar...",
+    "suppliersFound": "leverantörer med öppna beställningar hittades",
+    "noSuppliersFound": "Inga leverantörer med öppna beställningar hittades för denna veckodag"
+  },
+  "dataReview": {
+    "title": "Granska data",
+    "reviewOrderLines": "Granska orderrader",
+    "reviewForSupplier": "Granskning av utestående beställningar för {supplier}",
+    "supplier": "Leverantör:",
+    "weekday": "Veckodag:",
+    "totalCount": "Totalt antal:",
+    "outstandingOrders": "Utestående beställningar:",
+    "selectedForEmail": "Valda för e-post:",
+    "selectAll": "Välj alla",
+    "selectNone": "Välj inga",
+    "selectOutstandingOnly": "Välj endast utestående",
+    "noDataAvailable": "Ingen data tillgänglig. Välj först en leverantör.",
+    "back": "Tillbaka",
+    "sendEmail": "Skicka e-post",
+    "sendEmailSelected": "Skicka e-post ({count} valda)",
+    "rowsPerPage": "Antal rader per sida",
+    "perPage": "per sida",
+    "goToFirst": "Gå till första sidan",
+    "goToPrevious": "Gå till föregående sida",
+    "goToNext": "Gå till nästa sida",
+    "goToLast": "Gå till sista sidan",
+    "pageOf": "av"
+  },
+  "table": {
+    "selectAllRows": "Välj alla rader",
+    "selectRow": "Välj rad {poNumber}",
+    "status": "Status",
+    "critical": "Kritisk",
+    "overdue": "Förfallen",
+    "normal": "Normal",
+    "dueDate": "Förfallodatum",
+    "poNumber": "PO-nummer",
+    "itemNumber": "OneMed artikelnummer",
+    "supplierArticleNumber": "Leverantörens artikelnummer",
+    "comment": "Kommentar",
+    "orderRow": "Beställningsrad",
+    "outstanding": "Utestående",
+    "key": "Nyckel"
+  },
+  "email": {
+    "title": "Skicka e-post",
+    "previewAndSend": "E-post förhandsvisning och sändning",
+    "sendButton": "Skicka e-post",
+    "sendingEmails": "Skickar e-postmeddelanden...",
+    "emailsSent": "E-postmeddelanden skickade framgångsrikt",
+    "emailError": "Fel vid sändning av e-postmeddelanden. Försök igen."
+  },
+  "bulkSupplierSelect": {
+    "loading": "Laddar leverantörer...",
+    "planner": "Inköpsplanerare:",
+    "selectedWeekday": "Vald veckodag:",
+    "description": "Välj leverantörer som ska få påminnelser om utestående beställningar",
+    "mixedLanguageWarning": "Varning: Du har valt leverantörer med olika språk. E-postmeddelanden kommer att skickas på rätt språk per leverantör.",
+    "removeAll": "Ta bort alla",
+    "selectAll": "Välj alla",
+    "suppliersSelected": "leverantörer valda",
+    "tableHeaders": {
+      "select": "Välj",
+      "supplier": "Leverantör",
+      "outstandingLines": "Antal kvarvarande rader",
+      "email": "E-postadress",
+      "language": "Språk",
+      "details": "Detaljer"
+    },
+    "unselect": "Avmarkera",
+    "select": "Välj",
+    "show": "Visa",
+    "outstandingOrdersFor": "Utestående beställningar för {supplier}",
+    "noSuppliersFound": "Inga leverantörer med utestående beställningar hittades för denna veckodag",
+    "summary": "Sammanfattning",
+    "totalOutstandingLines": "utestående beställningsrader totalt (exkluderade rader inkluderas inte)",
+    "mixedLanguageInfo": "Blandade språk: E-postmeddelanden kommer att skickas på rätt språk per leverantör"
+  },
+  "bulkDataReview": {
+    "title": "Granska och välj beställningsrader",
+    "suppliers": "Leverantörer:",
+    "totalOrderLines": "Totalt antal beställningsrader:",
+    "selectedOrderLines": "Valda beställningsrader:",
+    "mixedLanguageWarning": "Varning: Blandade språk upptäcktes. E-postmeddelanden kommer att skickas på rätt språk per leverantör.",
+    "selected": "valda",
+    "removeAll": "Ta bort alla",
+    "selectAll": "Välj alla",
+    "goToEmailPreview": "Gå till e-post förhandsvisning →",
+    "validationNote": "Obs: Alla leverantörer måste ha minst en vald beställningsrad",
+    "backToSupplierSelection": "Tillbaka till leverantörsval",
+    "tableHeaders": {
+      "select": "Inkludera",
+      "poNumber": "PO-nr",
+      "oneMedNumber": "OneMed nr",
+      "description": "Beskrivning",
+      "specification": "Specifikation",
+      "ordered": "Beställt",
+      "received": "Mottaget",
+      "outstanding": "Utestående",
+      "eta": "ETA"
+    }
+  },
+  "bulkEmailPreview": {
+    "noEmailProvided": "Ingen e-postadress angiven",
+    "allEmailsSentSuccess": "Alla {count} e-postmeddelanden skickades framgångsrikt!",
+    "partialSuccess": "{success} e-postmeddelanden skickades framgångsrikt, {failed} misslyckades.",
+    "allEmailsFailed": "Alla {count} e-postmeddelanden misslyckades. Kontrollera felmeddelandena och försök igen.",
+    "preparingData": "Förbereder e-postdata...",
+    "title": "E-post förhandsvisning och sändning",
+    "suppliers": "Leverantörer:",
+    "orderLines": "Beställningsrader:",
+    "emails": "E-postmeddelanden:",
+    "mixedLanguageInfo": "Info: Blandade språk upptäcktes. E-postmeddelanden kommer att skickas på rätt språk per leverantör.",
+    "sendingEmails": "Skickar e-postmeddelanden... ({current} av {total})",
+    "sending": "Skickar...",
+    "sent": "✓ Skickat",
+    "failed": "✗ Misslyckades",
+    "previewDisabled": "Förhandsvisning inaktiverad för bättre prestanda",
+    "preview": "Förhandsvis",
+    "emailAddress": "E-postadress:",
+    "resetToDefault": "Återställ till standard",
+    "noEmailWarning": "⚠️ Ingen e-postadress angiven - e-postmeddelande kommer inte att skickas",
+    "error": "Fel:",
+    "backToOrderSelection": "← Tillbaka till beställningsval",
+    "sendAll": "Skicka alla e-postmeddelanden"
+  }
+}
