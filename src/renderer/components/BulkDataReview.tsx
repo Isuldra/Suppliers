@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { ChevronDownIcon, ChevronRightIcon } from "@heroicons/react/24/outline";
 import { ExcelRow } from "../types/ExcelData";
 import supplierData from "../data/supplierData.json";
@@ -35,6 +36,7 @@ const BulkDataReview: React.FC<BulkDataReviewProps> = ({
   onNext,
   onBack,
 }) => {
+  const { t } = useTranslation();
   const [supplierOrders, setSupplierOrders] = useState<SupplierOrders[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [expandedSuppliers, setExpandedSuppliers] = useState<Set<string>>(
@@ -184,30 +186,31 @@ const BulkDataReview: React.FC<BulkDataReviewProps> = ({
       {/* Header with summary */}
       <div className="mb-6 p-4 bg-primary-light bg-opacity-10 border border-primary-light rounded-md">
         <h2 className="text-lg font-medium text-primary mb-2">
-          Gjennomgå og velg ordrelinjer
+          {t("bulkDataReview.title")}
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
           <div>
-            <span className="font-medium text-neutral">Leverandører:</span>{" "}
+            <span className="font-medium text-neutral">
+              {t("bulkDataReview.suppliers")}
+            </span>{" "}
             {totals.totalSuppliers}
           </div>
           <div>
             <span className="font-medium text-neutral">
-              Totale ordrelinjer:
+              {t("bulkDataReview.totalOrderLines")}
             </span>{" "}
             {totals.totalOrders}
           </div>
           <div>
             <span className="font-medium text-primary">
-              Valgte ordrelinjer:
+              {t("bulkDataReview.selectedOrderLines")}
             </span>{" "}
             {totals.selectedOrders}
           </div>
         </div>
         {hasMixedLanguages && (
           <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-sm text-yellow-800">
-            <strong>Advarsel:</strong> Blandet språk oppdaget. E-poster vil
-            sendes med riktig språk per leverandør.
+            {t("bulkDataReview.mixedLanguageWarning")}
           </div>
         )}
       </div>
@@ -251,7 +254,7 @@ const BulkDataReview: React.FC<BulkDataReviewProps> = ({
                 <div className="flex items-center space-x-4">
                   <span className="text-sm text-neutral-secondary">
                     {supplierData.selectedOrders.size} av{" "}
-                    {supplierData.orders.length} valgt
+                    {supplierData.orders.length} {t("bulkDataReview.selected")}
                   </span>
 
                   <button
@@ -267,8 +270,8 @@ const BulkDataReview: React.FC<BulkDataReviewProps> = ({
                   >
                     {supplierData.selectedOrders.size ===
                     supplierData.orders.length
-                      ? "Fjern alle"
-                      : "Velg alle"}
+                      ? t("bulkDataReview.removeAll")
+                      : t("bulkDataReview.selectAll")}
                   </button>
                 </div>
               </div>
@@ -296,14 +299,30 @@ const BulkDataReview: React.FC<BulkDataReviewProps> = ({
                             className="h-4 w-4 text-primary focus:ring-primary border-neutral-light rounded"
                           />
                         </th>
-                        <th className="text-left py-2 px-2">PO-nr</th>
-                        <th className="text-left py-2 px-2">OneMed nr</th>
-                        <th className="text-left py-2 px-2">Beskrivelse</th>
-                        <th className="text-left py-2 px-2">Spesifikasjon</th>
-                        <th className="text-center py-2 px-2">Bestilt</th>
-                        <th className="text-center py-2 px-2">Mottatt</th>
-                        <th className="text-center py-2 px-2">Utestående</th>
-                        <th className="text-left py-2 px-2">ETA</th>
+                        <th className="text-left py-2 px-2">
+                          {t("bulkDataReview.tableHeaders.poNumber")}
+                        </th>
+                        <th className="text-left py-2 px-2">
+                          {t("bulkDataReview.tableHeaders.oneMedNumber")}
+                        </th>
+                        <th className="text-left py-2 px-2">
+                          {t("bulkDataReview.tableHeaders.description")}
+                        </th>
+                        <th className="text-left py-2 px-2">
+                          {t("bulkDataReview.tableHeaders.specification")}
+                        </th>
+                        <th className="text-center py-2 px-2">
+                          {t("bulkDataReview.tableHeaders.ordered")}
+                        </th>
+                        <th className="text-center py-2 px-2">
+                          {t("bulkDataReview.tableHeaders.received")}
+                        </th>
+                        <th className="text-center py-2 px-2">
+                          {t("bulkDataReview.tableHeaders.outstanding")}
+                        </th>
+                        <th className="text-left py-2 px-2">
+                          {t("bulkDataReview.tableHeaders.eta")}
+                        </th>
                       </tr>
                     </thead>
                     <tbody>
@@ -364,7 +383,7 @@ const BulkDataReview: React.FC<BulkDataReviewProps> = ({
       {/* Action buttons */}
       <div className="mt-6 flex justify-between">
         <button onClick={onBack} className="btn btn-secondary">
-          ← Tilbake til leverandørvalg
+          ← {t("bulkDataReview.backToSupplierSelection")}
         </button>
 
         <button
@@ -386,7 +405,7 @@ const BulkDataReview: React.FC<BulkDataReviewProps> = ({
           className="btn btn-primary"
           disabled={!allSuppliersHaveOrders || totals.selectedOrders === 0}
         >
-          Gå til e-post forhåndsvisning →
+          {t("bulkDataReview.goToEmailPreview")}
         </button>
       </div>
 
@@ -394,8 +413,7 @@ const BulkDataReview: React.FC<BulkDataReviewProps> = ({
       {!allSuppliersHaveOrders && (
         <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-md">
           <p className="text-sm text-red-800">
-            <strong>Merk:</strong> Alle leverandører må ha minst én valgt
-            ordrelinje for å fortsette.
+            {t("bulkDataReview.validationNote")}
           </p>
         </div>
       )}

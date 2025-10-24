@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { EyeIcon, PaperAirplaneIcon } from "@heroicons/react/24/outline";
 import { EmailService, EmailData } from "../services/emailService";
 import { ExcelRow } from "../types/ExcelData";
 import supplierData from "../data/supplierData.json";
+import EmailPreviewModal from "./EmailPreviewModal";
 
 interface BulkEmailPreviewProps {
   selectedSuppliers: string[];
@@ -39,16 +41,17 @@ const BulkEmailPreview: React.FC<BulkEmailPreviewProps> = ({
   onBack,
   onComplete,
 }) => {
+  const { t } = useTranslation();
   const [emailPreviewData, setEmailPreviewData] = useState<EmailPreviewData[]>(
     []
   );
   const [isLoading, setIsLoading] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [sendingProgress, setSendingProgress] = useState(0);
-  // Preview functionality disabled for performance
-  // const [showPreviewModal, setShowPreviewModal] = useState(false);
-  // const [previewSupplier, setPreviewSupplier] = useState<string | null>(null);
-  // const [previewHtml, setPreviewHtml] = useState<string>("");
+  // Preview functionality
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
+  const [previewSupplier, setPreviewSupplier] = useState<string | null>(null);
+  const [previewHtml, setPreviewHtml] = useState<string>("");
   const [customEmails, setCustomEmails] = useState<Map<string, string>>(
     new Map()
   );
@@ -175,10 +178,42 @@ const BulkEmailPreview: React.FC<BulkEmailPreviewProps> = ({
     return defaultEmail;
   };
 
-  // Preview email for a supplier - DISABLED for performance
-  const handlePreviewEmail = async (_supplier: string) => {
-    // Preview functionality disabled to improve performance
-    console.log("Preview disabled for performance reasons");
+  // Preview email for a supplier
+  const handlePreviewEmail = async (supplier: string) => {
+    const supplierData = emailPreviewData.find((s) => s.supplier === supplier);
+    if (!supplierData) return;
+
+    const emailData: EmailData = {
+      supplier: supplierData.supplier,
+      recipientEmail: getEmailForSupplier(
+        supplierData.supplier,
+        supplierData.email
+      ),
+      orders: supplierData.orders.map((order) => ({
+        key: order.key,
+        poNumber: order.poNumber,
+        itemNo: order.itemNo || "",
+        description: order.description || "",
+        specification: order.specification || "",
+        orderQty: order.orderQty,
+        receivedQty: order.receivedQty,
+        estReceiptDate: order.dueDate
+          ? new Date(order.dueDate).toLocaleDateString("nb-NO")
+          : "Ikke spesifisert",
+        outstandingQty: order.outstandingQty,
+        orderRowNumber: order.orderRowNumber,
+      })),
+      language: supplierData.language,
+      subject:
+        supplierData.language === "no"
+          ? `Purring på manglende leveranser – ${supplierData.supplier}`
+          : `Reminder: Outstanding Deliveries – ${supplierData.supplier}`,
+    };
+
+    const html = emailService.generatePreview(emailData);
+    setPreviewHtml(html);
+    setPreviewSupplier(supplier);
+    setShowPreviewModal(true);
   };
 
   // Send all emails using optimized batch function
@@ -220,7 +255,7 @@ const BulkEmailPreview: React.FC<BulkEmailPreviewProps> = ({
                       isSending: false,
                       sendResult: {
                         success: false,
-                        error: "Ingen e-postadresse angitt",
+                        error: t("bulkEmailPreview.noEmailProvided"),
                       },
                     }
                   : s
@@ -299,18 +334,23 @@ const BulkEmailPreview: React.FC<BulkEmailPreviewProps> = ({
 
       // Show completion message
       if (successCount === totalEmails) {
-        alert(`Alle ${successCount} e-poster ble sendt vellykket!`);
+        alert(
+          t("bulkEmailPreview.allEmailsSentSuccess", { count: successCount })
+        );
         onComplete();
       } else if (successCount > 0) {
-        alert(`${successCount} e-poster sendt vellykket, ${failCount} feilet.`);
-      } else {
         alert(
-          `Alle ${failCount} e-poster feilet. Sjekk feilmeldingene og prøv igjen.`
+          t("bulkEmailPreview.partialSuccess", {
+            success: successCount,
+            failed: failCount,
+          })
         );
+      } else {
+        alert(t("bulkEmailPreview.allEmailsFailed", { count: failCount }));
       }
     } catch (error) {
       console.error("Error in bulk email sending:", error);
-      alert("Feil ved sending av e-poster. Prøv igjen.");
+      alert(t("email.emailError"));
     } finally {
       setIsSending(false);
       setSendingProgress(0);
@@ -354,7 +394,7 @@ const BulkEmailPreview: React.FC<BulkEmailPreviewProps> = ({
         <div className="flex items-center justify-center p-8">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
           <span className="ml-2 text-neutral-secondary">
-            Forbereder e-postdata...
+            {t("bulkEmailPreview.preparingData")}
           </span>
         </div>
       </div>
@@ -366,26 +406,31 @@ const BulkEmailPreview: React.FC<BulkEmailPreviewProps> = ({
       {/* Header with summary */}
       <div className="mb-6 p-4 bg-primary-light bg-opacity-10 border border-primary-light rounded-md">
         <h2 className="text-lg font-medium text-primary mb-2">
-          E-post forhåndsvisning og sending
+          {t("bulkEmailPreview.title")}
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
           <div>
-            <span className="font-medium text-neutral">Leverandører:</span>{" "}
+            <span className="font-medium text-neutral">
+              {t("bulkEmailPreview.suppliers")}
+            </span>{" "}
             {totals.totalSuppliers}
           </div>
           <div>
-            <span className="font-medium text-neutral">Ordrelinjer:</span>{" "}
+            <span className="font-medium text-neutral">
+              {t("bulkEmailPreview.orderLines")}
+            </span>{" "}
             {totals.totalOrders}
           </div>
           <div>
-            <span className="font-medium text-primary">E-poster:</span>{" "}
+            <span className="font-medium text-primary">
+              {t("bulkEmailPreview.emails")}
+            </span>{" "}
             {totals.totalSuppliers}
           </div>
         </div>
         {hasMixedLanguages && (
           <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-sm text-yellow-800">
-            <strong>Info:</strong> Blandet språk oppdaget. E-poster vil sendes
-            med riktig språk per leverandør.
+            {t("bulkEmailPreview.mixedLanguageInfo")}
           </div>
         )}
       </div>
@@ -395,8 +440,10 @@ const BulkEmailPreview: React.FC<BulkEmailPreviewProps> = ({
         <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-md">
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm font-medium text-blue-800">
-              Sender e-poster... ({totals.sendingCount} av{" "}
-              {totals.totalSuppliers})
+              {t("bulkEmailPreview.sendingEmails", {
+                current: totals.sendingCount,
+                total: totals.totalSuppliers,
+              })}
             </span>
             <span className="text-sm text-blue-600">
               {Math.round(sendingProgress)}%
@@ -446,7 +493,9 @@ const BulkEmailPreview: React.FC<BulkEmailPreviewProps> = ({
                 {supplierData.isSending && (
                   <div className="flex items-center text-blue-600">
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
-                    <span className="text-sm">Sender...</span>
+                    <span className="text-sm">
+                      {t("bulkEmailPreview.sending")}
+                    </span>
                   </div>
                 )}
 
@@ -459,20 +508,26 @@ const BulkEmailPreview: React.FC<BulkEmailPreviewProps> = ({
                     }`}
                   >
                     <span className="text-sm font-medium">
-                      {supplierData.sendResult.success ? "✓ Sendt" : "✗ Feilet"}
+                      {supplierData.sendResult.success
+                        ? t("bulkEmailPreview.sent")
+                        : t("bulkEmailPreview.failed")}
                     </span>
                   </div>
                 )}
 
-                {/* Preview button - DISABLED for performance */}
+                {/* Preview button */}
                 <button
                   onClick={() => handlePreviewEmail(supplierData.supplier)}
-                  className="btn btn-secondary btn-sm opacity-50 cursor-not-allowed"
-                  disabled={true}
-                  title="Forhåndsvisning deaktivert for bedre ytelse"
+                  className="btn btn-secondary btn-sm"
+                  disabled={supplierData.isSending}
+                  title={
+                    supplierData.isSending
+                      ? t("bulkEmailPreview.sending")
+                      : t("bulkEmailPreview.preview")
+                  }
                 >
                   <EyeIcon className="h-4 w-4 mr-1" />
-                  Forhåndsvis (deaktivert)
+                  {t("bulkEmailPreview.preview")}
                 </button>
               </div>
             </div>
@@ -481,7 +536,7 @@ const BulkEmailPreview: React.FC<BulkEmailPreviewProps> = ({
             <div className="mt-3 pt-3 border-t border-neutral-light">
               <div className="flex items-center justify-between mb-1">
                 <label className="block text-sm font-medium text-neutral">
-                  E-postadresse:
+                  {t("bulkEmailPreview.emailAddress")}
                 </label>
                 {(customEmails.has(supplierData.supplier) ||
                   bulkSupplierEmails?.has(supplierData.supplier)) && (
@@ -496,7 +551,7 @@ const BulkEmailPreview: React.FC<BulkEmailPreviewProps> = ({
                       supplierData.isSending || supplierData.sendResult?.success
                     }
                   >
-                    Tilbakestill til standard
+                    {t("bulkEmailPreview.resetToDefault")}
                   </button>
                 )}
               </div>
@@ -535,7 +590,7 @@ const BulkEmailPreview: React.FC<BulkEmailPreviewProps> = ({
                   supplierData.email
                 ).trim() === "") && (
                 <p className="text-xs text-red-600 mt-1">
-                  ⚠️ Ingen e-postadresse angitt - e-post vil ikke bli sendt
+                  {t("bulkEmailPreview.noEmailWarning")}
                 </p>
               )}
             </div>
@@ -543,7 +598,8 @@ const BulkEmailPreview: React.FC<BulkEmailPreviewProps> = ({
             {/* Error message */}
             {supplierData.sendResult && !supplierData.sendResult.success && (
               <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded text-sm text-red-800">
-                <strong>Feil:</strong> {supplierData.sendResult.error}
+                <strong>{t("bulkEmailPreview.error")}</strong>{" "}
+                {supplierData.sendResult.error}
               </div>
             )}
           </div>
@@ -557,7 +613,7 @@ const BulkEmailPreview: React.FC<BulkEmailPreviewProps> = ({
           className="btn btn-secondary"
           disabled={isSending}
         >
-          ← Tilbake til ordrevalg
+          {t("bulkEmailPreview.backToOrderSelection")}
         </button>
 
         <button
@@ -567,12 +623,62 @@ const BulkEmailPreview: React.FC<BulkEmailPreviewProps> = ({
         >
           <PaperAirplaneIcon className="h-4 w-4 mr-2" />
           {isSending
-            ? "Sender..."
-            : `Send alle ${totals.totalSuppliers} e-poster`}
+            ? t("bulkEmailPreview.sending")
+            : t("bulkEmailPreview.sendAll")}
         </button>
       </div>
 
-      {/* Email Preview Modal - DISABLED for performance */}
+      {/* Email Preview Modal */}
+      {showPreviewModal && previewSupplier && (
+        <EmailPreviewModal
+          emailData={{
+            supplier: previewSupplier,
+            recipientEmail: getEmailForSupplier(
+              previewSupplier,
+              emailPreviewData.find((s) => s.supplier === previewSupplier)
+                ?.email || ""
+            ),
+            orders:
+              emailPreviewData
+                .find((s) => s.supplier === previewSupplier)
+                ?.orders.map((order) => ({
+                  key: order.key,
+                  poNumber: order.poNumber,
+                  itemNo: order.itemNo || "",
+                  description: order.description || "",
+                  specification: order.specification || "",
+                  orderQty: order.orderQty,
+                  receivedQty: order.receivedQty,
+                  estReceiptDate: order.dueDate
+                    ? new Date(order.dueDate).toLocaleDateString("nb-NO")
+                    : "Ikke spesifisert",
+                  outstandingQty: order.outstandingQty,
+                  orderRowNumber: order.orderRowNumber,
+                })) || [],
+            language:
+              emailPreviewData.find((s) => s.supplier === previewSupplier)
+                ?.language || "no",
+            subject:
+              emailPreviewData.find((s) => s.supplier === previewSupplier)
+                ?.language === "no"
+                ? `Purring på manglende leveranser – ${previewSupplier}`
+                : `Reminder: Outstanding Deliveries – ${previewSupplier}`,
+          }}
+          previewHtml={previewHtml}
+          onSend={() => {
+            // In bulk mode, we don't send individual emails from the preview modal
+            // The user should use the "Send All" button instead
+            setShowPreviewModal(false);
+          }}
+          onCancel={() => setShowPreviewModal(false)}
+          onChangeLanguage={() => {
+            // Language change not supported in bulk mode preview
+          }}
+          onChangeRecipient={() => {
+            // Recipient change not supported in bulk mode preview
+          }}
+        />
+      )}
     </div>
   );
 };

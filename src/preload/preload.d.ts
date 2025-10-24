@@ -185,6 +185,13 @@ interface ElectronAPI {
     path?: string;
     error?: string;
   }>;
+
+  // System language detection
+  getSystemLanguage: () => Promise<{
+    locale: string;
+    systemLocale: string;
+    preferredLanguages: string[];
+  }>;
 }
 
 // Extend the global Window interface

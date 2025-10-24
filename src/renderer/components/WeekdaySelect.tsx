@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import supplyPlannersData from "../data/supplyPlanners.json";
 
 interface WeekdaySelectProps {
@@ -23,6 +24,7 @@ const WeekdaySelect: React.FC<WeekdaySelectProps> = ({
   currentWeekday,
   selectedPlanner,
 }) => {
+  const { t } = useTranslation();
   const [selectedWeekday, setSelectedWeekday] = useState<string>(
     currentWeekday || ""
   );
@@ -66,6 +68,18 @@ const WeekdaySelect: React.FC<WeekdaySelectProps> = ({
 
     fetchImportedWeekdays();
   }, [selectedPlanner]);
+
+  // Function to translate weekday names
+  const translateWeekday = (weekday: string): string => {
+    const weekdayMap: { [key: string]: string } = {
+      Mandag: t("weekdays.monday"),
+      Tirsdag: t("weekdays.tuesday"),
+      Onsdag: t("weekdays.wednesday"),
+      Torsdag: t("weekdays.thursday"),
+      Fredag: t("weekdays.friday"),
+    };
+    return weekdayMap[weekday] || weekday;
+  };
 
   // Get available weekdays for the selected planner
   const availableWeekdays = useMemo<Weekday[]>(() => {
@@ -124,15 +138,17 @@ const WeekdaySelect: React.FC<WeekdaySelectProps> = ({
   return (
     <div className="w-full">
       <p className="mb-4 text-neutral-secondary">
-        Velg en ukedag for å se leverandører som er planlagt for den dagen.
+        {t("weekdaySelect.description")}
       </p>
 
       <div className="mb-6">
         <div className="bg-neutral-light p-4 rounded-md shadow-sm">
           <p className="text-sm text-neutral-secondary mb-2" aria-live="polite">
             {availableWeekdays.length === 0
-              ? "Ingen ukedager funnet for denne planleggeren"
-              : `${availableWeekdays.length} ukedager tilgjengelig`}
+              ? t("weekdaySelect.noWeekdays")
+              : `${availableWeekdays.length} ${t(
+                  "weekdaySelect.weekdaysAvailable"
+                )}`}
           </p>
 
           <div
@@ -166,7 +182,9 @@ const WeekdaySelect: React.FC<WeekdaySelectProps> = ({
                       <div className="w-3 h-3 rounded-full bg-neutral-white"></div>
                     )}
                   </div>
-                  <span className="font-medium">{weekday}</span>
+                  <span className="font-medium">
+                    {translateWeekday(weekday)}
+                  </span>
                 </div>
               </div>
             ))}
@@ -174,7 +192,7 @@ const WeekdaySelect: React.FC<WeekdaySelectProps> = ({
 
           {availableWeekdays.length === 0 && (
             <p className="text-neutral-secondary italic mt-2">
-              Det er ingen leverandører planlagt for denne planleggeren.
+              {t("weekdaySelect.noSuppliersPlanned")}
             </p>
           )}
         </div>

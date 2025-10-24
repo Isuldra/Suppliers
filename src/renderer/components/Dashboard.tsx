@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { ExcelData, ValidationError } from "../types/ExcelData";
 import onemedLogo from "../assets/onemed-logo.webp";
+import LanguageSelector from "./LanguageSelector";
 
 interface SupplierStat {
   name: string;
@@ -260,7 +261,7 @@ const Dashboard: React.FC<DashboardProps> = ({ appState: _appState }) => {
             <Link to="/" className="btn btn-secondary text-sm">
               Tilbake til hovedside
             </Link>
-            <div className="w-10"></div>
+            <LanguageSelector mode="compact" />
           </div>
         </div>
       </div>

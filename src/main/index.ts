@@ -101,6 +101,15 @@ ipcMain.handle("get-logs", async () => {
   }
 });
 
+// Add IPC handler for getting system language
+ipcMain.handle("get-system-language", () => {
+  return {
+    locale: app.getLocale(), // e.g., 'nb', 'sv', 'da', 'fi'
+    systemLocale: app.getSystemLocale(), // e.g., 'nb-NO', 'sv-SE'
+    preferredLanguages: app.getPreferredSystemLanguages(), // ['nb-NO', 'en-US', ...]
+  };
+});
+
 let mainWindow: BrowserWindow | null = null;
 
 function createWindow(): BrowserWindow {

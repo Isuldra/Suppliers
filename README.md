@@ -2,6 +2,13 @@
 
 SupplyChain OneMed is a desktop application for managing supplier workflows and data. It's built with Electron, React, and TypeScript, and follows OneMed's design system.
 
+## 📖 End-User Documentation
+
+**For users of the application:**
+
+- **[Multi-language User Guide](docs/user-guide-multilang.md)** - Complete user manual in Norwegian, Swedish, Danish, Finnish, and English
+- **[Getting Started Guide](docs/getting-started.md)** - Quick start guide for new users
+
 ---
 
 ## 🚀 Getting Started (Developers)
@@ -11,7 +18,7 @@ SupplyChain OneMed is a desktop application for managing supplier workflows and 
 3. Start the dev server: `npm run dev`
 4. Build: `npm run build`
 
-> For complete setup instructions, see [Onboarding Guide](docs/onboarding.md)
+> For complete setup instructions, see [Development Setup](docs/development/setup.md)
 
 ---
 

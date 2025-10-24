@@ -1,5 +1,83 @@
 # Documentation Changelog
 
+## Version 1.3.0: Multi-Language Support
+
+_Completed January 2025_
+
+This version introduces comprehensive multi-language support for the OneMed SupplyChain application, making it accessible to users across Nordic countries and English-speaking markets.
+
+### Key Features:
+
+- **Multi-Language Interface Support:**
+
+  - Norwegian (Norsk) - Primary language
+  - Swedish (Svenska) - Full interface translation
+  - Danish (Dansk) - Complete localization
+  - Finnish (Suomi) - Full language support
+  - English - International accessibility
+
+- **Language Detection and Selection:**
+
+  - Automatic language detection based on system locale
+  - Manual language selector component for user preference
+  - Persistent language settings across application sessions
+
+- **Comprehensive Documentation:**
+
+  - Multi-language user guide covering all 5 supported languages
+  - End-user focused documentation with clear navigation
+  - Developer documentation updates for internationalization
+
+- **Enhanced User Experience:**
+  - Localized interface elements throughout the application
+  - Language-specific email templates for international suppliers
+  - Cultural adaptation of user interface elements
+
+### Technical Implementation:
+
+- **Internationalization Framework:**
+
+  - Integrated i18next and react-i18next for React component translation
+  - Language detection service for automatic locale identification
+  - Comprehensive translation files for all supported languages
+
+- **Component Updates:**
+
+  - Language selector component for manual language switching
+  - Updated all major UI components with translation support
+  - Maintained backward compatibility with existing functionality
+
+- **Documentation Structure:**
+  - Created `docs/user-guide-multilang.md` with sections for all 5 languages
+  - Updated main README.md with prominent end-user documentation links
+  - Maintained developer-focused documentation structure
+
+### Files Added/Modified:
+
+**New Files:**
+
+- `docs/user-guide-multilang.md` - Comprehensive multi-language user guide
+- `src/renderer/components/LanguageSelector.tsx` - Language selection component
+- `src/renderer/services/languageDetectionService.ts` - Automatic language detection
+- `src/renderer/i18n/config.ts` - Internationalization configuration
+- `src/renderer/locales/` - Translation files for all 5 languages
+
+**Updated Files:**
+
+- `package.json` - Version bump to 1.3.0
+- `README.md` - Added end-user documentation section
+- `docs/CHANGELOG.md` - Added version 1.3.0 entry
+- All renderer components - Added translation support
+
+### Impact:
+
+- **Improved Accessibility**: Application now supports 5 languages, making it accessible to Nordic and international users
+- **Enhanced User Experience**: Native language support improves usability and reduces learning curve
+- **Professional Documentation**: Comprehensive user guides in all supported languages
+- **International Reach**: Enables deployment across different markets and user bases
+
+---
+
 ## Phase 7: Email Template Column Header Updates
 
 _Completed December 2024_
