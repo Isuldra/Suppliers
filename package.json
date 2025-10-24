@@ -6,7 +6,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "cross-env NODE_ENV=development electron-vite dev",
+    "dev": "node scripts/ensure-electron-modules.js && cross-env NODE_ENV=development electron-vite dev",
     "dev:no-warnings": "cross-env NODE_NO_WARNINGS=1 NODE_ENV=development electron-vite dev",
     "build": "electron-vite build",
     "preview": "electron-vite preview",
