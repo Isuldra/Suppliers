@@ -43,17 +43,35 @@ const mapSystemLanguageToAppLanguage = (systemLang: string): string => {
 
 /**
  * Detects the appropriate language for the app
- * Priority: localStorage > system language > default (no)
+ * Priority: User manually selected language > system language > default (no)
+ */
+/**
+ * Resets language selection to follow system language
+ */
+export const resetLanguageToSystem = async (): Promise<string> => {
+  localStorage.removeItem("userSelectedLanguage");
+  localStorage.removeItem("i18nextLng");
+  return await detectAppLanguage();
+};
+
+/**
+ * Detects the appropriate language for the app
+ * Priority: User manually selected language > system language > default (no)
  */
 export const detectAppLanguage = async (): Promise<string> => {
   try {
-    // Check if user has previously selected a language
+    // Check if user has manually selected a language (not auto-detected)
     const savedLanguage = localStorage.getItem("i18nextLng");
+    const hasUserSelectedLanguage = localStorage.getItem(
+      "userSelectedLanguage"
+    );
+
     if (
       savedLanguage &&
+      hasUserSelectedLanguage === "true" &&
       ["no", "se", "da", "fi", "en"].includes(savedLanguage)
     ) {
-      console.log("Using saved language preference:", savedLanguage);
+      console.log("Using user-selected language preference:", savedLanguage);
       return savedLanguage;
     }
 
@@ -80,6 +98,6 @@ export const detectAppLanguage = async (): Promise<string> => {
     return mappedLang;
   } catch (error) {
     console.error("Error detecting system language:", error);
-    return "en"; // Default fallback
+    return "no"; // Default to Norwegian for Norwegian users
   }
 };
