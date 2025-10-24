@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { resetLanguageToSystem } from "../services/languageDetectionService";
 
 interface LanguageSelectorProps {
   mode?: "compact" | "expanded";
@@ -26,6 +27,14 @@ const LanguageSelector: React.FC<LanguageSelectorProps> = ({
 
   const handleLanguageChange = (languageCode: string) => {
     i18n.changeLanguage(languageCode);
+    // Mark that user has manually selected a language
+    localStorage.setItem("userSelectedLanguage", "true");
+    setIsOpen(false);
+  };
+
+  const handleResetToSystem = async () => {
+    const systemLanguage = await resetLanguageToSystem();
+    i18n.changeLanguage(systemLanguage);
     setIsOpen(false);
   };
 
@@ -50,6 +59,15 @@ const LanguageSelector: React.FC<LanguageSelectorProps> = ({
               )}
             </button>
           ))}
+        </div>
+        <div className="border-t border-neutral-light pt-4">
+          <button
+            onClick={handleResetToSystem}
+            className="w-full flex items-center space-x-3 p-3 rounded-md border border-neutral-light bg-neutral-white text-neutral hover:bg-neutral-light transition-colors"
+          >
+            <span className="text-xl">🔄</span>
+            <span className="font-medium">Reset to system language</span>
+          </button>
         </div>
       </div>
     );
@@ -79,7 +97,7 @@ const LanguageSelector: React.FC<LanguageSelectorProps> = ({
               <button
                 key={language.code}
                 onClick={() => handleLanguageChange(language.code)}
-                className={`w-full flex items-center space-x-3 px-3 py-2 text-left hover:bg-neutral-light transition-colors first:rounded-t-md last:rounded-b-md ${
+                className={`w-full flex items-center space-x-3 px-3 py-2 text-left hover:bg-neutral-light transition-colors ${
                   i18n.language === language.code
                     ? "bg-primary text-neutral-white"
                     : "text-neutral"
@@ -92,6 +110,15 @@ const LanguageSelector: React.FC<LanguageSelectorProps> = ({
                 )}
               </button>
             ))}
+            <div className="border-t border-neutral-light">
+              <button
+                onClick={handleResetToSystem}
+                className="w-full flex items-center space-x-3 px-3 py-2 text-left hover:bg-neutral-light transition-colors text-neutral text-sm"
+              >
+                <span className="text-sm">🔄</span>
+                <span>Reset to system language</span>
+              </button>
+            </div>
           </div>
         </>
       )}
