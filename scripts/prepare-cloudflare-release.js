@@ -124,6 +124,34 @@ releaseDate: '${releaseDate}'`;
   const latestYmlPath = path.join(updatesDir, "latest.yml");
   fs.writeFileSync(latestYmlPath, latestYml);
   console.log(`✅ Generated: latest.yml`);
+} else {
+  console.log("\n⚠️  No NSIS installer found for latest.yml generation");
+  console.log("   Run 'npm run dist' to build the NSIS installer first");
+}
+
+// Generate latest.json for portable version
+if (fs.existsSync(portableExePath)) {
+  console.log("\n📝 Generating latest.json...");
+
+  const portableHash = calculateSHA512(portableExePath);
+  const portableSize = getFileSize(portableExePath);
+  const releaseDate = new Date().toISOString();
+
+  const latestJson = {
+    version: version,
+    files: [
+      {
+        url: portableExe,
+        sha512: portableHash,
+        size: portableSize,
+      },
+    ],
+    releaseDate: releaseDate,
+  };
+
+  const latestJsonPath = path.join(updatesDir, "latest.json");
+  fs.writeFileSync(latestJsonPath, JSON.stringify(latestJson, null, 2));
+  console.log(`✅ Generated: latest.json`);
 }
 
 // Update index.html with current version
