@@ -1,0 +1,241 @@
+{
+  "app": {
+    "title": "OneMed SupplyChain",
+    "welcome": {
+      "title": "Velkommen til OneMed SupplyChain",
+      "description": "Et værktøj til at sende påmindelser til leverandører om leveringsdatoer",
+      "getStarted": "Kom i gang"
+    }
+  },
+  "navigation": {
+    "dashboard": "Dashboard",
+    "keyboardShortcuts": "Tastaturgenveje",
+    "settings": "Indstillinger"
+  },
+  "progress": {
+    "uploadFile": "Upload fil",
+    "selectWeekday": "Vælg ugedag",
+    "selectSupplier": "Vælg leverandør",
+    "reviewData": "Gennemgå data",
+    "sendEmail": "Send e-mail"
+  },
+  "fileUpload": {
+    "title": "Upload Excel-fil",
+    "fileLoaded": "Excel-fil uploadet",
+    "rowsReady": "rækker med data er klar til behandling",
+    "uploadNewFile": "Upload ny fil",
+    "help": "Hjælp",
+    "helpAndResources": "Hjælp og ressourcer",
+    "documentation": "Dokumentation",
+    "checkUpdates": "Tjek for opdateringer",
+    "contactSupport": "Kontakt support",
+    "about": "Om OneMed SupplyChain",
+    "showLogs": "Vis logs (fejlfinding)",
+    "dropFile": "Træk og slip Excel-filen her, eller klik for at vælge fil",
+    "dropFileHere": "Slip filen her...",
+    "fileRequirement": "Filen skal indeholde arket \"BP\" med data fra række 6",
+    "whatToDo": "Hvad skal jeg gøre?",
+    "instruction1": "Download den nyeste version af \"BP\"-arket fra systemet.",
+    "instruction2": "Sørg for at du eksporterer \"BP\"-arket som en .xlsx-fil med data fra række 6.",
+    "instruction3": "Arket skal indeholde kolonnerne C-P med PO-nummer, leverandørinfo, ETA-datoer og mængder.",
+    "instruction4": "Træk og slip filen her, eller klik for at vælge den.",
+    "errors": {
+      "couldNotOpenDocs": "Kunne ikke åbne dokumentationen",
+      "errorOpeningDocs": "Fejl ved åbning af dokumentation",
+      "couldNotOpenEmail": "Kunne ikke åbne e-mailklient",
+      "errorOpeningEmail": "Fejl ved åbning af e-mailklient",
+      "noFileSelected": "Ingen fil valgt eller filtypen er ugyldig",
+      "validationError": "Valideringsfejl",
+      "validationSuccessButDatabaseFailed": "Data valideret men databasegemning fejlede",
+      "dataValidatedButNotSaved": "Data valideret men ikke gemt i lokal database"
+    },
+    "processing": {
+      "readingFile": "Læser fil...",
+      "validatingData": "Validerer data mod database..."
+    },
+    "success": {
+      "importCompleted": "Import vellykket og data gemt i databasen"
+    }
+  },
+  "configuration": {
+    "title": "Konfiguration",
+    "weekday": "Ugedag",
+    "sendingMode": "Sendingsmodus",
+    "singleSupplier": "Enkelt leverandør",
+    "multipleSuppliers": "Flere leverandører",
+    "supplier": "Leverandør",
+    "suppliers": "Leverandører",
+    "sendingModeDescription": "Vælg mellem enkelt leverandør eller flere leverandører"
+  },
+  "validation": {
+    "errors": "Fejl ved validering:"
+  },
+  "keyboardShortcuts": {
+    "title": "Tastaturgenveje",
+    "reset": "Start forfra",
+    "goBack": "Gå tilbage ét trin",
+    "confirm": "Bekræft valg",
+    "navigate": "Naviger mellem felter",
+    "close": "Luk"
+  },
+  "buttons": {
+    "close": "Luk",
+    "save": "Gem",
+    "cancel": "Annuller",
+    "next": "Næste",
+    "back": "Tilbage",
+    "complete": "Fuldfør"
+  },
+  "languages": {
+    "norwegian": "Norsk",
+    "swedish": "Svensk",
+    "danish": "Dansk",
+    "finnish": "Finsk",
+    "english": "Engelsk"
+  },
+  "weekdays": {
+    "monday": "Mandag",
+    "tuesday": "Tirsdag",
+    "wednesday": "Onsdag",
+    "thursday": "Torsdag",
+    "friday": "Fredag"
+  },
+  "weekdaySelect": {
+    "title": "Vælg ugedag",
+    "description": "Vælg en ugedag for at se leverandører, der er planlagt for den dag.",
+    "noWeekdays": "Ingen ugedage fundet for denne planlægger",
+    "weekdaysAvailable": "ugedage tilgængelige",
+    "noSuppliersPlanned": "Der er ingen leverandører planlagt for denne planlægger."
+  },
+  "supplierSelect": {
+    "title": "Vælg leverandør",
+    "planner": "Indkøbsplanlægger:",
+    "selectedWeekday": "Valgt ugedag:",
+    "description": "Viser kun leverandører, der er planlagt for {weekday} og som har åbne ordrer.",
+    "searchPlaceholder": "Søg efter leverandør...",
+    "loadingSuppliers": "Indlæser leverandører med åbne ordrer...",
+    "loading": "Indlæser...",
+    "suppliersFound": "leverandører med åbne ordrer fundet",
+    "noSuppliersFound": "Ingen leverandører med åbne ordrer fundet for denne ugedag"
+  },
+  "dataReview": {
+    "title": "Gennemgå data",
+    "reviewOrderLines": "Gennemgå ordrelinjer",
+    "reviewForSupplier": "Gennemgang af udestående ordrer for {supplier}",
+    "supplier": "Leverandør:",
+    "weekday": "Ugedag:",
+    "totalCount": "Totalt antal:",
+    "outstandingOrders": "Udestående ordrer:",
+    "selectedForEmail": "Valgte til e-mail:",
+    "selectAll": "Vælg alle",
+    "selectNone": "Vælg ingen",
+    "selectOutstandingOnly": "Vælg kun udestående",
+    "noDataAvailable": "Ingen data tilgængelig. Vælg venligst en leverandør først.",
+    "back": "Tilbage",
+    "sendEmail": "Send e-mail",
+    "sendEmailSelected": "Send e-mail ({count} valgte)",
+    "rowsPerPage": "Antal rækker per side",
+    "perPage": "per side",
+    "goToFirst": "Gå til første side",
+    "goToPrevious": "Gå til forrige side",
+    "goToNext": "Gå til næste side",
+    "goToLast": "Gå til sidste side",
+    "pageOf": "af"
+  },
+  "table": {
+    "selectAllRows": "Vælg alle rækker",
+    "selectRow": "Vælg række {poNumber}",
+    "status": "Status",
+    "critical": "Kritisk",
+    "overdue": "Forfalden",
+    "normal": "Normal",
+    "dueDate": "Forfaldsdato",
+    "poNumber": "PO-nummer",
+    "itemNumber": "OneMed varenummer",
+    "supplierArticleNumber": "Leverandørens artikelnummer",
+    "comment": "Kommentar",
+    "orderRow": "Ordrelinje",
+    "outstanding": "Udestående",
+    "key": "Nøgle"
+  },
+  "email": {
+    "sendButton": "Send e-mail",
+    "sendingEmails": "Sender e-mails...",
+    "emailsSent": "E-mails sendt succesfuldt",
+    "emailError": "Fejl ved afsendelse af e-mails. Prøv igen."
+  },
+  "bulkSupplierSelect": {
+    "loading": "Indlæser leverandører...",
+    "planner": "Indkøbsplanlægger:",
+    "selectedWeekday": "Valgt ugedag:",
+    "description": "Vælg leverandører, der skal modtage påmindelser om udestående ordrer",
+    "mixedLanguageWarning": "Advarsel: Du har valgt leverandører med forskellige sprog. E-mails vil blive sendt på det rigtige sprog per leverandør.",
+    "removeAll": "Fjern alle",
+    "selectAll": "Vælg alle",
+    "suppliersSelected": "leverandører valgt",
+    "tableHeaders": {
+      "select": "Vælg",
+      "supplier": "Leverandør",
+      "outstandingLines": "Antal restlinjer",
+      "email": "E-mailadresse",
+      "language": "Sprog",
+      "details": "Detaljer"
+    },
+    "unselect": "Fravælg",
+    "select": "Vælg",
+    "show": "Vis",
+    "outstandingOrdersFor": "Udestående ordrer for {supplier}",
+    "noSuppliersFound": "Ingen leverandører med udestående ordrer fundet for denne ugedag",
+    "summary": "Resumé",
+    "totalOutstandingLines": "udestående ordrelinjer i alt (ekskluderede linjer er ikke inkluderet)",
+    "mixedLanguageInfo": "Blandede sprog: E-mails vil blive sendt på det rigtige sprog per leverandør"
+  },
+  "bulkDataReview": {
+    "title": "Gennemgå og vælg ordrelinjer",
+    "suppliers": "Leverandører:",
+    "totalOrderLines": "Totalt antal ordrelinjer:",
+    "selectedOrderLines": "Valgte ordrelinjer:",
+    "mixedLanguageWarning": "Advarsel: Blandede sprog opdaget. E-mails vil blive sendt på det rigtige sprog per leverandør.",
+    "selected": "valgt",
+    "removeAll": "Fjern alle",
+    "selectAll": "Vælg alle",
+    "goToEmailPreview": "Gå til e-mail forhåndsvisning →",
+    "validationNote": "Bemærk: Alle leverandører skal have mindst én valgt ordrelinje",
+    "backToSupplierSelection": "Tilbage til leverandørvalg",
+    "tableHeaders": {
+      "select": "Inkluder",
+      "poNumber": "PO-nr",
+      "oneMedNumber": "OneMed nr",
+      "description": "Beskrivelse",
+      "specification": "Specifikation",
+      "ordered": "Bestilt",
+      "received": "Modtaget",
+      "outstanding": "Udestående",
+      "eta": "ETA"
+    }
+  },
+  "bulkEmailPreview": {
+    "noEmailProvided": "Ingen e-mailadresse angivet",
+    "allEmailsSentSuccess": "Alle {count} e-mails blev sendt succesfuldt!",
+    "partialSuccess": "{success} e-mails sendt succesfuldt, {failed} fejlede.",
+    "allEmailsFailed": "Alle {count} e-mails fejlede. Tjek fejlmeddelelserne og prøv igen.",
+    "preparingData": "Forbereder e-maildata...",
+    "title": "E-mail forhåndsvisning og afsendelse",
+    "suppliers": "Leverandører:",
+    "orderLines": "Ordrelinjer:",
+    "emails": "E-mails:",
+    "mixedLanguageInfo": "Info: Blandede sprog opdaget. E-mails vil blive sendt på det rigtige sprog per leverandør.",
+    "sendingEmails": "Sender e-mails... ({current} af {total})",
+    "sending": "Sender...",
+    "sent": "✓ Sendt",
+    "failed": "✗ Fejlede",
+    "previewDisabled": "Forhåndsvisning deaktiveret for bedre ydeevne",
+    "preview": "Forhåndsvis",
+    "emailAddress": "E-mailadresse:",
+    "resetToDefault": "Nulstil til standard",
+    "noEmailWarning": "⚠️ Ingen e-mailadresse angivet - e-mail vil ikke blive sendt",
+    "error": "Fejl:",
+    "backToOrderSelection": "← Tilbage til ordrevalg",
+    "sendAll": "Send alle e-mails"
+  }
+}

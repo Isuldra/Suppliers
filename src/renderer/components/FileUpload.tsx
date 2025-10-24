@@ -1,5 +1,6 @@
 import React, { useCallback, useState, useEffect, useRef } from "react";
 import { useDropzone } from "react-dropzone";
+import { useTranslation } from "react-i18next";
 import { ExcelData, ValidationError, ExcelRow } from "../types/ExcelData";
 import toast from "react-hot-toast";
 import * as XLSX from "xlsx";
@@ -15,6 +16,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
   onDataParsed,
   onValidationErrors,
 }) => {
+  const { t } = useTranslation();
   const [isLoading, setIsLoading] = useState(false);
   const [isValidating, setIsValidating] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -47,12 +49,12 @@ const FileUpload: React.FC<FileUploadProps> = ({
           .then((result) => {
             if (!result.success) {
               console.error("Failed to open documentation:", result.error);
-              toast.error("Kunne ikke åpne dokumentasjonen");
+              toast.error(t("fileUpload.errors.couldNotOpenDocs"));
             }
           })
           .catch((err) => {
             console.error("Error opening documentation:", err);
-            toast.error("Feil ved åpning av dokumentasjon");
+            toast.error(t("fileUpload.errors.errorOpeningDocs"));
           });
         break;
 
@@ -69,12 +71,12 @@ const FileUpload: React.FC<FileUploadProps> = ({
           .then((result) => {
             if (!result.success) {
               console.error("Failed to open email client:", result.error);
-              toast.error("Kunne ikke åpne e-postklient");
+              toast.error(t("fileUpload.errors.couldNotOpenEmail"));
             }
           })
           .catch((err) => {
             console.error("Error opening email client:", err);
-            toast.error("Feil ved åpning av e-postklient");
+            toast.error(t("fileUpload.errors.errorOpeningEmail"));
           });
         break;
 
@@ -256,7 +258,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
                     className="underline text-sm text-blue-600 mt-2"
                     onClick={() => window.electron.send("show-logs", {})}
                   >
-                    Vis logger
+                    {t("fileUpload.showLogs")}
                   </button>
                 </div>
               );
@@ -272,7 +274,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
                     className="underline text-sm text-blue-600 mt-2"
                     onClick={() => window.electron.send("show-logs", {})}
                   >
-                    Vis logger
+                    {t("fileUpload.showLogs")}
                   </button>
                 </div>
               );
@@ -495,7 +497,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
   const onDrop = useCallback(
     async (acceptedFiles: File[]) => {
       if (acceptedFiles.length === 0) {
-        toast.error("Ingen fil valgt eller filtypen er ugyldig.");
+        toast.error(t("fileUpload.errors.noFileSelected"));
         return;
       }
 
@@ -505,7 +507,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
       setIsLoading(true);
       setIsValidating(false);
       setProgress(0);
-      setProcessingStage("Leser fil...");
+      setProcessingStage(t("fileUpload.processing.readingFile"));
 
       try {
         console.log("Starting Excel parsing process...");
@@ -514,7 +516,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
           bpRows: parsedData.bp.length,
         });
 
-        setProcessingStage("Validerer data mot database...");
+        setProcessingStage(t("fileUpload.processing.validatingData"));
         setIsValidating(true);
 
         try {
@@ -537,7 +539,9 @@ const FileUpload: React.FC<FileUploadProps> = ({
 
           if (!typedResult.success) {
             console.error("Validation failed:", typedResult.error);
-            toast.error(`Valideringsfeil: ${typedResult.error}`);
+            toast.error(
+              `${t("fileUpload.errors.validationError")}: ${typedResult.error}`
+            );
             setIsLoading(false);
             setIsValidating(false);
             return;
@@ -581,12 +585,12 @@ const FileUpload: React.FC<FileUploadProps> = ({
               // Continue even if database save fails - it's not critical for the app to function
               toast.error(
                 dbResult.error ||
-                  "Data validert, men lagring til database feilet"
+                  t("fileUpload.errors.validationSuccessButDatabaseFailed")
               );
             } else {
               console.log("Database import/save successful.");
               // We might not need a specific count here anymore if the importer handles it
-              toast.success(`Import vellykket og data lagret i databasen.`);
+              toast.success(t("fileUpload.success.importCompleted"));
 
               // Debug: Log all available suppliers
               try {
@@ -618,7 +622,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
           } catch {
             console.error("Database error:");
             // Continue even if database save fails
-            toast.error("Data validated but not saved to local database");
+            toast.error(t("fileUpload.errors.dataValidatedButNotSaved"));
           }
 
           console.log("Processing complete, calling onDataParsed");
@@ -684,16 +688,18 @@ const FileUpload: React.FC<FileUploadProps> = ({
           <button
             onClick={() => setHelpMenuOpen(!helpMenuOpen)}
             className="flex items-center text-neutral-dark hover:text-primary transition-colors"
-            aria-label="Hjelp"
+            aria-label={t("fileUpload.help")}
           >
             <QuestionMarkCircleIcon className="h-6 w-6 mr-1" />
-            <span>Hjelp</span>
+            <span>{t("fileUpload.help")}</span>
           </button>
 
           {helpMenuOpen && (
             <div className="absolute right-0 mt-2 w-64 bg-white rounded-md shadow-lg z-10 border border-gray-200">
               <div className="flex justify-between items-center p-3 border-b border-gray-200">
-                <h3 className="font-medium text-neutral">Hjelp og ressurser</h3>
+                <h3 className="font-medium text-neutral">
+                  {t("fileUpload.helpAndResources")}
+                </h3>
                 <button
                   onClick={() => setHelpMenuOpen(false)}
                   className="text-gray-400 hover:text-gray-500"
@@ -707,32 +713,32 @@ const FileUpload: React.FC<FileUploadProps> = ({
                   onClick={() => handleHelpOptionClick("docs")}
                   className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                 >
-                  Dokumentasjon
+                  {t("fileUpload.documentation")}
                 </button>
                 <button
                   onClick={() => handleHelpOptionClick("check-updates")}
                   className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                 >
-                  Sjekk for oppdateringer
+                  {t("fileUpload.checkUpdates")}
                 </button>
                 <button
                   onClick={() => handleHelpOptionClick("contact-support")}
                   className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                 >
-                  Kontakt support
+                  {t("fileUpload.contactSupport")}
                 </button>
                 <button
                   onClick={() => handleHelpOptionClick("about")}
                   className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                 >
-                  Om OneMed SupplyChain
+                  {t("fileUpload.about")}
                 </button>
                 <div className="border-t border-gray-200 my-1"></div>
                 <button
                   onClick={() => handleHelpOptionClick("show-logs")}
                   className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                 >
-                  Vis logger (feilsøking)
+                  {t("fileUpload.showLogs")}
                 </button>
               </div>
             </div>
@@ -766,7 +772,9 @@ const FileUpload: React.FC<FileUploadProps> = ({
                 ></path>
               </svg>
               <span className="font-medium">
-                {isValidating ? "Validerer mot database..." : processingStage}
+                {isValidating
+                  ? t("fileUpload.processing.validatingData")
+                  : processingStage}
               </span>
             </div>
 
@@ -823,11 +831,11 @@ const FileUpload: React.FC<FileUploadProps> = ({
             <div className="text-center">
               <p className="text-lg text-neutral">
                 {isDragActive
-                  ? "Slipp filen her..."
-                  : "Dra og slipp Excel-filen her, eller klikk for å velge fil"}
+                  ? t("fileUpload.dropFileHere")
+                  : t("fileUpload.dropFile")}
               </p>
               <p className="text-sm text-gray-500 mt-1">
-                Filen må inneholde arket &quot;BP&quot; med data fra rad 6
+                {t("fileUpload.fileRequirement")}
               </p>
             </div>
           </div>
@@ -835,20 +843,18 @@ const FileUpload: React.FC<FileUploadProps> = ({
       )}
 
       <div className="mt-4 p-4 border border-neutral-light rounded-sm bg-primary-light bg-opacity-10">
-        <h4 className="font-medium text-primary mb-2">Hva må jeg gjøre?</h4>
-        <p className="text-sm text-neutral">
-          Last ned den nyeste versjonen av &quot;BP&quot;-arket fra systemet.
+        <h4 className="font-medium text-primary mb-2">
+          {t("fileUpload.whatToDo")}
+        </h4>
+        <p className="text-sm text-neutral">{t("fileUpload.instruction1")}</p>
+        <p className="text-sm text-neutral mt-1">
+          {t("fileUpload.instruction2")}
         </p>
         <p className="text-sm text-neutral mt-1">
-          Pass på at du eksporterer &quot;BP&quot;-arket som en .xlsx-fil med
-          data fra rad 6.
+          {t("fileUpload.instruction3")}
         </p>
         <p className="text-sm text-neutral mt-1">
-          Arket må inneholde kolonnene C-P med PO-nummer, leverandørinfo,
-          ETA-datoer og mengder.
-        </p>
-        <p className="text-sm text-neutral mt-1">
-          Dra og slipp filen her, eller klikk for å velge den.
+          {t("fileUpload.instruction4")}
         </p>
       </div>
     </div>

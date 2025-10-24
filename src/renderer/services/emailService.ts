@@ -38,7 +38,7 @@ export interface EmailData {
     outstandingQty?: number;
     orderRowNumber?: string;
   }>;
-  language?: "no" | "en"; // Add language option
+  language?: "no" | "en" | "se" | "da" | "fi"; // Add language option
   subject: string; // Make required
 }
 
@@ -46,6 +46,9 @@ export class EmailService {
   private templates: {
     no: string;
     en: string;
+    se: string;
+    da: string;
+    fi: string;
   };
 
   constructor() {
@@ -207,9 +210,249 @@ export class EmailService {
 </body>
 </html>`;
 
+    // Swedish template
+    const seTemplate = `<!DOCTYPE html>
+<html>
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+  <title>Påminnelse om utestående ordrar</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f6f6f6; font-family: Arial, Helvetica, sans-serif;">
+
+  <table width="100%" border="0" cellpadding="0" cellspacing="0" bgcolor="#f6f6f6">
+    <tr>
+      <td>
+        <table align="center" width="100%" border="0" cellpadding="0" cellspacing="0" style="max-width: 900px; margin: 20px auto; background-color: #ffffff; border: 1px solid #e0e0e0; border-radius: 4px; padding: 20px;">
+          
+          <!-- Introduktion -->
+          <tr>
+            <td style="padding: 10px 10px 20px 10px; font-family: Arial, Helvetica, sans-serif; font-size: 14px; color: #333333;">
+              <p>Hej,</p>
+              <p>Vi hänvisar till vår beställning och ser att följande orderrader fortfarande står som utestående hos er. Vi ber om en återkoppling med ny förväntad leveransdatum (ETA) för varje rad.</p>
+              <p>Vänligen svara på detta e-postmeddelande med den ifyllda informationen i kolumnen <b>"Ny ETA"</b>.</p>
+            </td>
+          </tr>
+
+          <!-- Ordertabell -->
+          <tr>
+            <td>
+              <table width="100%" border="0" cellpadding="0" cellspacing="0" style="border-collapse: collapse; font-size: 12px; border: 1px solid #cccccc;">
+
+                <!-- Tabellrubriker -->
+                <thead>
+                  <tr style="background-color: #003366; color: #ffffff; text-align: left;">
+                    <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">PO-nr</th>
+                    <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">OneMed nr</th>
+                    <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">Lev. ArtNr</th>
+                    <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">Specifikation</th>
+                    <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">Beställt ant.</th>
+                    <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">Mottaget ant.</th>
+                    <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">Förväntad ETA</th>
+                    <th style="padding: 8px 10px; background-color: #008000; border: 1px solid #4A7AAB;">Ny ETA</th>
+                  </tr>
+                </thead>
+
+                <!-- Tabellinnehåll -->
+                <tbody>
+                  {{#each orders}}
+                  <tr style="background-color: {{#if @even}}#f7f7f7{{else}}#ffffff{{/if}}; border-bottom: 1px solid #e0e0e0;">
+                    <td style="padding: 6px 10px; border: 1px solid #e0e0e0; font-weight: bold;">{{poNumber}}</td>
+                    <td style="padding: 6px 10px; border: 1px solid #e0e0e0;">{{itemNo}}</td>
+                    <td style="padding: 6px 10px; border: 1px solid #e0e0e0;">{{description}}</td>
+                    <td style="padding: 6px 10px; border: 1px solid #e0e0e0;">{{specification}}</td>
+                    <td style="padding: 6px 10px; border: 1px solid #e0e0e0; text-align: center;">{{orderQty}}</td>
+                    <td style="padding: 6px 10px; border: 1px solid #e0e0e0; text-align: center;">{{receivedQty}}</td>
+                    <td style="padding: 6px 10px; border: 1px solid #e0e0e0;">{{estReceiptDate}}</td>
+                    <td style="padding: 6px 10px; border: 1px solid #e0e0e0; background-color: #E8F5E9;">&nbsp;</td>
+                  </tr>
+                  {{/each}}
+                </tbody>
+
+              </table>
+            </td>
+          </tr>
+
+          <!-- Avslutning -->
+          <tr>
+            <td style="padding: 30px 10px 10px 10px; font-family: Arial, Helvetica, sans-serif; font-size: 14px; color: #333333;">
+              <p>Med vänliga hälsningar,<br>
+              <b>OneMed Norge AS</b><br>
+              Supply Chain Team</p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+
+</body>
+</html>`;
+
+    // Danish template
+    const daTemplate = `<!DOCTYPE html>
+<html>
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+  <title>Påmindelse om udestående ordrer</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f6f6f6; font-family: Arial, Helvetica, sans-serif;">
+
+  <table width="100%" border="0" cellpadding="0" cellspacing="0" bgcolor="#f6f6f6">
+    <tr>
+      <td>
+        <table align="center" width="100%" border="0" cellpadding="0" cellspacing="0" style="max-width: 900px; margin: 20px auto; background-color: #ffffff; border: 1px solid #e0e0e0; border-radius: 4px; padding: 20px;">
+          
+          <!-- Introduktion -->
+          <tr>
+            <td style="padding: 10px 10px 20px 10px; font-family: Arial, Helvetica, sans-serif; font-size: 14px; color: #333333;">
+              <p>Hej,</p>
+              <p>Vi henviser til vores bestilling og ser, at følgende ordrelinjer stadig står som udestående hos jer. Vi beder om en tilbagemelding med ny forventet leveringsdato (ETA) for hver linje.</p>
+              <p>Venligst svar på denne e-mail med den udfyldte information i kolonnen <b>"Ny ETA"</b>.</p>
+            </td>
+          </tr>
+
+          <!-- Ordretabel -->
+          <tr>
+            <td>
+              <table width="100%" border="0" cellpadding="0" cellspacing="0" style="border-collapse: collapse; font-size: 12px; border: 1px solid #cccccc;">
+
+                <!-- Tabelloverskrifter -->
+                <thead>
+                  <tr style="background-color: #003366; color: #ffffff; text-align: left;">
+                    <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">PO-nr</th>
+                    <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">OneMed nr</th>
+                    <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">Lev. ArtNr</th>
+                    <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">Specifikation</th>
+                    <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">Bestilt ant.</th>
+                    <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">Modtaget ant.</th>
+                    <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">Forventet ETA</th>
+                    <th style="padding: 8px 10px; background-color: #008000; border: 1px solid #4A7AAB;">Ny ETA</th>
+                  </tr>
+                </thead>
+
+                <!-- Tabellindhold -->
+                <tbody>
+                  {{#each orders}}
+                  <tr style="background-color: {{#if @even}}#f7f7f7{{else}}#ffffff{{/if}}; border-bottom: 1px solid #e0e0e0;">
+                    <td style="padding: 6px 10px; border: 1px solid #e0e0e0; font-weight: bold;">{{poNumber}}</td>
+                    <td style="padding: 6px 10px; border: 1px solid #e0e0e0;">{{itemNo}}</td>
+                    <td style="padding: 6px 10px; border: 1px solid #e0e0e0;">{{description}}</td>
+                    <td style="padding: 6px 10px; border: 1px solid #e0e0e0;">{{specification}}</td>
+                    <td style="padding: 6px 10px; border: 1px solid #e0e0e0; text-align: center;">{{orderQty}}</td>
+                    <td style="padding: 6px 10px; border: 1px solid #e0e0e0; text-align: center;">{{receivedQty}}</td>
+                    <td style="padding: 6px 10px; border: 1px solid #e0e0e0;">{{estReceiptDate}}</td>
+                    <td style="padding: 6px 10px; border: 1px solid #e0e0e0; background-color: #E8F5E9;">&nbsp;</td>
+                  </tr>
+                  {{/each}}
+                </tbody>
+
+              </table>
+            </td>
+          </tr>
+
+          <!-- Afslutning -->
+          <tr>
+            <td style="padding: 30px 10px 10px 10px; font-family: Arial, Helvetica, sans-serif; font-size: 14px; color: #333333;">
+              <p>Med venlig hilsen,<br>
+              <b>OneMed Norge AS</b><br>
+              Supply Chain Team</p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+
+</body>
+</html>`;
+
+    // Finnish template
+    const fiTemplate = `<!DOCTYPE html>
+<html>
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+  <title>Muistutus vireillä olevista tilauksista</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f6f6f6; font-family: Arial, Helvetica, sans-serif;">
+
+  <table width="100%" border="0" cellpadding="0" cellspacing="0" bgcolor="#f6f6f6">
+    <tr>
+      <td>
+        <table align="center" width="100%" border="0" cellpadding="0" cellspacing="0" style="max-width: 900px; margin: 20px auto; background-color: #ffffff; border: 1px solid #e0e0e0; border-radius: 4px; padding: 20px;">
+          
+          <!-- Johdanto -->
+          <tr>
+            <td style="padding: 10px 10px 20px 10px; font-family: Arial, Helvetica, sans-serif; font-size: 14px; color: #333333;">
+              <p>Hei,</p>
+              <p>Viittaamme tilauksemme ja näemme, että seuraavat tilausrivit ovat edelleen vireillä teillä. Pyydämme palautetta uudella odotetulla toimituspäivämäärällä (ETA) jokaiselle riville.</p>
+              <p>Vastatkaa tähän sähköpostiin täyttämällä tiedot sarakkeessa <b>"Uusi ETA"</b>.</p>
+            </td>
+          </tr>
+
+          <!-- Tilaus taulukko -->
+          <tr>
+            <td>
+              <table width="100%" border="0" cellpadding="0" cellspacing="0" style="border-collapse: collapse; font-size: 12px; border: 1px solid #cccccc;">
+
+                <!-- Taulukon otsikot -->
+                <thead>
+                  <tr style="background-color: #003366; color: #ffffff; text-align: left;">
+                    <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">PO-nr</th>
+                    <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">OneMed nr</th>
+                    <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">Lev. ArtNr</th>
+                    <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">Spesifikaatio</th>
+                    <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">Tilattu määrä</th>
+                    <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">Vastaanotettu määrä</th>
+                    <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">Odotettu ETA</th>
+                    <th style="padding: 8px 10px; background-color: #008000; border: 1px solid #4A7AAB;">Uusi ETA</th>
+                  </tr>
+                </thead>
+
+                <!-- Taulukon sisältö -->
+                <tbody>
+                  {{#each orders}}
+                  <tr style="background-color: {{#if @even}}#f7f7f7{{else}}#ffffff{{/if}}; border-bottom: 1px solid #e0e0e0;">
+                    <td style="padding: 6px 10px; border: 1px solid #e0e0e0; font-weight: bold;">{{poNumber}}</td>
+                    <td style="padding: 6px 10px; border: 1px solid #e0e0e0;">{{itemNo}}</td>
+                    <td style="padding: 6px 10px; border: 1px solid #e0e0e0;">{{description}}</td>
+                    <td style="padding: 6px 10px; border: 1px solid #e0e0e0;">{{specification}}</td>
+                    <td style="padding: 6px 10px; border: 1px solid #e0e0e0; text-align: center;">{{orderQty}}</td>
+                    <td style="padding: 6px 10px; border: 1px solid #e0e0e0; text-align: center;">{{receivedQty}}</td>
+                    <td style="padding: 6px 10px; border: 1px solid #e0e0e0;">{{estReceiptDate}}</td>
+                    <td style="padding: 6px 10px; border: 1px solid #e0e0e0; background-color: #E8F5E9;">&nbsp;</td>
+                  </tr>
+                  {{/each}}
+                </tbody>
+
+              </table>
+            </td>
+          </tr>
+
+          <!-- Lopetus -->
+          <tr>
+            <td style="padding: 30px 10px 10px 10px; font-family: Arial, Helvetica, sans-serif; font-size: 14px; color: #333333;">
+              <p>Ystävällisin terveisin,<br>
+              <b>OneMed Norge AS</b><br>
+              Supply Chain Team</p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+
+</body>
+</html>`;
+
     this.templates = {
       no: noTemplate,
       en: enTemplate,
+      se: seTemplate,
+      da: daTemplate,
+      fi: fiTemplate,
     };
   }
 
@@ -258,10 +501,22 @@ export class EmailService {
     }
   }
 
-  // Get the preferred language for a supplier
+  // Get the preferred language for a supplier (legacy method - now uses app language)
   getSupplierLanguage(supplierName: string): "no" | "en" {
     const supplierInfo = this.getSupplierInfo(supplierName);
     return supplierInfo?.språkKode === "ENG" ? "en" : "no";
+  }
+
+  // Get the current app language from localStorage
+  getAppLanguage(): "no" | "en" | "se" | "da" | "fi" {
+    const storedLanguage = localStorage.getItem("i18nextLng");
+    if (
+      storedLanguage &&
+      ["no", "en", "se", "da", "fi"].includes(storedLanguage)
+    ) {
+      return storedLanguage as "no" | "en" | "se" | "da" | "fi";
+    }
+    return "no"; // Default to Norwegian
   }
 
   // New method to generate email preview HTML
@@ -289,7 +544,7 @@ export class EmailService {
     try {
       // Use manually overridden email if provided, otherwise get from supplier data
       let supplierEmail: string | null = data.recipientEmail || null;
-      let language: "no" | "en" = "no"; // Default to Norwegian
+      const language: "no" | "en" | "se" | "da" | "fi" = this.getAppLanguage(); // Use app language
 
       console.log("EmailService: sendReminder called with data:", {
         supplier: data.supplier,
@@ -306,8 +561,7 @@ export class EmailService {
 
         if (supplierInfo) {
           supplierEmail = supplierInfo.epost;
-          // Set language based on supplier's preference
-          language = supplierInfo.språkKode === "ENG" ? "en" : "no";
+          // Language is now determined by app settings, not supplier preference
           console.log(
             "EmailService: Found supplier info in JSON:",
             supplierInfo
@@ -383,10 +637,14 @@ export class EmailService {
       }
 
       // Set the subject based on language with proper UTF-8 encoding
-      const subject =
-        finalLanguage === "no"
-          ? `Purring på manglende leveranser – ${data.supplier}`
-          : `Reminder: Outstanding Deliveries – ${data.supplier}`;
+      const subjectTemplates = {
+        no: `Purring på manglende leveranser – ${data.supplier}`,
+        en: `Reminder: Outstanding Deliveries – ${data.supplier}`,
+        se: `Påminnelse om utestående leveranser – ${data.supplier}`,
+        da: `Påmindelse om udestående leverancer – ${data.supplier}`,
+        fi: `Muistutus vireillä olevista toimituksista – ${data.supplier}`,
+      };
+      const subject = subjectTemplates[finalLanguage] || subjectTemplates.no;
 
       // ATTEMPT 1: sendEmailViaEmlAndCOM (Preferred Method - .eml + COM)
       try {

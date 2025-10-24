@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { ExcelData } from "../types/ExcelData";
 
 interface SupplierSelectProps {
@@ -16,6 +17,7 @@ const SupplierSelect: React.FC<SupplierSelectProps> = ({
   selectedWeekday,
   selectedPlanner,
 }) => {
+  const { t } = useTranslation();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedSupplier, setSelectedSupplier] = useState(
     currentSupplier || ""
@@ -115,39 +117,51 @@ const SupplierSelect: React.FC<SupplierSelectProps> = ({
         className="text-xl font-bold mb-4 text-neutral"
         id="supplier-select-heading"
       >
-        Velg leverandør
+        {t("supplierSelect.title")}
       </h2>
 
       <div
         className="mb-4 p-4 bg-primary-light bg-opacity-10 border border-primary-light rounded-md"
-        aria-label="Valgt innkjøpsplanlegger og ukedag"
+        aria-label={
+          t("supplierSelect.planner") +
+          " " +
+          selectedPlanner +
+          " " +
+          t("supplierSelect.selectedWeekday") +
+          " " +
+          selectedWeekday
+        }
       >
         <p className="text-primary">
-          <span className="font-medium">Innkjøpsplanlegger:</span>{" "}
+          <span className="font-medium">{t("supplierSelect.planner")}</span>{" "}
           {selectedPlanner}
         </p>
         <p className="text-primary mt-1">
-          <span className="font-medium">Valgt ukedag:</span> {selectedWeekday}
+          <span className="font-medium">
+            {t("supplierSelect.selectedWeekday")}
+          </span>{" "}
+          {selectedWeekday}
         </p>
         <p className="text-sm text-neutral-secondary mt-1">
-          Viser kun leverandører som er planlagt for{" "}
-          {selectedWeekday?.toLowerCase()} og som har åpne ordre.
+          {t("supplierSelect.description", {
+            weekday: selectedWeekday?.toLowerCase(),
+          })}
         </p>
       </div>
 
       <div className="mb-6 w-full">
         <div className="flex mb-2 w-full">
           <label htmlFor="supplier-search" className="sr-only">
-            Søk etter leverandør
+            {t("supplierSelect.searchPlaceholder")}
           </label>
           <input
             type="text"
             id="supplier-search"
-            placeholder="Søk etter leverandør..."
+            placeholder={t("supplierSelect.searchPlaceholder")}
             className="form-control w-full"
             value={searchTerm}
             onChange={handleSearch}
-            aria-label="Søk etter leverandør"
+            aria-label={t("supplierSelect.searchPlaceholder")}
             aria-controls="supplier-list"
           />
         </div>
@@ -158,24 +172,24 @@ const SupplierSelect: React.FC<SupplierSelectProps> = ({
               className="text-sm text-neutral-secondary mb-2"
               aria-live="polite"
             >
-              Laster leverandører med åpne ordre...
+              {t("supplierSelect.loadingSuppliers")}
             </p>
           ) : (
             <p
               className="text-sm text-neutral-secondary mb-2"
               aria-live="polite"
             >
-              {filteredSuppliers.length} leverandører med åpne ordre funnet
+              {filteredSuppliers.length} {t("supplierSelect.suppliersFound")}
             </p>
           )}
 
           {isLoadingSuppliers ? (
             <p className="text-neutral-secondary italic" aria-live="polite">
-              Laster...
+              {t("supplierSelect.loading")}
             </p>
           ) : filteredSuppliers.length === 0 ? (
             <p className="text-neutral-secondary italic" aria-live="polite">
-              Ingen leverandører med åpne ordre funnet for denne ukedagen
+              {t("supplierSelect.noSuppliersFound")}
             </p>
           ) : (
             <div
