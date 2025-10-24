@@ -106,9 +106,9 @@
       "displayLanguageSelector": true,
       "include": "resources/installer.nsh",
       "warningsAsErrors": false,
-      "languages": [
-        "Norwegian",
-        "English"
+      "installerLanguages": [
+        "nb_NO",
+        "en_US"
       ]
     }
   },
