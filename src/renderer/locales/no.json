@@ -1,6 +1,7 @@
 {
   "app": {
     "title": "OneMed SupplyChain",
+    "version": "Versjon",
     "welcome": {
       "title": "Velkommen til OneMed SupplyChain",
       "description": "Et verktøy for å sende påminnelser til leverandører om leveringsdatoer",

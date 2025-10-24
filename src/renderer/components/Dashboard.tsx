@@ -60,11 +60,24 @@ interface DashboardProps {
 
 const Dashboard: React.FC<DashboardProps> = ({ appState: _appState }) => {
   const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [appVersion, setAppVersion] = useState<string>("");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     loadDashboardData();
+
+    // Fetch app version
+    const fetchVersion = async () => {
+      try {
+        const version = await window.electron.getAppVersion();
+        setAppVersion(version);
+      } catch (error) {
+        console.error("Failed to fetch app version:", error);
+      }
+    };
+
+    fetchVersion();
   }, []);
 
   const loadDashboardData = async () => {
@@ -249,8 +262,13 @@ const Dashboard: React.FC<DashboardProps> = ({ appState: _appState }) => {
     <div className="min-h-screen flex flex-col bg-neutral-light">
       <div className="p-4 bg-primary text-neutral-white shadow-md">
         <div className="container-app flex items-center justify-between">
-          <div>
+          <div className="flex items-center gap-3">
             <img src={onemedLogo} alt="OneMed Logo" className="h-10" />
+            {appVersion && (
+              <span className="text-sm text-neutral-white/80">
+                Versjon {appVersion}
+              </span>
+            )}
           </div>
           <div className="flex-grow text-center">
             <h1 className="text-2xl font-bold">

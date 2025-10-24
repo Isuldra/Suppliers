@@ -463,10 +463,23 @@ const MainApp: React.FC<MainAppProps> = ({
   const { t } = useTranslation();
   const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [appVersion, setAppVersion] = useState<string>("");
   // Welcome screen removed - language is now detected automatically
 
   useEffect(() => {
     console.log("🟢 App.tsx mounted!");
+
+    // Fetch app version
+    const fetchVersion = async () => {
+      try {
+        const version = await window.electron.getAppVersion();
+        setAppVersion(version);
+      } catch (error) {
+        console.error("Failed to fetch app version:", error);
+      }
+    };
+
+    fetchVersion();
   }, []);
 
   // Keyboard navigation
@@ -519,8 +532,13 @@ const MainApp: React.FC<MainAppProps> = ({
     <div className="min-h-screen flex flex-col bg-neutral-light">
       <div className="p-4 bg-primary text-neutral-white shadow-md">
         <div className="container-app flex items-center justify-between">
-          <div>
+          <div className="flex items-center gap-3">
             <img src={onemedLogo} alt="OneMed Logo" className="h-10" />
+            {appVersion && (
+              <span className="text-sm text-neutral-white/80">
+                {t("app.version")} {appVersion}
+              </span>
+            )}
           </div>
           <div className="flex-grow text-center">
             <h1 className="text-2xl font-bold">{t("app.title")}</h1>

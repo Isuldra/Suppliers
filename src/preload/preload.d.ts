@@ -192,6 +192,9 @@ interface ElectronAPI {
     systemLocale: string;
     preferredLanguages: string[];
   }>;
+
+  // App version
+  getAppVersion: () => Promise<string>;
 }
 
 // Extend the global Window interface

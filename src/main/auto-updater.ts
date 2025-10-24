@@ -1,6 +1,6 @@
 import { dialog } from "electron";
 import { autoUpdater } from "electron-updater";
-// eslint-disable-next-line @typescript-eslint/no-var-requires, @typescript-eslint/no-require-imports
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 const log = require("electron-log/main");
 import type { UpdateInfo, ProgressInfo } from "electron-updater";
 import { app, shell } from "electron";
@@ -72,6 +72,10 @@ function setupPortableUpdater() {
   // Configure for portable - disable automatic installation
   autoUpdater.autoDownload = false;
   autoUpdater.autoInstallOnAppQuit = false;
+  // Disable differential downloads to avoid 404 errors with missing old versions
+  (
+    autoUpdater as typeof autoUpdater & { differentialDownload?: boolean }
+  ).differentialDownload = false;
 
   // Handle update check
   autoUpdater.on("checking-for-update", () => {
@@ -279,6 +283,10 @@ function setupStandardUpdater() {
   // Standard configuration for installed versions
   autoUpdater.autoDownload = false;
   autoUpdater.autoInstallOnAppQuit = true;
+  // Disable differential downloads to avoid 404 errors with missing old versions
+  (
+    autoUpdater as typeof autoUpdater & { differentialDownload?: boolean }
+  ).differentialDownload = false;
 
   // Handle update-sjekk
   autoUpdater.on("checking-for-update", () => {
