@@ -25,7 +25,7 @@ const rootPackageJson = require("../package.json");
 // Create minimal package.json for electron-builder with production dependencies
 const minimalPackageJson = {
   name: "one-med-supplychain-app",
-  version: "1.1.7",
+  version: rootPackageJson.version, // Use version from root package.json
   main: "main/main.cjs",
   private: true,
   dependencies: rootPackageJson.dependencies || {},

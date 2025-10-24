@@ -1,11 +1,11 @@
 {
-  "version": "1.3.1",
+  "version": "1.3.2",
   "files": [
     {
-      "url": "https://github.com/Isuldra/Suppliers/releases/download/v1.3.1/OneMed.SupplyChain-Portable.exe",
-      "sha512": "OP+BS9ML1JcU7yGQw3NQGYwcsCC0uAV+9iHeb2W4X34XfOSFxnnGH2p4gPLxavjZgOKnlS0jPMpriTY5WgC5uQ==",
-      "size": 91631500
+      "url": "https://github.com/Isuldra/Suppliers/releases/download/v1.3.2/OneMed SupplyChain-Portable.exe",
+      "sha512": "5mCnmJdk11bTMw4bQUxF+wHZym0ntrtUKO4oWts0SMwqigzJSUKSA1uUktK06a/NPbr24CV3arH7P/kjPDb3Dw==",
+      "size": 91591899
     }
   ],
-  "releaseDate": "2025-10-24T12:16:55.373Z"
+  "releaseDate": "2025-10-24T12:57:20.893Z"
 }
