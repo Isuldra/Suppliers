@@ -19,6 +19,7 @@
     "pack": "electron-builder --dir",
     "create-minimal-manifest": "node scripts/create-minimal-manifest.js",
     "dist": "electron-vite build && npm run create-minimal-manifest && electron-builder --win --publish never",
+    "dist:clean": "node scripts/build-with-version.js",
     "clean-dist": "node scripts/clean-build.js",
     "dist:win": "electron-vite build && npm run create-minimal-manifest && electron-builder --win --publish never",
     "dist:portable": "electron-vite build && npm run create-minimal-manifest && electron-builder --win portable --publish never",
@@ -42,7 +43,7 @@
     "security-check": "node scripts/security-check.js",
     "security-audit": "npm audit --audit-level=moderate",
     "release:prepare": "node scripts/prepare-cloudflare-release.js",
-    "release:full": "npm run dist && npm run release:prepare"
+    "release:full": "npm run dist:clean && npm run release:prepare"
   },
   "build": {
     "appId": "com.onemed.supplychain",
