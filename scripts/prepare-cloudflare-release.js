@@ -97,11 +97,11 @@ if (fs.existsSync(portableExePath)) {
   console.log(`⚠️  Portable executable not found: ${portableExe}`);
 }
 
-// Copy files to updates directory
-console.log("\n📁 Copying files to docs/updates/...");
-filesToCopy.forEach(({ source, destination }) => {
-  copyFile(source, destination);
-});
+// Note: Large files (exe, blockmap) are now hosted on GitHub Releases
+// Only copy small files to docs/updates/ for Cloudflare Pages
+console.log("\n📁 Preparing Cloudflare Pages files...");
+console.log("   Large files will be uploaded to GitHub Releases");
+console.log("   Only metadata files will be copied to docs/updates/");
 
 // Generate latest.yml for auto-updates
 if (filesToInclude.length > 0) {
@@ -112,12 +112,15 @@ if (filesToInclude.length > 0) {
   const fileSize = getFileSize(mainFile.path);
   const releaseDate = new Date().toISOString();
 
+  // GitHub Releases URL for the installer
+  const githubReleaseUrl = `https://github.com/Isuldra/Suppliers/releases/download/v${version}/${mainFile.name}`;
+
   const latestYml = `version: ${version}
 files:
-  - url: ${mainFile.name}
+  - url: ${githubReleaseUrl}
     sha512: ${fileHash}
     size: ${fileSize}
-path: ${mainFile.name}
+path: ${githubReleaseUrl}
 sha512: ${fileHash}
 releaseDate: '${releaseDate}'`;
 
@@ -137,11 +140,13 @@ if (fs.existsSync(portableExePath)) {
   const portableSize = getFileSize(portableExePath);
   const releaseDate = new Date().toISOString();
 
+  const portableReleaseUrl = `https://github.com/Isuldra/Suppliers/releases/download/v${version}/${portableExe}`;
+
   const latestJson = {
     version: version,
     files: [
       {
-        url: portableExe,
+        url: portableReleaseUrl,
         sha512: portableHash,
         size: portableSize,
       },
@@ -196,13 +201,17 @@ if (!fs.existsSync(redirectsPath)) {
   console.log(`✅ Created: _redirects`);
 }
 
-console.log("\n🎉 Cloudflare release preparation complete!");
+console.log("\n🎉 Hybrid release preparation complete!");
 console.log("\n📋 Next steps:");
-console.log("1. Review the files in docs/updates/");
+console.log("1. Review the metadata files in docs/updates/");
 console.log("2. Commit changes: git add docs/updates/");
 console.log("3. Push to GitHub: git push origin main");
-console.log("4. Cloudflare Pages will auto-deploy in 1-2 minutes");
-console.log("5. Users will see update notifications automatically");
+console.log("4. Create GitHub Release with installer files:");
+console.log(`   - Upload: ${nsisInstaller}`);
+console.log(`   - Upload: ${nsisBlockmap}`);
+console.log(`   - Upload: ${portableExe}`);
+console.log("5. Cloudflare Pages will serve latest.yml with GitHub URLs");
+console.log("6. Users will download installers from GitHub Releases");
 
 console.log("\n📁 Files ready for deployment:");
 const deployedFiles = fs.readdirSync(updatesDir);
