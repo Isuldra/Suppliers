@@ -174,7 +174,7 @@
     "react-dom": "^19.1.0",
     "react-dropzone": "^14.3.8",
     "react-hot-toast": "^2.5.2",
-    "react-i18next": "^16.1.5",
+    "react-i18next": "^16.1.4",
     "react-router-dom": "^7.6.2",
     "react-select": "^5.10.1",
     "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.2/xlsx-0.20.2.tgz"
