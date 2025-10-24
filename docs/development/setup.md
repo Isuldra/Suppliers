@@ -380,4 +380,4 @@ npm run build
 ---
 
 **Sist oppdatert**: Juli 2024  
-**Versjon**: 1.1.7
+**Versjon**: Se package.json for gjeldende versjon
