@@ -177,8 +177,6 @@ export function setupSimpleUpdater() {
   // Try multiple update sources in order of preference
   const updateSources = [
     "https://suppliers-anx.pages.dev", // Cloudflare Pages
-    "https://isuldra.github.io/Suppliers", // GitHub Pages fallback
-    "https://updates.onemed.no", // Company server (if available)
     "https://raw.githubusercontent.com/Isuldra/Suppliers/main/docs/updates", // GitHub raw files
   ];
 
