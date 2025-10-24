@@ -1,1 +1,4 @@
-* text=auto eol=lf 
+# Git LFS configuration for auto-update files
+docs/updates/*.exe filter=lfs diff=lfs merge=lfs -text
+docs/updates/*.blockmap filter=lfs diff=lfs merge=lfs -text
+docs/updates/*.zip filter=lfs diff=lfs merge=lfs -text
