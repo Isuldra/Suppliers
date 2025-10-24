@@ -1,7 +1,14 @@
 # Cloudflare Pages redirects
+# Serve latest.yml for auto-updates
+/latest.yml /latest.yml 200
+
 # Serve JSON files with correct content type
 /latest.json /latest.json 200
 /app-update.json /app-update.json 200
+
+# Serve executable files
+/*.exe /*.exe 200
+/*.blockmap /*.blockmap 200
 
 # Redirect root to index.html
 / /index.html 200
