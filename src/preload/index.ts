@@ -165,6 +165,9 @@ interface ElectronAPI {
     systemLocale: string;
     preferredLanguages: string[];
   }>;
+
+  // App version
+  getAppVersion: () => Promise<string>;
 }
 
 // Valid send channels for IPC communication
@@ -209,6 +212,7 @@ const validSendChannels = [
   "saveDebugHtml",
   "openDebugFolder",
   "get-system-language",
+  "get-app-version",
 ] as const;
 
 // Valid receive channels for IPC communication
@@ -253,6 +257,7 @@ const validReceiveChannels = [
   "saveDebugHtml",
   "openDebugFolder",
   "get-system-language",
+  "get-app-version",
 ] as const;
 
 // Expose the API to the renderer process
@@ -504,5 +509,10 @@ contextBridge.exposeInMainWorld("electron", {
   // System language detection
   getSystemLanguage: async () => {
     return await ipcRenderer.invoke("get-system-language");
+  },
+
+  // App version
+  getAppVersion: async () => {
+    return await ipcRenderer.invoke("get-app-version");
   },
 } as ElectronAPI);
