@@ -280,6 +280,11 @@ function setupHelpMenuHandlers() {
       buttons: ["OK"],
     });
   });
+
+  // Handler for getting app version
+  ipcMain.handle("get-app-version", async () => {
+    return app.getVersion();
+  });
 }
 
 async function createWindow() {
