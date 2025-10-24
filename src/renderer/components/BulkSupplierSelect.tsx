@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { ChevronDownIcon, ChevronRightIcon } from "@heroicons/react/24/outline";
 import { ExcelRow } from "../types/ExcelData";
 import supplierData from "../data/supplierData.json";
@@ -40,6 +41,7 @@ const BulkSupplierSelect: React.FC<BulkSupplierSelectProps> = ({
   selectedSuppliers,
   bulkSupplierEmails,
 }) => {
+  const { t } = useTranslation();
   console.log("🟡 BulkSupplierSelect: Component rendered with props:", {
     selectedWeekday,
     selectedPlanner,
@@ -317,7 +319,7 @@ const BulkSupplierSelect: React.FC<BulkSupplierSelectProps> = ({
         <div className="flex items-center justify-center p-8">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
           <span className="ml-2 text-neutral-secondary">
-            Laster leverandører...
+            {t("bulkSupplierSelect.loading")}
           </span>
         </div>
       </div>
@@ -328,14 +330,17 @@ const BulkSupplierSelect: React.FC<BulkSupplierSelectProps> = ({
     <div className="w-full">
       <div className="mb-4 p-4 bg-primary-light bg-opacity-10 border border-primary-light rounded-md">
         <p className="text-primary">
-          <span className="font-medium">Innkjøpsplanlegger:</span>{" "}
+          <span className="font-medium">{t("bulkSupplierSelect.planner")}</span>{" "}
           {selectedPlanner}
         </p>
         <p className="text-primary mt-1">
-          <span className="font-medium">Valgt ukedag:</span> {selectedWeekday}
+          <span className="font-medium">
+            {t("bulkSupplierSelect.selectedWeekday")}
+          </span>{" "}
+          {selectedWeekday}
         </p>
         <p className="text-sm text-neutral-secondary mt-1">
-          Velg leverandører som skal motta purring på utestående ordre
+          {t("bulkSupplierSelect.description")}
         </p>
       </div>
 
@@ -358,9 +363,7 @@ const BulkSupplierSelect: React.FC<BulkSupplierSelectProps> = ({
             </div>
             <div className="ml-3">
               <p className="text-sm text-yellow-800">
-                <strong>Advarsel:</strong> Du har valgt leverandører med
-                forskjellige språk. E-poster vil sendes med riktig språk per
-                leverandør.
+                {t("bulkSupplierSelect.mixedLanguageWarning")}
               </p>
             </div>
           </div>
@@ -379,11 +382,12 @@ const BulkSupplierSelect: React.FC<BulkSupplierSelectProps> = ({
           disabled={suppliers.length === 0}
         >
           {selectedSuppliers.length === suppliers.length
-            ? "Fjern alle"
-            : "Velg alle"}
+            ? t("bulkSupplierSelect.removeAll")
+            : t("bulkSupplierSelect.selectAll")}
         </button>
         <span className="ml-2 text-sm text-neutral-secondary">
-          {selectedSuppliers.length} av {suppliers.length} leverandører valgt
+          {selectedSuppliers.length} av {suppliers.length}{" "}
+          {t("bulkSupplierSelect.suppliersSelected")}
         </span>
       </div>
 
@@ -394,22 +398,22 @@ const BulkSupplierSelect: React.FC<BulkSupplierSelectProps> = ({
             <thead className="bg-neutral-light">
               <tr>
                 <th className="px-4 py-3 text-left text-sm font-medium text-neutral">
-                  Velg
+                  {t("bulkSupplierSelect.tableHeaders.select")}
                 </th>
                 <th className="px-4 py-3 text-left text-sm font-medium text-neutral">
-                  Leverandør
+                  {t("bulkSupplierSelect.tableHeaders.supplier")}
                 </th>
                 <th className="px-4 py-3 text-left text-sm font-medium text-neutral">
-                  Antall restlinjer
+                  {t("bulkSupplierSelect.tableHeaders.outstandingLines")}
                 </th>
                 <th className="px-4 py-3 text-left text-sm font-medium text-neutral">
-                  E-postadresse
+                  {t("bulkSupplierSelect.tableHeaders.email")}
                 </th>
                 <th className="px-4 py-3 text-left text-sm font-medium text-neutral">
-                  Språk
+                  {t("bulkSupplierSelect.tableHeaders.language")}
                 </th>
                 <th className="px-4 py-3 text-left text-sm font-medium text-neutral">
-                  Detaljer
+                  {t("bulkSupplierSelect.tableHeaders.details")}
                 </th>
               </tr>
             </thead>
@@ -462,8 +466,8 @@ const BulkSupplierSelect: React.FC<BulkSupplierSelectProps> = ({
                           className="ml-2 text-xs bg-blue-500 text-white px-2 py-1 rounded"
                         >
                           {selectedSuppliers.includes(supplier.supplier)
-                            ? "Unselect"
-                            : "Select"}
+                            ? t("bulkSupplierSelect.unselect")
+                            : t("bulkSupplierSelect.select")}
                         </button>
                       </td>
                       <td className="px-4 py-3 text-sm font-medium text-neutral">
@@ -488,7 +492,9 @@ const BulkSupplierSelect: React.FC<BulkSupplierSelectProps> = ({
                             handleEmailChange(supplier.supplier, e.target.value)
                           }
                           className="form-control text-sm w-full min-w-64"
-                          placeholder="E-postadresse"
+                          placeholder={t(
+                            "bulkSupplierSelect.tableHeaders.email"
+                          )}
                         />
                       </td>
                       <td className="px-4 py-3 text-sm">
@@ -512,12 +518,12 @@ const BulkSupplierSelect: React.FC<BulkSupplierSelectProps> = ({
                           {expandedSuppliers.has(supplier.supplier) ? (
                             <>
                               <ChevronDownIcon className="h-4 w-4 mr-1" />
-                              Skjul
+                              {t("bulkSupplierSelect.show")}
                             </>
                           ) : (
                             <>
                               <ChevronRightIcon className="h-4 w-4 mr-1" />
-                              Vis
+                              {t("bulkSupplierSelect.show")}
                             </>
                           )}
                         </button>
@@ -529,7 +535,9 @@ const BulkSupplierSelect: React.FC<BulkSupplierSelectProps> = ({
                         <td colSpan={6} className="px-4 py-4">
                           <div className="bg-neutral-white rounded-md border border-neutral-light p-4">
                             <h4 className="text-sm font-medium text-neutral mb-3">
-                              Utestående ordre for {supplier.supplier}
+                              {t("bulkSupplierSelect.outstandingOrdersFor", {
+                                supplier: supplier.supplier,
+                              })}
                             </h4>
                             {supplierOrders.get(supplier.supplier) ? (
                               <div className="overflow-x-auto">
@@ -537,28 +545,42 @@ const BulkSupplierSelect: React.FC<BulkSupplierSelectProps> = ({
                                   <thead>
                                     <tr className="border-b border-neutral-light">
                                       <th className="text-left py-2 px-2">
-                                        Inkluder
+                                        {t(
+                                          "bulkDataReview.tableHeaders.select"
+                                        )}
                                       </th>
                                       <th className="text-left py-2 px-2">
-                                        PO-nr
+                                        {t(
+                                          "bulkDataReview.tableHeaders.poNumber"
+                                        )}
                                       </th>
                                       <th className="text-left py-2 px-2">
-                                        OneMed nr
+                                        {t(
+                                          "bulkDataReview.tableHeaders.oneMedNumber"
+                                        )}
                                       </th>
                                       <th className="text-left py-2 px-2">
-                                        Beskrivelse
+                                        {t(
+                                          "bulkDataReview.tableHeaders.description"
+                                        )}
                                       </th>
                                       <th className="text-left py-2 px-2">
-                                        Bestilt
+                                        {t(
+                                          "bulkDataReview.tableHeaders.ordered"
+                                        )}
                                       </th>
                                       <th className="text-left py-2 px-2">
-                                        Mottatt
+                                        {t(
+                                          "bulkDataReview.tableHeaders.received"
+                                        )}
                                       </th>
                                       <th className="text-left py-2 px-2">
-                                        Utestående
+                                        {t(
+                                          "bulkDataReview.tableHeaders.outstanding"
+                                        )}
                                       </th>
                                       <th className="text-left py-2 px-2">
-                                        ETA
+                                        {t("bulkDataReview.tableHeaders.eta")}
                                       </th>
                                     </tr>
                                   </thead>
@@ -645,9 +667,7 @@ const BulkSupplierSelect: React.FC<BulkSupplierSelectProps> = ({
 
         {suppliers.length === 0 && (
           <div className="text-center py-8 text-neutral-secondary">
-            <p>
-              Ingen leverandører med utestående ordre funnet for denne ukedagen
-            </p>
+            <p>{t("bulkSupplierSelect.noSuppliersFound")}</p>
           </div>
         )}
       </div>
@@ -655,10 +675,12 @@ const BulkSupplierSelect: React.FC<BulkSupplierSelectProps> = ({
       {/* Summary */}
       {selectedSuppliers.length > 0 && (
         <div className="mt-4 p-4 bg-primary-light bg-opacity-10 border border-primary-light rounded-md">
-          <h3 className="text-sm font-medium text-primary mb-2">Sammendrag</h3>
+          <h3 className="text-sm font-medium text-primary mb-2">
+            {t("bulkSupplierSelect.summary")}
+          </h3>
           <p className="text-sm text-neutral">
             <strong>{[...new Set(selectedSuppliers)].length}</strong>{" "}
-            leverandører valgt
+            {t("bulkSupplierSelect.suppliersSelected")}
           </p>
           <p className="text-sm text-neutral">
             <strong>
@@ -676,12 +698,11 @@ const BulkSupplierSelect: React.FC<BulkSupplierSelectProps> = ({
                 );
               }, 0)}
             </strong>{" "}
-            utestående ordrelinjer totalt (ekskluderte linjer er ikke inkludert)
+            {t("bulkSupplierSelect.totalOutstandingLines")}
           </p>
           {hasMixedLanguages && (
             <p className="text-sm text-yellow-700 mt-1">
-              <strong>Blandet språk:</strong> E-poster vil sendes med riktig
-              språk per leverandør
+              {t("bulkSupplierSelect.mixedLanguageInfo")}
             </p>
           )}
         </div>

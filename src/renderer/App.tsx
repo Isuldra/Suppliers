@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Toaster } from "react-hot-toast";
+import { useTranslation } from "react-i18next";
 import FileUpload from "./components/FileUpload";
 import DataReview from "./components/DataReview";
 import EmailButton from "./components/EmailButton";
@@ -10,12 +11,17 @@ import Dashboard from "./components/Dashboard";
 import BulkSupplierSelect from "./components/BulkSupplierSelect";
 import BulkDataReview from "./components/BulkDataReview";
 import BulkEmailPreview from "./components/BulkEmailPreview";
+import SettingsModal from "./components/SettingsModal";
+// WelcomeScreen removed - language is now detected automatically
+import LanguageSelector from "./components/LanguageSelector";
 import { ExcelData, ValidationError } from "./types/ExcelData";
 import { HashRouter as Router, Routes, Route, Link } from "react-router-dom";
 import supplyPlannersData from "./data/supplyPlanners.json";
 
 // Import the OneMed logo
 import onemedLogo from "./assets/onemed-logo.webp";
+
+// i18n is now initialized asynchronously in index.tsx
 
 // New AppState interface to replace WizardState
 interface AppState {
@@ -37,24 +43,34 @@ interface AppState {
 
 // Progress indicator component
 const ProgressIndicator: React.FC<{ appState: AppState }> = ({ appState }) => {
+  const { t } = useTranslation();
+
   const steps = [
-    { id: "upload", label: "Last opp fil", completed: !!appState.excelData },
+    {
+      id: "upload",
+      label: t("progress.uploadFile"),
+      completed: !!appState.excelData,
+    },
     {
       id: "weekday",
-      label: "Velg ukedag",
+      label: t("progress.selectWeekday"),
       completed: !!appState.selectedWeekday,
     },
     {
       id: "supplier",
-      label: "Velg leverandør",
+      label: t("progress.selectSupplier"),
       completed: !!appState.selectedSupplier,
     },
     {
       id: "review",
-      label: "Gjennomgå data",
+      label: t("progress.reviewData"),
       completed: appState.showDataReview,
     },
-    { id: "email", label: "Send e-post", completed: appState.showEmailButton },
+    {
+      id: "email",
+      label: t("progress.sendEmail"),
+      completed: appState.showEmailButton,
+    },
   ];
 
   const currentStepIndex = steps.findIndex((step) => !step.completed);
@@ -107,20 +123,24 @@ const KeyboardShortcutsModal: React.FC<{
   isOpen: boolean;
   onClose: () => void;
 }> = ({ isOpen, onClose }) => {
+  const { t } = useTranslation();
+
   if (!isOpen) return null;
 
   const shortcuts = [
-    { key: "Ctrl/Cmd + R", description: "Start på nytt" },
-    { key: "Escape", description: "Gå tilbake ett steg" },
-    { key: "Enter", description: "Bekreft valg" },
-    { key: "Tab", description: "Naviger mellom felter" },
+    { key: "Ctrl/Cmd + R", description: t("keyboardShortcuts.reset") },
+    { key: "Escape", description: t("keyboardShortcuts.goBack") },
+    { key: "Enter", description: t("keyboardShortcuts.confirm") },
+    { key: "Tab", description: t("keyboardShortcuts.navigate") },
   ];
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-neutral-white p-6 rounded-md shadow-lg max-w-md w-full mx-4">
         <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-bold text-neutral">Hurtigtaster</h3>
+          <h3 className="text-lg font-bold text-neutral">
+            {t("keyboardShortcuts.title")}
+          </h3>
           <button
             onClick={onClose}
             className="text-neutral-secondary hover:text-neutral"
@@ -142,7 +162,7 @@ const KeyboardShortcutsModal: React.FC<{
         </div>
         <div className="mt-6 text-center">
           <button onClick={onClose} className="btn btn-primary px-4 py-2">
-            Lukk
+            {t("buttons.close")}
           </button>
         </div>
       </div>
@@ -440,7 +460,10 @@ const MainApp: React.FC<MainAppProps> = ({
   onBulkDataReviewBack,
   onBulkEmailPreviewBack,
 }) => {
+  const { t } = useTranslation();
   const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  // Welcome screen removed - language is now detected automatically
 
   useEffect(() => {
     console.log("🟢 App.tsx mounted!");
@@ -500,22 +523,20 @@ const MainApp: React.FC<MainAppProps> = ({
             <img src={onemedLogo} alt="OneMed Logo" className="h-10" />
           </div>
           <div className="flex-grow text-center">
-            <h1 className="text-2xl font-bold">OneMed SupplyChain</h1>
+            <h1 className="text-2xl font-bold">{t("app.title")}</h1>
           </div>
           <div className="flex items-center gap-4">
             <Link to="/dashboard" className="btn btn-secondary text-sm">
-              Dashboard
+              {t("navigation.dashboard")}
             </Link>
+            <LanguageSelector mode="compact" />
             <button
               onClick={() => setShowKeyboardShortcuts(true)}
               className="btn btn-secondary text-sm"
-              title="Hurtigtaster (Ctrl/Cmd + ?)"
+              title={`${t("navigation.keyboardShortcuts")} (Ctrl/Cmd + ?)`}
             >
               ⌨️
             </button>
-            <div className="w-10">
-              {/* Tomt element for å balansere layouten */}
-            </div>
           </div>
         </div>
       </div>
@@ -535,7 +556,7 @@ const MainApp: React.FC<MainAppProps> = ({
               // Show full upload interface when no file is loaded
               <>
                 <h2 className="text-xl font-bold mb-4 text-neutral">
-                  Last opp Excel-fil
+                  {t("fileUpload.title")}
                 </h2>
                 <FileUpload
                   onDataParsed={onDataParsed}
@@ -547,15 +568,14 @@ const MainApp: React.FC<MainAppProps> = ({
               <div className="flex justify-between items-center">
                 <div>
                   <h2 className="text-xl font-bold text-neutral">
-                    Excel-fil lastet opp
+                    {t("fileUpload.fileLoaded")}
                   </h2>
                   <p className="text-sm text-neutral-secondary mt-1">
-                    {appState.excelData.bp.length} rader med data er klar for
-                    behandling
+                    {appState.excelData.bp.length} {t("fileUpload.rowsReady")}
                   </p>
                 </div>
                 <button onClick={onResetApp} className="btn btn-secondary">
-                  Last opp ny fil
+                  {t("fileUpload.uploadNewFile")}
                 </button>
               </div>
             )}
@@ -565,7 +585,7 @@ const MainApp: React.FC<MainAppProps> = ({
           {appState.validationErrors.length > 0 && (
             <div className="mb-6 p-4 bg-accent bg-opacity-10 border border-accent rounded-md w-full">
               <h3 className="text-accent font-medium mb-2">
-                Feil ved validering:
+                {t("validation.errors")}
               </h3>
               <ul className="list-disc pl-5 text-sm text-neutral">
                 {appState.validationErrors.map((error, index) => (
@@ -579,13 +599,13 @@ const MainApp: React.FC<MainAppProps> = ({
           {appState.excelData && (
             <div className="bg-neutral-white p-6 rounded-md shadow-md mb-6 w-full">
               <h2 className="text-xl font-bold mb-4 text-neutral">
-                Konfigurasjon
+                {t("configuration.title")}
               </h2>
 
               {/* Weekday Selection - Show directly since there's only one planner */}
               <div className="mb-6">
                 <h3 className="text-lg font-medium mb-3 text-neutral">
-                  Ukedag
+                  {t("configuration.weekday")}
                 </h3>
                 <WeekdaySelect
                   onWeekdaySelected={onWeekdaySelected}
@@ -600,10 +620,10 @@ const MainApp: React.FC<MainAppProps> = ({
                   <div className="flex items-center justify-between">
                     <div>
                       <h3 className="text-lg font-medium text-neutral mb-1">
-                        Sendingsmodus
+                        {t("configuration.sendingMode")}
                       </h3>
                       <p className="text-sm text-neutral-secondary">
-                        Velg mellom enkelt leverandør eller flere leverandører
+                        {t("configuration.sendingModeDescription")}
                       </p>
                     </div>
                     <div className="flex items-center space-x-3">
@@ -614,7 +634,7 @@ const MainApp: React.FC<MainAppProps> = ({
                             : "text-neutral-secondary"
                         }`}
                       >
-                        Enkelt leverandør
+                        {t("configuration.singleSupplier")}
                       </span>
                       <button
                         onClick={onToggleBulkMode}
@@ -639,7 +659,7 @@ const MainApp: React.FC<MainAppProps> = ({
                             : "text-neutral-secondary"
                         }`}
                       >
-                        Flere leverandører
+                        {t("configuration.multipleSuppliers")}
                       </span>
                     </div>
                   </div>
@@ -650,7 +670,9 @@ const MainApp: React.FC<MainAppProps> = ({
               {appState.selectedWeekday && (
                 <div className="mb-6">
                   <h3 className="text-lg font-medium mb-3 text-neutral">
-                    {appState.isBulkMode ? "Leverandører" : "Leverandør"}
+                    {appState.isBulkMode
+                      ? t("configuration.suppliers")
+                      : t("configuration.supplier")}
                   </h3>
                   {appState.isBulkMode ? (
                     <BulkSupplierSelect
@@ -683,7 +705,7 @@ const MainApp: React.FC<MainAppProps> = ({
             appState.excelData && (
               <div className="bg-neutral-white p-6 rounded-md shadow-md mb-6 w-full">
                 <h2 className="text-xl font-bold mb-4 text-neutral">
-                  Gjennomgå data
+                  {t("dataReview.title")}
                 </h2>
                 <DataReview
                   excelData={appState.excelData}
@@ -701,7 +723,7 @@ const MainApp: React.FC<MainAppProps> = ({
             appState.excelData && (
               <div className="bg-neutral-white p-6 rounded-md shadow-md mb-6 w-full">
                 <h2 className="text-xl font-bold mb-4 text-neutral">
-                  Send e-post
+                  {t("email.title")}
                 </h2>
                 <EmailButton
                   excelData={appState.excelData}
@@ -716,7 +738,7 @@ const MainApp: React.FC<MainAppProps> = ({
             !appState.showDataReview && (
               <div className="bg-neutral-white p-6 rounded-md shadow-md mb-6 w-full">
                 <h2 className="text-xl font-bold mb-4 text-neutral">
-                  Gjennomgå ordrelinjer
+                  {t("dataReview.reviewOrderLines")}
                 </h2>
                 <BulkDataReview
                   selectedSuppliers={appState.selectedSuppliers}
@@ -733,7 +755,7 @@ const MainApp: React.FC<MainAppProps> = ({
             appState.selectedSuppliers.length > 0 && (
               <div className="bg-neutral-white p-6 rounded-md shadow-md mb-6 w-full">
                 <h2 className="text-xl font-bold mb-4 text-neutral">
-                  E-post forhåndsvisning og sending
+                  {t("email.previewAndSend")}
                 </h2>
                 <BulkEmailPreview
                   selectedSuppliers={appState.selectedSuppliers}
@@ -746,6 +768,14 @@ const MainApp: React.FC<MainAppProps> = ({
             )}
         </div>
       </div>
+
+      {/* Welcome Screen removed - language is now detected automatically */}
+
+      {/* Settings Modal */}
+      <SettingsModal
+        isOpen={showSettings}
+        onClose={() => setShowSettings(false)}
+      />
 
       {/* Keyboard Shortcuts Modal */}
       <KeyboardShortcutsModal

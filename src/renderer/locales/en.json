@@ -1,0 +1,243 @@
+{
+  "app": {
+    "title": "OneMed SupplyChain",
+    "welcome": {
+      "title": "Welcome to OneMed SupplyChain",
+      "description": "A tool for sending reminders to suppliers about delivery dates",
+      "getStarted": "Get Started"
+    }
+  },
+  "navigation": {
+    "dashboard": "Dashboard",
+    "keyboardShortcuts": "Keyboard Shortcuts",
+    "settings": "Settings"
+  },
+  "progress": {
+    "uploadFile": "Upload file",
+    "selectWeekday": "Select weekday",
+    "selectSupplier": "Select supplier",
+    "reviewData": "Review data",
+    "sendEmail": "Send email"
+  },
+  "fileUpload": {
+    "title": "Upload Excel file",
+    "fileLoaded": "Excel file uploaded",
+    "rowsReady": "rows of data ready for processing",
+    "uploadNewFile": "Upload new file",
+    "help": "Help",
+    "helpAndResources": "Help and resources",
+    "documentation": "Documentation",
+    "checkUpdates": "Check for updates",
+    "contactSupport": "Contact support",
+    "about": "About OneMed SupplyChain",
+    "showLogs": "Show logs (debugging)",
+    "dropFile": "Drag and drop the Excel file here, or click to select file",
+    "dropFileHere": "Drop file here...",
+    "fileRequirement": "The file must contain the \"BP\" sheet with data from row 6",
+    "whatToDo": "What do I need to do?",
+    "instruction1": "Download the latest version of the \"BP\" sheet from the system.",
+    "instruction2": "Make sure you export the \"BP\" sheet as a .xlsx file with data from row 6.",
+    "instruction3": "The sheet must contain columns C-P with PO number, supplier info, ETA dates and quantities.",
+    "instruction4": "Drag and drop the file here, or click to select it.",
+    "errors": {
+      "couldNotOpenDocs": "Could not open documentation",
+      "errorOpeningDocs": "Error opening documentation",
+      "couldNotOpenEmail": "Could not open email client",
+      "errorOpeningEmail": "Error opening email client",
+      "noFileSelected": "No file selected or file type is invalid",
+      "validationError": "Validation error",
+      "validationSuccessButDatabaseFailed": "Data validated but database save failed",
+      "dataValidatedButNotSaved": "Data validated but not saved to local database"
+    },
+    "processing": {
+      "readingFile": "Reading file...",
+      "validatingData": "Validating data against database..."
+    },
+    "success": {
+      "importCompleted": "Import successful and data saved to database"
+    }
+  },
+  "configuration": {
+    "title": "Configuration",
+    "weekday": "Weekday",
+    "sendingMode": "Sending mode",
+    "singleSupplier": "Single supplier",
+    "multipleSuppliers": "Multiple suppliers",
+    "supplier": "Supplier",
+    "suppliers": "Suppliers",
+    "sendingModeDescription": "Choose between single supplier or multiple suppliers"
+  },
+  "validation": {
+    "errors": "Validation errors:"
+  },
+  "keyboardShortcuts": {
+    "title": "Keyboard Shortcuts",
+    "reset": "Start over",
+    "goBack": "Go back one step",
+    "confirm": "Confirm selection",
+    "navigate": "Navigate between fields",
+    "close": "Close"
+  },
+  "buttons": {
+    "close": "Close",
+    "save": "Save",
+    "cancel": "Cancel",
+    "next": "Next",
+    "back": "Back",
+    "complete": "Complete"
+  },
+  "languages": {
+    "norwegian": "Norwegian",
+    "swedish": "Swedish",
+    "danish": "Danish",
+    "finnish": "Finnish",
+    "english": "English"
+  },
+  "weekdays": {
+    "monday": "Monday",
+    "tuesday": "Tuesday",
+    "wednesday": "Wednesday",
+    "thursday": "Thursday",
+    "friday": "Friday"
+  },
+  "weekdaySelect": {
+    "title": "Select weekday",
+    "description": "Select a weekday to see suppliers planned for that day.",
+    "noWeekdays": "No weekdays found for this planner",
+    "weekdaysAvailable": "weekdays available",
+    "noSuppliersPlanned": "There are no suppliers planned for this planner."
+  },
+  "supplierSelect": {
+    "title": "Select supplier",
+    "planner": "Purchasing planner:",
+    "selectedWeekday": "Selected weekday:",
+    "description": "Shows only suppliers planned for {weekday} and with open orders.",
+    "searchPlaceholder": "Search for supplier...",
+    "loadingSuppliers": "Loading suppliers with open orders...",
+    "loading": "Loading...",
+    "suppliersFound": "suppliers with open orders found",
+    "noSuppliersFound": "No suppliers with open orders found for this weekday"
+  },
+  "dataReview": {
+    "title": "Review data",
+    "reviewOrderLines": "Review order lines",
+    "reviewForSupplier": "Review of outstanding orders for {supplier}",
+    "supplier": "Supplier:",
+    "weekday": "Weekday:",
+    "totalCount": "Total count:",
+    "outstandingOrders": "Outstanding orders:",
+    "selectedForEmail": "Selected for email:",
+    "selectAll": "Select all",
+    "selectNone": "Select none",
+    "selectOutstandingOnly": "Select outstanding only",
+    "noDataAvailable": "No data available. Please select a supplier first.",
+    "back": "Back",
+    "sendEmail": "Send email",
+    "sendEmailSelected": "Send email ({count} selected)",
+    "rowsPerPage": "Number of rows per page",
+    "perPage": "per page",
+    "goToFirst": "Go to first page",
+    "goToPrevious": "Go to previous page",
+    "goToNext": "Go to next page",
+    "goToLast": "Go to last page",
+    "pageOf": "of"
+  },
+  "table": {
+    "selectAllRows": "Select all rows",
+    "selectRow": "Select row {poNumber}",
+    "status": "Status",
+    "critical": "Critical",
+    "overdue": "Overdue",
+    "normal": "Normal",
+    "dueDate": "Due date",
+    "poNumber": "PO number",
+    "itemNumber": "OneMed item number",
+    "supplierArticleNumber": "Supplier article number",
+    "comment": "Comment",
+    "orderRow": "Order row",
+    "outstanding": "Outstanding",
+    "key": "Key"
+  },
+  "email": {
+    "title": "Send email",
+    "previewAndSend": "Email preview and sending",
+    "sendButton": "Send email",
+    "sendingEmails": "Sending emails...",
+    "emailsSent": "Emails sent successfully",
+    "emailError": "Error sending emails. Try again."
+  },
+  "bulkSupplierSelect": {
+    "loading": "Loading suppliers...",
+    "planner": "Purchasing planner:",
+    "selectedWeekday": "Selected weekday:",
+    "description": "Select suppliers to receive reminders about outstanding orders",
+    "mixedLanguageWarning": "Warning: You have selected suppliers with different languages. Emails will be sent in the correct language per supplier.",
+    "removeAll": "Remove all",
+    "selectAll": "Select all",
+    "suppliersSelected": "suppliers selected",
+    "tableHeaders": {
+      "select": "Select",
+      "supplier": "Supplier",
+      "outstandingLines": "Outstanding lines",
+      "email": "Email address",
+      "language": "Language",
+      "details": "Details"
+    },
+    "unselect": "Unselect",
+    "select": "Select",
+    "show": "Show",
+    "outstandingOrdersFor": "Outstanding orders for {supplier}",
+    "noSuppliersFound": "No suppliers with outstanding orders found for this weekday",
+    "summary": "Summary",
+    "totalOutstandingLines": "outstanding order lines total (excluded lines not included)",
+    "mixedLanguageInfo": "Mixed languages: Emails will be sent in the correct language per supplier"
+  },
+  "bulkDataReview": {
+    "title": "Review and select order lines",
+    "suppliers": "Suppliers:",
+    "totalOrderLines": "Total order lines:",
+    "selectedOrderLines": "Selected order lines:",
+    "mixedLanguageWarning": "Warning: Mixed languages detected. Emails will be sent in the correct language per supplier.",
+    "selected": "selected",
+    "removeAll": "Remove all",
+    "selectAll": "Select all",
+    "goToEmailPreview": "Go to email preview →",
+    "validationNote": "Note: All suppliers must have at least one selected order line",
+    "backToSupplierSelection": "Back to supplier selection",
+    "tableHeaders": {
+      "select": "Include",
+      "poNumber": "PO no",
+      "oneMedNumber": "OneMed no",
+      "description": "Description",
+      "specification": "Specification",
+      "ordered": "Ordered",
+      "received": "Received",
+      "outstanding": "Outstanding",
+      "eta": "ETA"
+    }
+  },
+  "bulkEmailPreview": {
+    "noEmailProvided": "No email address provided",
+    "allEmailsSentSuccess": "All {count} emails sent successfully!",
+    "partialSuccess": "{success} emails sent successfully, {failed} failed.",
+    "allEmailsFailed": "All {count} emails failed. Check error messages and try again.",
+    "preparingData": "Preparing email data...",
+    "title": "Email preview and sending",
+    "suppliers": "Suppliers:",
+    "orderLines": "Order lines:",
+    "emails": "Emails:",
+    "mixedLanguageInfo": "Info: Mixed languages detected. Emails will be sent in the correct language per supplier.",
+    "sendingEmails": "Sending emails... ({current} of {total})",
+    "sending": "Sending...",
+    "sent": "✓ Sent",
+    "failed": "✗ Failed",
+    "previewDisabled": "Preview disabled for better performance",
+    "preview": "Preview",
+    "emailAddress": "Email address:",
+    "resetToDefault": "Reset to default",
+    "noEmailWarning": "⚠️ No email address provided - email will not be sent",
+    "error": "Error:",
+    "backToOrderSelection": "← Back to order selection",
+    "sendAll": "Send all emails"
+  }
+}

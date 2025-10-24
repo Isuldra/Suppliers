@@ -1,0 +1,239 @@
+{
+  "app": {
+    "title": "OneMed SupplyChain",
+    "welcome": {
+      "title": "Tervetuloa OneMed SupplyChainiin",
+      "description": "Työkalu toimittajien muistuttamiseen toimituspäivämääristä",
+      "getStarted": "Aloita"
+    }
+  },
+  "navigation": {
+    "dashboard": "Hallintapaneeli",
+    "keyboardShortcuts": "Pikanäppäimet",
+    "settings": "Asetukset"
+  },
+  "progress": {
+    "uploadFile": "Lataa tiedosto",
+    "selectWeekday": "Valitse viikonpäivä",
+    "selectSupplier": "Valitse toimittaja",
+    "reviewData": "Tarkista tiedot",
+    "sendEmail": "Lähetä sähköposti"
+  },
+  "fileUpload": {
+    "title": "Lataa Excel-tiedosto",
+    "fileLoaded": "Excel-tiedosto ladattu",
+    "rowsReady": "riviä tietoa valmiina käsittelyyn",
+    "uploadNewFile": "Lataa uusi tiedosto",
+    "help": "Apua",
+    "helpAndResources": "Apua ja resursseja",
+    "documentation": "Dokumentaatio",
+    "checkUpdates": "Tarkista päivitykset",
+    "contactSupport": "Ota yhteyttä tukeen",
+    "about": "Tietoja OneMed SupplyChainista",
+    "showLogs": "Näytä lokit (vianetsintä)",
+    "dropFile": "Vedä ja pudota Excel-tiedosto tähän tai klikkaa valitaksesi tiedosto",
+    "dropFileHere": "Pudota tiedosto tähän...",
+    "fileRequirement": "Tiedoston tulee sisältää \"BP\"-arkki tiedoilla riviltä 6",
+    "whatToDo": "Mitä minun pitää tehdä?",
+    "instruction1": "Lataa uusin versio \"BP\"-arkista järjestelmästä.",
+    "instruction2": "Varmista, että viedään \"BP\"-arkki .xlsx-tiedostona tiedoilla riviltä 6.",
+    "instruction3": "Arkin tulee sisältää sarakkeet C-P PO-numerolla, toimittajatiedoilla, ETA-päivämäärillä ja määrillä.",
+    "instruction4": "Vedä ja pudota tiedosto tähän tai klikkaa valitaksesi sen.",
+    "errors": {
+      "couldNotOpenDocs": "Dokumentaatiota ei voitu avata",
+      "errorOpeningDocs": "Virhe dokumentaation avaamisessa",
+      "couldNotOpenEmail": "Sähköpostiohjelmaa ei voitu avata",
+      "errorOpeningEmail": "Virhe sähköpostiohjelman avaamisessa",
+      "noFileSelected": "Tiedostoa ei valittu tai tiedostotyyppi on virheellinen",
+      "validationError": "Validoinnin virhe",
+      "validationSuccessButDatabaseFailed": "Tiedot validoitu mutta tietokantaan tallentaminen epäonnistui",
+      "dataValidatedButNotSaved": "Tiedot validoitu mutta ei tallennettu paikalliseen tietokantaan"
+    },
+    "processing": {
+      "readingFile": "Luetaan tiedostoa...",
+      "validatingData": "Validoidaan tietoja tietokantaa vastaan..."
+    },
+    "success": {
+      "importCompleted": "Tuo onnistui ja tiedot tallennettiin tietokantaan"
+    }
+  },
+  "configuration": {
+    "title": "Konfiguraatio",
+    "weekday": "Viikonpäivä",
+    "sendingMode": "Lähetystila",
+    "singleSupplier": "Yksi toimittaja",
+    "multipleSuppliers": "Useita toimittajia",
+    "supplier": "Toimittaja",
+    "suppliers": "Toimittajat",
+    "sendingModeDescription": "Valitse yksi toimittaja tai useita toimittajia"
+  },
+  "email": {
+    "title": "Lähetä sähköposti",
+    "previewAndSend": "Sähköpostin esikatselu ja lähetys"
+  },
+  "validation": {
+    "errors": "Virheet validoinnissa:"
+  },
+  "keyboardShortcuts": {
+    "title": "Pikanäppäimet",
+    "reset": "Aloita alusta",
+    "goBack": "Mene takaisin yksi askel",
+    "confirm": "Vahvista valinta",
+    "navigate": "Navigoi kenttien välillä",
+    "close": "Sulje"
+  },
+  "buttons": {
+    "close": "Sulje",
+    "save": "Tallenna",
+    "cancel": "Peruuta",
+    "next": "Seuraava",
+    "back": "Takaisin",
+    "complete": "Valmis"
+  },
+  "languages": {
+    "norwegian": "Norja",
+    "swedish": "Ruotsi",
+    "danish": "Tanska",
+    "finnish": "Suomi",
+    "english": "Englanti"
+  },
+  "weekdays": {
+    "monday": "Maanantai",
+    "tuesday": "Tiistai",
+    "wednesday": "Keskiviikko",
+    "thursday": "Torstai",
+    "friday": "Perjantai"
+  },
+  "weekdaySelect": {
+    "title": "Valitse viikonpäivä",
+    "description": "Valitse viikonpäivä nähdäksesi kyseiselle päivälle suunnitellut toimittajat.",
+    "noWeekdays": "Tälle suunnittelijalle ei löytynyt viikonpäiviä",
+    "weekdaysAvailable": "viikonpäivää saatavilla",
+    "noSuppliersPlanned": "Tälle suunnittelijalle ei ole suunniteltu toimittajia"
+  },
+  "supplierSelect": {
+    "title": "Valitse toimittaja",
+    "planner": "Ostosuunnittelija:",
+    "selectedWeekday": "Valittu viikonpäivä:",
+    "description": "Näyttää vain toimittajat, jotka on suunniteltu {weekday} ja joilla on avoimia tilauksia.",
+    "searchPlaceholder": "Hae toimittajaa...",
+    "loadingSuppliers": "Ladataan toimittajia avoimilla tilauksilla...",
+    "loading": "Ladataan...",
+    "suppliersFound": "toimittajaa avoimilla tilauksilla löytyi",
+    "noSuppliersFound": "Tälle viikonpäivälle ei löytynyt toimittajia avoimilla tilauksilla"
+  },
+  "dataReview": {
+    "title": "Tarkista tiedot",
+    "reviewOrderLines": "Tarkista tilausrivit",
+    "reviewForSupplier": "Tarkista avoimet tilaukset toimittajalle {supplier}",
+    "supplier": "Toimittaja:",
+    "weekday": "Viikonpäivä:",
+    "totalCount": "Yhteensä:",
+    "outstandingOrders": "Avoimet tilaukset:",
+    "selectedForEmail": "Valittu sähköpostiin:",
+    "selectAll": "Valitse kaikki",
+    "selectNone": "Älä valitse mitään",
+    "selectOutstandingOnly": "Valitse vain avoimet",
+    "noDataAvailable": "Tietoja ei saatavilla. Valitse ensin toimittaja.",
+    "back": "Takaisin",
+    "sendEmail": "Lähetä sähköposti",
+    "sendEmailSelected": "Lähetä sähköposti ({count} valittu)",
+    "rowsPerPage": "Rivejä per sivu",
+    "perPage": "per sivu",
+    "goToFirst": "Siirry ensimmäiselle sivulle",
+    "goToPrevious": "Siirry edelliselle sivulle",
+    "goToNext": "Siirry seuraavalle sivulle",
+    "goToLast": "Siirry viimeiselle sivulle",
+    "pageOf": "sivua"
+  },
+  "table": {
+    "selectAllRows": "Valitse kaikki rivit",
+    "selectRow": "Valitse rivi {poNumber}",
+    "status": "Tila",
+    "critical": "Kriittinen",
+    "overdue": "Myöhässä",
+    "normal": "Normaali",
+    "dueDate": "Eräpäivä",
+    "poNumber": "PO-numero",
+    "itemNumber": "OneMed tuotenumero",
+    "supplierArticleNumber": "Toimittajan tuotenumero",
+    "comment": "Kommentti",
+    "orderRow": "Tilausrivi",
+    "outstanding": "Avoinna",
+    "key": "Avain"
+  },
+  "bulkSupplierSelect": {
+    "loading": "Ladataan toimittajia...",
+    "planner": "Ostosuunnittelija:",
+    "selectedWeekday": "Valittu viikonpäivä:",
+    "description": "Valitse toimittajat, jotka saavat muistutuksia avoimista tilauksista",
+    "mixedLanguageWarning": "Varoitus: Olet valinnut toimittajia eri kielillä. Sähköpostit lähetetään oikealla kielellä per toimittaja.",
+    "removeAll": "Poista kaikki",
+    "selectAll": "Valitse kaikki",
+    "suppliersSelected": "toimittajaa valittu",
+    "tableHeaders": {
+      "select": "Valitse",
+      "supplier": "Toimittaja",
+      "outstandingLines": "Avoimia rivejä",
+      "email": "Sähköpostiosoite",
+      "language": "Kieli",
+      "details": "Yksityiskohdat"
+    },
+    "unselect": "Poista valinta",
+    "select": "Valitse",
+    "show": "Näytä",
+    "outstandingOrdersFor": "Avoimet tilaukset toimittajalle {supplier}",
+    "noSuppliersFound": "Tälle viikonpäivälle ei löytynyt toimittajia avoimilla tilauksilla",
+    "summary": "Yhteenveto",
+    "totalOutstandingLines": "avoimia tilausrivejä yhteensä (poissuljetut rivit eivät sisälly)",
+    "mixedLanguageInfo": "Sekakielisyys: Sähköpostit lähetetään oikealla kielellä per toimittaja"
+  },
+  "bulkDataReview": {
+    "title": "Tarkista ja valitse tilausrivit",
+    "suppliers": "Toimittajat:",
+    "totalOrderLines": "Tilausrivejä yhteensä:",
+    "selectedOrderLines": "Valitut tilausrivit:",
+    "mixedLanguageWarning": "Varoitus: Sekakielisyys havaittu. Sähköpostit lähetetään oikealla kielellä per toimittaja.",
+    "selected": "valittu",
+    "removeAll": "Poista kaikki",
+    "selectAll": "Valitse kaikki",
+    "goToEmailPreview": "Siirry sähköpostin esikatseluun →",
+    "validationNote": "Huom: Kaikilla toimittajilla on oltava vähintään yksi valittu tilausrivi",
+    "backToSupplierSelection": "Takaisin toimittajan valintaan",
+    "tableHeaders": {
+      "select": "Sisällytä",
+      "poNumber": "PO-nro",
+      "oneMedNumber": "OneMed nro",
+      "description": "Kuvaus",
+      "specification": "Määrittely",
+      "ordered": "Tilattu",
+      "received": "Vastaanotettu",
+      "outstanding": "Avoinna",
+      "eta": "ETA"
+    }
+  },
+  "bulkEmailPreview": {
+    "noEmailProvided": "Sähköpostiosoitetta ei annettu",
+    "allEmailsSentSuccess": "Kaikki {count} sähköposti lähetetty onnistuneesti!",
+    "partialSuccess": "{success} sähköposti lähetetty onnistuneesti, {failed} epäonnistui.",
+    "allEmailsFailed": "Kaikki {count} sähköposti epäonnistui. Tarkista virheviestit ja yritä uudelleen.",
+    "preparingData": "Valmistellaan sähköpostitietoja...",
+    "title": "Sähköpostin esikatselu ja lähetys",
+    "suppliers": "Toimittajat:",
+    "orderLines": "Tilausrivit:",
+    "emails": "Sähköpostit:",
+    "mixedLanguageInfo": "Tiedot: Sekakielisyys havaittu. Sähköpostit lähetetään oikealla kielellä per toimittaja.",
+    "sendingEmails": "Lähetetään sähköposteja... ({current} / {total})",
+    "sending": "Lähetetään...",
+    "sent": "✓ Lähetetty",
+    "failed": "✗ Epäonnistui",
+    "previewDisabled": "Esikatselu poistettu käytöstä paremman suorituskyvyn vuoksi",
+    "preview": "Esikatselu",
+    "emailAddress": "Sähköpostiosoite:",
+    "resetToDefault": "Palauta oletukseen",
+    "noEmailWarning": "⚠️ Sähköpostiosoitetta ei annettu - sähköposti ei lähetetä",
+    "error": "Virhe:",
+    "backToOrderSelection": "← Takaisin tilausvalintaan",
+    "sendAll": "Lähetä kaikki sähköposti"
+  }
+}
