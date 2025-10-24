@@ -1,13 +1,18 @@
 /latest.yml
-  Content-Type: text/yaml
-  Cache-Control: no-cache
+  Content-Type: text/yaml; charset=utf-8
+  Cache-Control: no-cache, no-store, must-revalidate
+
+/app-update.yml
+  Content-Type: text/yaml; charset=utf-8
+  Cache-Control: no-cache, no-store, must-revalidate
 
 /latest.json
-  Content-Type: application/json
-  Cache-Control: no-cache
+  Content-Type: application/json; charset=utf-8
+  Cache-Control: no-cache, no-store, must-revalidate
 
 /*.exe
   Content-Type: application/octet-stream
+  Content-Disposition: attachment
 
 /*.blockmap
   Content-Type: application/octet-stream
