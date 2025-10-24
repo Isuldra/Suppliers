@@ -132,7 +132,7 @@ npm run version:help
 ### Version Bumping
 
 ```bash
-# Patch version (1.2.2 → 1.2.3)
+# Patch version (1.2.2 → 1.3.1)
 npm run version:bump
 
 # Minor version (1.2.2 → 1.3.0)
