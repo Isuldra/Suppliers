@@ -1,0 +1,13 @@
+/latest.yml
+  Content-Type: text/yaml
+  Cache-Control: no-cache
+
+/latest.json
+  Content-Type: application/json
+  Cache-Control: no-cache
+
+/*.exe
+  Content-Type: application/octet-stream
+
+/*.blockmap
+  Content-Type: application/octet-stream
