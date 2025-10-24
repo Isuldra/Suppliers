@@ -43,7 +43,8 @@
     "security-check": "node scripts/security-check.js",
     "security-audit": "npm audit --audit-level=moderate",
     "release:prepare": "node scripts/prepare-cloudflare-release.js",
-    "release:full": "npm run dist:clean && npm run release:prepare"
+    "release:full": "npm run validate:version && npm run dist:clean && npm run release:prepare",
+    "validate:version": "node scripts/validate-version.js"
   },
   "build": {
     "appId": "com.onemed.supplychain",
