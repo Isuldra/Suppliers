@@ -1,6 +1,6 @@
 {
   "name": "one-med-supplychain-app",
-  "version": "1.3.0",
+  "version": "1.2.1",
   "description": "OneMed SupplyChain - Supplier Reminder Pro",
   "main": "dist/main/main.cjs",
   "private": true,
@@ -40,7 +40,9 @@
     "version:info": "node scripts/sync-version.js info",
     "version:help": "node scripts/sync-version.js help",
     "security-check": "node scripts/security-check.js",
-    "security-audit": "npm audit --audit-level=moderate"
+    "security-audit": "npm audit --audit-level=moderate",
+    "release:prepare": "node scripts/prepare-cloudflare-release.js",
+    "release:full": "npm run dist && npm run release:prepare"
   },
   "build": {
     "appId": "com.onemed.supplychain",
