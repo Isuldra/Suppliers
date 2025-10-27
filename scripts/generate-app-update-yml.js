@@ -35,13 +35,17 @@ const sha512 = crypto.createHash("sha512").update(fileBuffer).digest("base64");
 // 5. Get size from buffer
 const size = fileBuffer.length;
 
-// 6. Generate app-update.yml content
+// 6. Generate app-update.yml content with absolute GitHub Release URLs
+// Convert spaces to dots for GitHub Release filename
+const githubFilename = nsisFile.replace(/ /g, ".");
+const githubReleaseUrl = `https://github.com/Isuldra/Suppliers/releases/download/v${version}/${githubFilename}`;
+
 const appUpdateYml = `version: ${version}
 files:
-  - url: ${nsisFile}
+  - url: ${githubReleaseUrl}
     sha512: ${sha512}
     size: ${size}
-path: ${nsisFile}
+path: ${githubFilename}
 sha512: ${sha512}
 releaseDate: '${new Date().toISOString()}'
 `;
