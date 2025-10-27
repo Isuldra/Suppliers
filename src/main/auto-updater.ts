@@ -237,14 +237,7 @@ export function setupAutoUpdater() {
     return;
   }
 
-  // Configure update server URL to use Cloudflare Pages
-  autoUpdater.setFeedURL({
-    provider: "generic",
-    url: "https://suppliers-anx.pages.dev/",
-  });
-  updateLogger.info(
-    "Update server configured to use Cloudflare Pages: https://suppliers-anx.pages.dev/"
-  );
+  updateLogger.info("Auto-updater configured to use GitHub Releases");
 
   // Check if running as portable version
   const isPortable = isPortableVersion();
