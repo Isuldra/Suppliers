@@ -112,11 +112,9 @@ if (filesToInclude.length > 0) {
   const fileSize = getFileSize(mainFile.path);
   const releaseDate = new Date().toISOString();
 
-  // URL-encode the filename for GitHub Releases URL (spaces -> %20)
-  const encodedFilename = encodeURIComponent(mainFile.name);
-
-  // GitHub Releases URL for the installer
-  const githubReleaseUrl = `https://github.com/Isuldra/Suppliers/releases/download/v${version}/${encodedFilename}`;
+  // Use filename with dots instead of spaces for GitHub Releases URL
+  const githubFilename = mainFile.name.replace(/ /g, ".");
+  const githubReleaseUrl = `https://github.com/Isuldra/Suppliers/releases/download/v${version}/${githubFilename}`;
 
   const latestYml = `version: ${version}
 files:
@@ -145,9 +143,9 @@ if (fs.existsSync(portableExePath)) {
   const portableSize = getFileSize(portableExePath);
   const releaseDate = new Date().toISOString();
 
-  // URL-encode the filename for GitHub Releases URL
-  const encodedPortableName = encodeURIComponent(portableExe);
-  const portableReleaseUrl = `https://github.com/Isuldra/Suppliers/releases/download/v${version}/${encodedPortableName}`;
+  // Use filename with dots instead of spaces for GitHub Releases URL
+  const portableFilename = portableExe.replace(/ /g, ".");
+  const portableReleaseUrl = `https://github.com/Isuldra/Suppliers/releases/download/v${version}/${portableFilename}`;
 
   const latestJson = {
     version: version,

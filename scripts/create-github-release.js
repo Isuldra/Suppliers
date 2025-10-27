@@ -30,6 +30,8 @@ const tagName = `v${version}`;
 
 async function createRelease() {
   try {
+    let release;
+
     // Check if release already exists
     try {
       const existingRelease = await octokit.rest.repos.getReleaseByTag({
@@ -40,22 +42,19 @@ async function createRelease() {
 
       console.log(`⚠️  Release ${tagName} already exists!`);
       console.log(`   URL: ${existingRelease.data.html_url}`);
-      return;
+      release = existingRelease.data;
     } catch (error) {
       if (error.status !== 404) {
         throw error;
       }
-      // Release doesn't exist, continue
-    }
-
-    // Create the release
-    console.log(`📝 Creating release ${tagName}...`);
-    const release = await octokit.rest.repos.createRelease({
-      owner,
-      repo,
-      tag_name: tagName,
-      name: `OneMed SupplyChain v${version}`,
-      body: `## OneMed SupplyChain v${version}
+      // Release doesn't exist, create it
+      console.log(`📝 Creating release ${tagName}...`);
+      const newRelease = await octokit.rest.repos.createRelease({
+        owner,
+        repo,
+        tag_name: tagName,
+        name: `OneMed SupplyChain v${version}`,
+        body: `## OneMed SupplyChain v${version}
 
 ### Changes
 - Auto-update system improvements
@@ -72,21 +71,22 @@ async function createRelease() {
 
 ---
 *This release was created automatically by the build system.*`,
-      draft: false,
-      prerelease: false,
-    });
-
-    console.log(`✅ Release created: ${release.data.html_url}`);
+        draft: false,
+        prerelease: false,
+      });
+      release = newRelease.data;
+      console.log(`✅ Release created: ${release.html_url}`);
+    }
 
     // Upload assets
     const assetsToUpload = [
       {
-        name: `OneMed SupplyChain-${version}-setup.exe`,
+        name: `OneMed.SupplyChain-${version}-setup.exe`,
         path: path.join(releaseDir, `OneMed SupplyChain-${version}-setup.exe`),
         contentType: "application/octet-stream",
       },
       {
-        name: `OneMed SupplyChain-${version}-setup.exe.blockmap`,
+        name: `OneMed.SupplyChain-${version}-setup.exe.blockmap`,
         path: path.join(
           releaseDir,
           `OneMed SupplyChain-${version}-setup.exe.blockmap`
@@ -94,9 +94,14 @@ async function createRelease() {
         contentType: "application/octet-stream",
       },
       {
-        name: "OneMed SupplyChain-Portable.exe",
+        name: "OneMed.SupplyChain-Portable.exe",
         path: path.join(releaseDir, "OneMed SupplyChain-Portable.exe"),
         contentType: "application/octet-stream",
+      },
+      {
+        name: "latest.yml",
+        path: path.join(projectRoot, "docs", "updates", "latest.yml"),
+        contentType: "text/yaml",
       },
     ];
 
@@ -121,7 +126,7 @@ async function createRelease() {
         await octokit.rest.repos.uploadReleaseAsset({
           owner,
           repo,
-          release_id: release.data.id,
+          release_id: release.id,
           name: asset.name,
           data: fileBuffer,
           headers: {
@@ -136,10 +141,10 @@ async function createRelease() {
     }
 
     console.log(`\n🎉 GitHub Release v${version} is ready!`);
-    console.log(`   URL: ${release.data.html_url}`);
+    console.log(`   URL: ${release.html_url}`);
     console.log(`\n📋 Next steps:`);
     console.log(`1. Auto-update will now work correctly`);
-    console.log(`2. Users can download from: ${release.data.html_url}`);
+    console.log(`2. Users can download from: ${release.html_url}`);
     console.log(`3. Cloudflare Pages serves latest.yml with GitHub URLs`);
   } catch (error) {
     console.error("❌ Error creating GitHub release:", error.message);
