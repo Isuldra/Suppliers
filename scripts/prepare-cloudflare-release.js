@@ -112,8 +112,11 @@ if (filesToInclude.length > 0) {
   const fileSize = getFileSize(mainFile.path);
   const releaseDate = new Date().toISOString();
 
+  // URL-encode the filename for GitHub Releases URL (spaces -> %20)
+  const encodedFilename = encodeURIComponent(mainFile.name);
+
   // GitHub Releases URL for the installer
-  const githubReleaseUrl = `https://github.com/Isuldra/Suppliers/releases/download/v${version}/${mainFile.name}`;
+  const githubReleaseUrl = `https://github.com/Isuldra/Suppliers/releases/download/v${version}/${encodedFilename}`;
 
   const latestYml = `version: ${version}
 files:
@@ -127,6 +130,8 @@ releaseDate: '${releaseDate}'`;
   const latestYmlPath = path.join(updatesDir, "latest.yml");
   fs.writeFileSync(latestYmlPath, latestYml);
   console.log(`✅ Generated: latest.yml`);
+  console.log(`   Filename: ${mainFile.name}`);
+  console.log(`   URL: ${githubReleaseUrl}`);
 } else {
   console.log("\n⚠️  No NSIS installer found for latest.yml generation");
   console.log("   Run 'npm run dist' to build the NSIS installer first");
@@ -140,7 +145,9 @@ if (fs.existsSync(portableExePath)) {
   const portableSize = getFileSize(portableExePath);
   const releaseDate = new Date().toISOString();
 
-  const portableReleaseUrl = `https://github.com/Isuldra/Suppliers/releases/download/v${version}/${portableExe}`;
+  // URL-encode the filename for GitHub Releases URL
+  const encodedPortableName = encodeURIComponent(portableExe);
+  const portableReleaseUrl = `https://github.com/Isuldra/Suppliers/releases/download/v${version}/${encodedPortableName}`;
 
   const latestJson = {
     version: version,
@@ -157,6 +164,8 @@ if (fs.existsSync(portableExePath)) {
   const latestJsonPath = path.join(updatesDir, "latest.json");
   fs.writeFileSync(latestJsonPath, JSON.stringify(latestJson, null, 2));
   console.log(`✅ Generated: latest.json`);
+  console.log(`   Filename: ${portableExe}`);
+  console.log(`   URL: ${portableReleaseUrl}`);
 }
 
 // Update index.html with current version
