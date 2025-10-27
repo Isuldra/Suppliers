@@ -115,11 +115,13 @@ if (filesToInclude.length > 0) {
   // Use filename with dots instead of spaces for GitHub Releases URL
   const githubFilename = mainFile.name.replace(/ /g, ".");
 
-  // For electron-updater, we should use relative URLs or just the filename
-  // The publish config in package.json will handle the base URL
+  // Use full GitHub Releases URL since we're serving from Cloudflare Pages
+  // but the files are hosted on GitHub Releases
+  const githubReleaseUrl = `https://github.com/Isuldra/Suppliers/releases/download/v${version}/${githubFilename}`;
+
   const latestYml = `version: ${version}
 files:
-  - url: ${githubFilename}
+  - url: ${githubReleaseUrl}
     sha512: ${fileHash}
     size: ${fileSize}
 path: ${githubFilename}
@@ -130,7 +132,7 @@ releaseDate: '${releaseDate}'`;
   fs.writeFileSync(latestYmlPath, latestYml);
   console.log(`✅ Generated: latest.yml`);
   console.log(`   Filename: ${mainFile.name}`);
-  console.log(`   URL: ${githubFilename} (relative URL for electron-updater)`);
+  console.log(`   URL: ${githubReleaseUrl}`);
 
   // Also copy to release/ directory for GitHub Release upload
   const releaseLatestYmlPath = path.join(releaseDir, "latest.yml");
@@ -152,13 +154,15 @@ if (fs.existsSync(portableExePath)) {
   // Use filename with dots instead of spaces for GitHub Releases URL
   const portableFilename = portableExe.replace(/ /g, ".");
 
-  // For electron-updater, we should use relative URLs or just the filename
-  // The publish config in package.json will handle the base URL
+  // Use full GitHub Releases URL since we're serving from Cloudflare Pages
+  // but the files are hosted on GitHub Releases
+  const portableReleaseUrl = `https://github.com/Isuldra/Suppliers/releases/download/v${version}/${portableFilename}`;
+
   const latestJson = {
     version: version,
     files: [
       {
-        url: portableFilename,
+        url: portableReleaseUrl,
         sha512: portableHash,
         size: portableSize,
       },
@@ -170,9 +174,7 @@ if (fs.existsSync(portableExePath)) {
   fs.writeFileSync(latestJsonPath, JSON.stringify(latestJson, null, 2));
   console.log(`✅ Generated: latest.json`);
   console.log(`   Filename: ${portableExe}`);
-  console.log(
-    `   URL: ${portableFilename} (relative URL for electron-updater)`
-  );
+  console.log(`   URL: ${portableReleaseUrl}`);
 }
 
 // Update index.html with current version
