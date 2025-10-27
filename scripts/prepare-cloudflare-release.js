@@ -130,6 +130,11 @@ releaseDate: '${releaseDate}'`;
   console.log(`✅ Generated: latest.yml`);
   console.log(`   Filename: ${mainFile.name}`);
   console.log(`   URL: ${githubReleaseUrl}`);
+
+  // Also copy to release/ directory for GitHub Release upload
+  const releaseLatestYmlPath = path.join(releaseDir, "latest.yml");
+  fs.writeFileSync(releaseLatestYmlPath, latestYml);
+  console.log(`✅ Copied latest.yml to release/ directory for GitHub Release`);
 } else {
   console.log("\n⚠️  No NSIS installer found for latest.yml generation");
   console.log("   Run 'npm run dist' to build the NSIS installer first");
