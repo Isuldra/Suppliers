@@ -1,0 +1,78 @@
+name: Manual Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to release (e.g., 1.3.5)"
+        required: true
+        type: string
+
+jobs:
+  manual-release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Update package.json version
+        run: |
+          npm version ${{ github.event.inputs.version }} --no-git-tag-version
+          echo "Updated package.json to version ${{ github.event.inputs.version }}"
+
+      - name: Build application
+        run: npm run dist:clean
+
+      - name: Prepare Cloudflare metadata
+        run: npm run release:prepare
+
+      - name: Create GitHub Release
+        run: npm run release:github
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Commit and push Cloudflare metadata
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+
+          # Add the metadata files
+          git add docs/updates/latest.yml
+          git add docs/updates/latest.json
+          git add docs/updates/index.html
+          git add docs/updates/_redirects
+
+          # Check if there are any changes to commit
+          if git diff-index --quiet HEAD; then
+            echo "No changes in Cloudflare metadata to commit."
+          else
+            git commit -m "chore(release): Update Cloudflare metadata for v${{ github.event.inputs.version }}"
+            git push origin main
+            echo "Successfully pushed Cloudflare metadata updates"
+          fi
+
+      - name: Create and push git tag
+        run: |
+          git tag "v${{ github.event.inputs.version }}"
+          git push origin "v${{ github.event.inputs.version }}"
+          echo "Created and pushed tag v${{ github.event.inputs.version }}"
+
+      - name: Verify deployment
+        run: |
+          echo "✅ Release v${{ github.event.inputs.version }} completed!"
+          echo "📱 GitHub Release: https://github.com/Isuldra/Suppliers/releases/tag/v${{ github.event.inputs.version }}"
+          echo "🌐 Cloudflare Pages: https://suppliers-anx.pages.dev/"
+          echo "🔄 Auto-update URL: https://suppliers-anx.pages.dev/latest.yml"

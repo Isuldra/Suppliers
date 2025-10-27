@@ -220,14 +220,12 @@ if (!fs.existsSync(redirectsPath)) {
 console.log("\n🎉 Hybrid release preparation complete!");
 console.log("\n📋 Next steps:");
 console.log("1. Review the metadata files in docs/updates/");
-console.log("2. Commit changes: git add docs/updates/");
-console.log("3. Push to GitHub: git push origin main");
-console.log("4. Create GitHub Release with installer files:");
-console.log(`   - Upload: ${nsisInstaller}`);
-console.log(`   - Upload: ${nsisBlockmap}`);
-console.log(`   - Upload: ${portableExe}`);
-console.log("5. Cloudflare Pages will serve latest.yml with GitHub URLs");
-console.log("6. Users will download installers from GitHub Releases");
+console.log("2. Run: npm run release:github (creates GitHub Release)");
+console.log(
+  "3. GitHub Actions will automatically commit and push metadata files"
+);
+console.log("4. Cloudflare Pages will serve latest.yml with GitHub URLs");
+console.log("5. Users will download installers from GitHub Releases");
 
 console.log("\n📁 Files ready for deployment:");
 const deployedFiles = fs.readdirSync(updatesDir);
