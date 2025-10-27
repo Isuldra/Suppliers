@@ -182,19 +182,23 @@ indexContent = indexContent.replace(
   `<span class="version-badge">v${version}</span>`
 );
 
-// Update status message
+// Update status message and replace all version entries
 indexContent = indexContent.replace(
   /<h3>✅ Cloudflare Pages er konfigurert!<\/h3>/,
   `<h3>✅ Release v${version} er klar!</h3>`
 );
 
-indexContent = indexContent.replace(
-  /<p>Automatiske oppdateringer er nå tilgjengelige via Cloudflare Pages\.<\/p>/,
-  `<p>Automatiske oppdateringer er nå tilgjengelige via Cloudflare Pages.</p>
+// Replace the entire status section to avoid duplicates
+const statusSectionRegex = /<div class="status">[\s\S]*?<\/div>/;
+const newStatusSection = `<div class="status">
+                <h3>✅ Release v${version} er klar!</h3>
+                <p>Automatiske oppdateringer er nå tilgjengelige via Cloudflare Pages.</p>
                 <p><strong>Ny versjon:</strong> v${version} - ${new Date().toLocaleDateString(
-    "no-NO"
-  )}</p>`
-);
+  "no-NO"
+)}</p>
+            </div>`;
+
+indexContent = indexContent.replace(statusSectionRegex, newStatusSection);
 
 fs.writeFileSync(indexPath, indexContent);
 console.log(`✅ Updated: index.html with version ${version}`);
