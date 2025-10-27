@@ -78,8 +78,7 @@
         "nsis"
       ],
       "icon": "resources/icon.ico",
-      "artifactName": "${productName}-${version}-setup.${ext}",
-      "publisherName": "OneMed"
+      "artifactName": "${productName}-${version}-setup.${ext}"
     },
     "portable": {
       "artifactName": "${productName}-Portable.exe",
@@ -95,7 +94,8 @@
       "upgradeCode": "7C04A11D-9FAA-4B83-85FF-79D2AABFD84E"
     },
     "nsis": {
-      "differentialPackage": true,
+      "publisherName": "OneMed",
+      "differentialPackage": false,
       "oneClick": false,
       "perMachine": false,
       "allowToChangeInstallationDirectory": true,
