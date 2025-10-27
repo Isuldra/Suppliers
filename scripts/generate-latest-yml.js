@@ -33,12 +33,18 @@ const sha512 = crypto.createHash("sha512").update(fileBuffer).digest("base64");
 // 5. Optimalisering: Få størrelsen fra bufferet, ikke fra et nytt disk-kall
 const size = fileBuffer.length;
 
-// 6. KORREKSJON: Fjernet 'path' og 'sha512' fra toppnivået
+// 6. Generate latest.yml with absolute GitHub Release URLs
+// Convert spaces to dots for GitHub Release filename
+const githubFilename = portableFile.replace(/ /g, ".");
+const githubReleaseUrl = `https://github.com/Isuldra/Suppliers/releases/download/v${version}/${githubFilename}`;
+
 const latestYml = `version: ${version}
 files:
-  - url: ${portableFile}
+  - url: ${githubReleaseUrl}
     sha512: ${sha512}
     size: ${size}
+path: ${githubFilename}
+sha512: ${sha512}
 releaseDate: '${new Date().toISOString()}'
 `;
 
