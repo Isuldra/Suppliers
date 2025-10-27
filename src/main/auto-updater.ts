@@ -11,6 +11,11 @@ import fs from "fs";
 const updateLogger = log.scope("autoUpdater");
 autoUpdater.logger = updateLogger;
 
+// Track shown update notifications to prevent duplicates
+let lastShownUpdateVersion: string | null = null;
+let lastUpdateNotificationTime: number = 0;
+const UPDATE_NOTIFICATION_COOLDOWN = 24 * 60 * 60 * 1000; // 24 hours
+
 /**
  * Detect if the app is running as a portable version
  * Portable apps typically run from a temporary or user-defined location
@@ -90,6 +95,22 @@ function setupPortableUpdater() {
   // Update available - automatically download for portable
   autoUpdater.on("update-available", ((info: UpdateInfo) => {
     updateLogger.info("Ny oppdatering tilgjengelig (portable):", info);
+
+    // Check if we've already shown this update notification recently
+    const now = Date.now();
+    if (
+      lastShownUpdateVersion === info.version &&
+      now - lastUpdateNotificationTime < UPDATE_NOTIFICATION_COOLDOWN
+    ) {
+      updateLogger.info(
+        `Skipping duplicate update notification for version ${info.version}`
+      );
+      return;
+    }
+
+    // Update tracking variables
+    lastShownUpdateVersion = info.version;
+    lastUpdateNotificationTime = now;
 
     // Show notification that download is starting
     dialog
@@ -263,15 +284,15 @@ export function setupAutoUpdater() {
       );
   }, 10000);
 
-  // Check for updates every hour
-  const ONE_HOUR = 60 * 60 * 1000;
+  // Check for updates every 6 hours to reduce spam
+  const SIX_HOURS = 6 * 60 * 60 * 1000;
   setInterval(() => {
     autoUpdater
       .checkForUpdates()
       .catch((err: Error) =>
         updateLogger.error("Feil ved periodisk sjekk for oppdateringer:", err)
       );
-  }, ONE_HOUR);
+  }, SIX_HOURS);
 }
 
 /**
@@ -299,6 +320,22 @@ function setupStandardUpdater() {
   // Oppdatering funnet
   autoUpdater.on("update-available", ((info: UpdateInfo) => {
     updateLogger.info("Ny oppdatering tilgjengelig:", info);
+
+    // Check if we've already shown this update notification recently
+    const now = Date.now();
+    if (
+      lastShownUpdateVersion === info.version &&
+      now - lastUpdateNotificationTime < UPDATE_NOTIFICATION_COOLDOWN
+    ) {
+      updateLogger.info(
+        `Skipping duplicate update notification for version ${info.version}`
+      );
+      return;
+    }
+
+    // Update tracking variables
+    lastShownUpdateVersion = info.version;
+    lastUpdateNotificationTime = now;
 
     // Varsle bruker om at nedlasting starter
     dialog.showMessageBox({
