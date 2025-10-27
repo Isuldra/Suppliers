@@ -45,6 +45,8 @@
     "release:prepare": "node scripts/prepare-cloudflare-release.js",
     "release:github": "node scripts/create-github-release.js",
     "release:full": "npm run validate:version && npm run dist:clean && npm run release:prepare && npm run release:github",
+    "release:local": "npm run validate:version && npm run dist:clean && npm run release:prepare && npm run release:github && echo '⚠️  Remember to commit and push docs/updates/ files!'",
+    "release:workflow": "echo '🚀 Use GitHub Actions for automated releases:' && echo '1. Go to Actions tab in GitHub' && echo '2. Run \"Manual Release\" workflow' && echo '3. Enter version number (e.g., 1.3.5)' && echo '4. GitHub Actions will handle everything automatically!'",
     "validate:version": "node scripts/validate-version.js"
   },
   "build": {

@@ -24,13 +24,16 @@ jobs:
     name: Build for ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     permissions:
-      contents: read
+      contents: write
     strategy:
       matrix:
         os: [windows-latest]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -91,12 +94,33 @@ jobs:
           Write-Host "Generating app-update.yml for NSIS auto-updates..."
           node scripts/generate-app-update-yml.js
 
-      - name: Deploy to Cloudflare Pages for Simple Updates
+      - name: Prepare Cloudflare metadata
         if: startsWith(github.ref, 'refs/tags/')
         shell: pwsh
         run: |
-          Write-Host "Deploying to Cloudflare Pages for simple auto-updates..."
-          npm run deploy:cloudflare
+          Write-Host "Preparing Cloudflare metadata for auto-updates..."
+          npm run release:prepare
+
+      - name: Commit and push Cloudflare metadata
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+
+          # Add the metadata files
+          git add docs/updates/latest.yml
+          git add docs/updates/latest.json
+          git add docs/updates/index.html
+          git add docs/updates/_redirects
+
+          # Check if there are any changes to commit
+          if git diff-index --quiet HEAD; then
+            echo "No changes in Cloudflare metadata to commit."
+          else
+            git commit -m "chore(release): Update Cloudflare metadata for v${GITHUB_REF#refs/tags/v}"
+            git push origin main
+            echo "Successfully pushed Cloudflare metadata updates"
+          fi
 
       - name: Upload to GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
