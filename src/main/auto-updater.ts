@@ -11,6 +11,13 @@ import fs from "fs";
 const updateLogger = log.scope("autoUpdater");
 autoUpdater.logger = updateLogger;
 
+// Configure auto-updater to use Cloudflare Pages for metadata
+// The latest.yml file contains relative URLs that point to GitHub Releases
+autoUpdater.setFeedURL({
+  provider: "generic",
+  url: "https://suppliers-anx.pages.dev/",
+});
+
 // Track shown update notifications to prevent duplicates
 let lastShownUpdateVersion: string | null = null;
 let lastUpdateNotificationTime: number = 0;
