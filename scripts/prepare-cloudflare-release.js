@@ -114,11 +114,12 @@ if (filesToInclude.length > 0) {
 
   // Use filename with dots instead of spaces for GitHub Releases URL
   const githubFilename = mainFile.name.replace(/ /g, ".");
-  const githubReleaseUrl = `https://github.com/Isuldra/Suppliers/releases/download/v${version}/${githubFilename}`;
 
+  // For electron-updater, we should use relative URLs or just the filename
+  // The publish config in package.json will handle the base URL
   const latestYml = `version: ${version}
 files:
-  - url: ${githubReleaseUrl}
+  - url: ${githubFilename}
     sha512: ${fileHash}
     size: ${fileSize}
 path: ${githubFilename}
@@ -129,7 +130,7 @@ releaseDate: '${releaseDate}'`;
   fs.writeFileSync(latestYmlPath, latestYml);
   console.log(`✅ Generated: latest.yml`);
   console.log(`   Filename: ${mainFile.name}`);
-  console.log(`   URL: ${githubReleaseUrl}`);
+  console.log(`   URL: ${githubFilename} (relative URL for electron-updater)`);
 
   // Also copy to release/ directory for GitHub Release upload
   const releaseLatestYmlPath = path.join(releaseDir, "latest.yml");
@@ -150,13 +151,14 @@ if (fs.existsSync(portableExePath)) {
 
   // Use filename with dots instead of spaces for GitHub Releases URL
   const portableFilename = portableExe.replace(/ /g, ".");
-  const portableReleaseUrl = `https://github.com/Isuldra/Suppliers/releases/download/v${version}/${portableFilename}`;
 
+  // For electron-updater, we should use relative URLs or just the filename
+  // The publish config in package.json will handle the base URL
   const latestJson = {
     version: version,
     files: [
       {
-        url: portableReleaseUrl,
+        url: portableFilename,
         sha512: portableHash,
         size: portableSize,
       },
@@ -168,7 +170,9 @@ if (fs.existsSync(portableExePath)) {
   fs.writeFileSync(latestJsonPath, JSON.stringify(latestJson, null, 2));
   console.log(`✅ Generated: latest.json`);
   console.log(`   Filename: ${portableExe}`);
-  console.log(`   URL: ${portableReleaseUrl}`);
+  console.log(
+    `   URL: ${portableFilename} (relative URL for electron-updater)`
+  );
 }
 
 // Update index.html with current version
