@@ -121,7 +121,7 @@ files:
   - url: ${githubReleaseUrl}
     sha512: ${fileHash}
     size: ${fileSize}
-path: ${githubReleaseUrl}
+path: ${githubFilename}
 sha512: ${fileHash}
 releaseDate: '${releaseDate}'`;
 
