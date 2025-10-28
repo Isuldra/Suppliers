@@ -227,44 +227,36 @@ function setupHelpMenuHandlers() {
     }
   });
 
-  // Handler for checking updates
-  ipcMain.on("check-for-updates", async (_event) => {
+  // Handler for checking updates - now returns result to UI
+  ipcMain.handle("check-for-updates", async () => {
     log.info("Check for updates requested");
     try {
       if (isDevelopment) {
-        log.info("In development mode, showing dialog");
-        dialog.showMessageBox({
-          type: "info",
-          title: "Utviklermodus",
-          message: "Automatiske oppdateringer er deaktivert i utviklermodus.",
-          buttons: ["OK"],
-        });
-        return;
+        log.info("In development mode");
+        return {
+          success: false,
+          error: "Automatiske oppdateringer er deaktivert i utviklermodus.",
+          updateAvailable: false,
+        };
       }
 
       log.info("Checking for updates...");
       const result = await checkForUpdatesManually();
       log.info("Update check result:", result);
 
-      // If no update is available, show a message
-      if (!result.updateAvailable) {
-        dialog.showMessageBox({
-          type: "info",
-          title: "Ingen oppdateringer",
-          message: "Du har den nyeste versjonen av OneMed SupplyChain.",
-          buttons: ["OK"],
-        });
-      }
-      // If update is available, it will be handled by the auto-updater events
+      return {
+        success: true,
+        updateAvailable: result.updateAvailable,
+        version: result.version || null,
+        error: null,
+      };
     } catch (error: unknown) {
       log.error("Failed to check for updates:", error);
-      dialog.showMessageBox({
-        type: "error",
-        title: "Feil ved oppdateringssjekk",
-        message: "Kunne ikke sjekke for oppdateringer.",
-        detail: error instanceof Error ? error.message : "Ukjent feil",
-        buttons: ["OK"],
-      });
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Ukjent feil",
+        updateAvailable: false,
+      };
     }
   });
 
