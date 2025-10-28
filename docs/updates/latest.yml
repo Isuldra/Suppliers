@@ -1,8 +1,8 @@
-version: 1.3.4
+version: 1.3.5
 files:
-  - url: https://github.com/Isuldra/Suppliers/releases/download/v1.3.4/OneMed.SupplyChain-1.3.4-setup.exe
-    sha512: p5+KZfEC6838KiT1roi5Bt4cPPVuioJBaMMxuMtk2pQhzXK2D7d/0nBZfvyVrwGkHGgk7qJtcb+EgaHzOc02EQ==
-    size: 91542036
-path: OneMed.SupplyChain-1.3.4-setup.exe
-sha512: p5+KZfEC6838KiT1roi5Bt4cPPVuioJBaMMxuMtk2pQhzXK2D7d/0nBZfvyVrwGkHGgk7qJtcb+EgaHzOc02EQ==
-releaseDate: '2025-10-28T08:51:34.357Z'
+  - url: https://github.com/Isuldra/Suppliers/releases/download/v1.3.5/OneMed.SupplyChain-1.3.5-setup.exe
+    sha512: rCXL85jhSt5VFn6Y8LQtk6Viwi0lydhGyD54Aiehn6bv1nyLQISnpXLPRApX3C8cvCUfoO7kzuIGABwP5GnvrA==
+    size: 91548198
+path: OneMed.SupplyChain-1.3.5-setup.exe
+sha512: rCXL85jhSt5VFn6Y8LQtk6Viwi0lydhGyD54Aiehn6bv1nyLQISnpXLPRApX3C8cvCUfoO7kzuIGABwP5GnvrA==
+releaseDate: '2025-10-28T09:53:16.812Z'
