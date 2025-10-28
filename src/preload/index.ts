@@ -96,8 +96,22 @@ interface ElectronAPI {
 
   // Auto-updater methods
   checkForUpdates: () => Promise<void>;
+  checkForUpdatesWithResult: () => Promise<{
+    success: boolean;
+    updateAvailable: boolean;
+    version?: string | null;
+    error?: string | null;
+  }>;
   onUpdateAvailable: (callback: (info: unknown) => void) => () => void;
   onUpdateDownloaded: (callback: (info: unknown) => void) => () => void;
+  onUpdateDownloadProgress: (
+    callback: (progress: {
+      percent: number;
+      bytesPerSecond: number;
+      total: number;
+      transferred: number;
+    }) => void
+  ) => () => void;
   onUpdateError: (callback: (error: Error) => void) => () => void;
   installUpdate: () => Promise<void>;
 
@@ -398,6 +412,9 @@ contextBridge.exposeInMainWorld("electron", {
   checkForUpdates: async () => {
     return await ipcRenderer.invoke("update:check");
   },
+  checkForUpdatesWithResult: async () => {
+    return await ipcRenderer.invoke("check-for-updates");
+  },
   onUpdateAvailable: (callback: (info: unknown) => void) => {
     const subscription = (_event: Electron.IpcRendererEvent, info: unknown) =>
       callback(info);
@@ -406,12 +423,36 @@ contextBridge.exposeInMainWorld("electron", {
       ipcRenderer.removeListener("update:available", subscription);
     };
   },
-  onUpdateDownloaded: (callback: (info: unknown) => void) => {
-    const subscription = (_event: Electron.IpcRendererEvent, info: unknown) =>
-      callback(info);
+  onUpdateDownloaded: (callback: (info: { version: string }) => void) => {
+    const subscription = (
+      _event: Electron.IpcRendererEvent,
+      info: { version: string }
+    ) => callback(info);
     ipcRenderer.on("update:downloaded", subscription);
     return () => {
       ipcRenderer.removeListener("update:downloaded", subscription);
+    };
+  },
+  onUpdateDownloadProgress: (
+    callback: (progress: {
+      percent: number;
+      bytesPerSecond: number;
+      total: number;
+      transferred: number;
+    }) => void
+  ) => {
+    const subscription = (
+      _event: Electron.IpcRendererEvent,
+      progress: {
+        percent: number;
+        bytesPerSecond: number;
+        total: number;
+        transferred: number;
+      }
+    ) => callback(progress);
+    ipcRenderer.on("update-download-progress", subscription);
+    return () => {
+      ipcRenderer.removeListener("update-download-progress", subscription);
     };
   },
   onUpdateError: (callback: (error: Error) => void) => {

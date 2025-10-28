@@ -3,7 +3,7 @@ import { autoUpdater } from "electron-updater";
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const log = require("electron-log/main");
 import type { UpdateInfo, ProgressInfo } from "electron-updater";
-import { app, shell } from "electron";
+import { app, shell, BrowserWindow } from "electron";
 import path from "path";
 import fs from "fs";
 
@@ -20,7 +20,6 @@ autoUpdater.setFeedURL({
 
 // Midlertidig fix: Deaktiver differential updates til problemet er løst
 autoUpdater.autoDownload = false;
-autoUpdater.allowDowngrade = false;
 
 // Track shown update notifications to prevent duplicates
 let lastShownUpdateVersion: string | null = null;
@@ -147,6 +146,16 @@ function setupPortableUpdater() {
 
     // Automatically start download
     updateLogger.info("Starter automatisk nedlasting av oppdatering...");
+
+    // Send update available to UI
+    const mainWindow = BrowserWindow.getAllWindows()[0];
+    if (mainWindow) {
+      mainWindow.webContents.send("update-available", {
+        version: info.version,
+        releaseNotes: info.releaseNotes,
+        releaseDate: info.releaseDate,
+      });
+    }
   }) as (...args: unknown[]) => void);
 
   // Handle download progress
@@ -155,12 +164,32 @@ function setupPortableUpdater() {
       progressObj.percent
     )}%`;
     updateLogger.info(message);
-    // Could show progress notification here if needed
+
+    // Send progress to UI
+    const mainWindow = BrowserWindow.getAllWindows()[0];
+    if (mainWindow) {
+      mainWindow.webContents.send("update-download-progress", {
+        percent: Math.round(progressObj.percent),
+        bytesPerSecond: progressObj.bytesPerSecond,
+        total: progressObj.total,
+        transferred: progressObj.transferred,
+      });
+    }
   }) as (...args: unknown[]) => void);
 
   // Update downloaded - provide manual installation instructions
   autoUpdater.on("update-downloaded", ((info: UpdateInfo) => {
     updateLogger.info("Oppdatering lastet ned (portable):", info);
+
+    // Send update downloaded to UI
+    const mainWindow = BrowserWindow.getAllWindows()[0];
+    if (mainWindow) {
+      mainWindow.webContents.send("update-downloaded", {
+        version: info.version,
+        releaseNotes: info.releaseNotes,
+        releaseDate: info.releaseDate,
+      });
+    }
 
     // Get the download location
     const downloadPath = getPortableUpdatePath();
@@ -359,6 +388,16 @@ function setupStandardUpdater() {
 
     // Automatically start download
     updateLogger.info("Starter automatisk nedlasting av oppdatering...");
+
+    // Send update available to UI
+    const mainWindow = BrowserWindow.getAllWindows()[0];
+    if (mainWindow) {
+      mainWindow.webContents.send("update-available", {
+        version: info.version,
+        releaseNotes: info.releaseNotes,
+        releaseDate: info.releaseDate,
+      });
+    }
   }) as (...args: unknown[]) => void);
 
   // Håndtere nedlastningsfremdrift
@@ -367,11 +406,32 @@ function setupStandardUpdater() {
       progressObj.percent
     )}%`;
     updateLogger.info(message);
+
+    // Send progress to UI
+    const mainWindow = BrowserWindow.getAllWindows()[0];
+    if (mainWindow) {
+      mainWindow.webContents.send("update-download-progress", {
+        percent: Math.round(progressObj.percent),
+        bytesPerSecond: progressObj.bytesPerSecond,
+        total: progressObj.total,
+        transferred: progressObj.transferred,
+      });
+    }
   }) as (...args: unknown[]) => void);
 
   // Oppdatering er lastet ned og klar for installasjon
   autoUpdater.on("update-downloaded", ((info: UpdateInfo) => {
     updateLogger.info("Oppdatering lastet ned:", info);
+
+    // Send update downloaded to UI
+    const mainWindow = BrowserWindow.getAllWindows()[0];
+    if (mainWindow) {
+      mainWindow.webContents.send("update-downloaded", {
+        version: info.version,
+        releaseNotes: info.releaseNotes,
+        releaseDate: info.releaseDate,
+      });
+    }
 
     // Show notification that update is ready and will install on next restart
     dialog
