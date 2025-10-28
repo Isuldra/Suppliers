@@ -95,8 +95,24 @@ interface ElectronAPI {
 
   // Auto-updater methods
   checkForUpdates: () => Promise<void>;
+  checkForUpdatesWithResult: () => Promise<{
+    success: boolean;
+    updateAvailable: boolean;
+    version?: string | null;
+    error?: string | null;
+  }>;
   onUpdateAvailable: (callback: (info: unknown) => void) => () => void;
-  onUpdateDownloaded: (callback: (info: unknown) => void) => () => void;
+  onUpdateDownloaded: (
+    callback: (info: { version: string }) => void
+  ) => () => void;
+  onUpdateDownloadProgress: (
+    callback: (progress: {
+      percent: number;
+      bytesPerSecond: number;
+      total: number;
+      transferred: number;
+    }) => void
+  ) => () => void;
   onUpdateError: (callback: (error: Error) => void) => () => void;
   installUpdate: () => Promise<void>;
 
