@@ -29,9 +29,17 @@ jobs:
         run: npm ci
 
       - name: Update package.json version
+        shell: bash
         run: |
-          npm version ${{ github.event.inputs.version }} --no-git-tag-version
-          echo "Updated package.json to version ${{ github.event.inputs.version }}"
+          CURRENT_VERSION=$(node -p "require('./package.json').version")
+          TARGET_VERSION="${{ github.event.inputs.version }}"
+
+          if [ "$CURRENT_VERSION" != "$TARGET_VERSION" ]; then
+            npm version $TARGET_VERSION --no-git-tag-version
+            echo "Updated package.json from $CURRENT_VERSION to $TARGET_VERSION"
+          else
+            echo "Package.json already at version $TARGET_VERSION, skipping update"
+          fi
 
       - name: Build application
         run: npm run dist:clean
@@ -45,6 +53,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Commit and push Cloudflare metadata
+        shell: bash
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"

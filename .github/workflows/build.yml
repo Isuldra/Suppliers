@@ -103,6 +103,7 @@ jobs:
 
       - name: Commit and push Cloudflare metadata
         if: startsWith(github.ref, 'refs/tags/')
+        shell: bash
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
