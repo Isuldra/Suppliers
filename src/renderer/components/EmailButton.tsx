@@ -49,7 +49,7 @@ const EmailButton: React.FC<EmailButtonProps> = ({
         key: row.key,
         poNumber: String(row.poNumber || ""),
         itemNo: String(row.itemNo || ""),
-        description: String(row.description || ""),
+        description: String(row.supplierArticleNo || row.description || ""),
         specification: String(row.specification || ""),
         orderQty: Number(row.orderQty || 0),
         receivedQty: Number(row.receivedQty || 0),

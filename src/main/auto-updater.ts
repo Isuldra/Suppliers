@@ -18,8 +18,8 @@ autoUpdater.setFeedURL({
   url: "https://suppliers-anx.pages.dev/",
 });
 
-// Midlertidig fix: Deaktiver differential updates til problemet er løst
-autoUpdater.autoDownload = false;
+// Configure auto-download based on version type (will be set in setup functions)
+// Don't set autoDownload globally - let each setup function configure it
 
 // Track shown update notifications to prevent duplicates
 let lastShownUpdateVersion: string | null = null;
@@ -36,9 +36,13 @@ function isPortableVersion(): boolean {
     const appPath = app.getAppPath();
     const execPath = process.execPath;
 
+    updateLogger.info(`App path: ${appPath}`);
+    updateLogger.info(`Exec path: ${execPath}`);
+
     // Check if running from a portable executable
     // Portable versions often have "Portable" in the filename
     if (execPath.includes("Portable") || execPath.includes("portable")) {
+      updateLogger.info("Detected portable version by filename");
       return true;
     }
 
@@ -51,12 +55,42 @@ function isPortableVersion(): boolean {
       normalizedPath.includes("users") &&
       (isInAppData || normalizedPath.includes("local"));
 
+    updateLogger.info(`Normalized path: ${normalizedPath}`);
+    updateLogger.info(`Is in Program Files: ${isInProgramFiles}`);
+    updateLogger.info(`Is in AppData: ${isInAppData}`);
+    updateLogger.info(`Is in User Profile: ${isInUserProfile}`);
+
+    // More specific check: if it's in AppData but not in a proper installation structure
+    // NSIS installations typically create proper folder structures
+    if (isInAppData) {
+      // Check if it has a proper installation structure (resources, locales, etc.)
+      const hasResources = fs.existsSync(path.join(appPath, "resources"));
+      const hasLocales = fs.existsSync(path.join(appPath, "locales"));
+      const hasUninstaller = fs.existsSync(
+        path.join(path.dirname(appPath), "uninstall.exe")
+      );
+
+      updateLogger.info(`Has resources folder: ${hasResources}`);
+      updateLogger.info(`Has locales folder: ${hasLocales}`);
+      updateLogger.info(`Has uninstaller: ${hasUninstaller}`);
+
+      // If it has proper installation structure, it's not portable
+      if (hasResources || hasLocales || hasUninstaller) {
+        updateLogger.info(
+          "Detected as installed version (has proper structure)"
+        );
+        return false;
+      }
+    }
+
     // If not in standard installation paths, likely portable
     if (!isInProgramFiles && !isInUserProfile) {
+      updateLogger.info("Detected portable version (not in standard paths)");
       return true;
     }
 
     // Additional check: portable versions often run from Downloads, Desktop, or removable drives
+    // But only if they don't have proper installation structure
     const portableIndicators = [
       "downloads",
       "desktop",
@@ -68,9 +102,17 @@ function isPortableVersion(): boolean {
     if (
       portableIndicators.some((indicator) => normalizedPath.includes(indicator))
     ) {
-      return true;
+      // Double-check: if it has installation structure, it might be a portable installation
+      const hasResources = fs.existsSync(path.join(appPath, "resources"));
+      if (!hasResources) {
+        updateLogger.info(
+          "Detected portable version (in portable location without resources)"
+        );
+        return true;
+      }
     }
 
+    updateLogger.info("Detected as installed version (default)");
     return false;
   } catch (error) {
     updateLogger.warn("Error detecting portable version:", error);
@@ -105,6 +147,11 @@ function setupPortableUpdater() {
   // Update available - automatically download for portable
   autoUpdater.on("update-available", ((info: UpdateInfo) => {
     updateLogger.info("Ny oppdatering tilgjengelig (portable):", info);
+    updateLogger.info(
+      `Current app version: ${app.getVersion()}, Available version: ${
+        info.version
+      }`
+    );
 
     // Check if we've already shown this update notification recently
     const now = Date.now();
@@ -299,6 +346,7 @@ export function setupAutoUpdater() {
   }
 
   updateLogger.info("Auto-updater configured to use GitHub Releases");
+  updateLogger.info(`Current app version: ${app.getVersion()}`);
 
   // Check if running as portable version
   const isPortable = isPortableVersion();
@@ -360,6 +408,11 @@ function setupStandardUpdater() {
   // Oppdatering funnet
   autoUpdater.on("update-available", ((info: UpdateInfo) => {
     updateLogger.info("Ny oppdatering tilgjengelig:", info);
+    updateLogger.info(
+      `Current app version: ${app.getVersion()}, Available version: ${
+        info.version
+      }`
+    );
 
     // Check if we've already shown this update notification recently
     const now = Date.now();
@@ -482,5 +535,16 @@ export function checkForUpdatesManually() {
   }
 
   updateLogger.info("Manuell sjekk for oppdateringer startet...");
-  return autoUpdater.checkForUpdates();
+  updateLogger.info(`Current app version: ${app.getVersion()}`);
+
+  return autoUpdater
+    .checkForUpdates()
+    .then((result) => {
+      updateLogger.info("Manual update check result:", result);
+      return result;
+    })
+    .catch((error) => {
+      updateLogger.error("Manual update check failed:", error);
+      throw error;
+    });
 }
