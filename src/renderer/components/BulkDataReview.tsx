@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { ChevronDownIcon, ChevronRightIcon } from "@heroicons/react/24/outline";
 import { ExcelRow } from "../types/ExcelData";
 import supplierData from "../data/supplierData.json";
+import SelectToggleButton from "./SelectToggleButton";
 
 interface BulkDataReviewProps {
   selectedSuppliers: string[];
@@ -253,26 +254,23 @@ const BulkDataReview: React.FC<BulkDataReviewProps> = ({
 
                 <div className="flex items-center space-x-4">
                   <span className="text-sm text-neutral-secondary">
-                    {supplierData.selectedOrders.size} av{" "}
-                    {supplierData.orders.length} {t("bulkDataReview.selected")}
+                    {supplierData.selectedOrders.size}{" "}
+                    {t("bulkDataReview.outOf")} {supplierData.orders.length}{" "}
+                    {t("bulkDataReview.selected")}
                   </span>
 
-                  <button
-                    onClick={() =>
-                      handleSelectAllOrdersForSupplier(supplierData.supplier)
-                    }
-                    className={`btn btn-sm ${
+                  <SelectToggleButton
+                    isSelected={
                       supplierData.selectedOrders.size ===
                       supplierData.orders.length
-                        ? "btn-secondary"
-                        : "btn-primary"
-                    }`}
-                  >
-                    {supplierData.selectedOrders.size ===
-                    supplierData.orders.length
-                      ? t("bulkDataReview.removeAll")
-                      : t("bulkDataReview.selectAll")}
-                  </button>
+                    }
+                    onToggle={() =>
+                      handleSelectAllOrdersForSupplier(supplierData.supplier)
+                    }
+                    selectLabelKey="bulkDataReview.selectAll"
+                    removeLabelKey="bulkDataReview.removeAll"
+                    size="sm"
+                  />
                 </div>
               </div>
             </div>

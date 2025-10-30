@@ -267,6 +267,7 @@ export async function importAlleArk(
         ftgnavn: supplierName, // Primary supplier name field
         status: "Active",
         producer_item: supplierArticleNo,
+        specification: erpComment, // Column L (ERP Comment) stored in specification field for email templates
         comment: erpComment,
         note: erpComment,
         inventory_balance: 0,

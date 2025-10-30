@@ -200,6 +200,7 @@
     "selectedOrderLines": "Selected order lines:",
     "mixedLanguageWarning": "Warning: Mixed languages detected. Emails will be sent in the correct language per supplier.",
     "selected": "selected",
+    "outOf": "of",
     "removeAll": "Remove all",
     "selectAll": "Select all",
     "goToEmailPreview": "Go to email preview →",

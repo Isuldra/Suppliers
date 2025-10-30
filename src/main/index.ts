@@ -194,10 +194,23 @@ app.whenReady().then(async () => {
       // Determine the folder containing the logs
       const logsFolder = path.dirname(logFilePath);
 
+      const isDev = process.env.NODE_ENV === "development";
       const template: Electron.MenuItemConstructorOptions[] = [
         { role: "fileMenu" }, // standard File menu
         { role: "editMenu" }, // standard Edit menu
-        { role: "viewMenu" }, // standard View menu
+        // Custom View menu: hide DevTools in production builds
+        isDev
+          ? { role: "viewMenu" }
+          : {
+              label: "View",
+              submenu: [
+                { role: "resetZoom" },
+                { role: "zoomIn" },
+                { role: "zoomOut" },
+                { type: "separator" },
+                { role: "togglefullscreen" },
+              ],
+            },
         {
           label: "Help",
           submenu: [

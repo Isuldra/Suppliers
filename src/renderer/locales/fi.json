@@ -195,6 +195,7 @@
     "selectedOrderLines": "Valitut tilausrivit:",
     "mixedLanguageWarning": "Varoitus: Sekakielisyys havaittu. Sähköpostit lähetetään oikealla kielellä per toimittaja.",
     "selected": "valittu",
+    "outOf": "/",
     "removeAll": "Poista kaikki",
     "selectAll": "Valitse kaikki",
     "goToEmailPreview": "Siirry sähköpostin esikatseluun →",
