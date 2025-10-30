@@ -191,8 +191,8 @@
       "language": "Språk",
       "details": "Detaljer"
     },
-    "unselect": "Unselect",
-    "select": "Select",
+    "unselect": "Fjern valg",
+    "select": "Velg",
     "show": "Vis",
     "outstandingOrdersFor": "Utestående ordre for {supplier}",
     "noSuppliersFound": "Ingen leverandører med utestående ordre funnet for denne ukedagen",
@@ -207,6 +207,7 @@
     "selectedOrderLines": "Valgte ordrelinjer:",
     "mixedLanguageWarning": "Advarsel: Blandet språk oppdaget. E-poster vil sendes med riktig språk per leverandør.",
     "selected": "valgt",
+    "outOf": "av",
     "removeAll": "Fjern alle",
     "selectAll": "Velg alle",
     "goToEmailPreview": "Gå til e-post forhåndsvisning →",

@@ -29,8 +29,8 @@ export interface EmailData {
     key: string;
     poNumber: string; // PO-nr
     itemNo: string; // OneMed nr
-    description: string; // Beskrivelse/Description
-    specification: string; // Spesifikasjon/Specification
+    description: string; // Lev. ArtNr (Supplier Article Number)
+    specification: string; // Kommentar/Commentary (ERP Comment/Column L)
     orderQty: number; // Bestilt ant./Order qty
     receivedQty: number; // Mottatt ant./Received qty
     estReceiptDate: string; // Forventet ETA/Expected ETA
@@ -86,7 +86,7 @@ export class EmailService {
                     <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">PO-nr</th>
                     <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">OneMed nr</th>
                     <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">Lev. ArtNr</th>
-                    <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">Spesifikasjon</th>
+                    <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">Kommentar</th>
                     <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">Bestilt ant.</th>
                     <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">Mottatt ant.</th>
                     <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">Forventet ETA</th>
@@ -165,7 +165,7 @@ export class EmailService {
                     <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">PO No.</th>
                     <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">OneMed No.</th>
                     <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">Supplier ArtNo</th>
-                    <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">Specification</th>
+                    <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">Commentary</th>
                     <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">Order Qty</th>
                     <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">Received Qty</th>
                     <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">Expected ETA</th>
@@ -244,7 +244,7 @@ export class EmailService {
                     <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">PO-nr</th>
                     <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">OneMed nr</th>
                     <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">Lev. ArtNr</th>
-                    <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">Specifikation</th>
+                    <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">Kommentar</th>
                     <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">Beställt ant.</th>
                     <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">Mottaget ant.</th>
                     <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">Förväntad ETA</th>
@@ -323,7 +323,7 @@ export class EmailService {
                     <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">PO-nr</th>
                     <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">OneMed nr</th>
                     <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">Lev. ArtNr</th>
-                    <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">Specifikation</th>
+                    <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">Kommentar</th>
                     <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">Bestilt ant.</th>
                     <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">Modtaget ant.</th>
                     <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">Forventet ETA</th>
@@ -402,7 +402,7 @@ export class EmailService {
                     <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">PO-nr</th>
                     <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">OneMed nr</th>
                     <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">Lev. ArtNr</th>
-                    <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">Spesifikaatio</th>
+                    <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">Kommentti</th>
                     <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">Tilattu määrä</th>
                     <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">Vastaanotettu määrä</th>
                     <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">Odotettu ETA</th>
@@ -760,7 +760,7 @@ export class EmailService {
               key: order.key,
               poNumber: order.poNumber,
               itemNo: order.itemNo || "",
-              description: order.description || "",
+              description: order.supplierArticleNo || order.description || "",
               specification: order.specification || "",
               orderQty: order.orderQty,
               receivedQty: order.receivedQty,
