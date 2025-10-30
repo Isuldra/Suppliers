@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { ChevronDownIcon, ChevronRightIcon } from "@heroicons/react/24/outline";
 import { ExcelRow } from "../types/ExcelData";
 import supplierData from "../data/supplierData.json";
+import SelectToggleButton from "./SelectToggleButton";
 
 interface BulkSupplierSelectProps {
   onSuppliersSelected: (suppliers: string[]) => void;
@@ -371,20 +372,14 @@ const BulkSupplierSelect: React.FC<BulkSupplierSelectProps> = ({
       )}
 
       {/* Select all button */}
-      <div className="mb-4">
-        <button
-          onClick={handleSelectAll}
-          className={`btn ${
-            selectedSuppliers.length === suppliers.length
-              ? "btn-secondary"
-              : "btn-primary"
-          } px-4 py-2`}
-          disabled={suppliers.length === 0}
-        >
-          {selectedSuppliers.length === suppliers.length
-            ? t("bulkSupplierSelect.removeAll")
-            : t("bulkSupplierSelect.selectAll")}
-        </button>
+      <div className="mb-4 flex items-center gap-2">
+        <SelectToggleButton
+          isSelected={selectedSuppliers.length === suppliers.length}
+          onToggle={handleSelectAll}
+          selectLabelKey="bulkSupplierSelect.selectAll"
+          removeLabelKey="bulkSupplierSelect.removeAll"
+          size="md"
+        />
         <span className="ml-2 text-sm text-neutral-secondary">
           {selectedSuppliers.length} av {suppliers.length}{" "}
           {t("bulkSupplierSelect.suppliersSelected")}
@@ -427,48 +422,17 @@ const BulkSupplierSelect: React.FC<BulkSupplierSelectProps> = ({
                   <React.Fragment key={supplier.supplier}>
                     <tr className="hover:bg-neutral-light bg-opacity-50">
                       <td className="px-4 py-3">
-                        {/* Simple test checkbox without any styling */}
-                        <input
-                          type="checkbox"
-                          checked={selectedSuppliers.includes(
+                        <SelectToggleButton
+                          isSelected={selectedSuppliers.includes(
                             supplier.supplier
                           )}
-                          onClick={(e) => {
-                            console.log(
-                              "🔴 Checkbox onClick triggered for:",
-                              supplier.supplier
-                            );
-                            console.log(
-                              "🔴 Event target checked:",
-                              e.currentTarget.checked
-                            );
-                            e.preventDefault(); // Prevent default checkbox behavior
-                            handleSupplierSelect(supplier.supplier);
-                          }}
-                          onChange={() => {
-                            console.log(
-                              "🔴 Checkbox onChange triggered for:",
-                              supplier.supplier
-                            );
-                            // Don't handle here, let onClick handle it
-                          }}
-                          style={{ marginRight: "8px" }}
+                          onToggle={() =>
+                            handleSupplierSelect(supplier.supplier)
+                          }
+                          selectLabelKey="bulkSupplierSelect.select"
+                          removeLabelKey="bulkSupplierSelect.unselect"
+                          size="sm"
                         />
-                        {/* Debug button to test if the issue is with checkbox specifically */}
-                        <button
-                          onClick={() => {
-                            console.log(
-                              "🟤 Debug button clicked for:",
-                              supplier.supplier
-                            );
-                            handleSupplierSelect(supplier.supplier);
-                          }}
-                          className="ml-2 text-xs bg-blue-500 text-white px-2 py-1 rounded"
-                        >
-                          {selectedSuppliers.includes(supplier.supplier)
-                            ? t("bulkSupplierSelect.unselect")
-                            : t("bulkSupplierSelect.select")}
-                        </button>
                       </td>
                       <td className="px-4 py-3 text-sm font-medium text-neutral">
                         {supplier.supplier}

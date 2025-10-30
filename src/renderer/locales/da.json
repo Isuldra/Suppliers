@@ -197,6 +197,7 @@
     "selectedOrderLines": "Valgte ordrelinjer:",
     "mixedLanguageWarning": "Advarsel: Blandede sprog opdaget. E-mails vil blive sendt på det rigtige sprog per leverandør.",
     "selected": "valgt",
+    "outOf": "af",
     "removeAll": "Fjern alle",
     "selectAll": "Vælg alle",
     "goToEmailPreview": "Gå til e-mail forhåndsvisning →",

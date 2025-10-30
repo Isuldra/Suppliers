@@ -199,6 +199,7 @@
     "selectedOrderLines": "Valda beställningsrader:",
     "mixedLanguageWarning": "Varning: Blandade språk upptäcktes. E-postmeddelanden kommer att skickas på rätt språk per leverantör.",
     "selected": "valda",
+    "outOf": "av",
     "removeAll": "Ta bort alla",
     "selectAll": "Välj alla",
     "goToEmailPreview": "Gå till e-post förhandsvisning →",
