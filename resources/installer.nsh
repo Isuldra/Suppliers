@@ -12,8 +12,9 @@
   Page custom DesktopShortcutPage DesktopShortcutPageLeave
   
   ; Set default language based on system locale
+  ; Note: Removed MULTIUSER_INSTALLMODE_INSTDIR override to let electron-builder
+  ; use its default installation directory: $LOCALAPPDATA\Programs\${PRODUCT_FILENAME}
   !define MULTIUSER_EXECUTIONLEVEL Standard
-  !define MULTIUSER_INSTALLMODE_INSTDIR "${APP_NAME}"
 !macroend
 
 ; Desktop shortcut selection page
@@ -50,42 +51,53 @@
   ${EndIf}
 
   ; Create desktop shortcut if user chose to
+  ; Note: electron-builder creates shortcuts automatically via createDesktopShortcut: true
+  ; This custom shortcut is only created if the user explicitly chose to on the custom page
+  ; Using productName from package.json: "OneMed SupplyChain"
+  ; electron-builder uses this name for both folder and executable
   ${If} $CreateDesktopShortcut == "true"
-    CreateShortCut "$DESKTOP\${APP_NAME}.lnk" "$INSTDIR\${APP_NAME}.exe" "" "$INSTDIR\${APP_NAME}.exe" 0
+    CreateShortCut "$DESKTOP\OneMed SupplyChain.lnk" "$INSTDIR\OneMed SupplyChain.exe" "" "$INSTDIR\OneMed SupplyChain.exe" 0
   ${EndIf}
 
   ; Create registry entries for easy uninstallation via PowerShell
-  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_NAME}" \
-    "DisplayName" "${APP_NAME}"
-  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_NAME}" \
+  ; Note: electron-builder also creates registry entries automatically
+  ; These are additional entries for PowerShell compatibility
+  ; Using productName from package.json: "OneMed SupplyChain"
+  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\OneMed SupplyChain" \
+    "DisplayName" "OneMed SupplyChain"
+  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\OneMed SupplyChain" \
     "UninstallString" "$INSTDIR\uninstall.exe /S"
-  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_NAME}" \
+  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\OneMed SupplyChain" \
     "QuietUninstallString" "$INSTDIR\uninstall.exe /S"
-  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_NAME}" \
+  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\OneMed SupplyChain" \
     "InstallLocation" "$INSTDIR"
-  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_NAME}" \
+  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\OneMed SupplyChain" \
     "Publisher" "OneMed"
-  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_NAME}" \
+  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\OneMed SupplyChain" \
     "Version" "${VERSION}"
-  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_NAME}" \
+  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\OneMed SupplyChain" \
     "DisplayVersion" "${VERSION}"
-  WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_NAME}" \
+  WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\OneMed SupplyChain" \
     "NoModify" 1
-  WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_NAME}" \
+  WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\OneMed SupplyChain" \
     "NoRepair" 1
   
   ; Add application to startup (optional, uncomment if needed)
-  ; WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Run" "${APP_NAME}" "$INSTDIR\${APP_NAME}.exe"
+  ; WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Run" "OneMed SupplyChain" "$INSTDIR\OneMed SupplyChain.exe"
 !macroend
 
 !macro customUnInstall
   ; Custom uninstall actions
   ; Delete registry entries
-  DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_NAME}"
-  DeleteRegValue HKLM "Software\Microsoft\Windows\CurrentVersion\Run" "${APP_NAME}"
+  ; Note: Using hardcoded productName "OneMed SupplyChain" from package.json
+  ; electron-builder also handles uninstall registry cleanup automatically
+  DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\OneMed SupplyChain"
+  DeleteRegValue HKLM "Software\Microsoft\Windows\CurrentVersion\Run" "OneMed SupplyChain"
   
   ; Remove desktop shortcut if it exists
-  Delete "$DESKTOP\${APP_NAME}.lnk"
+  ; Note: electron-builder also removes shortcuts automatically
+  ; This is cleanup for the custom shortcut created in customInstall
+  Delete "$DESKTOP\OneMed SupplyChain.lnk"
   
   ; If running silently, do not show any UI during uninstall
   ${If} ${Silent}
