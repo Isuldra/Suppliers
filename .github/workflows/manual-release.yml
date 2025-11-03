@@ -69,7 +69,7 @@ jobs:
             echo "No changes in Cloudflare metadata to commit."
           else
             git commit -m "chore(release): Update Cloudflare metadata for v${{ github.event.inputs.version }}"
-            git push origin main
+            git push origin HEAD:main
             echo "Successfully pushed Cloudflare metadata updates"
           fi
 
