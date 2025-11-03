@@ -13,7 +13,9 @@ on:
 
 jobs:
   release:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout code
@@ -29,45 +31,50 @@ jobs:
           cache: "npm"
 
       - name: Install dependencies
+        shell: pwsh
         run: npm ci
 
       - name: Set version from tag or input
         id: version
+        shell: pwsh
         run: |
-          if [ "${{ github.event_name }}" = "push" ]; then
-            VERSION=${GITHUB_REF#refs/tags/v}
-          else
-            VERSION=${{ github.event.inputs.version }}
-          fi
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "Setting version to: $VERSION"
+          if ("${{ github.event_name }}" -eq "push") {
+            $VERSION = "${{ github.ref }}".Replace("refs/tags/v", "")
+          } else {
+            $VERSION = "${{ github.event.inputs.version }}"
+          }
+          echo "version=$VERSION" >> $env:GITHUB_OUTPUT
+          Write-Host "Setting version to: $VERSION"
 
       - name: Update package.json version
-        shell: bash
+        shell: pwsh
         run: |
-          CURRENT_VERSION=$(node -p "require('./package.json').version")
-          TARGET_VERSION="${{ steps.version.outputs.version }}"
+          $currentVersion = (Get-Content package.json | ConvertFrom-Json).version
+          $targetVersion = "${{ steps.version.outputs.version }}"
 
-          if [ "$CURRENT_VERSION" != "$TARGET_VERSION" ]; then
-            npm version $TARGET_VERSION --no-git-tag-version
-            echo "Updated package.json from $CURRENT_VERSION to $TARGET_VERSION"
-          else
-            echo "Package.json already at version $TARGET_VERSION, skipping update"
-          fi
+          if ($currentVersion -ne $targetVersion) {
+            npm version $targetVersion --no-git-tag-version
+            Write-Host "Updated package.json from $currentVersion to $targetVersion"
+          } else {
+            Write-Host "Package.json already at version $targetVersion, skipping update"
+          }
 
       - name: Build application
+        shell: pwsh
         run: npm run dist:clean
 
       - name: Prepare Cloudflare metadata
+        shell: pwsh
         run: npm run release:prepare
 
       - name: Create GitHub Release
+        shell: pwsh
         run: npm run release:github
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Commit and push Cloudflare metadata
-        shell: bash
+        shell: pwsh
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
@@ -79,16 +86,17 @@ jobs:
           git add docs/updates/_redirects
 
           # Check if there are any changes to commit
-          if git diff-index --quiet HEAD; then
-            echo "No changes in Cloudflare metadata to commit."
-          else
+          if (git diff-index --quiet HEAD) {
+            Write-Host "No changes in Cloudflare metadata to commit."
+          } else {
             git commit -m "chore(release): Update Cloudflare metadata for v${{ steps.version.outputs.version }}"
             git push origin main
-            echo "Successfully pushed Cloudflare metadata updates"
-          fi
+            Write-Host "Successfully pushed Cloudflare metadata updates"
+          }
 
       - name: Verify Cloudflare deployment
+        shell: pwsh
         run: |
-          echo "Cloudflare Pages will automatically deploy the updated metadata files"
-          echo "Check deployment status at: https://suppliers-anx.pages.dev/"
-          echo "Auto-update URL: https://suppliers-anx.pages.dev/latest.yml"
+          Write-Host "Cloudflare Pages will automatically deploy the updated metadata files"
+          Write-Host "Check deployment status at: https://suppliers-anx.pages.dev/"
+          Write-Host "Auto-update URL: https://suppliers-anx.pages.dev/latest.yml"

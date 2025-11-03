@@ -4,7 +4,7 @@ name: 🏗️ Build Electron App for Windows
 on:
   push:
     branches: [main]
-    tags: ["v*"] # Trigger on version tags
+    # NOTE: Removed tags trigger - release.yml handles tag builds to avoid duplicate builds
   pull_request:
     branches: [main]
   workflow_run:
