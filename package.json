@@ -1,6 +1,6 @@
 {
   "name": "one-med-supplychain-app",
-  "version": "1.3.6",
+  "version": "1.3.7",
   "description": "OneMed SupplyChain - Supplier Reminder Pro",
   "main": "dist/main/main.cjs",
   "private": true,
