@@ -13,6 +13,19 @@
     "keyboardShortcuts": "Keyboard Shortcuts",
     "settings": "Settings"
   },
+  "settings": {
+    "displayName": "Display Name",
+    "displayNamePlaceholder": "Your name (e.g., Andreas Selvethun)",
+    "displayNameHelp": "This name will be shown in Slack notifications",
+    "slackWebhookUrl": "Slack Webhook URL",
+    "slackWebhookUrlPlaceholder": "https://hooks.slack.com/services/...",
+    "slackWebhookUrlHelp": "Webhook URL for Slack notifications. Keep this secret!",
+    "slackNotificationsEnabled": "Enable Slack Notifications",
+    "slackNotificationsHelp": "Send notifications to Slack when emails are sent",
+    "slackSection": "Slack Integration",
+    "showWebhookUrl": "Show URL",
+    "hideWebhookUrl": "Hide URL"
+  },
   "progress": {
     "uploadFile": "Upload file",
     "selectWeekday": "Select weekday",
