@@ -3,6 +3,12 @@ import { Link } from "react-router-dom";
 import { ExcelData, ValidationError } from "../types/ExcelData";
 import onemedLogo from "../assets/onemed-logo.webp";
 import LanguageSelector from "./LanguageSelector";
+import SettingsModal from "./SettingsModal";
+import {
+  Cog6ToothIcon,
+  HomeIcon,
+  PresentationChartBarIcon,
+} from "@heroicons/react/24/outline";
 
 interface SupplierStat {
   name: string;
@@ -63,6 +69,7 @@ const Dashboard: React.FC<DashboardProps> = ({ appState: _appState }) => {
   const [appVersion, setAppVersion] = useState<string>("");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showSettings, setShowSettings] = useState(false);
 
   useEffect(() => {
     loadDashboardData();
@@ -259,38 +266,58 @@ const Dashboard: React.FC<DashboardProps> = ({ appState: _appState }) => {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-neutral-light">
-      <div className="p-4 bg-primary text-neutral-white shadow-md">
-        <div className="container-app flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <img src={onemedLogo} alt="OneMed Logo" className="h-10" />
-            {appVersion && (
-              <span className="text-sm text-neutral-white/80">
-                Versjon {appVersion}
-              </span>
-            )}
+    <div className="min-h-screen flex flex-col bg-gradient-glass">
+      <div className="bg-gradient-to-r from-primary via-primary to-primary-dark text-neutral-white shadow-lg backdrop-blur-lg">
+        <div className="container-app py-4 px-4">
+          {/* Top row */}
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-3">
+              <img src={onemedLogo} alt="OneMed Logo" className="h-12" />
+              {appVersion && (
+                <span className="text-xs text-neutral-white/70 bg-white/10 backdrop-blur-sm border border-white/20 px-2 py-1 rounded">
+                  v{appVersion}
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-3">
+              <Link
+                to="/"
+                className="flex items-center gap-2 bg-white/10 backdrop-blur-sm border border-white/20 hover:bg-white/20 px-3 py-2 rounded transition-all text-sm"
+              >
+                <HomeIcon className="w-5 h-5" />
+                Tilbake til hovedside
+              </Link>
+              <LanguageSelector mode="compact" />
+              <button
+                onClick={() => setShowSettings(true)}
+                className="bg-white/10 backdrop-blur-sm border border-white/20 hover:bg-white/20 px-3 py-2 rounded transition-all text-sm"
+                title="Innstillinger"
+              >
+                <Cog6ToothIcon className="w-5 h-5" />
+              </button>
+            </div>
           </div>
-          <div className="flex-grow text-center">
-            <h1 className="text-2xl font-bold">
-              OneMed SupplyChain - Dashboard
+          {/* Title row */}
+          <div className="text-center">
+            <h1 className="text-3xl font-bold mb-1 flex items-center justify-center gap-3">
+              <PresentationChartBarIcon className="w-8 h-8" />
+              OneMed SupplyChain Dashboard
+              <PresentationChartBarIcon className="w-8 h-8" />
             </h1>
-          </div>
-          <div className="flex items-center gap-4">
-            <Link to="/" className="btn btn-secondary text-sm">
-              Tilbake til hovedside
-            </Link>
-            <LanguageSelector mode="compact" />
+            <p className="text-sm text-neutral-white/80">
+              Oversikt over leverandører og utestående ordre
+            </p>
           </div>
         </div>
       </div>
 
       <div className="flex-1 p-6 container-app mx-auto">
-        <div className="bg-neutral-white p-6 rounded-md shadow-md">
+        <div className="bg-white/30 backdrop-blur-xl rounded-3xl border border-white/40 shadow-2xl p-8">
           <h2 className="text-2xl font-bold text-neutral mb-6">Dashboard</h2>
 
           {/* Overview Cards */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-            <div className="bg-neutral-white p-6 rounded-md shadow-md">
+            <div className="bg-white/60 backdrop-blur-2xl rounded-xl border border-white/50 shadow-xl p-6 transition-all duration-300 hover:bg-white/70 hover:shadow-2xl">
               <div className="flex items-center">
                 <div className="p-3 bg-blue-100 rounded-full">
                   <svg
@@ -318,7 +345,7 @@ const Dashboard: React.FC<DashboardProps> = ({ appState: _appState }) => {
               </div>
             </div>
 
-            <div className="bg-neutral-white p-6 rounded-md shadow-md">
+            <div className="bg-white/60 backdrop-blur-2xl rounded-xl border border-white/50 shadow-xl p-6 transition-all duration-300 hover:bg-white/70 hover:shadow-2xl">
               <div className="flex items-center">
                 <div className="p-3 bg-green-100 rounded-full">
                   <svg
@@ -346,7 +373,7 @@ const Dashboard: React.FC<DashboardProps> = ({ appState: _appState }) => {
               </div>
             </div>
 
-            <div className="bg-neutral-white p-6 rounded-md shadow-md">
+            <div className="bg-white/60 backdrop-blur-2xl rounded-xl border border-white/50 shadow-xl p-6 transition-all duration-300 hover:bg-white/70 hover:shadow-2xl">
               <div className="flex items-center">
                 <div className="p-3 bg-yellow-100 rounded-full">
                   <svg
@@ -374,7 +401,7 @@ const Dashboard: React.FC<DashboardProps> = ({ appState: _appState }) => {
               </div>
             </div>
 
-            <div className="bg-neutral-white p-6 rounded-md shadow-md">
+            <div className="bg-white/60 backdrop-blur-2xl rounded-xl border border-white/50 shadow-xl p-6 transition-all duration-300 hover:bg-white/70 hover:shadow-2xl">
               <div className="flex items-center">
                 <div className="p-3 bg-red-100 rounded-full">
                   <svg
@@ -406,7 +433,7 @@ const Dashboard: React.FC<DashboardProps> = ({ appState: _appState }) => {
           {/* Charts */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Top Suppliers Chart */}
-            <div className="bg-neutral-white p-6 rounded-md shadow-md">
+            <div className="bg-white/60 backdrop-blur-2xl rounded-xl border border-white/50 shadow-xl p-6 transition-all duration-300 hover:bg-white/70 hover:shadow-2xl">
               <h3 className="text-lg font-bold text-neutral mb-4">
                 Topp 5 leverandører - Restantall
               </h3>
@@ -446,7 +473,7 @@ const Dashboard: React.FC<DashboardProps> = ({ appState: _appState }) => {
             </div>
 
             {/* Orders by Weekday Chart */}
-            <div className="bg-neutral-white p-6 rounded-md shadow-md">
+            <div className="bg-white/60 backdrop-blur-2xl rounded-xl border border-white/50 shadow-xl p-6 transition-all duration-300 hover:bg-white/70 hover:shadow-2xl">
               <h3 className="text-lg font-bold text-neutral mb-4">
                 Ordre per ukedag
               </h3>
@@ -487,6 +514,12 @@ const Dashboard: React.FC<DashboardProps> = ({ appState: _appState }) => {
           </div>
         </div>
       </div>
+
+      {/* Settings Modal */}
+      <SettingsModal
+        isOpen={showSettings}
+        onClose={() => setShowSettings(false)}
+      />
     </div>
   );
 };

@@ -68,11 +68,6 @@ const EmailPreviewModal: React.FC<EmailPreviewModalProps> = ({
     if (editableEmail.trim() && editableEmail.includes("@")) {
       const trimmedEmail = editableEmail.trim();
       setRecipientEmail(trimmedEmail);
-      // Update the emailData with the new recipient email
-      const updatedEmailData = {
-        ...emailData,
-        recipientEmail: trimmedEmail,
-      };
       onChangeRecipient(trimmedEmail);
       setIsEditingEmail(false);
     }
@@ -84,8 +79,8 @@ const EmailPreviewModal: React.FC<EmailPreviewModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-neutral bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-neutral-white rounded-md shadow-lg w-full max-w-7xl max-h-[90vh] flex flex-col">
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-white/60 backdrop-blur-2xl rounded-3xl border border-white/50 shadow-2xl w-full max-w-7xl max-h-[90vh] flex flex-col">
         <div className="p-6 border-b flex justify-between items-center">
           <h2 className="text-xl font-bold text-neutral">
             Forhåndsvisning av e-post

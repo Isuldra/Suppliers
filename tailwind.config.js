@@ -66,6 +66,10 @@ export default {
         md: "0 4px 8px rgba(0,0,0,0.1)",
         lg: "0 8px 16px rgba(0,0,0,0.15)",
       },
+      backgroundImage: {
+        "gradient-glass":
+          "linear-gradient(135deg, #E8B4A0 0%, #D4A89B 25%, #B8A8B8 50%, #9AA5B8 75%, #8B9BAB 100%)",
+      },
       transitionProperty: {
         default: "all",
       },

@@ -77,10 +77,12 @@ const LanguageSelector: React.FC<LanguageSelectorProps> = ({
     <div className={`relative ${className}`}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center justify-center w-8 h-8 hover:bg-white hover:bg-opacity-20 rounded transition-colors"
-        title={t("navigation.settings")}
+        className="h-11 w-11 bg-gradient-to-br from-white/30 to-white/20 backdrop-blur-xl rounded-xl border border-white/40 flex items-center justify-center hover:from-white/40 hover:to-white/30 hover:scale-105 active:scale-95 transition-all duration-200 shadow-lg hover:shadow-xl group"
+        title={t("navigation.language") || "Language"}
       >
-        <span className="text-xl">{currentLanguage.flag}</span>
+        <span className="text-xl group-hover:scale-110 transition-transform duration-200">
+          {currentLanguage.flag}
+        </span>
       </button>
 
       {isOpen && (
