@@ -17,6 +17,14 @@ import LanguageSelector from "./components/LanguageSelector";
 import { ExcelData, ValidationError } from "./types/ExcelData";
 import { HashRouter as Router, Routes, Route, Link } from "react-router-dom";
 import supplyPlannersData from "./data/supplyPlanners.json";
+import { SlackService } from "./services/slackService";
+import {
+  Cog6ToothIcon,
+  ChartBarIcon,
+  CommandLineIcon,
+  CubeIcon,
+  EnvelopeIcon,
+} from "@heroicons/react/24/outline";
 
 // Import the OneMed logo
 import onemedLogo from "./assets/onemed-logo.webp";
@@ -135,8 +143,8 @@ const KeyboardShortcutsModal: React.FC<{
   ];
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-neutral-white p-6 rounded-md shadow-lg max-w-md w-full mx-4">
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+      <div className="bg-white/60 backdrop-blur-2xl rounded-3xl border border-white/50 shadow-2xl p-6 max-w-md w-full mx-4">
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-lg font-bold text-neutral">
             {t("keyboardShortcuts.title")}
@@ -480,6 +488,32 @@ const MainApp: React.FC<MainAppProps> = ({
     };
 
     fetchVersion();
+
+    // Listen for update available events and send Slack notification
+    const unsubscribeUpdate = window.electron.onUpdateAvailable(
+      (info: unknown) => {
+        console.log("Update available:", info);
+
+        // Type guard for update info
+        const updateInfo = info as { version?: string };
+        if (!updateInfo.version) return;
+
+        // Send Slack notification (non-blocking)
+        SlackService.sendDeploymentNotification({
+          version: updateInfo.version as string,
+          timestamp: new Date().toLocaleString("no-NO", {
+            dateStyle: "short",
+            timeStyle: "short",
+          }),
+        }).catch((error: Error) => {
+          console.error("Failed to send Slack deployment notification:", error);
+        });
+      }
+    );
+
+    return () => {
+      unsubscribeUpdate();
+    };
   }, []);
 
   // Keyboard navigation
@@ -529,51 +563,96 @@ const MainApp: React.FC<MainAppProps> = ({
   ]);
 
   return (
-    <div className="min-h-screen flex flex-col bg-neutral-light">
-      <div className="p-4 bg-primary text-neutral-white shadow-md">
-        <div className="container-app flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <img src={onemedLogo} alt="OneMed Logo" className="h-10" />
-            {appVersion && (
-              <span className="text-sm text-neutral-white/80">
-                {t("app.version")} {appVersion}
-              </span>
-            )}
+    <div
+      className="min-h-screen flex flex-col"
+      style={{
+        background: `
+          radial-gradient(circle at 20% 30%, rgba(236, 72, 153, 0.3) 0%, transparent 50%),
+          radial-gradient(circle at 80% 70%, rgba(139, 92, 246, 0.3) 0%, transparent 50%),
+          radial-gradient(circle at 50% 50%, rgba(147, 197, 253, 0.2) 0%, transparent 50%),
+          linear-gradient(135deg, #fce7f3 0%, #ddd6fe 50%, #cbd5e1 100%)
+        `,
+      }}
+    >
+      <div className="bg-gradient-to-r from-primary via-primary to-primary-dark text-neutral-white shadow-lg backdrop-blur-lg">
+        <div className="container-app py-4 px-4">
+          {/* Top row */}
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-3">
+              <img src={onemedLogo} alt="OneMed Logo" className="h-12" />
+              {appVersion && (
+                <span className="text-xs text-neutral-white/70 bg-white/10 backdrop-blur-sm border border-white/20 px-2 py-1 rounded">
+                  v{appVersion}
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-3">
+              <Link
+                to="/dashboard"
+                className="h-11 px-5 bg-gradient-to-br from-white/30 to-white/20 backdrop-blur-xl rounded-xl border border-white/40 text-white text-sm font-semibold flex items-center gap-2.5 hover:from-white/40 hover:to-white/30 hover:scale-105 active:scale-95 transition-all duration-200 shadow-lg hover:shadow-xl"
+              >
+                <ChartBarIcon className="w-5 h-5" />
+                {t("navigation.dashboard")}
+              </Link>
+              <LanguageSelector mode="compact" />
+              <button
+                onClick={() => setShowSettings(true)}
+                className="h-11 w-11 bg-gradient-to-br from-white/30 to-white/20 backdrop-blur-xl rounded-xl border border-white/40 flex items-center justify-center hover:from-white/40 hover:to-white/30 hover:scale-105 active:scale-95 transition-all duration-200 shadow-lg hover:shadow-xl group"
+                title={t("navigation.settings")}
+              >
+                <Cog6ToothIcon className="w-5 h-5 text-white/90 group-hover:text-white" />
+              </button>
+              <button
+                onClick={() => setShowKeyboardShortcuts(true)}
+                className="h-11 w-11 bg-gradient-to-br from-white/30 to-white/20 backdrop-blur-xl rounded-xl border border-white/40 flex items-center justify-center hover:from-white/40 hover:to-white/30 hover:scale-105 active:scale-95 transition-all duration-200 shadow-lg hover:shadow-xl group"
+                title={`${t("navigation.keyboardShortcuts")} (Ctrl/Cmd + ?)`}
+              >
+                <CommandLineIcon className="w-5 h-5 text-white/90 group-hover:text-white" />
+              </button>
+            </div>
           </div>
-          <div className="flex-grow text-center">
-            <h1 className="text-2xl font-bold">{t("app.title")}</h1>
-          </div>
-          <div className="flex items-center gap-4">
-            <Link to="/dashboard" className="btn btn-secondary text-sm">
-              {t("navigation.dashboard")}
-            </Link>
-            <LanguageSelector mode="compact" />
-            <button
-              onClick={() => setShowKeyboardShortcuts(true)}
-              className="btn btn-secondary text-sm"
-              title={`${t("navigation.keyboardShortcuts")} (Ctrl/Cmd + ?)`}
-            >
-              ⌨️
-            </button>
+          {/* Title row */}
+          <div className="text-center">
+            <h1 className="text-3xl font-bold mb-1 flex items-center justify-center gap-3">
+              <div className="p-2 rounded-lg bg-white/10 backdrop-blur-sm">
+                <CubeIcon className="w-6 h-6 text-white" strokeWidth={1.5} />
+              </div>
+              <span>{t("app.title")}</span>
+              <div className="p-2 rounded-lg bg-white/10 backdrop-blur-sm">
+                <EnvelopeIcon
+                  className="w-6 h-6 text-white"
+                  strokeWidth={1.5}
+                />
+              </div>
+            </h1>
+            <p className="text-sm text-neutral-white/80">
+              {t("app.welcome.description")}
+            </p>
           </div>
         </div>
       </div>
 
       <div className="flex-1 p-6">
-        <div className="max-w-4xl mx-auto w-full">
+        <div
+          className={`mx-auto w-full bg-white/30 backdrop-blur-xl rounded-3xl border border-white/40 shadow-2xl ${
+            appState.isBulkMode
+              ? "max-w-7xl lg:max-w-6xl md:max-w-4xl px-4 sm:px-6 lg:px-8 p-4 sm:p-6 lg:p-8"
+              : "max-w-4xl p-6 sm:p-8"
+          }`}
+        >
           {/* Progress Indicator - Show when file is uploaded */}
           {appState.excelData && (
-            <div className="bg-neutral-white p-6 rounded-md shadow-md mb-6 w-full">
+            <div className="bg-white/60 backdrop-blur-2xl rounded-xl border border-white/50 shadow-xl p-6 mb-6 w-full transition-all duration-300 hover:bg-white/70 hover:shadow-2xl">
               <ProgressIndicator appState={appState} />
             </div>
           )}
 
           {/* File Upload Section - Always visible but changes state after upload */}
-          <div className="bg-neutral-white p-6 rounded-md shadow-md mb-6 w-full">
+          <div className="bg-white/60 backdrop-blur-2xl rounded-xl border border-white/50 shadow-xl p-6 mb-6 w-full transition-all duration-300 hover:bg-white/70 hover:shadow-2xl">
             {!appState.excelData ? (
               // Show full upload interface when no file is loaded
               <>
-                <h2 className="text-xl font-bold mb-4 text-neutral">
+                <h2 className="text-xl font-bold mb-4 text-slate-900">
                   {t("fileUpload.title")}
                 </h2>
                 <FileUpload
@@ -585,10 +664,10 @@ const MainApp: React.FC<MainAppProps> = ({
               // Show file status when file is loaded
               <div className="flex justify-between items-center">
                 <div>
-                  <h2 className="text-xl font-bold text-neutral">
+                  <h2 className="text-xl font-bold text-slate-900">
                     {t("fileUpload.fileLoaded")}
                   </h2>
-                  <p className="text-sm text-neutral-secondary mt-1">
+                  <p className="text-sm text-slate-700 mt-1">
                     {appState.excelData.bp.length} {t("fileUpload.rowsReady")}
                   </p>
                 </div>
@@ -615,8 +694,8 @@ const MainApp: React.FC<MainAppProps> = ({
 
           {/* Configuration Section - Only show if file is uploaded */}
           {appState.excelData && (
-            <div className="bg-neutral-white p-6 rounded-md shadow-md mb-6 w-full">
-              <h2 className="text-xl font-bold mb-4 text-neutral">
+            <div className="bg-white/60 backdrop-blur-2xl rounded-xl border border-white/50 shadow-xl p-6 mb-6 w-full transition-all duration-300 hover:bg-white/70 hover:shadow-2xl">
+              <h2 className="text-xl font-bold mb-4 text-slate-900">
                 {t("configuration.title")}
               </h2>
 
@@ -634,13 +713,13 @@ const MainApp: React.FC<MainAppProps> = ({
 
               {/* Bulk Mode Toggle - Only show if weekday is selected */}
               {appState.selectedWeekday && (
-                <div className="mb-6 p-4 bg-neutral-light bg-opacity-30 rounded-md">
+                <div className="mb-6 p-4 bg-white/40 backdrop-blur-md rounded-lg border border-white/40">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h3 className="text-lg font-medium text-neutral mb-1">
+                      <h3 className="text-lg font-medium text-slate-900 mb-1">
                         {t("configuration.sendingMode")}
                       </h3>
-                      <p className="text-sm text-neutral-secondary">
+                      <p className="text-sm text-slate-700">
                         {t("configuration.sendingModeDescription")}
                       </p>
                     </div>
@@ -687,7 +766,7 @@ const MainApp: React.FC<MainAppProps> = ({
               {/* Supplier Selection - Only show if weekday is selected */}
               {appState.selectedWeekday && (
                 <div className="mb-6">
-                  <h3 className="text-lg font-medium mb-3 text-neutral">
+                  <h3 className="text-lg font-medium mb-3 text-slate-900">
                     {appState.isBulkMode
                       ? t("configuration.suppliers")
                       : t("configuration.supplier")}
@@ -721,8 +800,8 @@ const MainApp: React.FC<MainAppProps> = ({
             appState.showDataReview &&
             appState.selectedSupplier &&
             appState.excelData && (
-              <div className="bg-neutral-white p-6 rounded-md shadow-md mb-6 w-full">
-                <h2 className="text-xl font-bold mb-4 text-neutral">
+              <div className="bg-white/60 backdrop-blur-2xl rounded-xl border border-white/50 shadow-xl p-6 mb-6 w-full transition-all duration-300 hover:bg-white/70 hover:shadow-2xl">
+                <h2 className="text-xl font-bold mb-4 text-slate-900">
                   {t("dataReview.title")}
                 </h2>
                 <DataReview
@@ -739,8 +818,8 @@ const MainApp: React.FC<MainAppProps> = ({
             appState.showEmailButton &&
             appState.selectedSupplier &&
             appState.excelData && (
-              <div className="bg-neutral-white p-6 rounded-md shadow-md mb-6 w-full">
-                <h2 className="text-xl font-bold mb-4 text-neutral">
+              <div className="bg-white/60 backdrop-blur-2xl rounded-xl border border-white/50 shadow-xl p-6 mb-6 w-full transition-all duration-300 hover:bg-white/70 hover:shadow-2xl">
+                <h2 className="text-xl font-bold mb-4 text-slate-900">
                   {t("email.title")}
                 </h2>
                 <EmailButton
@@ -754,8 +833,8 @@ const MainApp: React.FC<MainAppProps> = ({
           {appState.isBulkMode &&
             appState.selectedSuppliers.length > 0 &&
             !appState.showDataReview && (
-              <div className="bg-neutral-white p-6 rounded-md shadow-md mb-6 w-full">
-                <h2 className="text-xl font-bold mb-4 text-neutral">
+              <div className="bg-white/60 backdrop-blur-2xl rounded-xl border border-white/50 shadow-xl p-6 mb-6 w-full transition-all duration-300 hover:bg-white/70 hover:shadow-2xl">
+                <h2 className="text-xl font-bold mb-4 text-slate-900">
                   {t("dataReview.reviewOrderLines")}
                 </h2>
                 <BulkDataReview
@@ -771,8 +850,8 @@ const MainApp: React.FC<MainAppProps> = ({
           {appState.isBulkMode &&
             appState.showDataReview &&
             appState.selectedSuppliers.length > 0 && (
-              <div className="bg-neutral-white p-6 rounded-md shadow-md mb-6 w-full">
-                <h2 className="text-xl font-bold mb-4 text-neutral">
+              <div className="bg-white/60 backdrop-blur-2xl rounded-xl border border-white/50 shadow-xl p-6 mb-6 w-full transition-all duration-300 hover:bg-white/70 hover:shadow-2xl">
+                <h2 className="text-xl font-bold mb-4 text-slate-900">
                   {t("email.previewAndSend")}
                 </h2>
                 <BulkEmailPreview

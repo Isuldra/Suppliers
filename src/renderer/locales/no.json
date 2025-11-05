@@ -13,6 +13,19 @@
     "keyboardShortcuts": "Hurtigtaster",
     "settings": "Innstillinger"
   },
+  "settings": {
+    "displayName": "Visningsnavn",
+    "displayNamePlaceholder": "Ditt navn (f.eks. Andreas Selvethun)",
+    "displayNameHelp": "Dette navnet vil vises i Slack-varsler",
+    "slackWebhookUrl": "Slack Webhook URL",
+    "slackWebhookUrlPlaceholder": "https://hooks.slack.com/services/...",
+    "slackWebhookUrlHelp": "Webhook URL for Slack-varsler. Hold denne hemmelig!",
+    "slackNotificationsEnabled": "Aktiver Slack-varsler",
+    "slackNotificationsHelp": "Send varsler til Slack når e-poster sendes",
+    "slackSection": "Slack-integrasjon",
+    "showWebhookUrl": "Vis URL",
+    "hideWebhookUrl": "Skjul URL"
+  },
   "progress": {
     "uploadFile": "Last opp fil",
     "selectWeekday": "Velg ukedag",
@@ -67,14 +80,6 @@
     "supplier": "Leverandør",
     "suppliers": "Leverandører",
     "sendingModeDescription": "Velg mellom enkelt leverandør eller flere leverandører"
-  },
-  "dataReview": {
-    "title": "Gjennomgå data",
-    "reviewOrderLines": "Gjennomgå ordrelinjer"
-  },
-  "email": {
-    "title": "Send e-post",
-    "previewAndSend": "E-post forhåndsvisning og sending"
   },
   "validation": {
     "errors": "Feil ved validering:"
@@ -149,8 +154,7 @@
     "goToPrevious": "Gå til forrige side",
     "goToNext": "Gå til neste side",
     "goToLast": "Gå til siste side",
-    "pageOf": "av",
-    "noDataAvailable": "Ingen data tilgjengelig"
+    "pageOf": "av"
   },
   "table": {
     "selectAllRows": "Velg alle rader",
@@ -169,6 +173,8 @@
     "key": "Nøkkel"
   },
   "email": {
+    "title": "Send e-post",
+    "previewAndSend": "E-post forhåndsvisning og sending",
     "sendButton": "Send e-post",
     "sendingEmails": "Sender e-poster...",
     "emailsSent": "E-poster sendt vellykket",

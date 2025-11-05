@@ -5,6 +5,7 @@ import { EmailService, EmailData } from "../services/emailService";
 import { ExcelRow } from "../types/ExcelData";
 import supplierData from "../data/supplierData.json";
 import EmailPreviewModal from "./EmailPreviewModal";
+import { SlackService } from "../services/slackService";
 
 interface BulkEmailPreviewProps {
   selectedSuppliers: string[];
@@ -332,6 +333,28 @@ const BulkEmailPreview: React.FC<BulkEmailPreviewProps> = ({
         setSendingProgress(((i + 1) / totalEmails) * 100);
       }
 
+      // Send Slack notification (non-blocking)
+      try {
+        const failures = emailPreviewData
+          .filter((s) => s.sendResult && !s.sendResult.success)
+          .map((s) => ({
+            supplier: s.supplier,
+            error: s.sendResult?.error || "Unknown error",
+          }));
+
+        await SlackService.sendBulkEmailNotification({
+          recipientCount: totalEmails,
+          template: "Standard Reminder (Norwegian/English)",
+          scheduled: "Immediate",
+          successCount,
+          failCount,
+          failures: failures.length > 0 ? failures : undefined,
+        });
+      } catch (slackError) {
+        console.error("Failed to send Slack notification:", slackError);
+        // Don't show error to user - Slack is optional
+      }
+
       // Show completion message
       if (successCount === totalEmails) {
         alert(
@@ -393,7 +416,7 @@ const BulkEmailPreview: React.FC<BulkEmailPreviewProps> = ({
       <div className="w-full">
         <div className="flex items-center justify-center p-8">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-          <span className="ml-2 text-neutral-secondary">
+          <span className="ml-2 text-slate-800">
             {t("bulkEmailPreview.preparingData")}
           </span>
         </div>
@@ -404,25 +427,25 @@ const BulkEmailPreview: React.FC<BulkEmailPreviewProps> = ({
   return (
     <div className="w-full">
       {/* Header with summary */}
-      <div className="mb-6 p-4 bg-primary-light bg-opacity-10 border border-primary-light rounded-md">
-        <h2 className="text-lg font-medium text-primary mb-2">
+      <div className="mb-6 p-6 bg-white/70 backdrop-blur-2xl rounded-2xl border border-white/60 shadow-xl">
+        <h2 className="text-lg font-semibold text-slate-900 mb-2 drop-shadow-sm">
           {t("bulkEmailPreview.title")}
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
           <div>
-            <span className="font-medium text-neutral">
+            <span className="font-medium text-slate-900">
               {t("bulkEmailPreview.suppliers")}
             </span>{" "}
             {totals.totalSuppliers}
           </div>
           <div>
-            <span className="font-medium text-neutral">
+            <span className="font-medium text-slate-900">
               {t("bulkEmailPreview.orderLines")}
             </span>{" "}
             {totals.totalOrders}
           </div>
           <div>
-            <span className="font-medium text-primary">
+            <span className="font-medium text-slate-900">
               {t("bulkEmailPreview.emails")}
             </span>{" "}
             {totals.totalSuppliers}
@@ -463,15 +486,15 @@ const BulkEmailPreview: React.FC<BulkEmailPreviewProps> = ({
         {emailPreviewData.map((supplierData) => (
           <div
             key={supplierData.supplier}
-            className="bg-neutral-white border border-neutral-light rounded-md p-4"
+            className="bg-white/40 backdrop-blur-md border border-white/40 rounded-xl p-4 hover:bg-white/50 transition-all duration-200"
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-4">
                 <div>
-                  <h3 className="font-medium text-neutral">
+                  <h3 className="font-medium text-slate-900">
                     {supplierData.supplier}
                   </h3>
-                  <p className="text-sm text-neutral-secondary">
+                  <p className="text-sm text-slate-800">
                     {supplierData.orderCount} ordrelinjer •{" "}
                     {supplierData.languageDisplay}
                   </p>
@@ -518,7 +541,7 @@ const BulkEmailPreview: React.FC<BulkEmailPreviewProps> = ({
                 {/* Preview button */}
                 <button
                   onClick={() => handlePreviewEmail(supplierData.supplier)}
-                  className="btn btn-secondary btn-sm"
+                  className="btn btn-secondary btn-sm bg-white/60 backdrop-blur-md border border-white/40 hover:bg-white/80 transition-all duration-200"
                   disabled={supplierData.isSending}
                   title={
                     supplierData.isSending
@@ -533,9 +556,9 @@ const BulkEmailPreview: React.FC<BulkEmailPreviewProps> = ({
             </div>
 
             {/* Email address editing */}
-            <div className="mt-3 pt-3 border-t border-neutral-light">
+            <div className="mt-3 pt-3 border-t border-white/20">
               <div className="flex items-center justify-between mb-1">
-                <label className="block text-sm font-medium text-neutral">
+                <label className="block text-sm font-medium text-slate-900">
                   {t("bulkEmailPreview.emailAddress")}
                 </label>
                 {(customEmails.has(supplierData.supplier) ||
@@ -546,7 +569,7 @@ const BulkEmailPreview: React.FC<BulkEmailPreviewProps> = ({
                       newCustomEmails.delete(supplierData.supplier);
                       setCustomEmails(newCustomEmails);
                     }}
-                    className="text-xs text-neutral-secondary hover:text-primary"
+                    className="text-xs text-slate-700 hover:text-teal-600 transition-colors"
                     disabled={
                       supplierData.isSending || supplierData.sendResult?.success
                     }
@@ -564,7 +587,7 @@ const BulkEmailPreview: React.FC<BulkEmailPreviewProps> = ({
                 onChange={(e) =>
                   handleEmailChange(supplierData.supplier, e.target.value)
                 }
-                className={`form-control text-sm max-w-md ${
+                className={`text-sm max-w-md bg-white/60 backdrop-blur-md border border-white/40 rounded-lg shadow-inner focus:border-teal-400/60 focus:ring-2 focus:ring-teal-400/30 focus:outline-none transition-all duration-200 px-3 py-2 ${
                   !getEmailForSupplier(
                     supplierData.supplier,
                     supplierData.email
@@ -573,7 +596,7 @@ const BulkEmailPreview: React.FC<BulkEmailPreviewProps> = ({
                     supplierData.supplier,
                     supplierData.email
                   ).trim() === ""
-                    ? "border-red-300 bg-red-50"
+                    ? "border-red-300 bg-red-50/60"
                     : ""
                 }`}
                 placeholder={supplierData.email}
@@ -610,7 +633,7 @@ const BulkEmailPreview: React.FC<BulkEmailPreviewProps> = ({
       <div className="flex justify-between">
         <button
           onClick={onBack}
-          className="btn btn-secondary"
+          className="btn btn-secondary bg-white/60 backdrop-blur-md border border-white/40 hover:bg-white/80 transition-all duration-200"
           disabled={isSending}
         >
           {t("bulkEmailPreview.backToOrderSelection")}
@@ -618,7 +641,7 @@ const BulkEmailPreview: React.FC<BulkEmailPreviewProps> = ({
 
         <button
           onClick={handleSendAllEmails}
-          className="btn btn-primary"
+          className="btn btn-primary bg-teal-600/90 backdrop-blur-md border border-teal-400/30 hover:bg-teal-700/95 text-white shadow-lg transition-all duration-200"
           disabled={isSending || totals.totalSuppliers === 0}
         >
           <PaperAirplaneIcon className="h-4 w-4 mr-2" />
