@@ -50,6 +50,16 @@ export interface DeploymentNotificationData {
   timestamp: string;
 }
 
+export interface ChangelogNotificationData {
+  version: string;
+  title: string;
+  completedDate: string;
+  description: string;
+  sections?: Record<string, string>;
+  displayName?: string;
+  timestamp: string;
+}
+
 export class SlackService {
   /**
    * Send a message to Slack via webhook
@@ -290,7 +300,7 @@ export class SlackService {
       type: "section",
       text: {
         type: "mrkdwn",
-        text: "A new version of OneMed SupplyChain is available. Users will be notified to update.",
+        text: "A new version of Pulse is available. Users will be notified to update.",
       },
     });
 
@@ -387,6 +397,144 @@ export class SlackService {
     }
 
     const message = this.formatDeploymentNotification({
+      ...data,
+      displayName: settings.displayName,
+    });
+
+    await this.sendMessage(settings.webhookUrl, message);
+  }
+
+  /**
+   * Format CHANGELOG notification for Slack
+   */
+  static formatChangelogNotification(
+    data: ChangelogNotificationData
+  ): SlackMessage {
+    const fallbackText = `📋 New Release: ${data.version} - ${data.title}`;
+
+    const blocks: SlackBlock[] = [
+      {
+        type: "header",
+        text: {
+          type: "plain_text",
+          text: `📋 Release ${data.version}`,
+          emoji: true,
+        },
+      },
+      {
+        type: "section",
+        text: {
+          type: "mrkdwn",
+          text: `*${data.title}*\n\n${data.description}`,
+        },
+      },
+    ];
+
+    // Add metadata fields
+    const fields: Array<{
+      type: string;
+      text: string;
+      emoji?: boolean;
+    }> = [];
+
+    if (data.completedDate) {
+      fields.push({
+        type: "mrkdwn",
+        text: `*Completed:*\n${data.completedDate}`,
+      });
+    }
+
+    if (data.timestamp) {
+      fields.push({
+        type: "mrkdwn",
+        text: `*Released:*\n${data.timestamp}`,
+      });
+    }
+
+    if (data.displayName) {
+      fields.push({
+        type: "mrkdwn",
+        text: `*Released by:*\n${data.displayName}`,
+      });
+    }
+
+    if (fields.length > 0) {
+      blocks.push({
+        type: "section",
+        fields: fields.slice(0, 3), // Max 3 fields per section
+      });
+    }
+
+    // Add sections if available
+    if (data.sections && Object.keys(data.sections).length > 0) {
+      blocks.push({
+        type: "divider",
+      });
+
+      // Add key sections (limit to first 3 to avoid too long messages)
+      const sectionKeys = Object.keys(data.sections).slice(0, 3);
+      for (const sectionKey of sectionKeys) {
+        const sectionContent = data.sections[sectionKey];
+        // Truncate long sections to avoid message limits
+        const truncatedContent =
+          sectionContent.length > 1000
+            ? sectionContent.substring(0, 1000) + "..."
+            : sectionContent;
+
+        blocks.push({
+          type: "section",
+          text: {
+            type: "mrkdwn",
+            text: `*${sectionKey}*\n${truncatedContent}`,
+          },
+        });
+      }
+
+      // If there are more sections, add a note
+      if (Object.keys(data.sections).length > 3) {
+        blocks.push({
+          type: "section",
+          text: {
+            type: "mrkdwn",
+            text: `_...and ${
+              Object.keys(data.sections).length - 3
+            } more sections. See full CHANGELOG for details._`,
+          },
+        });
+      }
+    }
+
+    // Add divider and link to full CHANGELOG
+    blocks.push({
+      type: "divider",
+    });
+
+    blocks.push({
+      type: "section",
+      text: {
+        type: "mrkdwn",
+        text: `📖 <https://github.com/Isuldra/Suppliers/blob/main/docs/CHANGELOG.md|View full CHANGELOG on GitHub>`,
+      },
+    });
+
+    return {
+      text: fallbackText,
+      blocks,
+    };
+  }
+
+  /**
+   * Send CHANGELOG notification if enabled
+   */
+  static async sendChangelogNotification(
+    data: Omit<ChangelogNotificationData, "displayName">
+  ): Promise<void> {
+    const settings = this.getSettings();
+    if (!settings) {
+      return;
+    }
+
+    const message = this.formatChangelogNotification({
       ...data,
       displayName: settings.displayName,
     });

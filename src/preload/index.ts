@@ -182,6 +182,60 @@ interface ElectronAPI {
 
   // App version
   getAppVersion: () => Promise<string>;
+
+  // Dashboard methods
+  getDashboardStats: () => Promise<{
+    success: boolean;
+    data?: import("../renderer/types/Dashboard").DashboardStats;
+    error?: string;
+  }>;
+  getTopSuppliers: (limit?: number) => Promise<{
+    success: boolean;
+    data?: import("../renderer/types/Dashboard").SupplierStat[];
+    error?: string;
+  }>;
+  getSupplierDetails: (supplierName: string) => Promise<{
+    success: boolean;
+    data?: import("../renderer/types/Dashboard").SupplierStat;
+    error?: string;
+  }>;
+  getOrdersByWeek: (
+    weeksAhead?: number,
+    weeksBehind?: number
+  ) => Promise<{
+    success: boolean;
+    data?: import("../renderer/types/Dashboard").WeekStat[];
+    error?: string;
+  }>;
+
+  // Product Catalog methods
+  productCatalogSync: () => Promise<{
+    success: boolean;
+    count: number;
+    error?: string;
+  }>;
+  productCatalogUpload: (buffer: ArrayBuffer) => Promise<{
+    success: boolean;
+    count: number;
+    error?: string;
+  }>;
+  productCatalogGetStats: () => Promise<{
+    success: boolean;
+    data?: { count: number; lastSync: Date | null };
+    error?: string;
+  }>;
+  getTopItems: (limit?: number) => Promise<{
+    success: boolean;
+    data?: Array<{
+      itemNo: string;
+      description: string;
+      productName: string;
+      totalOutstandingQty: number;
+      orderCount: number;
+      supplierCount: number;
+    }>;
+    error?: string;
+  }>;
 }
 
 // Valid send channels for IPC communication
@@ -227,6 +281,10 @@ const validSendChannels = [
   "openDebugFolder",
   "get-system-language",
   "get-app-version",
+  // Dashboard channels
+  "get-dashboard-stats",
+  "get-top-suppliers",
+  "get-orders-by-week",
 ] as const;
 
 // Valid receive channels for IPC communication
@@ -272,6 +330,10 @@ const validReceiveChannels = [
   "openDebugFolder",
   "get-system-language",
   "get-app-version",
+  // Dashboard channels
+  "get-dashboard-stats",
+  "get-top-suppliers",
+  "get-orders-by-week",
 ] as const;
 
 // Expose the API to the renderer process
@@ -555,5 +617,37 @@ contextBridge.exposeInMainWorld("electron", {
   // App version
   getAppVersion: async () => {
     return await ipcRenderer.invoke("get-app-version");
+  },
+
+  // Dashboard methods
+  getDashboardStats: async () => {
+    return await ipcRenderer.invoke("get-dashboard-stats");
+  },
+  getTopSuppliers: async (limit?: number) => {
+    return await ipcRenderer.invoke("get-top-suppliers", limit);
+  },
+  getSupplierDetails: async (supplierName: string) => {
+    return await ipcRenderer.invoke("get-supplier-details", supplierName);
+  },
+  getOrdersByWeek: async (weeksAhead?: number, weeksBehind?: number) => {
+    return await ipcRenderer.invoke(
+      "get-orders-by-week",
+      weeksAhead,
+      weeksBehind
+    );
+  },
+
+  // Product Catalog methods
+  productCatalogSync: async () => {
+    return await ipcRenderer.invoke("product-catalog:sync");
+  },
+  productCatalogUpload: async (buffer: ArrayBuffer) => {
+    return await ipcRenderer.invoke("product-catalog:upload", buffer);
+  },
+  productCatalogGetStats: async () => {
+    return await ipcRenderer.invoke("product-catalog:get-stats");
+  },
+  getTopItems: async (limit?: number) => {
+    return await ipcRenderer.invoke("get-top-items", limit);
   },
 } as ElectronAPI);

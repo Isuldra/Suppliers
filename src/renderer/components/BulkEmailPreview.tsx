@@ -427,7 +427,7 @@ const BulkEmailPreview: React.FC<BulkEmailPreviewProps> = ({
   return (
     <div className="w-full">
       {/* Header with summary */}
-      <div className="mb-6 p-6 bg-white/70 backdrop-blur-2xl rounded-2xl border border-white/60 shadow-xl">
+      <div className="mb-6 p-6 bg-white/50 backdrop-blur-2xl rounded-2xl border border-white/40 shadow-xl">
         <h2 className="text-lg font-semibold text-slate-900 mb-2 drop-shadow-sm">
           {t("bulkEmailPreview.title")}
         </h2>
@@ -486,7 +486,7 @@ const BulkEmailPreview: React.FC<BulkEmailPreviewProps> = ({
         {emailPreviewData.map((supplierData) => (
           <div
             key={supplierData.supplier}
-            className="bg-white/40 backdrop-blur-md border border-white/40 rounded-xl p-4 hover:bg-white/50 transition-all duration-200"
+            className="bg-white/30 backdrop-blur-md border border-white/30 rounded-xl p-4 hover:bg-white/40 transition-all duration-200"
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-4">
@@ -587,7 +587,7 @@ const BulkEmailPreview: React.FC<BulkEmailPreviewProps> = ({
                 onChange={(e) =>
                   handleEmailChange(supplierData.supplier, e.target.value)
                 }
-                className={`text-sm max-w-md bg-white/60 backdrop-blur-md border border-white/40 rounded-lg shadow-inner focus:border-teal-400/60 focus:ring-2 focus:ring-teal-400/30 focus:outline-none transition-all duration-200 px-3 py-2 ${
+                className={`text-sm max-w-md bg-white/50 backdrop-blur-md border border-white/30 rounded-lg shadow-inner focus:border-teal-400/60 focus:ring-2 focus:ring-teal-400/30 focus:outline-none transition-all duration-200 px-3 py-2 ${
                   !getEmailForSupplier(
                     supplierData.supplier,
                     supplierData.email
