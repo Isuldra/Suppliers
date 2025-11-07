@@ -1,9 +1,9 @@
 {
   "app": {
-    "title": "OneMed SupplyChain",
+    "title": "Pulse",
     "version": "Versio",
     "welcome": {
-      "title": "Tervetuloa OneMed SupplyChainiin",
+      "title": "Tervetuloa Pulseen",
       "description": "Työkalu toimittajien muistuttamiseen toimituspäivämääristä",
       "getStarted": "Aloita"
     }

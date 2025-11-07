@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useTranslation } from "react-i18next";
+import { useDropzone } from "react-dropzone";
 import LanguageSelector from "./LanguageSelector";
 import { SettingsData, DEFAULT_SETTINGS } from "../types/Settings";
 
@@ -14,6 +15,18 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
   const [settings, setSettings] = useState<SettingsData>(DEFAULT_SETTINGS);
   const [showWebhookUrl, setShowWebhookUrl] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+
+  // Product Catalog state
+  const [catalogStats, setCatalogStats] = useState<{
+    count: number;
+    lastSync: Date | null;
+  } | null>(null);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [catalogMessage, setCatalogMessage] = useState<{
+    type: "success" | "error";
+    text: string;
+  } | null>(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -34,6 +47,16 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
           }
         } catch (error) {
           console.error("Failed to load settings:", error);
+        }
+
+        // Load product catalog stats
+        try {
+          const stats = await window.electron.productCatalogGetStats();
+          if (stats.success && stats.data) {
+            setCatalogStats(stats.data);
+          }
+        } catch (error) {
+          console.error("Failed to load catalog stats:", error);
         }
       };
 
@@ -67,6 +90,97 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
       },
     }));
   };
+
+  // Product Catalog handlers
+  const handleSyncCatalog = async () => {
+    setIsSyncing(true);
+    setCatalogMessage(null);
+    try {
+      const result = await window.electron.productCatalogSync();
+      if (result.success) {
+        setCatalogMessage({
+          type: "success",
+          text: `Synkronisert ${result.count} produkter fra cloud`,
+        });
+        // Refresh stats
+        const stats = await window.electron.productCatalogGetStats();
+        if (stats.success && stats.data) {
+          setCatalogStats(stats.data);
+        }
+      } else {
+        setCatalogMessage({
+          type: "error",
+          text: result.error || "Synkronisering feilet",
+        });
+      }
+    } catch (error) {
+      setCatalogMessage({
+        type: "error",
+        text: error instanceof Error ? error.message : "Ukjent feil",
+      });
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const handleUploadCatalog = useCallback(async (file: File) => {
+    setIsUploading(true);
+    setCatalogMessage(null);
+    try {
+      const buffer = await file.arrayBuffer();
+      const result = await window.electron.productCatalogUpload(buffer);
+
+      if (result.success) {
+        setCatalogMessage({
+          type: "success",
+          text: `Lastet opp ${result.count} produkter til cloud`,
+        });
+        // Refresh stats
+        const stats = await window.electron.productCatalogGetStats();
+        if (stats.success && stats.data) {
+          setCatalogStats(stats.data);
+        }
+      } else {
+        setCatalogMessage({
+          type: "error",
+          text: result.error || "Opplasting feilet",
+        });
+      }
+    } catch (error) {
+      setCatalogMessage({
+        type: "error",
+        text: error instanceof Error ? error.message : "Ukjent feil",
+      });
+    } finally {
+      setIsUploading(false);
+    }
+  }, []);
+
+  const onDrop = useCallback(
+    (acceptedFiles: File[]) => {
+      const file = acceptedFiles[0];
+      if (file && file.name.endsWith(".xlsx")) {
+        handleUploadCatalog(file);
+      } else {
+        setCatalogMessage({
+          type: "error",
+          text: "Kun .xlsx filer er støttet",
+        });
+      }
+    },
+    [handleUploadCatalog]
+  );
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop,
+    accept: {
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": [
+        ".xlsx",
+      ],
+    },
+    multiple: false,
+    disabled: isUploading,
+  });
 
   if (!isOpen) return null;
 
@@ -171,6 +285,96 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                 {t("settings.slackWebhookUrlHelp")}
               </p>
             </div>
+          </div>
+
+          {/* Product Catalog Section */}
+          <div className="pt-4 border-t border-neutral-light">
+            <h4 className="text-sm font-semibold text-neutral mb-3">
+              Produktkatalog
+            </h4>
+
+            {/* Catalog Stats */}
+            <div className="mb-4 p-3 bg-blue-50 rounded-md">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-neutral">
+                    Status:{" "}
+                    {catalogStats
+                      ? `${catalogStats.count.toLocaleString(
+                          "nb-NO"
+                        )} produkter`
+                      : "Ikke synkronisert"}
+                  </p>
+                  {catalogStats?.lastSync && (
+                    <p className="text-xs text-neutral-secondary mt-1">
+                      Sist synkronisert:{" "}
+                      {new Date(catalogStats.lastSync).toLocaleString("nb-NO")}
+                    </p>
+                  )}
+                </div>
+                <button
+                  onClick={handleSyncCatalog}
+                  disabled={isSyncing}
+                  className="px-3 py-1 text-sm bg-primary text-white rounded hover:bg-primary-dark disabled:opacity-50"
+                >
+                  {isSyncing ? "Synkroniserer..." : "Synkroniser"}
+                </button>
+              </div>
+            </div>
+
+            {/* Upload Section */}
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-neutral mb-2">
+                Last opp ny produktkatalog
+              </label>
+              <div
+                {...getRootProps()}
+                className={`border-2 border-dashed rounded-md p-6 text-center cursor-pointer transition-colors ${
+                  isDragActive
+                    ? "border-primary bg-primary-light/10"
+                    : isUploading
+                    ? "border-neutral-light bg-gray-100 cursor-not-allowed"
+                    : "border-neutral-light hover:border-primary hover:bg-blue-50"
+                }`}
+              >
+                <input {...getInputProps()} />
+                {isUploading ? (
+                  <p className="text-sm text-neutral-secondary">
+                    Laster opp produktkatalog...
+                  </p>
+                ) : isDragActive ? (
+                  <p className="text-sm text-primary font-medium">
+                    Slipp filen her...
+                  </p>
+                ) : (
+                  <div>
+                    <p className="text-sm text-neutral font-medium">
+                      Dra og slipp Produktkatalog.xlsx her
+                    </p>
+                    <p className="text-xs text-neutral-secondary mt-1">
+                      eller klikk for å velge fil
+                    </p>
+                  </div>
+                )}
+              </div>
+              <p className="text-xs text-neutral-secondary mt-2">
+                Forventer kolonne A: &quot;Item No.&quot; og kolonne C:
+                &quot;Item description&quot;
+              </p>
+            </div>
+
+            {/* Message Display */}
+            {catalogMessage && (
+              <div
+                className={`p-3 rounded-md ${
+                  catalogMessage.type === "success"
+                    ? "bg-green-100 text-green-800"
+                    : "bg-red-100 text-red-800"
+                }`}
+              >
+                <p className="text-sm">{catalogMessage.text}</p>
+              </div>
+            )}
           </div>
         </div>
 

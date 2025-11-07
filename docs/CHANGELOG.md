@@ -1,8 +1,150 @@
 # Documentation Changelog
 
+## Version 1.4.0: Dashboard Enhancement & Product Catalog Integration
+
+_Completed November 2025_
+
+This version introduces comprehensive dashboard improvements with advanced KPIs, Supabase cloud integration for product catalog, and a new tabbed interface for better data visualization.
+
+### 🚀 Major Features:
+
+#### 📊 Enhanced Dashboard KPIs
+
+- **New Performance Metrics**:
+
+  - Gjennomsnittlig forsinkelse (Average delay in days)
+  - Kritisk forsinkede ordre (Orders delayed >30 days)
+  - On-Time Delivery Rate (Percentage of orders delivered on time)
+  - Eldste utestående ordre (Oldest outstanding order date)
+  - Totalt restlinjer (Total outstanding lines, not pieces)
+
+- **Improved Data Accuracy**:
+  - KPIs now measure by number of lines instead of quantity/pieces
+  - More relevant metrics based on actual BP sheet data
+  - Real-time calculations using SQLite queries
+
+#### 🗂️ Tabbed Dashboard Interface
+
+- **Oversikt Tab**:
+
+  - 6 key performance indicators
+  - Top 5 suppliers by outstanding lines
+  - Enhanced tooltips with delay and on-time delivery metrics
+
+- **Varenummer Tab** (NEW):
+
+  - Display top 200 items with outstanding quantities
+  - Full product names from Supabase catalog
+  - Real-time search functionality across item numbers and product names
+  - Sortable columns: Item No., Product Name, Quantity, Lines, Suppliers
+  - Dynamic filtering with result count
+
+- **Timeline Tab**:
+  - Weekly overview of orders
+  - Moved from Oversikt tab for better organization
+
+#### ☁️ Supabase Product Catalog Integration
+
+- **Cloud-Based Product Names**:
+
+  - 10,000+ products stored in Supabase
+  - Automatic synchronization on app startup
+  - Local caching for fast lookups (5-minute TTL)
+  - Fallback to BP description if product not found
+
+- **Excel Upload Feature**:
+
+  - Drag-and-drop interface in Settings modal
+  - Parse Produktkatalog.xlsx (Column A: Item No., Column C: Item description)
+  - Batch upload (1000 products at a time)
+  - Replace existing catalog with new data
+  - Sync status display with product count and last sync time
+
+- **Row Level Security**:
+  - Proper RLS policies for secure access
+  - Public read/write access for internal use
+  - Environment variable configuration for credentials
+
+#### 🔧 Database Enhancements
+
+- **New Database Methods**:
+
+  - `getTopItemsByOutstanding(limit)`: Fetch top items with quantities and supplier counts
+  - `getDashboardStats()`: Extended with new KPI calculations
+  - `getTopSuppliersByOutstanding()`: Now sorts by line count instead of quantity
+  - `getSupplierDetails(supplierName)`: Detailed supplier statistics
+
+- **Advanced SQL Queries**:
+  - AVG delay calculations for overdue orders
+  - COUNT of critically delayed orders (>30 days)
+  - On-time delivery rate calculations
+  - MIN date for oldest outstanding order
+
+#### 🎨 UI/UX Improvements
+
+- **TopItemsTable Component**:
+
+  - Responsive design with mobile-friendly layout
+  - Large search field with instant filtering
+  - Color-coded table rows for better readability
+  - "No results" message when search returns empty
+  - Dynamic result counter
+
+- **TopSuppliersChart Component**:
+
+  - Updated to show line count instead of quantity
+  - Enhanced tooltips with average delay and on-time delivery percentage
+  - Better data visualization
+
+- **Settings Modal**:
+  - New "Produktkatalog" section
+  - Sync status indicator
+  - Manual sync button
+  - Drag-and-drop file upload area with visual feedback
+  - Success/error message display
+
+### 🔐 Security & Configuration
+
+- **Environment Variables**:
+
+  - `.env.example` template for Supabase credentials
+  - `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`
+  - Secure credential management
+  - `.gitignore` updated to exclude `.env`
+
+- **Lazy Initialization**:
+  - Supabase client initialized only when needed
+  - Graceful fallback if not configured
+  - No app crashes if Supabase unavailable
+
+### 🐛 Bug Fixes
+
+- Fixed infinite loop issue when selecting suppliers from dashboard
+- Resolved "postgresclient is not a constructor" error with dynamic imports
+- Fixed TypeScript/ESLint errors for Supabase client
+- Removed navigation logic that caused re-render loops
+
+### 📦 Dependencies
+
+- **New**: `@supabase/supabase-js` - Cloud database integration
+
+### 🔄 Breaking Changes
+
+- Dashboard filter navigation temporarily disabled to prevent infinite loops
+- KPIs now measure lines instead of pieces (more accurate representation)
+
+### 📝 Technical Notes
+
+- Supabase table: `product_catalog` with indexes on `item_no` and `item_name`
+- Product catalog enrichment happens at IPC handler level
+- Local cache prevents excessive API calls
+- Background sync on app startup (non-blocking)
+
+---
+
 ## Version 1.3.8: Complete Visual Redesign & UI Improvements
 
-_Completed January 2025_
+_Completed November 2025_
 
 This version introduces a comprehensive visual redesign with glassmorphism effects, improved spacing, and enhanced user experience across the application.
 
@@ -66,6 +208,7 @@ This version introduces a comprehensive visual redesign with glassmorphism effec
 ### Files Modified:
 
 **Core Components:**
+
 - `src/renderer/App.tsx` - Background gradients, responsive container, header navigation
 - `src/renderer/components/BulkEmailPreview.tsx` - Complete glassmorphism redesign
 - `src/renderer/components/LanguageSelector.tsx` - Standardized button styling
@@ -95,7 +238,7 @@ No migration required - all changes are backward compatible.
 
 ## Version 1.3.0: Multi-Language Support
 
-_Completed January 2025_
+_Completed October 2025_
 
 This version introduces comprehensive multi-language support for the OneMed SupplyChain application, making it accessible to users across Nordic countries and English-speaking markets.
 
@@ -173,7 +316,7 @@ This version introduces comprehensive multi-language support for the OneMed Supp
 
 ## Phase 7: Email Template Column Header Updates
 
-_Completed December 2024_
+_Completed October 2025_
 
 This phase updated the email template column headers to better reflect the actual data content, improving clarity for suppliers receiving reminder emails.
 
@@ -224,7 +367,7 @@ This phase updated the email template column headers to better reflect the actua
 
 ## Phase 6: Supplier Selection Logic Unification
 
-_Completed December 2024_
+_Completed October 2025_
 
 This phase focused on unifying the supplier selection logic between single and bulk modes to ensure consistent data display and eliminate discrepancies.
 
@@ -279,7 +422,7 @@ This phase focused on unifying the supplier selection logic between single and b
 
 ## Phase 5: Complete Documentation Overhaul
 
-_Completed July 2024_
+_Completed July 2025_
 
 This phase involved a complete overhaul of the documentation to reflect the current state of the application after major UI/UX improvements and feature additions.
 
@@ -359,7 +502,7 @@ This phase involved a complete overhaul of the documentation to reflect the curr
 
 ## Phase 4: Import Debugging & UI Layout
 
-_Completed [Current Date - e.g., 21 Apr 2025]_
+_Completed April 2025_
 
 This phase focused on resolving critical Excel import bugs and improving UI layout consistency.
 
@@ -388,7 +531,7 @@ This phase focused on resolving critical Excel import bugs and improving UI layo
 
 ## Phase 3: Technical Accuracy Review & Cleanup
 
-_Completed [Current Month/Year - e.g., May 2024]_
+_Completed April 2025_
 
 This phase involved a detailed review of the existing documentation against the actual codebase and configurations to ensure technical accuracy and consistency.
 
@@ -427,7 +570,7 @@ This phase involved a detailed review of the existing documentation against the 
 
 ## Phase 2: Structure, Accuracy & Consistency Cleanup
 
-_Completed April 2024 (Adjust date as needed)_
+_Completed April 2025_
 
 This phase focused on modernizing the documentation structure, ensuring accuracy after the initial rename, and improving overall consistency.
 
