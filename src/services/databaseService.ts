@@ -8,6 +8,11 @@ import path from "path";
 import fs from "fs";
 import { app } from "electron";
 import { ExcelRow } from "../types/ExcelRow";
+import type {
+  DashboardStats,
+  SupplierStat,
+  WeekStat,
+} from "../renderer/types/Dashboard";
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const log = require("electron-log/main");
 
@@ -35,6 +40,13 @@ export class DatabaseService {
   private backupInterval: number = 24 * 60 * 60 * 1000; // 24 hours
   private backupIntervalId: NodeJS.Timeout | null = null;
   private isShuttingDown: boolean = false;
+
+  // Dashboard cache
+  private dashboardCache: {
+    data: DashboardStats | null;
+    timestamp: number;
+  } = { data: null, timestamp: 0 };
+  private readonly CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
   private constructor() {
     this.isShuttingDown = false;
@@ -798,26 +810,20 @@ export class DatabaseService {
 
     try {
       const sql = `
-        SELECT DISTINCT COALESCE(supplier_name, ftgnavn) AS supplier
+        SELECT DISTINCT supplier_name AS name
         FROM purchase_order
-        WHERE COALESCE(supplier_name, ftgnavn) IS NOT NULL 
-          AND COALESCE(supplier_name, ftgnavn) != ''
-          AND COALESCE(supplier_name, ftgnavn) != '[object Object]'
-        ORDER BY supplier
+        WHERE outstanding_qty > 0
+          AND supplier_name IS NOT NULL
+          AND supplier_name != ''
+        ORDER BY supplier_name ASC
       `;
       const stmt = this.db.prepare(sql);
-      const rows = stmt.all() as { supplier: string }[];
-      const suppliers = rows
-        .map((row) => row.supplier)
-        .filter(
-          (supplier) =>
-            supplier &&
-            supplier.trim() !== "" &&
-            supplier !== "[object Object]" &&
-            !supplier.includes("[object Object]")
-        );
+      const rows = stmt.all() as { name: string }[];
+      const suppliers = rows.map((row) => row.name);
 
-      log.info(`Found ${suppliers.length} unique suppliers in database`);
+      log.info(
+        `Found ${suppliers.length} unique suppliers with outstanding orders`
+      );
       if (process.env.NODE_ENV === "development") {
         log.info("Available suppliers:", suppliers.slice(0, 10)); // Log first 10
       }
@@ -1220,6 +1226,473 @@ export class DatabaseService {
       log.error("Error getting all supplier planning:", error);
       return [];
     }
+  }
+
+  // Dashboard methods
+
+  public getDashboardStats(): DashboardStats {
+    if (!this.db) {
+      throw new Error("Database not connected");
+    }
+
+    // Check cache first
+    const now = Date.now();
+    if (
+      this.dashboardCache.data &&
+      now - this.dashboardCache.timestamp < this.CACHE_TTL
+    ) {
+      log.info("Returning cached dashboard stats");
+      return { ...this.dashboardCache.data, dataSource: "cache" as const };
+    }
+
+    try {
+      log.info("Fetching fresh dashboard stats from database");
+
+      // Total outstanding lines (WHERE outstanding_qty > 0)
+      const totalOutstandingLines = this.db
+        .prepare(
+          `
+        SELECT COUNT(*) as count
+        FROM purchase_order
+        WHERE outstanding_qty > 0
+      `
+        )
+        .get() as { count: number };
+
+      // Unique suppliers (DISTINCT supplier_name)
+      const uniqueSuppliers = this.db
+        .prepare(
+          `
+        SELECT COUNT(DISTINCT COALESCE(supplier_name, ftgnavn)) as count
+        FROM purchase_order
+        WHERE outstanding_qty > 0
+          AND COALESCE(supplier_name, ftgnavn) IS NOT NULL
+          AND COALESCE(supplier_name, ftgnavn) != ''
+      `
+        )
+        .get() as { count: number };
+
+      // Overdue orders (WHERE eta_supplier < CURRENT_DATE AND outstanding_qty > 0)
+      const overdueOrders = this.db
+        .prepare(
+          `
+        SELECT COUNT(*) as count
+        FROM purchase_order
+        WHERE outstanding_qty > 0
+          AND eta_supplier IS NOT NULL
+          AND eta_supplier != ''
+          AND date(eta_supplier) < date('now')
+      `
+        )
+        .get() as { count: number };
+
+      // Next follow-up date (MIN(eta_supplier) WHERE eta_supplier >= CURRENT_DATE)
+      const nextFollowUp = this.db
+        .prepare(
+          `
+        SELECT MIN(eta_supplier) as next_date
+        FROM purchase_order
+        WHERE outstanding_qty > 0
+          AND eta_supplier IS NOT NULL
+          AND eta_supplier != ''
+          AND date(eta_supplier) >= date('now')
+      `
+        )
+        .get() as { next_date: string | null };
+
+      // Average delay days (for overdue orders only)
+      const avgDelay = this.db
+        .prepare(
+          `
+        SELECT AVG(julianday('now') - julianday(eta_supplier)) as avgDelay
+        FROM purchase_order
+        WHERE outstanding_qty > 0
+          AND eta_supplier IS NOT NULL
+          AND eta_supplier != ''
+          AND date(eta_supplier) < date('now')
+      `
+        )
+        .get() as { avgDelay: number | null };
+
+      // Critically delayed orders (>30 days)
+      const criticalDelays = this.db
+        .prepare(
+          `
+        SELECT COUNT(*) as count
+        FROM purchase_order
+        WHERE outstanding_qty > 0
+          AND eta_supplier IS NOT NULL
+          AND eta_supplier != ''
+          AND date(eta_supplier) < date('now')
+          AND julianday('now') - julianday(eta_supplier) > 30
+      `
+        )
+        .get() as { count: number };
+
+      // On-time delivery rate (percentage)
+      const onTimeStats = this.db
+        .prepare(
+          `
+        SELECT 
+          COUNT(*) as total,
+          SUM(CASE WHEN date(eta_supplier) < date('now') THEN 1 ELSE 0 END) as overdue
+        FROM purchase_order
+        WHERE outstanding_qty > 0
+          AND eta_supplier IS NOT NULL
+          AND eta_supplier != ''
+      `
+        )
+        .get() as { total: number; overdue: number };
+
+      const onTimeRate =
+        onTimeStats.total > 0
+          ? ((onTimeStats.total - onTimeStats.overdue) * 100.0) /
+            onTimeStats.total
+          : 0;
+
+      // Oldest outstanding order date
+      const oldestOrder = this.db
+        .prepare(
+          `
+        SELECT MIN(date(eta_supplier)) as oldest_date
+        FROM purchase_order
+        WHERE outstanding_qty > 0
+          AND eta_supplier IS NOT NULL
+          AND eta_supplier != ''
+      `
+        )
+        .get() as { oldest_date: string | null };
+
+      const stats: DashboardStats = {
+        totalOutstandingLines: totalOutstandingLines.count,
+        uniqueSuppliers: uniqueSuppliers.count,
+        overdueOrders: overdueOrders.count,
+        nextFollowUpDate: nextFollowUp.next_date
+          ? new Date(nextFollowUp.next_date)
+          : null,
+        averageDelayDays:
+          avgDelay.avgDelay !== null
+            ? Math.round(avgDelay.avgDelay * 10) / 10
+            : 0,
+        criticallyDelayedOrders: criticalDelays.count,
+        onTimeDeliveryRate: Math.round(onTimeRate * 10) / 10,
+        oldestOutstandingOrderDate: oldestOrder.oldest_date
+          ? new Date(oldestOrder.oldest_date)
+          : null,
+        lastUpdated: new Date(),
+        dataSource: "database" as const,
+      };
+
+      // Cache the results
+      this.dashboardCache = {
+        data: stats,
+        timestamp: now,
+      };
+
+      log.info("Dashboard stats fetched successfully", stats);
+      return stats;
+    } catch (error) {
+      log.error("Error getting dashboard stats:", error);
+      throw new Error(
+        `Failed to load dashboard data: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`
+      );
+    }
+  }
+
+  public getTopSuppliersByOutstanding(limit: number = 5): SupplierStat[] {
+    if (!this.db) {
+      throw new Error("Database not connected");
+    }
+
+    try {
+      const sql = `
+        SELECT 
+          supplier_name as name,
+          SUM(outstanding_qty) as outstandingQty,
+          COUNT(*) as outstandingLines,
+          COUNT(*) as orderCount,
+          MIN(date(eta_supplier)) as oldestOrderDate,
+          AVG(CASE 
+            WHEN date(eta_supplier) < date('now') 
+            THEN julianday('now') - julianday(eta_supplier) 
+            ELSE NULL 
+          END) as avgDelayDays,
+          CASE 
+            WHEN COUNT(*) > 0 
+            THEN (COUNT(*) - SUM(CASE WHEN date(eta_supplier) < date('now') THEN 1 ELSE 0 END)) * 100.0 / COUNT(*)
+            ELSE 0 
+          END as onTimeRate
+        FROM purchase_order
+        WHERE outstanding_qty > 0
+          AND supplier_name IS NOT NULL
+          AND supplier_name != ''
+          AND eta_supplier IS NOT NULL
+          AND eta_supplier != ''
+        GROUP BY supplier_name
+        ORDER BY COUNT(*) DESC
+        LIMIT ?
+      `;
+
+      const rows = this.db.prepare(sql).all(limit) as Array<{
+        name: string;
+        outstandingQty: number;
+        outstandingLines: number;
+        orderCount: number;
+        oldestOrderDate: string | null;
+        avgDelayDays: number | null;
+        onTimeRate: number;
+      }>;
+
+      return rows.map((row) => ({
+        name: row.name,
+        outstandingQty: row.outstandingQty,
+        outstandingLines: row.outstandingLines,
+        orderCount: row.orderCount,
+        oldestOrderDate: row.oldestOrderDate
+          ? new Date(row.oldestOrderDate)
+          : undefined,
+        averageDelayDays:
+          row.avgDelayDays !== null
+            ? Math.round(row.avgDelayDays * 10) / 10
+            : undefined,
+        onTimeDeliveryRate:
+          row.onTimeRate !== null
+            ? Math.round(row.onTimeRate * 10) / 10
+            : undefined,
+      }));
+    } catch (error) {
+      log.error("Error getting top suppliers:", error);
+      throw error;
+    }
+  }
+
+  public getSupplierDetails(supplierName: string): SupplierStat | null {
+    if (!this.db) {
+      throw new Error("Database not connected");
+    }
+
+    try {
+      const sql = `
+        SELECT 
+          supplier_name as name,
+          SUM(outstanding_qty) as outstandingQty,
+          COUNT(*) as outstandingLines,
+          COUNT(*) as orderCount,
+          MIN(date(eta_supplier)) as oldestOrderDate,
+          AVG(CASE 
+            WHEN date(eta_supplier) < date('now') 
+            THEN julianday('now') - julianday(eta_supplier) 
+            ELSE NULL 
+          END) as avgDelayDays,
+          CASE 
+            WHEN COUNT(*) > 0 
+            THEN (COUNT(*) - SUM(CASE WHEN date(eta_supplier) < date('now') THEN 1 ELSE 0 END)) * 100.0 / COUNT(*)
+            ELSE 0 
+          END as onTimeRate
+        FROM purchase_order
+        WHERE outstanding_qty > 0
+          AND supplier_name = ?
+          AND supplier_name IS NOT NULL
+          AND supplier_name != ''
+          AND eta_supplier IS NOT NULL
+          AND eta_supplier != ''
+        GROUP BY supplier_name
+      `;
+
+      const row = this.db.prepare(sql).get(supplierName) as
+        | {
+            name: string;
+            outstandingQty: number;
+            outstandingLines: number;
+            orderCount: number;
+            oldestOrderDate: string | null;
+            avgDelayDays: number | null;
+            onTimeRate: number;
+          }
+        | undefined;
+
+      if (!row) {
+        return null;
+      }
+
+      return {
+        name: row.name,
+        outstandingQty: row.outstandingQty,
+        outstandingLines: row.outstandingLines,
+        orderCount: row.orderCount,
+        oldestOrderDate: row.oldestOrderDate
+          ? new Date(row.oldestOrderDate)
+          : undefined,
+        averageDelayDays:
+          row.avgDelayDays !== null
+            ? Math.round(row.avgDelayDays * 10) / 10
+            : undefined,
+        onTimeDeliveryRate:
+          row.onTimeRate !== null
+            ? Math.round(row.onTimeRate * 10) / 10
+            : undefined,
+      };
+    } catch (error) {
+      log.error("Error getting supplier details:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get top items by outstanding quantity
+   * Returns item numbers with total outstanding qty and order count
+   */
+  public getTopItemsByOutstanding(limit: number = 30): Array<{
+    itemNo: string;
+    description: string;
+    totalOutstandingQty: number;
+    orderCount: number;
+    supplierCount: number;
+  }> {
+    if (!this.db) {
+      throw new Error("Database not connected");
+    }
+
+    try {
+      const sql = `
+        SELECT 
+          itemNo,
+          MAX(beskrivelse) as description,
+          SUM(outstanding_qty) as totalOutstandingQty,
+          COUNT(*) as orderCount,
+          COUNT(DISTINCT supplier_name) as supplierCount
+        FROM purchase_order
+        WHERE outstanding_qty > 0
+          AND itemNo IS NOT NULL
+          AND itemNo != ''
+        GROUP BY itemNo
+        ORDER BY SUM(outstanding_qty) DESC
+        LIMIT ?
+      `;
+
+      const rows = this.db.prepare(sql).all(limit) as Array<{
+        itemNo: string;
+        description: string;
+        totalOutstandingQty: number;
+        orderCount: number;
+        supplierCount: number;
+      }>;
+
+      return rows;
+    } catch (error) {
+      log.error("Error getting top items:", error);
+      throw error;
+    }
+  }
+
+  public getOrdersByWeek(
+    weeksAhead: number = 8,
+    weeksBehind: number = 2
+  ): WeekStat[] {
+    if (!this.db) {
+      throw new Error("Database not connected");
+    }
+
+    try {
+      const sql = `
+        SELECT 
+          CAST(strftime('%W', eta_supplier) AS INTEGER) as week,
+          CAST(strftime('%Y', eta_supplier) AS INTEGER) as year,
+          COUNT(*) as orderCount,
+          SUM(CASE WHEN date(eta_supplier) < date('now') THEN 1 ELSE 0 END) as overdueCount
+        FROM purchase_order
+        WHERE outstanding_qty > 0
+          AND eta_supplier IS NOT NULL
+          AND eta_supplier != ''
+          AND date(eta_supplier) BETWEEN 
+            date('now', '-' || ? || ' days') AND 
+            date('now', '+' || ? || ' days')
+        GROUP BY strftime('%W', eta_supplier), strftime('%Y', eta_supplier)
+        ORDER BY year ASC, week ASC
+      `;
+
+      const rows = this.db
+        .prepare(sql)
+        .all(weeksBehind * 7, weeksAhead * 7) as Array<{
+        week: number;
+        year: number;
+        orderCount: number;
+        overdueCount: number;
+      }>;
+
+      const now = new Date();
+      const currentWeek = this.getWeekNumber(now);
+
+      return rows.map((row) => {
+        // Calculate date range for the week
+        const weekStart = this.getDateOfISOWeek(row.week, row.year);
+        const weekEnd = new Date(weekStart);
+        weekEnd.setDate(weekEnd.getDate() + 6);
+
+        const formatDate = (date: Date) => {
+          const months = [
+            "jan",
+            "feb",
+            "mar",
+            "apr",
+            "mai",
+            "jun",
+            "jul",
+            "aug",
+            "sep",
+            "okt",
+            "nov",
+            "des",
+          ];
+          return `${date.getDate()}. ${months[date.getMonth()]}`;
+        };
+
+        return {
+          week: row.week,
+          year: row.year,
+          weekLabel: `Uke ${row.week}`,
+          orderCount: row.orderCount,
+          overdueCount: row.overdueCount,
+          dateRange: `${formatDate(weekStart)} - ${formatDate(weekEnd)}`,
+          isCurrentWeek:
+            row.week === currentWeek && row.year === now.getFullYear(),
+        };
+      });
+    } catch (error) {
+      log.error("Error getting orders by week:", error);
+      throw error;
+    }
+  }
+
+  // Helper method to get ISO week number
+  private getWeekNumber(date: Date): number {
+    const d = new Date(
+      Date.UTC(date.getFullYear(), date.getMonth(), date.getDate())
+    );
+    const dayNum = d.getUTCDay() || 7;
+    d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+    const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+    return Math.ceil(((d.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
+  }
+
+  // Helper method to get date of ISO week
+  private getDateOfISOWeek(week: number, year: number): Date {
+    const simple = new Date(year, 0, 1 + (week - 1) * 7);
+    const dow = simple.getDay();
+    const ISOweekStart = simple;
+    if (dow <= 4) {
+      ISOweekStart.setDate(simple.getDate() - simple.getDay() + 1);
+    } else {
+      ISOweekStart.setDate(simple.getDate() + 8 - simple.getDay());
+    }
+    return ISOweekStart;
+  }
+
+  public invalidateDashboardCache(): void {
+    this.dashboardCache = { data: null, timestamp: 0 };
+    log.info("Dashboard cache invalidated");
   }
 }
 

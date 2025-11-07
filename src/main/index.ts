@@ -180,6 +180,27 @@ app.whenReady().then(async () => {
     setupDatabaseHandlers();
     log.info("IPC Handlers setup complete.");
 
+    // 2.5. Sync Product Catalog from Supabase (background, non-blocking)
+    log.info("Starting product catalog sync from Supabase...");
+    import("../services/productCatalogService")
+      .then(({ productCatalogService }) => {
+        return productCatalogService.syncFromCloud();
+      })
+      .then((result) => {
+        if (result.success) {
+          log.info(
+            `Product catalog synced successfully: ${result.count} products`
+          );
+        } else {
+          log.warn(
+            `Product catalog sync failed: ${result.error || "Unknown error"}`
+          );
+        }
+      })
+      .catch((error) => {
+        log.error("Error during product catalog sync:", error);
+      });
+
     // 3. Create Main Window (but don't load URL yet)
     log.info("Creating main window...");
     const mainWindow = createWindow();
@@ -438,6 +459,8 @@ async function createOrLoadDatabase(): Promise<Database.Database> {
       }
 
       log.info("Excel import completed successfully.");
+      // Invalidate dashboard cache after successful import
+      databaseService.invalidateDashboardCache();
       dbForReturn = initializedDbForImport;
     } catch (err: unknown) {
       log.error("Error during database creation or initial import:", err);
@@ -508,6 +531,8 @@ ipcMain.handle(
       log.info(`importAlleArk finished with success: ${success}`);
 
       if (success) {
+        // Invalidate dashboard cache after successful import
+        databaseService.invalidateDashboardCache();
         return { success: true, message: "Import completed successfully." };
       } else {
         // Check if importAlleArk provides more specific error info
