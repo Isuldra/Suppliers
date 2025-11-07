@@ -112,6 +112,166 @@ export function setupDatabaseHandlers() {
       }
     }
   );
+
+  // Dashboard data handlers
+  ipcMain.handle("get-dashboard-stats", async () => {
+    try {
+      const stats = databaseService.getDashboardStats();
+      return { success: true, data: stats };
+    } catch (error) {
+      log.error("Error in get-dashboard-stats handler:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+      };
+    }
+  });
+
+  ipcMain.handle("get-top-suppliers", async (_event, limit: number = 5) => {
+    try {
+      const suppliers = databaseService.getTopSuppliersByOutstanding(limit);
+      return { success: true, data: suppliers };
+    } catch (error) {
+      log.error("Error in get-top-suppliers handler:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+      };
+    }
+  });
+
+  ipcMain.handle(
+    "get-supplier-details",
+    async (_event, supplierName: string) => {
+      try {
+        const supplier = databaseService.getSupplierDetails(supplierName);
+        if (!supplier) {
+          return {
+            success: false,
+            error: `Supplier '${supplierName}' not found`,
+          };
+        }
+        return { success: true, data: supplier };
+      } catch (error) {
+        log.error("Error in get-supplier-details handler:", error);
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : "Unknown error",
+        };
+      }
+    }
+  );
+
+  ipcMain.handle(
+    "get-orders-by-week",
+    async (_event, weeksAhead: number = 8, weeksBehind: number = 2) => {
+      try {
+        const weeks = databaseService.getOrdersByWeek(weeksAhead, weeksBehind);
+        return { success: true, data: weeks };
+      } catch (error) {
+        log.error("Error in get-orders-by-week handler:", error);
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : "Unknown error",
+        };
+      }
+    }
+  );
+
+  // Product Catalog handlers
+  ipcMain.handle("product-catalog:sync", async () => {
+    try {
+      const { productCatalogService } = await import(
+        "../services/productCatalogService"
+      );
+      const result = await productCatalogService.syncFromCloud();
+      return result;
+    } catch (error) {
+      log.error("Error in product-catalog:sync handler:", error);
+      return {
+        success: false,
+        count: 0,
+        error: error instanceof Error ? error.message : "Unknown error",
+      };
+    }
+  });
+
+  ipcMain.handle(
+    "product-catalog:upload",
+    async (_event, buffer: ArrayBuffer) => {
+      try {
+        const { parseProductCatalogForUpload } = await import(
+          "./productCatalogImporter"
+        );
+        const { productCatalogService } = await import(
+          "../services/productCatalogService"
+        );
+
+        // Parse Excel file
+        const parseResult = await parseProductCatalogForUpload(buffer);
+        if (!parseResult.success || !parseResult.products) {
+          return {
+            success: false,
+            count: 0,
+            error: parseResult.error || "Failed to parse Excel file",
+          };
+        }
+
+        // Upload to Supabase
+        const uploadResult = await productCatalogService.uploadToCloud(
+          parseResult.products
+        );
+        return uploadResult;
+      } catch (error) {
+        log.error("Error in product-catalog:upload handler:", error);
+        return {
+          success: false,
+          count: 0,
+          error: error instanceof Error ? error.message : "Unknown error",
+        };
+      }
+    }
+  );
+
+  ipcMain.handle("product-catalog:get-stats", async () => {
+    try {
+      const { productCatalogService } = await import(
+        "../services/productCatalogService"
+      );
+      const stats = productCatalogService.getCacheStats();
+      return { success: true, data: stats };
+    } catch (error) {
+      log.error("Error in product-catalog:get-stats handler:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+      };
+    }
+  });
+
+  ipcMain.handle("get-top-items", async (_event, limit: number = 30) => {
+    try {
+      const items = databaseService.getTopItemsByOutstanding(limit);
+
+      // Enrich with product names from catalog
+      const { productCatalogService } = await import(
+        "../services/productCatalogService"
+      );
+      const enrichedItems = items.map((item) => ({
+        ...item,
+        productName:
+          productCatalogService.getProductName(item.itemNo) || item.description,
+      }));
+
+      return { success: true, data: enrichedItems };
+    } catch (error) {
+      log.error("Error in get-top-items handler:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+      };
+    }
+  });
 }
 
 // Clean up database when app is closing

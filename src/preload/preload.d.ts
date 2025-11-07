@@ -211,6 +211,60 @@ interface ElectronAPI {
 
   // App version
   getAppVersion: () => Promise<string>;
+
+  // Dashboard methods
+  getDashboardStats: () => Promise<{
+    success: boolean;
+    data?: import("../renderer/types/Dashboard").DashboardStats;
+    error?: string;
+  }>;
+  getTopSuppliers: (limit?: number) => Promise<{
+    success: boolean;
+    data?: import("../renderer/types/Dashboard").SupplierStat[];
+    error?: string;
+  }>;
+  getSupplierDetails: (supplierName: string) => Promise<{
+    success: boolean;
+    data?: import("../renderer/types/Dashboard").SupplierStat;
+    error?: string;
+  }>;
+  getOrdersByWeek: (
+    weeksAhead?: number,
+    weeksBehind?: number
+  ) => Promise<{
+    success: boolean;
+    data?: import("../renderer/types/Dashboard").WeekStat[];
+    error?: string;
+  }>;
+
+  // Product Catalog methods
+  productCatalogSync: () => Promise<{
+    success: boolean;
+    count: number;
+    error?: string;
+  }>;
+  productCatalogUpload: (buffer: ArrayBuffer) => Promise<{
+    success: boolean;
+    count: number;
+    error?: string;
+  }>;
+  productCatalogGetStats: () => Promise<{
+    success: boolean;
+    data?: { count: number; lastSync: Date | null };
+    error?: string;
+  }>;
+  getTopItems: (limit?: number) => Promise<{
+    success: boolean;
+    data?: Array<{
+      itemNo: string;
+      description: string;
+      productName: string;
+      totalOutstandingQty: number;
+      orderCount: number;
+      supplierCount: number;
+    }>;
+    error?: string;
+  }>;
 }
 
 // Extend the global Window interface

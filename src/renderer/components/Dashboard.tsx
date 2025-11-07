@@ -1,32 +1,27 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { ExcelData, ValidationError } from "../types/ExcelData";
-import onemedLogo from "../assets/onemed-logo.webp";
 import LanguageSelector from "./LanguageSelector";
 import SettingsModal from "./SettingsModal";
+import { KPICard } from "./dashboard/KPICard";
+import { TopSuppliersChart } from "./dashboard/TopSuppliersChart";
+import { OrderTimelineChart } from "./dashboard/OrderTimelineChart";
+import { DashboardFilters } from "./dashboard/DashboardFilters";
+import { TopItemsTable } from "./dashboard/TopItemsTable";
+import type {
+  DashboardStats,
+  SupplierStat,
+  WeekStat,
+  DashboardFilter,
+} from "../types/Dashboard";
 import {
+  ChartBarIcon,
+  ClockIcon,
+  CalendarIcon,
   Cog6ToothIcon,
   HomeIcon,
   PresentationChartBarIcon,
 } from "@heroicons/react/24/outline";
-
-interface SupplierStat {
-  name: string;
-  outstandingOrders: number;
-  outstandingQuantity: number;
-}
-
-interface DashboardStats {
-  totalSuppliers: number;
-  suppliersWithOutstandingOrders: number;
-  totalOutstandingOrders: number;
-  totalOutstandingQuantity: number;
-  topSuppliers: SupplierStat[];
-  ordersByWeekday: Array<{
-    weekday: string;
-    count: number;
-  }>;
-}
 
 interface AppState {
   excelData?: ExcelData;
@@ -66,10 +61,31 @@ interface DashboardProps {
 
 const Dashboard: React.FC<DashboardProps> = ({ appState: _appState }) => {
   const [stats, setStats] = useState<DashboardStats | null>(null);
-  const [appVersion, setAppVersion] = useState<string>("");
+  const [topSuppliers, setTopSuppliers] = useState<SupplierStat[]>([]);
+  const [weeklyData, setWeeklyData] = useState<WeekStat[]>([]);
+  const [topItems, setTopItems] = useState<
+    Array<{
+      itemNo: string;
+      description: string;
+      productName: string;
+      totalOutstandingQty: number;
+      orderCount: number;
+      supplierCount: number;
+    }>
+  >([]);
+  const [activeFilter, setActiveFilter] = useState<DashboardFilter | null>(
+    null
+  );
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [appVersion, setAppVersion] = useState<string>("");
   const [showSettings, setShowSettings] = useState(false);
+  const [activeTab, setActiveTab] = useState<
+    "oversikt" | "varenummer" | "timeline"
+  >("oversikt");
+
+  // For filters
+  const [availableSuppliers, setAvailableSuppliers] = useState<string[]>([]);
 
   useEffect(() => {
     loadDashboardData();
@@ -92,187 +108,91 @@ const Dashboard: React.FC<DashboardProps> = ({ appState: _appState }) => {
       setIsLoading(true);
       setError(null);
 
-      // Get suppliers with outstanding orders
-      const suppliersResponse =
-        await window.electron.getSuppliersWithOutstandingOrders();
-      if (!suppliersResponse.success) {
+      // Timeout promise (10 seconds)
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(
+          () => reject(new Error("Request timed out after 10 seconds")),
+          10000
+        )
+      );
+
+      // Load all dashboard data in parallel
+      const [
+        statsResponse,
+        suppliersResponse,
+        allSuppliersResponse,
+        weeksResponse,
+        topItemsResponse,
+      ] = await Promise.race([
+        Promise.all([
+          window.electron.getDashboardStats(),
+          window.electron.getTopSuppliers(10), // Increase to top 10
+          window.electron.getAllSupplierNames(),
+          window.electron.getOrdersByWeek(8, 2),
+          window.electron.getTopItems(200), // Top 200 items with search
+        ]),
+        timeoutPromise,
+      ]);
+
+      // Check for errors
+      if (!statsResponse.success) {
         throw new Error(
-          suppliersResponse.error || "Kunne ikke hente leverandørdata"
+          statsResponse.error || "Failed to load dashboard stats"
         );
       }
+      if (!suppliersResponse.success) {
+        throw new Error(suppliersResponse.error || "Failed to load suppliers");
+      }
+      if (!allSuppliersResponse.success) {
+        throw new Error(
+          allSuppliersResponse.error || "Failed to load supplier names"
+        );
+      }
+      if (!weeksResponse.success) {
+        throw new Error(weeksResponse.error || "Failed to load weekly data");
+      }
+      if (!topItemsResponse.success) {
+        throw new Error(topItemsResponse.error || "Failed to load top items");
+      }
 
-      const suppliersWithOrders = suppliersResponse.data || [];
+      // Set data
+      setStats(statsResponse.data!);
+      setTopSuppliers(suppliersResponse.data!);
+      setWeeklyData(weeksResponse.data!);
+      setTopItems(topItemsResponse.data || []);
 
-      // Get outstanding orders for each supplier to calculate statistics
-      const supplierStats: SupplierStat[] = await Promise.all(
-        suppliersWithOrders.slice(0, 10).map(async (supplier: string) => {
-          try {
-            const ordersResponse = await window.electron.getOutstandingOrders(
-              supplier
-            );
-            const orders = ordersResponse.data || [];
+      // Extract available filters - now from ALL suppliers
+      setAvailableSuppliers(allSuppliersResponse.data || []);
 
-            return {
-              name: supplier,
-              outstandingOrders: orders.length,
-              outstandingQuantity: orders.reduce(
-                (sum: number, order: unknown) => {
-                  const orderData = order as { outstandingQty?: number };
-                  return sum + (orderData.outstandingQty || 0);
-                },
-                0
-              ),
-            };
-          } catch (err) {
-            console.error(`Error getting orders for ${supplier}:`, err);
-            return {
-              name: supplier,
-              outstandingOrders: 0,
-              outstandingQuantity: 0,
-            };
-          }
-        })
-      );
-
-      // Filter suppliers with outstanding orders (should already be filtered, but double-check)
-      const suppliersWithActualOrders = supplierStats.filter(
-        (supplier) => supplier.outstandingQuantity > 0
-      );
-
-      // Sort by outstanding quantity
-      const topSuppliers = supplierStats
-        .sort(
-          (a: SupplierStat, b: SupplierStat) =>
-            b.outstandingQuantity - a.outstandingQuantity
-        )
-        .slice(0, 5);
-
-      // Calculate totals
-      const totalOutstandingQuantity = supplierStats.reduce(
-        (sum: number, supplier: SupplierStat) =>
-          sum + supplier.outstandingQuantity,
-        0
-      );
-      const totalOutstandingOrders = supplierStats.reduce(
-        (sum: number, supplier: SupplierStat) =>
-          sum + supplier.outstandingOrders,
-        0
-      );
-
-      // Mock data for orders by weekday (this would need to be implemented in the backend)
-      const ordersByWeekday = [
-        { weekday: "Mandag", count: Math.floor(Math.random() * 20) + 10 },
-        { weekday: "Tirsdag", count: Math.floor(Math.random() * 20) + 10 },
-        { weekday: "Onsdag", count: Math.floor(Math.random() * 20) + 10 },
-        { weekday: "Torsdag", count: Math.floor(Math.random() * 20) + 10 },
-        { weekday: "Fredag", count: Math.floor(Math.random() * 20) + 10 },
-      ];
-
-      setStats({
-        totalSuppliers: suppliersWithOrders.length,
-        suppliersWithOutstandingOrders: suppliersWithActualOrders.length,
-        totalOutstandingOrders,
-        totalOutstandingQuantity,
-        topSuppliers,
-        ordersByWeekday,
-      });
+      console.log("Dashboard data loaded successfully");
     } catch (err) {
       console.error("Error loading dashboard data:", err);
-      setError(err instanceof Error ? err.message : "Ukjent feil");
+      setError(err instanceof Error ? err.message : "Unknown error");
     } finally {
       setIsLoading(false);
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex flex-col bg-neutral-light">
-        <div className="p-4 bg-primary text-neutral-white shadow-md">
-          <div className="container-app flex items-center justify-between">
-            <div>
-              <img src={onemedLogo} alt="OneMed Logo" className="h-10" />
-            </div>
-            <div className="flex-grow text-center">
-              <h1 className="text-2xl font-bold">
-                OneMed SupplyChain - Dashboard
-              </h1>
-            </div>
-            <div className="flex items-center gap-4">
-              <Link to="/" className="btn btn-secondary text-sm">
-                Tilbake til hovedside
-              </Link>
-              <div className="w-10"></div>
-            </div>
-          </div>
-        </div>
+  const handleRefresh = () => {
+    loadDashboardData();
+  };
 
-        <div className="flex-1 p-6 container-app mx-auto">
-          <div className="bg-neutral-white p-6 rounded-md shadow-md">
-            <div className="animate-pulse space-y-4">
-              <div className="h-8 bg-gray-200 rounded w-1/4"></div>
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                {[...Array(4)].map((_, i) => (
-                  <div key={i} className="h-24 bg-gray-200 rounded"></div>
-                ))}
-              </div>
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div className="h-64 bg-gray-200 rounded"></div>
-                <div className="h-64 bg-gray-200 rounded"></div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const handleFilterChange = (filter: DashboardFilter | null) => {
+    setActiveFilter(filter);
 
-  if (error) {
-    return (
-      <div className="min-h-screen flex flex-col bg-neutral-light">
-        <div className="p-4 bg-primary text-neutral-white shadow-md">
-          <div className="container-app flex items-center justify-between">
-            <div>
-              <img src={onemedLogo} alt="OneMed Logo" className="h-10" />
-            </div>
-            <div className="flex-grow text-center">
-              <h1 className="text-2xl font-bold">
-                OneMed SupplyChain - Dashboard
-              </h1>
-            </div>
-            <div className="flex items-center gap-4">
-              <Link to="/" className="btn btn-secondary text-sm">
-                Tilbake til hovedside
-              </Link>
-              <div className="w-10"></div>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex-1 p-6 container-app mx-auto">
-          <div className="bg-neutral-white p-6 rounded-md shadow-md">
-            <div className="text-center">
-              <h2 className="text-xl font-bold text-neutral mb-4">
-                Feil ved lasting av dashboard
-              </h2>
-              <p className="text-neutral-secondary mb-4">{error}</p>
-              <button onClick={loadDashboardData} className="btn btn-primary">
-                Prøv igjen
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
+    // Note: In a future version, you could reload data with filters from backend
+    // For now, filtering is just visual indication
+    // The components themselves don't need filtered data as they show top-level stats
+  };
 
   return (
     <div className="min-h-screen flex flex-col bg-gradient-glass">
+      {/* Header - keep existing header */}
       <div className="bg-gradient-to-r from-primary via-primary to-primary-dark text-neutral-white shadow-lg backdrop-blur-lg">
         <div className="container-app py-4 px-4">
           {/* Top row */}
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-3">
-              <img src={onemedLogo} alt="OneMed Logo" className="h-12" />
               {appVersion && (
                 <span className="text-xs text-neutral-white/70 bg-white/10 backdrop-blur-sm border border-white/20 px-2 py-1 rounded">
                   v{appVersion}
@@ -280,6 +200,14 @@ const Dashboard: React.FC<DashboardProps> = ({ appState: _appState }) => {
               )}
             </div>
             <div className="flex items-center gap-3">
+              <button
+                onClick={handleRefresh}
+                className="flex items-center gap-2 bg-white/10 backdrop-blur-sm border border-white/20 hover:bg-white/20 px-3 py-2 rounded transition-all text-sm"
+                disabled={isLoading}
+                aria-label="Oppdater dashboard"
+              >
+                {isLoading ? "Laster..." : "Oppdater"}
+              </button>
               <Link
                 to="/"
                 className="flex items-center gap-2 bg-white/10 backdrop-blur-sm border border-white/20 hover:bg-white/20 px-3 py-2 rounded transition-all text-sm"
@@ -292,6 +220,7 @@ const Dashboard: React.FC<DashboardProps> = ({ appState: _appState }) => {
                 onClick={() => setShowSettings(true)}
                 className="bg-white/10 backdrop-blur-sm border border-white/20 hover:bg-white/20 px-3 py-2 rounded transition-all text-sm"
                 title="Innstillinger"
+                aria-label="Innstillinger"
               >
                 <Cog6ToothIcon className="w-5 h-5" />
               </button>
@@ -301,7 +230,7 @@ const Dashboard: React.FC<DashboardProps> = ({ appState: _appState }) => {
           <div className="text-center">
             <h1 className="text-3xl font-bold mb-1 flex items-center justify-center gap-3">
               <PresentationChartBarIcon className="w-8 h-8" />
-              OneMed SupplyChain Dashboard
+              Pulse Dashboard
               <PresentationChartBarIcon className="w-8 h-8" />
             </h1>
             <p className="text-sm text-neutral-white/80">
@@ -311,207 +240,183 @@ const Dashboard: React.FC<DashboardProps> = ({ appState: _appState }) => {
         </div>
       </div>
 
+      {/* Main Content */}
       <div className="flex-1 p-6 container-app mx-auto">
         <div className="bg-white/30 backdrop-blur-xl rounded-3xl border border-white/40 shadow-2xl p-8">
-          <h2 className="text-2xl font-bold text-neutral mb-6">Dashboard</h2>
+          {/* Filters */}
+          {!isLoading && !error && (
+            <DashboardFilters
+              activeFilter={activeFilter}
+              onFilterChange={handleFilterChange}
+              availablePlanners={[]}
+              availableSuppliers={availableSuppliers}
+            />
+          )}
 
-          {/* Overview Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-            <div className="bg-white/60 backdrop-blur-2xl rounded-xl border border-white/50 shadow-xl p-6 transition-all duration-300 hover:bg-white/70 hover:shadow-2xl">
-              <div className="flex items-center">
-                <div className="p-3 bg-blue-100 rounded-full">
-                  <svg
-                    className="w-6 h-6 text-blue-600"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
-                    />
-                  </svg>
-                </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-neutral-secondary">
-                    Totalt leverandører
-                  </p>
-                  <p className="text-2xl font-bold text-neutral">
-                    {stats?.totalSuppliers || 0}
-                  </p>
-                </div>
-              </div>
+          {/* Error State */}
+          {error && (
+            <div className="text-center py-8">
+              <h2 className="text-xl font-bold text-neutral mb-4">
+                Feil ved lasting av dashboard
+              </h2>
+              <p className="text-neutral-secondary mb-4">{error}</p>
+              <button onClick={handleRefresh} className="btn btn-primary">
+                Prøv igjen
+              </button>
             </div>
+          )}
 
-            <div className="bg-white/60 backdrop-blur-2xl rounded-xl border border-white/50 shadow-xl p-6 transition-all duration-300 hover:bg-white/70 hover:shadow-2xl">
-              <div className="flex items-center">
-                <div className="p-3 bg-green-100 rounded-full">
-                  <svg
-                    className="w-6 h-6 text-green-600"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                    />
-                  </svg>
-                </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-neutral-secondary">
-                    Leverandører med åpne ordre
-                  </p>
-                  <p className="text-2xl font-bold text-neutral">
-                    {stats?.suppliersWithOutstandingOrders || 0}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white/60 backdrop-blur-2xl rounded-xl border border-white/50 shadow-xl p-6 transition-all duration-300 hover:bg-white/70 hover:shadow-2xl">
-              <div className="flex items-center">
-                <div className="p-3 bg-yellow-100 rounded-full">
-                  <svg
-                    className="w-6 h-6 text-yellow-600"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
-                    />
-                  </svg>
-                </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-neutral-secondary">
-                    Totalt åpne ordre
-                  </p>
-                  <p className="text-2xl font-bold text-neutral">
-                    {stats?.totalOutstandingOrders || 0}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white/60 backdrop-blur-2xl rounded-xl border border-white/50 shadow-xl p-6 transition-all duration-300 hover:bg-white/70 hover:shadow-2xl">
-              <div className="flex items-center">
-                <div className="p-3 bg-red-100 rounded-full">
-                  <svg
-                    className="w-6 h-6 text-red-600"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
-                    />
-                  </svg>
-                </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-neutral-secondary">
-                    Totalt restantall
-                  </p>
-                  <p className="text-2xl font-bold text-neutral">
-                    {stats?.totalOutstandingQuantity.toLocaleString() || 0}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Charts */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Top Suppliers Chart */}
-            <div className="bg-white/60 backdrop-blur-2xl rounded-xl border border-white/50 shadow-xl p-6 transition-all duration-300 hover:bg-white/70 hover:shadow-2xl">
-              <h3 className="text-lg font-bold text-neutral mb-4">
-                Topp 5 leverandører - Restantall
-              </h3>
-              <div className="space-y-4">
-                {stats?.topSuppliers.map((supplier, index) => (
-                  <div key={supplier.name} className="flex items-center">
-                    <div className="w-8 h-8 bg-primary text-neutral-white rounded-full flex items-center justify-center text-sm font-bold mr-3">
-                      {index + 1}
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex justify-between text-sm mb-1">
-                        <span className="font-medium text-neutral">
-                          {supplier.name}
-                        </span>
-                        <span className="text-neutral-secondary">
-                          {supplier.outstandingQuantity.toLocaleString()}
-                        </span>
-                      </div>
-                      <div className="w-full bg-neutral-light rounded-full h-2">
-                        <div
-                          className="bg-primary h-2 rounded-full"
-                          style={{
-                            width: `${Math.min(
-                              (supplier.outstandingQuantity /
-                                (stats?.topSuppliers[0]?.outstandingQuantity ||
-                                  1)) *
-                                100,
-                              100
-                            )}%`,
-                          }}
-                        ></div>
-                      </div>
-                    </div>
-                  </div>
+          {/* Loading State */}
+          {isLoading && !error && (
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {[...Array(4)].map((_, i) => (
+                  <div
+                    key={i}
+                    className="h-32 bg-gray-200 animate-pulse rounded-xl"
+                  ></div>
                 ))}
               </div>
             </div>
+          )}
 
-            {/* Orders by Weekday Chart */}
-            <div className="bg-white/60 backdrop-blur-2xl rounded-xl border border-white/50 shadow-xl p-6 transition-all duration-300 hover:bg-white/70 hover:shadow-2xl">
-              <h3 className="text-lg font-bold text-neutral mb-4">
-                Ordre per ukedag
-              </h3>
-              <div className="space-y-4">
-                {stats?.ordersByWeekday.map((item) => (
-                  <div key={item.weekday} className="flex items-center">
-                    <div className="w-20 text-sm font-medium text-neutral">
-                      {item.weekday}
-                    </div>
-                    <div className="flex-1 ml-4">
-                      <div className="flex justify-between text-sm mb-1">
-                        <span className="text-neutral-secondary">
-                          {item.count} ordre
-                        </span>
-                      </div>
-                      <div className="w-full bg-neutral-light rounded-full h-2">
-                        <div
-                          className="bg-accent h-2 rounded-full"
-                          style={{
-                            width: `${Math.min(
-                              (item.count /
-                                Math.max(
-                                  ...(stats?.ordersByWeekday.map(
-                                    (w) => w.count
-                                  ) || [1])
-                                )) *
-                                100,
-                              100
-                            )}%`,
-                          }}
-                        ></div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+          {/* Dashboard Content */}
+          {!isLoading && !error && stats && (
+            <>
+              {/* Tabs */}
+              <div className="flex gap-2 mb-6 border-b border-neutral-light">
+                <button
+                  onClick={() => setActiveTab("oversikt")}
+                  className={`px-4 py-2 font-medium transition-colors ${
+                    activeTab === "oversikt"
+                      ? "border-b-2 border-primary text-primary"
+                      : "text-neutral-secondary hover:text-neutral"
+                  }`}
+                >
+                  Oversikt
+                </button>
+                <button
+                  onClick={() => setActiveTab("varenummer")}
+                  className={`px-4 py-2 font-medium transition-colors ${
+                    activeTab === "varenummer"
+                      ? "border-b-2 border-primary text-primary"
+                      : "text-neutral-secondary hover:text-neutral"
+                  }`}
+                >
+                  Varenummer
+                </button>
+                <button
+                  onClick={() => setActiveTab("timeline")}
+                  className={`px-4 py-2 font-medium transition-colors ${
+                    activeTab === "timeline"
+                      ? "border-b-2 border-primary text-primary"
+                      : "text-neutral-secondary hover:text-neutral"
+                  }`}
+                >
+                  Timeline
+                </button>
               </div>
-            </div>
-          </div>
+
+              {/* Tab Content */}
+              {activeTab === "oversikt" && (
+                <>
+                  {/* KPI Cards */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+                    <KPICard
+                      title="Totalt restlinjer"
+                      value={stats.totalOutstandingLines}
+                      icon={<ChartBarIcon className="w-6 h-6 text-blue-600" />}
+                      formatType="number"
+                      loading={isLoading}
+                    />
+                    <KPICard
+                      title="Gjennomsnittlig forsinkelse"
+                      value={stats.averageDelayDays}
+                      icon={<ClockIcon className="w-6 h-6 text-orange-600" />}
+                      formatType="number"
+                      suffix=" dager"
+                      loading={isLoading}
+                    />
+                    <KPICard
+                      title="Kritisk forsinkede"
+                      value={stats.criticallyDelayedOrders}
+                      icon={<ClockIcon className="w-6 h-6 text-red-600" />}
+                      formatType="number"
+                      loading={isLoading}
+                    />
+                    <KPICard
+                      title="On-Time Delivery"
+                      value={stats.onTimeDeliveryRate}
+                      icon={<ChartBarIcon className="w-6 h-6 text-green-600" />}
+                      formatType="number"
+                      suffix="%"
+                      loading={isLoading}
+                    />
+                    <KPICard
+                      title="Forfalte ordre"
+                      value={stats.overdueOrders}
+                      icon={<ClockIcon className="w-6 h-6 text-red-600" />}
+                      formatType="number"
+                      loading={isLoading}
+                    />
+                    <KPICard
+                      title="Eldste utestående ordre"
+                      value={stats.oldestOutstandingOrderDate}
+                      icon={
+                        <CalendarIcon className="w-6 h-6 text-yellow-600" />
+                      }
+                      formatType="date"
+                      loading={isLoading}
+                    />
+                  </div>
+
+                  {/* Charts - Single Column */}
+                  <div className="space-y-6 mb-6">
+                    <TopSuppliersChart
+                      data={topSuppliers}
+                      loading={isLoading}
+                      onSupplierClick={(supplier) => {
+                        console.log("Clicked supplier:", supplier);
+                        handleFilterChange({
+                          type: "supplier",
+                          value: supplier,
+                          label: `Leverandør: ${supplier}`,
+                        });
+                      }}
+                    />
+                  </div>
+
+                  {/* Data Source Indicator */}
+                  {stats.dataSource === "cache" && (
+                    <div className="text-center text-sm text-neutral-secondary mt-4">
+                      Data fra cache (sist oppdatert:{" "}
+                      {new Date(stats.lastUpdated).toLocaleString("nb-NO")})
+                    </div>
+                  )}
+                </>
+              )}
+
+              {/* Varenummer Tab */}
+              {activeTab === "varenummer" && (
+                <TopItemsTable data={topItems} loading={isLoading} />
+              )}
+
+              {/* Timeline Tab */}
+              {activeTab === "timeline" && (
+                <div className="space-y-6">
+                  <OrderTimelineChart data={weeklyData} loading={isLoading} />
+
+                  {/* Data Source Indicator */}
+                  {stats.dataSource === "cache" && (
+                    <div className="text-center text-sm text-neutral-secondary mt-4">
+                      Data fra cache (sist oppdatert:{" "}
+                      {new Date(stats.lastUpdated).toLocaleString("nb-NO")})
+                    </div>
+                  )}
+                </div>
+              )}
+            </>
+          )}
         </div>
       </div>
 

@@ -1,9 +1,9 @@
 {
   "app": {
-    "title": "OneMed SupplyChain",
+    "title": "Pulse",
     "version": "Version",
     "welcome": {
-      "title": "Welcome to OneMed SupplyChain",
+      "title": "Welcome to Pulse",
       "description": "A tool for sending reminders to suppliers about delivery dates",
       "getStarted": "Get Started"
     }

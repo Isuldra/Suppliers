@@ -1,8 +1,8 @@
 {
   "app": {
-    "title": "OneMed SupplyChain",
+    "title": "Pulse",
     "welcome": {
-      "title": "Välkommen till OneMed SupplyChain",
+      "title": "Välkommen till Pulse",
       "description": "Ett verktyg för att skicka påminnelser till leverantörer om leveransdatum",
       "getStarted": "Kom igång"
     }

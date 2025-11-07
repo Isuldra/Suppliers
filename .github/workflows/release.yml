@@ -100,3 +100,19 @@ jobs:
           Write-Host "Cloudflare Pages will automatically deploy the updated metadata files"
           Write-Host "Check deployment status at: https://suppliers-anx.pages.dev/"
           Write-Host "Auto-update URL: https://suppliers-anx.pages.dev/latest.yml"
+
+      # Note: SLACK_WEBHOOK_URL is an optional secret. If not set, this step will be skipped.
+      # The linter warning about "Context access might be invalid" is expected and can be ignored.
+      - name: Send CHANGELOG to Slack
+        if: success()
+        shell: bash
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL || '' }}
+          SLACK_DISPLAY_NAME: ${{ github.actor }} (GitHub)
+        run: |
+          if [ -n "$SLACK_WEBHOOK_URL" ] && [ "$SLACK_WEBHOOK_URL" != "" ]; then
+            echo "📋 Sending CHANGELOG to Slack..."
+            node scripts/send-changelog-to-slack.js "${{ steps.version.outputs.version }}"
+          else
+            echo "⚠️  SLACK_WEBHOOK_URL secret not set, skipping Slack notification"
+          fi

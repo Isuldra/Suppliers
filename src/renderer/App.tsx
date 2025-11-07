@@ -22,12 +22,7 @@ import {
   Cog6ToothIcon,
   ChartBarIcon,
   CommandLineIcon,
-  CubeIcon,
-  EnvelopeIcon,
 } from "@heroicons/react/24/outline";
-
-// Import the OneMed logo
-import onemedLogo from "./assets/onemed-logo.webp";
 
 // i18n is now initialized asynchronously in index.tsx
 
@@ -96,7 +91,7 @@ const ProgressIndicator: React.FC<{ appState: AppState }> = ({ appState }) => {
                   ? "bg-primary border-primary text-neutral-white"
                   : index === activeStep
                   ? "border-primary text-primary"
-                  : "border-neutral-light text-neutral-secondary"
+                  : "border-gray-300 text-neutral-secondary"
               }`}
             >
               {step.completed ? "✓" : index + 1}
@@ -115,7 +110,7 @@ const ProgressIndicator: React.FC<{ appState: AppState }> = ({ appState }) => {
             {index < steps.length - 1 && (
               <div
                 className={`w-12 h-0.5 mx-4 ${
-                  step.completed ? "bg-primary" : "bg-neutral-light"
+                  step.completed ? "bg-primary" : "bg-gray-300"
                 }`}
               />
             )}
@@ -567,10 +562,10 @@ const MainApp: React.FC<MainAppProps> = ({
       className="min-h-screen flex flex-col"
       style={{
         background: `
-          radial-gradient(circle at 20% 30%, rgba(236, 72, 153, 0.3) 0%, transparent 50%),
-          radial-gradient(circle at 80% 70%, rgba(139, 92, 246, 0.3) 0%, transparent 50%),
-          radial-gradient(circle at 50% 50%, rgba(147, 197, 253, 0.2) 0%, transparent 50%),
-          linear-gradient(135deg, #fce7f3 0%, #ddd6fe 50%, #cbd5e1 100%)
+          radial-gradient(circle at 20% 30%, rgba(73, 120, 134, 0.25) 0%, transparent 50%),
+          radial-gradient(circle at 80% 70%, rgba(106, 153, 167, 0.3) 0%, transparent 50%),
+          radial-gradient(circle at 50% 50%, rgba(184, 216, 233, 0.2) 0%, transparent 50%),
+          linear-gradient(135deg, #e0f2f5 0%, #b8d8e9 30%, #a8d0e0 60%, #ffffff 100%)
         `,
       }}
     >
@@ -579,7 +574,6 @@ const MainApp: React.FC<MainAppProps> = ({
           {/* Top row */}
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-3">
-              <img src={onemedLogo} alt="OneMed Logo" className="h-12" />
               {appVersion && (
                 <span className="text-xs text-neutral-white/70 bg-white/10 backdrop-blur-sm border border-white/20 px-2 py-1 rounded">
                   v{appVersion}
@@ -589,7 +583,7 @@ const MainApp: React.FC<MainAppProps> = ({
             <div className="flex items-center gap-3">
               <Link
                 to="/dashboard"
-                className="h-11 px-5 bg-gradient-to-br from-white/30 to-white/20 backdrop-blur-xl rounded-xl border border-white/40 text-white text-sm font-semibold flex items-center gap-2.5 hover:from-white/40 hover:to-white/30 hover:scale-105 active:scale-95 transition-all duration-200 shadow-lg hover:shadow-xl"
+                className="h-11 px-5 bg-gradient-to-br from-white/20 to-white/10 backdrop-blur-xl rounded-xl border border-white/30 text-white text-sm font-semibold flex items-center gap-2.5 hover:from-white/30 hover:to-white/20 hover:scale-105 active:scale-95 transition-all duration-200 shadow-lg hover:shadow-xl"
               >
                 <ChartBarIcon className="w-5 h-5" />
                 {t("navigation.dashboard")}
@@ -597,14 +591,14 @@ const MainApp: React.FC<MainAppProps> = ({
               <LanguageSelector mode="compact" />
               <button
                 onClick={() => setShowSettings(true)}
-                className="h-11 w-11 bg-gradient-to-br from-white/30 to-white/20 backdrop-blur-xl rounded-xl border border-white/40 flex items-center justify-center hover:from-white/40 hover:to-white/30 hover:scale-105 active:scale-95 transition-all duration-200 shadow-lg hover:shadow-xl group"
+                className="h-11 w-11 bg-gradient-to-br from-white/20 to-white/10 backdrop-blur-xl rounded-xl border border-white/30 flex items-center justify-center hover:from-white/30 hover:to-white/20 hover:scale-105 active:scale-95 transition-all duration-200 shadow-lg hover:shadow-xl group"
                 title={t("navigation.settings")}
               >
                 <Cog6ToothIcon className="w-5 h-5 text-white/90 group-hover:text-white" />
               </button>
               <button
                 onClick={() => setShowKeyboardShortcuts(true)}
-                className="h-11 w-11 bg-gradient-to-br from-white/30 to-white/20 backdrop-blur-xl rounded-xl border border-white/40 flex items-center justify-center hover:from-white/40 hover:to-white/30 hover:scale-105 active:scale-95 transition-all duration-200 shadow-lg hover:shadow-xl group"
+                className="h-11 w-11 bg-gradient-to-br from-white/20 to-white/10 backdrop-blur-xl rounded-xl border border-white/30 flex items-center justify-center hover:from-white/30 hover:to-white/20 hover:scale-105 active:scale-95 transition-all duration-200 shadow-lg hover:shadow-xl group"
                 title={`${t("navigation.keyboardShortcuts")} (Ctrl/Cmd + ?)`}
               >
                 <CommandLineIcon className="w-5 h-5 text-white/90 group-hover:text-white" />
@@ -613,18 +607,7 @@ const MainApp: React.FC<MainAppProps> = ({
           </div>
           {/* Title row */}
           <div className="text-center">
-            <h1 className="text-3xl font-bold mb-1 flex items-center justify-center gap-3">
-              <div className="p-2 rounded-lg bg-white/10 backdrop-blur-sm">
-                <CubeIcon className="w-6 h-6 text-white" strokeWidth={1.5} />
-              </div>
-              <span>{t("app.title")}</span>
-              <div className="p-2 rounded-lg bg-white/10 backdrop-blur-sm">
-                <EnvelopeIcon
-                  className="w-6 h-6 text-white"
-                  strokeWidth={1.5}
-                />
-              </div>
-            </h1>
+            <h1 className="text-3xl font-bold mb-1">{t("app.title")}</h1>
             <p className="text-sm text-neutral-white/80">
               {t("app.welcome.description")}
             </p>
@@ -634,7 +617,7 @@ const MainApp: React.FC<MainAppProps> = ({
 
       <div className="flex-1 p-6">
         <div
-          className={`mx-auto w-full bg-white/30 backdrop-blur-xl rounded-3xl border border-white/40 shadow-2xl ${
+          className={`mx-auto w-full bg-white/20 backdrop-blur-xl rounded-3xl border border-white/30 shadow-2xl ${
             appState.isBulkMode
               ? "max-w-7xl lg:max-w-6xl md:max-w-4xl px-4 sm:px-6 lg:px-8 p-4 sm:p-6 lg:p-8"
               : "max-w-4xl p-6 sm:p-8"
@@ -642,7 +625,7 @@ const MainApp: React.FC<MainAppProps> = ({
         >
           {/* Progress Indicator - Show when file is uploaded */}
           {appState.excelData && (
-            <div className="bg-white/60 backdrop-blur-2xl rounded-xl border border-white/50 shadow-xl p-6 mb-6 w-full transition-all duration-300 hover:bg-white/70 hover:shadow-2xl">
+            <div className="bg-white/50 backdrop-blur-2xl rounded-xl border border-white/40 shadow-xl p-6 mb-6 w-full transition-all duration-300 hover:bg-white/60 hover:shadow-2xl">
               <ProgressIndicator appState={appState} />
             </div>
           )}
@@ -694,7 +677,7 @@ const MainApp: React.FC<MainAppProps> = ({
 
           {/* Configuration Section - Only show if file is uploaded */}
           {appState.excelData && (
-            <div className="bg-white/60 backdrop-blur-2xl rounded-xl border border-white/50 shadow-xl p-6 mb-6 w-full transition-all duration-300 hover:bg-white/70 hover:shadow-2xl">
+            <div className="bg-white/50 backdrop-blur-2xl rounded-xl border border-white/40 shadow-xl p-6 mb-6 w-full transition-all duration-300 hover:bg-white/60 hover:shadow-2xl">
               <h2 className="text-xl font-bold mb-4 text-slate-900">
                 {t("configuration.title")}
               </h2>
@@ -800,7 +783,7 @@ const MainApp: React.FC<MainAppProps> = ({
             appState.showDataReview &&
             appState.selectedSupplier &&
             appState.excelData && (
-              <div className="bg-white/60 backdrop-blur-2xl rounded-xl border border-white/50 shadow-xl p-6 mb-6 w-full transition-all duration-300 hover:bg-white/70 hover:shadow-2xl">
+              <div className="bg-white/50 backdrop-blur-2xl rounded-xl border border-white/40 shadow-xl p-6 mb-6 w-full transition-all duration-300 hover:bg-white/60 hover:shadow-2xl">
                 <h2 className="text-xl font-bold mb-4 text-slate-900">
                   {t("dataReview.title")}
                 </h2>
@@ -818,7 +801,7 @@ const MainApp: React.FC<MainAppProps> = ({
             appState.showEmailButton &&
             appState.selectedSupplier &&
             appState.excelData && (
-              <div className="bg-white/60 backdrop-blur-2xl rounded-xl border border-white/50 shadow-xl p-6 mb-6 w-full transition-all duration-300 hover:bg-white/70 hover:shadow-2xl">
+              <div className="bg-white/50 backdrop-blur-2xl rounded-xl border border-white/40 shadow-xl p-6 mb-6 w-full transition-all duration-300 hover:bg-white/60 hover:shadow-2xl">
                 <h2 className="text-xl font-bold mb-4 text-slate-900">
                   {t("email.title")}
                 </h2>
@@ -833,7 +816,7 @@ const MainApp: React.FC<MainAppProps> = ({
           {appState.isBulkMode &&
             appState.selectedSuppliers.length > 0 &&
             !appState.showDataReview && (
-              <div className="bg-white/60 backdrop-blur-2xl rounded-xl border border-white/50 shadow-xl p-6 mb-6 w-full transition-all duration-300 hover:bg-white/70 hover:shadow-2xl">
+              <div className="bg-white/50 backdrop-blur-2xl rounded-xl border border-white/40 shadow-xl p-6 mb-6 w-full transition-all duration-300 hover:bg-white/60 hover:shadow-2xl">
                 <h2 className="text-xl font-bold mb-4 text-slate-900">
                   {t("dataReview.reviewOrderLines")}
                 </h2>
@@ -850,7 +833,7 @@ const MainApp: React.FC<MainAppProps> = ({
           {appState.isBulkMode &&
             appState.showDataReview &&
             appState.selectedSuppliers.length > 0 && (
-              <div className="bg-white/60 backdrop-blur-2xl rounded-xl border border-white/50 shadow-xl p-6 mb-6 w-full transition-all duration-300 hover:bg-white/70 hover:shadow-2xl">
+              <div className="bg-white/50 backdrop-blur-2xl rounded-xl border border-white/40 shadow-xl p-6 mb-6 w-full transition-all duration-300 hover:bg-white/60 hover:shadow-2xl">
                 <h2 className="text-xl font-bold mb-4 text-slate-900">
                   {t("email.previewAndSend")}
                 </h2>
