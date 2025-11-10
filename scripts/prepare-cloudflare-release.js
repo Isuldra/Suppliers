@@ -50,13 +50,13 @@ function copyFile(source, destination) {
 }
 
 // Find the latest NSIS installer
-const nsisInstaller = `OneMed SupplyChain-${version}-setup.exe`;
+const nsisInstaller = `Pulse-${version}-setup.exe`;
 const nsisInstallerPath = path.join(releaseDir, nsisInstaller);
-const nsisBlockmap = `OneMed SupplyChain-${version}-setup.exe.blockmap`;
+const nsisBlockmap = `Pulse-${version}-setup.exe.blockmap`;
 const nsisBlockmapPath = path.join(releaseDir, nsisBlockmap);
 
 // Find portable executable
-const portableExe = "OneMed SupplyChain-Portable.exe";
+const portableExe = "Pulse-Portable.exe";
 const portableExePath = path.join(releaseDir, portableExe);
 
 // Check if files exist

@@ -1,7 +1,7 @@
 {
   "name": "one-med-supplychain-app",
   "version": "1.3.8",
-  "description": "Pulse",
+  "description": "Pulse - Desktop application for managing supplier workflows and data",
   "main": "dist/main/main.cjs",
   "private": true,
   "type": "module",
@@ -92,7 +92,7 @@
       "perMachine": false,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "OneMed SupplyChain",
+      "shortcutName": "Pulse",
       "upgradeCode": "7C04A11D-9FAA-4B83-85FF-79D2AABFD84E"
     },
     "nsis": {
@@ -106,7 +106,7 @@
       "installerHeaderIcon": "resources/supplychain.ico",
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "OneMed SupplyChain",
+      "shortcutName": "Pulse",
       "deleteAppDataOnUninstall": false,
       "displayLanguageSelector": true,
       "include": "resources/installer.nsh",
