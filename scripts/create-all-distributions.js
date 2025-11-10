@@ -42,11 +42,11 @@ async function createAllDistributions() {
     }
 
     // Step 1: Build the application
-    console.log("\n🔨 Step 1/5: Building Electron application...");
+    console.log("\nStep 1/5: Building Electron application...");
     execSync("npm run build", { stdio: "inherit" });
 
     // Step 2: Create standard NSIS installer
-    console.log("\n🔨 Step 2/5: Creating standard installer (NSIS)...");
+    console.log("\nStep 2/5: Creating standard installer (NSIS)...");
     execSync("electron-builder --win nsis", { stdio: "inherit" });
 
     // Find the NSIS installer file
@@ -64,13 +64,13 @@ async function createAllDistributions() {
         "Supplier-Reminder-Pro-Setup.exe"
       );
       fs.copyFileSync(path.join(releaseDir, nsisFile), targetFile);
-      console.log(`✅ Standard installer saved to: ${targetFile}`);
+      console.log(`Success: Standard installer saved to: ${targetFile}`);
     } else {
-      console.log("⚠️ Standard installer not found in release directory");
+      console.log("Warning: Standard installer not found in release directory");
     }
 
     // Step 3: Create MSI installer
-    console.log("\n🔨 Step 3/5: Creating MSI installer...");
+    console.log("\nStep 3/5: Creating MSI installer...");
     execSync("electron-builder --win msi", { stdio: "inherit" });
 
     // Find the MSI installer file
@@ -88,13 +88,13 @@ async function createAllDistributions() {
         "Supplier-Reminder-Pro-Setup.msi"
       );
       fs.copyFileSync(path.join(releaseDir, msiFile), targetFile);
-      console.log(`✅ MSI installer saved to: ${targetFile}`);
+      console.log(`Success: MSI installer saved to: ${targetFile}`);
     } else {
-      console.log("⚠️ MSI installer not found in release directory");
+      console.log("Warning: MSI installer not found in release directory");
     }
 
     // Step 4: Create portable version
-    console.log("\n🔨 Step 4/5: Creating portable version...");
+    console.log("\nStep 4/5: Creating portable version...");
     execSync("npm run portable", { stdio: "inherit" });
 
     // Find the portable zip file
@@ -110,13 +110,13 @@ async function createAllDistributions() {
         "Supplier-Reminder-Pro-Portable.zip"
       );
       fs.copyFileSync(path.join(portableDir, portableFile), targetFile);
-      console.log(`✅ Portable version saved to: ${targetFile}`);
+      console.log(`Success: Portable version saved to: ${targetFile}`);
     } else {
-      console.log("⚠️ Portable version not found in portable directory");
+      console.log("Warning: Portable version not found in portable directory");
     }
 
     // Step 5: Create README file with installation instructions
-    console.log("\n🔨 Step 5/5: Creating installation guide...");
+    console.log("\nStep 5/5: Creating installation guide...");
     const readmeContent = `
 =================================================
 Pulse - INSTALLATION OPTIONS
@@ -195,14 +195,14 @@ For additional support, contact your IT department or application administrator.
       readmeContent
     );
     console.log(
-      `✅ Installation guide created at: ${path.join(
+      `Success: Installation guide created at: ${path.join(
         currentBuildDir,
         "INSTALLATION.md"
       )}`
     );
 
     // Create a ZIP file with all distributions
-    console.log("\n📦 Creating complete package with all distributions...");
+    console.log("\nCreating complete package with all distributions...");
     const zipFileName = `Supplier-Reminder-Pro-All-Distributions-${timestamp}.zip`;
     const zipFilePath = path.join(distributionsDir, zipFileName);
 
@@ -216,20 +216,20 @@ For additional support, contact your IT department or application administrator.
         }
       );
       console.log(
-        `\n✅ All distributions packaged successfully in:\n   ${zipFilePath}`
+        `\nSuccess: All distributions packaged successfully in:\n   ${zipFilePath}`
       );
     } catch (e) {
       console.log(
-        "\n⚠️ 7z not available, please manually zip the directory contents:\n   ",
+        "\nWarning: 7z not available, please manually zip the directory contents:\n   ",
         currentBuildDir
       );
     }
 
-    console.log("\n✨ All distribution formats created successfully!");
-    console.log(`📂 Individual files can be found in:\n   ${currentBuildDir}`);
-    console.log(`📦 Complete package:\n   ${zipFilePath}`);
+    console.log("\nAll distribution formats created successfully!");
+    console.log(`Individual files can be found in:\n   ${currentBuildDir}`);
+    console.log(`Complete package:\n   ${zipFilePath}`);
   } catch (error) {
-    console.error("❌ Error creating distributions:", error.message);
+    console.error("Error creating distributions:", error.message);
     process.exit(1);
   }
 }

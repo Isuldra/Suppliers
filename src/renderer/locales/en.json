@@ -250,7 +250,7 @@
     "preview": "Preview",
     "emailAddress": "Email address:",
     "resetToDefault": "Reset to default",
-    "noEmailWarning": "⚠️ No email address provided - email will not be sent",
+    "noEmailWarning": "WARNING: No email address provided - email will not be sent",
     "error": "Error:",
     "backToOrderSelection": "← Back to order selection",
     "sendAll": "Send all emails"

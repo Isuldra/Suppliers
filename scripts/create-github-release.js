@@ -17,7 +17,7 @@ const packageJsonPath = path.join(projectRoot, "package.json");
 const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, "utf8"));
 const version = packageJson.version;
 
-console.log(`🚀 Creating GitHub Release v${version}...`);
+console.log(`Building GitHub Release v${version}...`);
 
 // Initialize GitHub API client
 const octokit = new Octokit({
@@ -40,7 +40,7 @@ async function createRelease() {
         tag: tagName,
       });
 
-      console.log(`⚠️  Release ${tagName} already exists!`);
+      console.log(`Warning: Release ${tagName} already exists!`);
       console.log(`   URL: ${existingRelease.data.html_url}`);
       release = existingRelease.data;
     } catch (error) {
@@ -48,7 +48,7 @@ async function createRelease() {
         throw error;
       }
       // Release doesn't exist, create it
-      console.log(`📝 Creating release ${tagName}...`);
+      console.log(`Creating release ${tagName}...`);
       const newRelease = await octokit.rest.repos.createRelease({
         owner,
         repo,
@@ -75,7 +75,7 @@ async function createRelease() {
         prerelease: false,
       });
       release = newRelease.data;
-      console.log(`✅ Release created: ${release.html_url}`);
+      console.log(`Success: Release created: ${release.html_url}`);
     }
 
     // Upload assets
@@ -102,11 +102,11 @@ async function createRelease() {
       },
     ];
 
-    console.log("\n📦 Uploading assets...");
+    console.log("\nUploading assets...");
 
     for (const asset of assetsToUpload) {
       if (!fs.existsSync(asset.path)) {
-        console.log(`⚠️  File not found: ${asset.name}`);
+        console.log(`Warning: File not found: ${asset.name}`);
         continue;
       }
 
@@ -131,24 +131,24 @@ async function createRelease() {
             "content-length": fileSize,
           },
         });
-        console.log(`   ✅ ${asset.name} uploaded successfully`);
+        console.log(`   Success: ${asset.name} uploaded successfully`);
       } catch (error) {
-        console.log(`   ❌ Failed to upload ${asset.name}:`, error.message);
+        console.log(`   Error: Failed to upload ${asset.name}:`, error.message);
       }
     }
 
-    console.log(`\n🎉 GitHub Release v${version} is ready!`);
+    console.log(`\nGitHub Release v${version} is ready!`);
     console.log(`   URL: ${release.html_url}`);
-    console.log(`\n📋 Next steps:`);
+    console.log(`\nNext steps:`);
     console.log(`1. Auto-update will now work correctly`);
     console.log(`2. Users can download from: ${release.html_url}`);
     console.log(`3. Cloudflare Pages serves latest.yml with GitHub URLs`);
   } catch (error) {
-    console.error("❌ Error creating GitHub release:", error.message);
+    console.error("Error creating GitHub release:", error.message);
 
     if (error.status === 401) {
       console.error(
-        "\n💡 Authentication failed. Please set GITHUB_TOKEN environment variable:"
+        "\nNote: Authentication failed. Please set GITHUB_TOKEN environment variable:"
       );
       console.error("   export GITHUB_TOKEN=your_github_token");
       console.error(
@@ -156,7 +156,7 @@ async function createRelease() {
       );
     } else if (error.status === 403) {
       console.error(
-        "\n💡 Permission denied. Please check your token permissions:"
+        "\nNote: Permission denied. Please check your token permissions:"
       );
       console.error("   - repo (full control)");
       console.error("   - write:packages");
@@ -168,8 +168,8 @@ async function createRelease() {
 
 // Check for GitHub token
 if (!process.env.GITHUB_TOKEN) {
-  console.error("❌ GITHUB_TOKEN environment variable is required");
-  console.error("\n💡 To create a GitHub token:");
+  console.error("Error: GITHUB_TOKEN environment variable is required");
+  console.error("\nNote: To create a GitHub token:");
   console.error("1. Go to: https://github.com/settings/tokens");
   console.error("2. Click 'Generate new token (classic)'");
   console.error("3. Select scopes: 'repo' (full control)");
