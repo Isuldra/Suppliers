@@ -111,6 +111,20 @@
 - [x] **P4.4.3** Sjekk om endring påvirker build/release scripts _(Scripts oppdatert til å bruke "Pulse" i filnavn)_
 - [x] **P4.4.4** Commit: "Align package.json naming"
 
+### P4.5 - Repository Structure & Policy
+
+- [x] **P4.5.1** Create LICENSE (ISC) with copyright Andreas Elvethun
+- [x] **P4.5.2** Verify package.json has "license": "ISC"
+- [x] **P4.5.3** Move src/test/setup.ts to tests/setup.ts
+- [x] **P4.5.4** Update vitest.config.ts to point to tests/setup.ts
+- [x] **P4.5.5** Create .github/CODEOWNERS with @AndreasElvethun
+- [x] **P4.5.6** Create .editorconfig for consistent formatting
+- [x] **P4.5.7** Create .gitattributes for line ending normalization
+- [x] **P4.5.8** Move docs/security.md to SECURITY.md (root)
+- [x] **P4.5.9** Remove all emojis from codebase (scripts, docs, locales, package.json)
+- [x] **P4.5.10** Update state.yaml and backlog.md with completion status
+- [x] **P4.5.11** Commits: "[cleanup][license]", "[cleanup][tests]", "[cleanup][owners]", "[cleanup][config]", "[cleanup][scripts]", "[cleanup][docs]"
+
 ---
 
 ## 🧪 Testing & Verifisering
