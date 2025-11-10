@@ -1,6 +1,6 @@
 # Repo Cleanup Backlog
 
-**Status**: 21/31 tasks completed  
+**Status**: 25/31 tasks completed  
 **Last updated**: 2025-11-10
 
 ---
@@ -92,10 +92,10 @@
 
 ### P4.2 - Rydd i scripts-mappen
 
-- [ ] **P4.2.1** Opprett `scripts/README.md` med beskrivelse av hver script
-- [ ] **P4.2.2** Flytt `scripts/troubleshoot-native-modules.md` til `docs/development/`
-- [ ] **P4.2.3** Identifiser ubrukte/deprecated scripts (sammenlign med package.json scripts)
-- [ ] **P4.2.4** Vurder å arkivere eller slette ubrukte scripts
+- [x] **P4.2.1** Opprett `scripts/README.md` med beskrivelse av hver script
+- [x] **P4.2.2** Flytt `scripts/troubleshoot-native-modules.md` til `docs/development/`
+- [x] **P4.2.3** Identifiser ubrukte/deprecated scripts (sammenlign med package.json scripts) _(7 deprecated scripts identifisert og dokumentert i README)_
+- [x] **P4.2.4** Vurder å arkivere eller slette ubrukte scripts _(Deprecated scripts dokumentert i README, kan slettes i fremtidig cleanup)_
 - [ ] **P4.2.5** Commit: "Document and organize scripts directory"
 
 ### P4.3 - Legg til .cursorignore
