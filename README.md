@@ -44,6 +44,27 @@ Pulse is a desktop application for managing supplier workflows and data. It's bu
 
 ---
 
+## Repository Structure
+
+```
+supplier-reminder-pro/
+├── .github/          # GitHub Actions workflows, CODEOWNERS
+├── docs/             # All documentation (features, development, distribution)
+├── resources/        # Static assets (icons, installer scripts, Excel templates)
+├── scripts/          # Build and deployment scripts
+├── src/
+│   ├── main/         # Electron main process
+│   ├── preload/      # Preload scripts
+│   ├── renderer/     # React frontend application
+│   ├── services/     # Shared services (email, database, templates)
+│   ├── types/        # Shared TypeScript types
+│   └── utils/        # Utility functions
+├── tests/            # Test setup and test files
+└── [config files]    # Root config files (tsconfig, vite, eslint, etc.)
+```
+
+---
+
 ## Dev Tools & Scripts
 
 | Script                  | Description                   |
