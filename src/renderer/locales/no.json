@@ -250,7 +250,7 @@
     "preview": "Forhåndsvis",
     "emailAddress": "E-postadresse:",
     "resetToDefault": "Tilbakestill til standard",
-    "noEmailWarning": "⚠️ Ingen e-postadresse angitt - e-post vil ikke bli sendt",
+    "noEmailWarning": "WARNING: Ingen e-postadresse angitt - e-post vil ikke bli sendt",
     "error": "Feil:",
     "backToOrderSelection": "← Tilbake til ordrevalg",
     "sendAll": "Send alle e-poster"

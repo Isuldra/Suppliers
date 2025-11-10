@@ -17,7 +17,7 @@ const packageJson = JSON.parse(
 );
 const version = packageJson.version;
 
-console.log(`🚀 Deploying version ${version} to Cloudflare Pages...`);
+console.log(`Deploying version ${version} to Cloudflare Pages...`);
 
 // Copy release files to Cloudflare directory
 const files = fs.readdirSync(releaseDir);
@@ -25,12 +25,12 @@ const releaseFiles = files.filter(
   (f) => f.endsWith(".exe") || f.endsWith(".zip") || f.endsWith(".yml")
 );
 
-console.log(`📁 Found ${releaseFiles.length} release files:`);
+console.log(`Found ${releaseFiles.length} release files:`);
 releaseFiles.forEach((file) => {
   const src = path.join(releaseDir, file);
   const dest = path.join(cloudflareDir, file);
   fs.copyFileSync(src, dest);
-  console.log(`  ✅ Copied ${file}`);
+  console.log(`  Success: Copied ${file}`);
 });
 
 // Generate latest.json for portable auto-updater
@@ -66,7 +66,7 @@ if (portableFile) {
     path.join(cloudflareDir, "latest.json"),
     JSON.stringify(latestJson, null, 2)
   );
-  console.log("✅ Generated latest.json for portable updates");
+  console.log("Success: Generated latest.json for portable updates");
 }
 
 if (nsisFile) {
@@ -96,7 +96,7 @@ if (nsisFile) {
     path.join(cloudflareDir, "app-update.json"),
     JSON.stringify(appUpdateJson, null, 2)
   );
-  console.log("✅ Generated app-update.json for NSIS updates");
+  console.log("Success: Generated app-update.json for NSIS updates");
 }
 
 // Create index.html for manual downloads
@@ -210,19 +210,19 @@ const indexHtml = `<!DOCTYPE html>
             </p>
             
             <div class="download">
-                <h3>📦 Portable Version</h3>
+                <h3>Portable Version</h3>
                 <p>Kjør direkte uten installasjon - anbefalt for testing og enkle installasjoner. Ingen administratorrettigheter nødvendig.</p>
                 <a href="${portableFile}">Last ned Portable (.exe)</a>
             </div>
             
             <div class="download">
-                <h3>🔧 NSIS Installer</h3>
+                <h3>NSIS Installer</h3>
                 <p>Full installasjon med automatiske oppdateringer. Anbefalt for produksjonsmiljøer. Installerer til brukerens AppData-mappe.</p>
                 <a href="${nsisFile}">Last ned Installer (.exe)</a>
             </div>
             
             <div class="download">
-                <h3>📁 ZIP Archive</h3>
+                <h3>ZIP Archive</h3>
                 <p>Arkiv med alle filer for manuell distribusjon eller backup. Inkluderer alle nødvendige komponenter.</p>
                 <a href="${releaseFiles.find((f) =>
                   f.endsWith(".zip")
@@ -239,7 +239,7 @@ const indexHtml = `<!DOCTYPE html>
 </html>`;
 
 fs.writeFileSync(path.join(cloudflareDir, "index.html"), indexHtml);
-console.log("✅ Generated index.html for manual downloads");
+console.log("Success: Generated index.html for manual downloads");
 
 // Create _redirects file for Cloudflare Pages
 const redirectsContent = `# Cloudflare Pages redirects
@@ -252,10 +252,10 @@ const redirectsContent = `# Cloudflare Pages redirects
 `;
 
 fs.writeFileSync(path.join(cloudflareDir, "_redirects"), redirectsContent);
-console.log("✅ Generated _redirects for Cloudflare Pages");
+console.log("Success: Generated _redirects for Cloudflare Pages");
 
-console.log("\n🎉 Cloudflare Pages deployment ready!");
-console.log("📝 Next steps:");
+console.log("\nCloudflare Pages deployment ready!");
+console.log("Next steps:");
 console.log("1. Commit and push the docs/updates/ directory");
 console.log("2. Connect your GitHub repo to Cloudflare Pages");
 console.log("3. Set build command to: npm run deploy:cloudflare");
