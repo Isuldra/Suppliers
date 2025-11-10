@@ -65,7 +65,7 @@ export interface DashboardStats {
 
   // Metadata
   lastUpdated: Date;
-  dataSource: "cache" | "database";
+  dataSource: 'cache' | 'database';
 }
 
 // Supplier statistics for bar chart
@@ -98,7 +98,7 @@ export interface WeekStat {
 
 // Filter interface for dashboard filtering
 export interface DashboardFilter {
-  type: "planner" | "supplier" | "week";
+  type: 'planner' | 'supplier' | 'week';
   value: string;
   label?: string;
 }
@@ -398,60 +398,57 @@ Add these IPC handlers in your main process initialization:
 
 ```typescript
 // Dashboard data handlers
-ipcMain.handle("get-dashboard-stats", async () => {
+ipcMain.handle('get-dashboard-stats', async () => {
   try {
     const stats = databaseService.getDashboardStats();
     return { success: true, data: stats };
   } catch (error) {
-    log.error("Error in get-dashboard-stats handler:", error);
+    log.error('Error in get-dashboard-stats handler:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
+      error: error instanceof Error ? error.message : 'Unknown error',
     };
   }
 });
 
-ipcMain.handle("get-top-suppliers", async (_, limit: number = 5) => {
+ipcMain.handle('get-top-suppliers', async (_, limit: number = 5) => {
   try {
     const suppliers = databaseService.getTopSuppliersByOutstanding(limit);
     return { success: true, data: suppliers };
   } catch (error) {
-    log.error("Error in get-top-suppliers handler:", error);
+    log.error('Error in get-top-suppliers handler:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
+      error: error instanceof Error ? error.message : 'Unknown error',
     };
   }
 });
 
-ipcMain.handle("get-orders-by-planner", async () => {
+ipcMain.handle('get-orders-by-planner', async () => {
   try {
     const planners = databaseService.getOrdersByPlanner();
     return { success: true, data: planners };
   } catch (error) {
-    log.error("Error in get-orders-by-planner handler:", error);
+    log.error('Error in get-orders-by-planner handler:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
+      error: error instanceof Error ? error.message : 'Unknown error',
     };
   }
 });
 
-ipcMain.handle(
-  "get-orders-by-week",
-  async (_, weeksAhead: number = 8, weeksBehind: number = 2) => {
-    try {
-      const weeks = databaseService.getOrdersByWeek(weeksAhead, weeksBehind);
-      return { success: true, data: weeks };
-    } catch (error) {
-      log.error("Error in get-orders-by-week handler:", error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : "Unknown error",
-      };
-    }
+ipcMain.handle('get-orders-by-week', async (_, weeksAhead: number = 8, weeksBehind: number = 2) => {
+  try {
+    const weeks = databaseService.getOrdersByWeek(weeksAhead, weeksBehind);
+    return { success: true, data: weeks };
+  } catch (error) {
+    log.error('Error in get-orders-by-week handler:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
   }
-);
+});
 ```
 
 **Requirements Met**: Requirement 7.1
@@ -469,12 +466,11 @@ const electronAPI = {
   // ... existing methods ...
 
   // Dashboard methods
-  getDashboardStats: () => ipcRenderer.invoke("get-dashboard-stats"),
-  getTopSuppliers: (limit?: number) =>
-    ipcRenderer.invoke("get-top-suppliers", limit),
-  getOrdersByPlanner: () => ipcRenderer.invoke("get-orders-by-planner"),
+  getDashboardStats: () => ipcRenderer.invoke('get-dashboard-stats'),
+  getTopSuppliers: (limit?: number) => ipcRenderer.invoke('get-top-suppliers', limit),
+  getOrdersByPlanner: () => ipcRenderer.invoke('get-orders-by-planner'),
   getOrdersByWeek: (weeksAhead?: number, weeksBehind?: number) =>
-    ipcRenderer.invoke("get-orders-by-week", weeksAhead, weeksBehind),
+    ipcRenderer.invoke('get-orders-by-week', weeksAhead, weeksBehind),
 };
 ```
 

@@ -15,12 +15,10 @@ Cloudflare Pages provides free, fast, and reliable hosting for your update files
 ### 1. Connect GitHub Repository
 
 1. **Go to Cloudflare Dashboard**
-
    - Navigate to: https://dash.cloudflare.com/
    - Click "Pages" in the left sidebar
 
 2. **Create New Project**
-
    - Click "Create a project"
    - Select "Connect to Git"
 

@@ -12,26 +12,22 @@
     - Beregn neste oppfølgingsdato fra eta_supplier
     - Returner DashboardStats-objekt med alle KPI-verdier
     - _Requirements: 1.1, 1.2, 1.3, 1.4_
-  
   - [ ] 2.2 Implementer getTopSuppliersByOutstanding() metode
     - Skriv SQL-spørring med GROUP BY supplier_name
     - Sorter etter SUM(outstanding_qty) DESC
     - Returner topp N leverandører med orderCount og outstandingQty
     - _Requirements: 2.1, 2.2_
-  
   - [ ] 2.3 Implementer getOrdersByPlanner() metode
     - Skriv SQL-spørring med GROUP BY purchaser
-    - Beregn COUNT(*) og SUM(outstanding_qty) per innkjøper
+    - Beregn COUNT(\*) og SUM(outstanding_qty) per innkjøper
     - Beregn prosentandel av totalen
     - _Requirements: 3.1, 3.2_
-  
   - [ ] 2.4 Implementer getOrdersByWeek() metode
     - Skriv SQL-spørring med strftime('%W', eta_supplier) for å gruppere per uke
     - Inkluder både forfalte (fortid) og kommende (fremtid) ordre
     - Beregn orderCount og overdueCount per uke
     - Generer weekLabel og dateRange for hver uke
     - _Requirements: 4.1, 4.2, 4.5_
-  
   - [ ] 2.5 Implementer caching-mekanisme
     - Legg til dashboardCache property i DatabaseService
     - Implementer cache-sjekk med 5 minutters TTL
@@ -46,7 +42,6 @@
     - Registrer 'get-orders-by-week' handler
     - Implementer feilhåndtering for alle handlers
     - _Requirements: 7.1_
-  
   - [ ] 3.2 Utvid preload bridge med nye API-metoder
     - Legg til getDashboardStats() i electronAPI
     - Legg til getTopSuppliers() i electronAPI
@@ -81,7 +76,6 @@
     - Konfigurer YAxis med formatert tall (tusendelsskilletegn)
     - Implementer Bar med gradient fill
     - _Requirements: 2.1, 2.2, 2.3_
-  
   - [ ] 6.2 Implementer custom Tooltip og onClick-handler
     - Opprett custom Tooltip-komponent med leverandørnavn, restantall og antall ordre
     - Implementer onClick-handler på Bar for navigasjon til leverandør-detaljer
@@ -125,20 +119,17 @@
     - Implementer handleRefresh() funksjon
     - Implementer handleFilterChange() funksjon
     - _Requirements: 5.1, 5.2, 7.3, 7.4, 7.5_
-  
   - [ ] 10.2 Erstatt eksisterende KPI-kort med KPICard-komponenter
     - Erstatt hardkodede KPI-kort med KPICard-komponenter
     - Koble til data fra DashboardStats
     - Implementer ikoner fra Heroicons
     - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5_
-  
   - [ ] 10.3 Legg til chart-komponenter i dashboard layout
     - Legg til TopSuppliersChart under KPI-kort
     - Legg til PlannerDistributionChart ved siden av TopSuppliersChart
     - Legg til OrderTimelineChart under de andre charts
     - Implementer responsivt grid layout (1-2 kolonner avhengig av skjermstørrelse)
     - _Requirements: 5.3, 5.4_
-  
   - [ ] 10.4 Legg til DashboardFilters-komponenten
     - Plasser DashboardFilters øverst i dashboard
     - Koble til activeFilter state
@@ -160,13 +151,13 @@
   - Test chart responsiveness på ulike skjermstørrelser
   - _Requirements: 5.3, 5.4, 5.5_
 
-- [ ]* 13. Implementer ytelsesoptimalisering
+- [ ]\* 13. Implementer ytelsesoptimalisering
   - Legg til React.memo på alle chart-komponenter
   - Implementer debouncing på filter-endringer (300ms)
   - Verifiser at caching fungerer korrekt
   - _Requirements: 7.1, 7.2_
 
-- [ ]* 14. Implementer accessibility-forbedringer
+- [ ]\* 14. Implementer accessibility-forbedringer
   - Legg til ARIA labels på alle interaktive elementer
   - Implementer keyboard navigation for alle kontroller
   - Verifiser color contrast (WCAG AA)

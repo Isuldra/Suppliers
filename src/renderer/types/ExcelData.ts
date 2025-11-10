@@ -43,19 +43,13 @@ export interface ExcelData {
 }
 
 export interface ValidationError {
-  type: "missingSheet" | "invalidDate" | "invalidNumber" | "missingColumn";
+  type: 'missingSheet' | 'invalidDate' | 'invalidNumber' | 'missingColumn';
   message: string;
   row?: number;
   column?: string;
 }
 
-export type WizardStep =
-  | "upload"
-  | "planner"
-  | "weekday"
-  | "supplier"
-  | "review"
-  | "email";
+export type WizardStep = 'upload' | 'planner' | 'weekday' | 'supplier' | 'review' | 'email';
 
 export interface WizardState {
   currentStep: WizardStep;

@@ -64,42 +64,37 @@ export class SlackService {
   /**
    * Send a message to Slack via webhook
    */
-  static async sendMessage(
-    webhookUrl: string,
-    message: SlackMessage
-  ): Promise<boolean> {
+  static async sendMessage(webhookUrl: string, message: SlackMessage): Promise<boolean> {
     try {
       // Validate webhook URL
-      if (!webhookUrl || !webhookUrl.startsWith("https://hooks.slack.com/")) {
-        console.error("Invalid Slack webhook URL");
+      if (!webhookUrl || !webhookUrl.startsWith('https://hooks.slack.com/')) {
+        console.error('Invalid Slack webhook URL');
         return false;
       }
 
       const response = await fetch(webhookUrl, {
-        method: "POST",
+        method: 'POST',
         headers: {
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify(message),
       });
 
       if (!response.ok) {
-        console.error(
-          `Slack API error: ${response.status} ${response.statusText}`
-        );
+        console.error(`Slack API error: ${response.status} ${response.statusText}`);
         return false;
       }
 
       const responseText = await response.text();
-      if (responseText !== "ok") {
+      if (responseText !== 'ok') {
         console.error(`Slack API unexpected response: ${responseText}`);
         return false;
       }
 
-      console.log("Slack notification sent successfully");
+      console.log('Slack notification sent successfully');
       return true;
     } catch (error) {
-      console.error("Failed to send Slack notification:", error);
+      console.error('Failed to send Slack notification:', error);
       return false;
     }
   }
@@ -107,62 +102,60 @@ export class SlackService {
   /**
    * Format bulk email notification
    */
-  static formatBulkEmailNotification(
-    data: BulkEmailNotificationData
-  ): SlackMessage {
-    const successEmoji = data.successCount > 0 ? "✅" : "";
-    const failEmoji = data.failCount > 0 ? "⚠️" : "";
+  static formatBulkEmailNotification(data: BulkEmailNotificationData): SlackMessage {
+    const successEmoji = data.successCount > 0 ? '✅' : '';
+    const failEmoji = data.failCount > 0 ? '⚠️' : '';
     const fallbackText = `📧 Bulk Email Sent by ${data.displayName} (${data.userEmail}): ${data.successCount} sent, ${data.failCount} failed`;
 
     const blocks: SlackBlock[] = [
       {
-        type: "header",
+        type: 'header',
         text: {
-          type: "plain_text",
-          text: "📧 Bulk Email Sent",
+          type: 'plain_text',
+          text: '📧 Bulk Email Sent',
           emoji: true,
         },
       },
       {
-        type: "section",
+        type: 'section',
         fields: [
           {
-            type: "mrkdwn",
+            type: 'mrkdwn',
             text: `*User:*\n${data.displayName} (${data.userEmail})`,
             emoji: true,
           },
           {
-            type: "mrkdwn",
+            type: 'mrkdwn',
             text: `*Recipients:*\n${data.recipientCount} suppliers`,
             emoji: true,
           },
           {
-            type: "mrkdwn",
+            type: 'mrkdwn',
             text: `*Template:*\n${data.template}`,
             emoji: true,
           },
           {
-            type: "mrkdwn",
+            type: 'mrkdwn',
             text: `*Scheduled:*\n${data.scheduled}`,
             emoji: true,
           },
         ],
       },
       {
-        type: "divider",
+        type: 'divider',
       },
       {
-        type: "section",
+        type: 'section',
         fields: [
           {
-            type: "mrkdwn",
+            type: 'mrkdwn',
             text: `${successEmoji} *Successfully sent:*\n${data.successCount}`,
             emoji: true,
           },
           {
-            type: "mrkdwn",
+            type: 'mrkdwn',
             text: `${failEmoji} *Failed:*\n${data.failCount}${
-              data.failCount > 0 ? " (see below)" : ""
+              data.failCount > 0 ? ' (see below)' : ''
             }`,
             emoji: true,
           },
@@ -175,20 +168,18 @@ export class SlackService {
       const failureLines = data.failures
         .slice(0, 10) // Limit to 10 to avoid too long messages
         .map((f) => `• ${f.supplier}: ${f.error}`)
-        .join("\n");
+        .join('\n');
 
       blocks.push(
         {
-          type: "divider",
+          type: 'divider',
         },
         {
-          type: "section",
+          type: 'section',
           text: {
-            type: "mrkdwn",
+            type: 'mrkdwn',
             text: `*Failed emails:*\n${failureLines}${
-              data.failures.length > 10
-                ? `\n_...and ${data.failures.length - 10} more_`
-                : ""
+              data.failures.length > 10 ? `\n_...and ${data.failures.length - 10} more_` : ''
             }`,
           },
         }
@@ -204,44 +195,42 @@ export class SlackService {
   /**
    * Format email error notification
    */
-  static formatEmailErrorNotification(
-    data: EmailErrorNotificationData
-  ): SlackMessage {
+  static formatEmailErrorNotification(data: EmailErrorNotificationData): SlackMessage {
     const fallbackText = `❌ Email Error: Failed to send email to ${data.supplier} by ${data.displayName}`;
 
     const blocks: SlackBlock[] = [
       {
-        type: "header",
+        type: 'header',
         text: {
-          type: "plain_text",
-          text: "❌ Email Sending Error",
+          type: 'plain_text',
+          text: '❌ Email Sending Error',
           emoji: true,
         },
       },
       {
-        type: "section",
+        type: 'section',
         fields: [
           {
-            type: "mrkdwn",
+            type: 'mrkdwn',
             text: `*User:*\n${data.displayName} (${data.userEmail})`,
             emoji: true,
           },
           {
-            type: "mrkdwn",
+            type: 'mrkdwn',
             text: `*Supplier:*\n${data.supplier}`,
             emoji: true,
           },
           {
-            type: "mrkdwn",
+            type: 'mrkdwn',
             text: `*Time:*\n${data.timestamp}`,
             emoji: true,
           },
         ],
       },
       {
-        type: "section",
+        type: 'section',
         text: {
-          type: "mrkdwn",
+          type: 'mrkdwn',
           text: `*Error:*\n\`\`\`${data.error}\`\`\``,
         },
       },
@@ -256,30 +245,28 @@ export class SlackService {
   /**
    * Format deployment/version update notification
    */
-  static formatDeploymentNotification(
-    data: DeploymentNotificationData
-  ): SlackMessage {
+  static formatDeploymentNotification(data: DeploymentNotificationData): SlackMessage {
     const fallbackText = `🚀 New Version Available: ${data.version}`;
 
     const blocks: SlackBlock[] = [
       {
-        type: "header",
+        type: 'header',
         text: {
-          type: "plain_text",
-          text: "🚀 New Version Detected",
+          type: 'plain_text',
+          text: '🚀 New Version Detected',
           emoji: true,
         },
       },
       {
-        type: "section",
+        type: 'section',
         fields: [
           {
-            type: "mrkdwn",
+            type: 'mrkdwn',
             text: `*Version:*\n${data.version}`,
             emoji: true,
           },
           {
-            type: "mrkdwn",
+            type: 'mrkdwn',
             text: `*Time:*\n${data.timestamp}`,
             emoji: true,
           },
@@ -290,17 +277,17 @@ export class SlackService {
     // Add user info if available
     if (data.displayName) {
       blocks[1].fields?.push({
-        type: "mrkdwn",
+        type: 'mrkdwn',
         text: `*Detected by:*\n${data.displayName}`,
         emoji: true,
       });
     }
 
     blocks.push({
-      type: "section",
+      type: 'section',
       text: {
-        type: "mrkdwn",
-        text: "A new version of Pulse is available. Users will be notified to update.",
+        type: 'mrkdwn',
+        text: 'A new version of Pulse is available. Users will be notified to update.',
       },
     });
 
@@ -320,7 +307,7 @@ export class SlackService {
     userEmail: string;
   } | null {
     try {
-      const savedSettings = localStorage.getItem("appSettings");
+      const savedSettings = localStorage.getItem('appSettings');
       if (!savedSettings) {
         return null;
       }
@@ -335,11 +322,11 @@ export class SlackService {
       return {
         enabled: user.slackNotificationsEnabled,
         webhookUrl: user.slackWebhookUrl,
-        displayName: user.displayName || "Unknown User",
-        userEmail: user.senderEmail || "",
+        displayName: user.displayName || 'Unknown User',
+        userEmail: user.senderEmail || '',
       };
     } catch (error) {
-      console.error("Failed to load Slack settings:", error);
+      console.error('Failed to load Slack settings:', error);
       return null;
     }
   }
@@ -348,11 +335,11 @@ export class SlackService {
    * Send bulk email notification if enabled
    */
   static async sendBulkEmailNotification(
-    data: Omit<BulkEmailNotificationData, "displayName" | "userEmail">
+    data: Omit<BulkEmailNotificationData, 'displayName' | 'userEmail'>
   ): Promise<void> {
     const settings = this.getSettings();
     if (!settings) {
-      console.log("Slack notifications disabled or not configured");
+      console.log('Slack notifications disabled or not configured');
       return;
     }
 
@@ -369,7 +356,7 @@ export class SlackService {
    * Send email error notification if enabled
    */
   static async sendEmailErrorNotification(
-    data: Omit<EmailErrorNotificationData, "displayName" | "userEmail">
+    data: Omit<EmailErrorNotificationData, 'displayName' | 'userEmail'>
   ): Promise<void> {
     const settings = this.getSettings();
     if (!settings) {
@@ -389,7 +376,7 @@ export class SlackService {
    * Send deployment notification if enabled
    */
   static async sendDeploymentNotification(
-    data: Omit<DeploymentNotificationData, "displayName">
+    data: Omit<DeploymentNotificationData, 'displayName'>
   ): Promise<void> {
     const settings = this.getSettings();
     if (!settings) {
@@ -407,24 +394,22 @@ export class SlackService {
   /**
    * Format CHANGELOG notification for Slack
    */
-  static formatChangelogNotification(
-    data: ChangelogNotificationData
-  ): SlackMessage {
+  static formatChangelogNotification(data: ChangelogNotificationData): SlackMessage {
     const fallbackText = `📋 New Release: ${data.version} - ${data.title}`;
 
     const blocks: SlackBlock[] = [
       {
-        type: "header",
+        type: 'header',
         text: {
-          type: "plain_text",
+          type: 'plain_text',
           text: `📋 Release ${data.version}`,
           emoji: true,
         },
       },
       {
-        type: "section",
+        type: 'section',
         text: {
-          type: "mrkdwn",
+          type: 'mrkdwn',
           text: `*${data.title}*\n\n${data.description}`,
         },
       },
@@ -439,28 +424,28 @@ export class SlackService {
 
     if (data.completedDate) {
       fields.push({
-        type: "mrkdwn",
+        type: 'mrkdwn',
         text: `*Completed:*\n${data.completedDate}`,
       });
     }
 
     if (data.timestamp) {
       fields.push({
-        type: "mrkdwn",
+        type: 'mrkdwn',
         text: `*Released:*\n${data.timestamp}`,
       });
     }
 
     if (data.displayName) {
       fields.push({
-        type: "mrkdwn",
+        type: 'mrkdwn',
         text: `*Released by:*\n${data.displayName}`,
       });
     }
 
     if (fields.length > 0) {
       blocks.push({
-        type: "section",
+        type: 'section',
         fields: fields.slice(0, 3), // Max 3 fields per section
       });
     }
@@ -468,7 +453,7 @@ export class SlackService {
     // Add sections if available
     if (data.sections && Object.keys(data.sections).length > 0) {
       blocks.push({
-        type: "divider",
+        type: 'divider',
       });
 
       // Add key sections (limit to first 3 to avoid too long messages)
@@ -477,14 +462,12 @@ export class SlackService {
         const sectionContent = data.sections[sectionKey];
         // Truncate long sections to avoid message limits
         const truncatedContent =
-          sectionContent.length > 1000
-            ? sectionContent.substring(0, 1000) + "..."
-            : sectionContent;
+          sectionContent.length > 1000 ? sectionContent.substring(0, 1000) + '...' : sectionContent;
 
         blocks.push({
-          type: "section",
+          type: 'section',
           text: {
-            type: "mrkdwn",
+            type: 'mrkdwn',
             text: `*${sectionKey}*\n${truncatedContent}`,
           },
         });
@@ -493,9 +476,9 @@ export class SlackService {
       // If there are more sections, add a note
       if (Object.keys(data.sections).length > 3) {
         blocks.push({
-          type: "section",
+          type: 'section',
           text: {
-            type: "mrkdwn",
+            type: 'mrkdwn',
             text: `_...and ${
               Object.keys(data.sections).length - 3
             } more sections. See full CHANGELOG for details._`,
@@ -506,13 +489,13 @@ export class SlackService {
 
     // Add divider and link to full CHANGELOG
     blocks.push({
-      type: "divider",
+      type: 'divider',
     });
 
     blocks.push({
-      type: "section",
+      type: 'section',
       text: {
-        type: "mrkdwn",
+        type: 'mrkdwn',
         text: `📖 <https://github.com/Isuldra/Suppliers/blob/main/docs/CHANGELOG.md|View full CHANGELOG on GitHub>`,
       },
     });
@@ -527,7 +510,7 @@ export class SlackService {
    * Send CHANGELOG notification if enabled
    */
   static async sendChangelogNotification(
-    data: Omit<ChangelogNotificationData, "displayName">
+    data: Omit<ChangelogNotificationData, 'displayName'>
   ): Promise<void> {
     const settings = this.getSettings();
     if (!settings) {

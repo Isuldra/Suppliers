@@ -1,34 +1,34 @@
 #!/usr/bin/env node
 
-import fs from "fs";
-import path from "path";
-import { execSync } from "child_process";
-import { fileURLToPath } from "url";
+import fs from 'fs';
+import path from 'path';
+import { execSync } from 'child_process';
+import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Get project root directory
-const projectRoot = path.resolve(__dirname, "..");
+const projectRoot = path.resolve(__dirname, '..');
 
-console.log("🧹 Cleaning electron-builder cache and build artifacts...");
+console.log('🧹 Cleaning electron-builder cache and build artifacts...');
 
 // Clean electron-builder cache
 try {
-  console.log("📦 Cleaning electron-builder cache...");
-  execSync("npx electron-builder install-app-deps", {
+  console.log('📦 Cleaning electron-builder cache...');
+  execSync('npx electron-builder install-app-deps', {
     cwd: projectRoot,
-    stdio: "inherit",
+    stdio: 'inherit',
   });
 } catch (error) {
-  console.log("⚠️  Could not clean electron-builder cache:", error.message);
+  console.log('⚠️  Could not clean electron-builder cache:', error.message);
 }
 
 // Clean build directories
 const dirsToClean = [
-  path.join(projectRoot, "dist"),
-  path.join(projectRoot, "release"),
-  path.join(projectRoot, "out"),
+  path.join(projectRoot, 'dist'),
+  path.join(projectRoot, 'release'),
+  path.join(projectRoot, 'out'),
 ];
 
 dirsToClean.forEach((dir) => {
@@ -39,35 +39,35 @@ dirsToClean.forEach((dir) => {
 });
 
 // Clean node_modules/.cache if it exists
-const cacheDir = path.join(projectRoot, "node_modules", ".cache");
+const cacheDir = path.join(projectRoot, 'node_modules', '.cache');
 if (fs.existsSync(cacheDir)) {
-  console.log("🗑️  Removing node_modules/.cache/");
+  console.log('🗑️  Removing node_modules/.cache/');
   fs.rmSync(cacheDir, { recursive: true, force: true });
 }
 
 // Clean electron cache
 const electronCacheDir = path.join(
   process.env.HOME || process.env.USERPROFILE,
-  ".cache",
-  "electron"
+  '.cache',
+  'electron'
 );
 if (fs.existsSync(electronCacheDir)) {
-  console.log("🗑️  Removing ~/.cache/electron/");
+  console.log('🗑️  Removing ~/.cache/electron/');
   fs.rmSync(electronCacheDir, { recursive: true, force: true });
 }
 
 // Clean electron-builder cache
 const electronBuilderCacheDir = path.join(
   process.env.HOME || process.env.USERPROFILE,
-  ".cache",
-  "electron-builder"
+  '.cache',
+  'electron-builder'
 );
 if (fs.existsSync(electronBuilderCacheDir)) {
-  console.log("🗑️  Removing ~/.cache/electron-builder/");
+  console.log('🗑️  Removing ~/.cache/electron-builder/');
   fs.rmSync(electronBuilderCacheDir, { recursive: true, force: true });
 }
 
-console.log("✅ Build cache cleaned successfully!");
-console.log("\n📋 Next steps:");
+console.log('✅ Build cache cleaned successfully!');
+console.log('\n📋 Next steps:');
 console.log("1. Run 'npm run dist' to build with clean cache");
 console.log("2. Run 'npm run release:prepare' to prepare for deployment");

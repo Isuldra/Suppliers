@@ -1,20 +1,20 @@
 #!/usr/bin/env node
 
-import fs from "fs";
-import path from "path";
-import { fileURLToPath } from "url";
-import { Octokit } from "@octokit/rest";
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { Octokit } from '@octokit/rest';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Get project root directory
-const projectRoot = path.resolve(__dirname, "..");
-const releaseDir = path.join(projectRoot, "release");
+const projectRoot = path.resolve(__dirname, '..');
+const releaseDir = path.join(projectRoot, 'release');
 
 // Read package.json to get current version
-const packageJsonPath = path.join(projectRoot, "package.json");
-const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, "utf8"));
+const packageJsonPath = path.join(projectRoot, 'package.json');
+const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
 const version = packageJson.version;
 
 console.log(`Building GitHub Release v${version}...`);
@@ -24,8 +24,8 @@ const octokit = new Octokit({
   auth: process.env.GITHUB_TOKEN,
 });
 
-const owner = "Isuldra";
-const repo = "Suppliers";
+const owner = 'Isuldra';
+const repo = 'Suppliers';
 const tagName = `v${version}`;
 
 async function createRelease() {
@@ -83,26 +83,26 @@ async function createRelease() {
       {
         name: `Pulse-${version}-setup.exe`,
         path: path.join(releaseDir, `Pulse-${version}-setup.exe`),
-        contentType: "application/octet-stream",
+        contentType: 'application/octet-stream',
       },
       {
         name: `Pulse-${version}-setup.exe.blockmap`,
         path: path.join(releaseDir, `Pulse-${version}-setup.exe.blockmap`),
-        contentType: "application/octet-stream",
+        contentType: 'application/octet-stream',
       },
       {
-        name: "Pulse-Portable.exe",
-        path: path.join(releaseDir, "Pulse-Portable.exe"),
-        contentType: "application/octet-stream",
+        name: 'Pulse-Portable.exe',
+        path: path.join(releaseDir, 'Pulse-Portable.exe'),
+        contentType: 'application/octet-stream',
       },
       {
-        name: "latest.yml",
-        path: path.join(projectRoot, "docs", "updates", "latest.yml"),
-        contentType: "text/yaml",
+        name: 'latest.yml',
+        path: path.join(projectRoot, 'docs', 'updates', 'latest.yml'),
+        contentType: 'text/yaml',
       },
     ];
 
-    console.log("\nUploading assets...");
+    console.log('\nUploading assets...');
 
     for (const asset of assetsToUpload) {
       if (!fs.existsSync(asset.path)) {
@@ -113,11 +113,7 @@ async function createRelease() {
       const fileBuffer = fs.readFileSync(asset.path);
       const fileSize = fileBuffer.length;
 
-      console.log(
-        `   Uploading ${asset.name} (${Math.round(
-          fileSize / 1024 / 1024
-        )} MB)...`
-      );
+      console.log(`   Uploading ${asset.name} (${Math.round(fileSize / 1024 / 1024)} MB)...`);
 
       try {
         await octokit.rest.repos.uploadReleaseAsset({
@@ -127,8 +123,8 @@ async function createRelease() {
           name: asset.name,
           data: fileBuffer,
           headers: {
-            "content-type": asset.contentType,
-            "content-length": fileSize,
+            'content-type': asset.contentType,
+            'content-length': fileSize,
           },
         });
         console.log(`   Success: ${asset.name} uploaded successfully`);
@@ -144,22 +140,16 @@ async function createRelease() {
     console.log(`2. Users can download from: ${release.html_url}`);
     console.log(`3. Cloudflare Pages serves latest.yml with GitHub URLs`);
   } catch (error) {
-    console.error("Error creating GitHub release:", error.message);
+    console.error('Error creating GitHub release:', error.message);
 
     if (error.status === 401) {
-      console.error(
-        "\nNote: Authentication failed. Please set GITHUB_TOKEN environment variable:"
-      );
-      console.error("   export GITHUB_TOKEN=your_github_token");
-      console.error(
-        "   Or create a Personal Access Token at: https://github.com/settings/tokens"
-      );
+      console.error('\nNote: Authentication failed. Please set GITHUB_TOKEN environment variable:');
+      console.error('   export GITHUB_TOKEN=your_github_token');
+      console.error('   Or create a Personal Access Token at: https://github.com/settings/tokens');
     } else if (error.status === 403) {
-      console.error(
-        "\nNote: Permission denied. Please check your token permissions:"
-      );
-      console.error("   - repo (full control)");
-      console.error("   - write:packages");
+      console.error('\nNote: Permission denied. Please check your token permissions:');
+      console.error('   - repo (full control)');
+      console.error('   - write:packages');
     }
 
     process.exit(1);
@@ -168,13 +158,13 @@ async function createRelease() {
 
 // Check for GitHub token
 if (!process.env.GITHUB_TOKEN) {
-  console.error("Error: GITHUB_TOKEN environment variable is required");
-  console.error("\nNote: To create a GitHub token:");
-  console.error("1. Go to: https://github.com/settings/tokens");
+  console.error('Error: GITHUB_TOKEN environment variable is required');
+  console.error('\nNote: To create a GitHub token:');
+  console.error('1. Go to: https://github.com/settings/tokens');
   console.error("2. Click 'Generate new token (classic)'");
   console.error("3. Select scopes: 'repo' (full control)");
-  console.error("4. Copy the token and set it:");
-  console.error("   export GITHUB_TOKEN=your_token_here");
+  console.error('4. Copy the token and set it:');
+  console.error('   export GITHUB_TOKEN=your_token_here');
   process.exit(1);
 }
 

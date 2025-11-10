@@ -1,17 +1,17 @@
 // Script to create all distribution formats of Supplier Reminder Pro
-import fs from "fs";
-import path from "path";
-import { execSync } from "child_process";
-import { fileURLToPath } from "url";
-import { dirname } from "path";
+import fs from 'fs';
+import path from 'path';
+import { execSync } from 'child_process';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
 
 // Convert file URL to path (ES Module compatibility)
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-const rootDir = path.join(__dirname, "..");
-const distDir = path.join(rootDir, "dist");
-const releaseDir = path.join(rootDir, "release");
-const distributionsDir = path.join(rootDir, "distributions");
+const rootDir = path.join(__dirname, '..');
+const distDir = path.join(rootDir, 'dist');
+const releaseDir = path.join(rootDir, 'release');
+const distributionsDir = path.join(rootDir, 'distributions');
 
 // Ensure directories exist
 if (!fs.existsSync(releaseDir)) {
@@ -26,15 +26,10 @@ if (!fs.existsSync(distributionsDir)) {
 // Build all distribution formats
 async function createAllDistributions() {
   try {
-    console.log(
-      "Creating all distribution formats for Supplier Reminder Pro..."
-    );
+    console.log('Creating all distribution formats for Supplier Reminder Pro...');
 
     // Create a timestamped directory for this build
-    const timestamp = new Date()
-      .toISOString()
-      .replace(/[:.]/g, "-")
-      .split("T")[0];
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').split('T')[0];
     const currentBuildDir = path.join(distributionsDir, `build-${timestamp}`);
 
     if (!fs.existsSync(currentBuildDir)) {
@@ -42,81 +37,66 @@ async function createAllDistributions() {
     }
 
     // Step 1: Build the application
-    console.log("\nStep 1/5: Building Electron application...");
-    execSync("npm run build", { stdio: "inherit" });
+    console.log('\nStep 1/5: Building Electron application...');
+    execSync('npm run build', { stdio: 'inherit' });
 
     // Step 2: Create standard NSIS installer
-    console.log("\nStep 2/5: Creating standard installer (NSIS)...");
-    execSync("electron-builder --win nsis", { stdio: "inherit" });
+    console.log('\nStep 2/5: Creating standard installer (NSIS)...');
+    execSync('electron-builder --win nsis', { stdio: 'inherit' });
 
     // Find the NSIS installer file
     const nsisFiles = fs
       .readdirSync(releaseDir)
-      .filter(
-        (file) =>
-          file.endsWith("setup.exe") && file.includes("Supplier-Reminder-Pro")
-      );
+      .filter((file) => file.endsWith('setup.exe') && file.includes('Supplier-Reminder-Pro'));
 
     if (nsisFiles.length > 0) {
       const nsisFile = nsisFiles[0];
-      const targetFile = path.join(
-        currentBuildDir,
-        "Supplier-Reminder-Pro-Setup.exe"
-      );
+      const targetFile = path.join(currentBuildDir, 'Supplier-Reminder-Pro-Setup.exe');
       fs.copyFileSync(path.join(releaseDir, nsisFile), targetFile);
       console.log(`Success: Standard installer saved to: ${targetFile}`);
     } else {
-      console.log("Warning: Standard installer not found in release directory");
+      console.log('Warning: Standard installer not found in release directory');
     }
 
     // Step 3: Create MSI installer
-    console.log("\nStep 3/5: Creating MSI installer...");
-    execSync("electron-builder --win msi", { stdio: "inherit" });
+    console.log('\nStep 3/5: Creating MSI installer...');
+    execSync('electron-builder --win msi', { stdio: 'inherit' });
 
     // Find the MSI installer file
     const msiFiles = fs
       .readdirSync(releaseDir)
-      .filter(
-        (file) =>
-          file.endsWith(".msi") && file.includes("Supplier-Reminder-Pro")
-      );
+      .filter((file) => file.endsWith('.msi') && file.includes('Supplier-Reminder-Pro'));
 
     if (msiFiles.length > 0) {
       const msiFile = msiFiles[0];
-      const targetFile = path.join(
-        currentBuildDir,
-        "Supplier-Reminder-Pro-Setup.msi"
-      );
+      const targetFile = path.join(currentBuildDir, 'Supplier-Reminder-Pro-Setup.msi');
       fs.copyFileSync(path.join(releaseDir, msiFile), targetFile);
       console.log(`Success: MSI installer saved to: ${targetFile}`);
     } else {
-      console.log("Warning: MSI installer not found in release directory");
+      console.log('Warning: MSI installer not found in release directory');
     }
 
     // Step 4: Create portable version
-    console.log("\nStep 4/5: Creating portable version...");
-    execSync("npm run portable", { stdio: "inherit" });
+    console.log('\nStep 4/5: Creating portable version...');
+    execSync('npm run portable', { stdio: 'inherit' });
 
     // Find the portable zip file
-    const portableDir = path.join(rootDir, "portable");
+    const portableDir = path.join(rootDir, 'portable');
     const portableFiles = fs
       .readdirSync(portableDir)
-      .filter((file) => file.endsWith(".zip") && file.includes("Portable"));
+      .filter((file) => file.endsWith('.zip') && file.includes('Portable'));
 
     if (portableFiles.length > 0) {
       const portableFile = portableFiles[0];
-      const targetFile = path.join(
-        currentBuildDir,
-        "Supplier-Reminder-Pro-Portable.zip"
-      );
+      const targetFile = path.join(currentBuildDir, 'Supplier-Reminder-Pro-Portable.zip');
       fs.copyFileSync(path.join(portableDir, portableFile), targetFile);
       console.log(`Success: Portable version saved to: ${targetFile}`);
     } else {
-      console.log("Warning: Portable version not found in portable directory");
+      console.log('Warning: Portable version not found in portable directory');
     }
 
     // Step 5: Create README file with installation instructions
-    console.log("\nStep 5/5: Creating installation guide...");
+    console.log('\nStep 5/5: Creating installation guide...');
     const readmeContent = `
 =================================================
 Pulse - INSTALLATION OPTIONS
@@ -190,19 +170,13 @@ For additional support, contact your IT department or application administrator.
 =================================================
 `;
 
-    fs.writeFileSync(
-      path.join(currentBuildDir, "INSTALLATION.md"),
-      readmeContent
-    );
+    fs.writeFileSync(path.join(currentBuildDir, 'INSTALLATION.md'), readmeContent);
     console.log(
-      `Success: Installation guide created at: ${path.join(
-        currentBuildDir,
-        "INSTALLATION.md"
-      )}`
+      `Success: Installation guide created at: ${path.join(currentBuildDir, 'INSTALLATION.md')}`
     );
 
     // Create a ZIP file with all distributions
-    console.log("\nCreating complete package with all distributions...");
+    console.log('\nCreating complete package with all distributions...');
     const zipFileName = `Supplier-Reminder-Pro-All-Distributions-${timestamp}.zip`;
     const zipFilePath = path.join(distributionsDir, zipFileName);
 
@@ -212,24 +186,22 @@ For additional support, contact your IT department or application administrator.
           currentBuildDir
         )}/*"`,
         {
-          stdio: "inherit",
+          stdio: 'inherit',
         }
       );
-      console.log(
-        `\nSuccess: All distributions packaged successfully in:\n   ${zipFilePath}`
-      );
+      console.log(`\nSuccess: All distributions packaged successfully in:\n   ${zipFilePath}`);
     } catch (e) {
       console.log(
-        "\nWarning: 7z not available, please manually zip the directory contents:\n   ",
+        '\nWarning: 7z not available, please manually zip the directory contents:\n   ',
         currentBuildDir
       );
     }
 
-    console.log("\nAll distribution formats created successfully!");
+    console.log('\nAll distribution formats created successfully!');
     console.log(`Individual files can be found in:\n   ${currentBuildDir}`);
     console.log(`Complete package:\n   ${zipFilePath}`);
   } catch (error) {
-    console.error("Error creating distributions:", error.message);
+    console.error('Error creating distributions:', error.message);
     process.exit(1);
   }
 }

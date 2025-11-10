@@ -1,51 +1,52 @@
-title: "Repo Cleanup State"
+title: 'Repo Cleanup State'
 version: 1
-last_updated: "2025-11-10"
+last_updated: '2025-11-10'
 
 decisions:
-  - "Strukturpolicy: src/ (kildekode), scripts/ (build/deploy), docs/ (dokumentasjon), resources/ (statiske assets), .github/ (CI/CD)"
-  - "Root-file policy: kun README.md, LICENSE, CONTRIBUTING.md, CODEOWNERS, .editorconfig, .gitignore, .gitattributes, SECURITY.md, package.json, package-lock.json, og nødvendige config-filer (tsconfig.json, vite.config.ts, etc.)"
-  - "Kvalitetsporter: ESLint (TS+React), tsc --noEmit, Vitest (test framework), Prettier (hvis/når implementert)"
-  - "tests/ policy: alle testfiler og test-setup under tests/ (1:1 speil av src/)"
-  - "Build output locations: dist/ (Vite output), release/ (electron-builder output) - begge gitignored"
-  - "Assets konsolideres: ikoner kun i resources/, logos kun i src/renderer/assets/"
+  - 'Strukturpolicy: src/ (kildekode), scripts/ (build/deploy), docs/ (dokumentasjon), resources/ (statiske assets), .github/ (CI/CD)'
+  - 'Root-file policy: kun README.md, LICENSE, CONTRIBUTING.md, CODEOWNERS, .editorconfig, .gitignore, .gitattributes, SECURITY.md, package.json, package-lock.json, og nødvendige config-filer (tsconfig.json, vite.config.ts, etc.)'
+  - 'Kvalitetsporter: ESLint (TS+React), tsc --noEmit, Vitest (test framework), Prettier (implementert)'
+  - 'tests/ policy: alle testfiler og test-setup under tests/ (1:1 speil av src/)'
+  - 'Build output locations: dist/ (Vite output), release/ (electron-builder output) - begge gitignored'
+  - 'Assets konsolideres: ikoner kun i resources/, logos kun i src/renderer/assets/'
 
 policies:
-  - "Ingen build-/release-artefakter i git (dist/, release/ skal være gitignored)"
-  - "Store binaries (*.exe, *.dmg, *.zip over 10MB) skal IKKE være i git - bruk GitHub Releases eller Git LFS"
-  - "Templates på én plass: src/services/emailTemplates/ (ikke duplisert i renderer)"
-  - "Dokumentasjon konsolideres i docs/ - ingen løse .md-filer i root (unntatt README.md)"
-  - "Config-filer i root kun når nødvendig for tooling (tsconfig, vite, electron, eslint, etc.)"
-  - "WiP/temporary filer skal være gitignored eller flyttes til docs/planning/"
+  - 'Ingen build-/release-artefakter i git (dist/, release/ skal være gitignored)'
+  - 'Store binaries (*.exe, *.dmg, *.zip over 10MB) skal IKKE være i git - bruk GitHub Releases eller Git LFS'
+  - 'Templates på én plass: src/services/emailTemplates/ (ikke duplisert i renderer)'
+  - 'Dokumentasjon konsolideres i docs/ - ingen løse .md-filer i root (unntatt README.md)'
+  - 'Config-filer i root kun når nødvendig for tooling (tsconfig, vite, electron, eslint, etc.)'
+  - 'WiP/temporary filer skal være gitignored eller flyttes til docs/planning/'
 
 constraints:
-  - "Endringer skal ikke endre runtime-adferd (kun flytting/sletting)"
-  - "Små, atomiske commits med klare beskrivelser"
-  - "Test at appen fortsatt bygger og kjører etter hver større endring"
-  - "Behold git history - ikke force push eller rewrite history uten avtale"
+  - 'Endringer skal ikke endre runtime-adferd (kun flytting/sletting)'
+  - 'Små, atomiske commits med klare beskrivelser'
+  - 'Test at appen fortsatt bygger og kjører etter hver større endring'
+  - 'Behold git history - ikke force push eller rewrite history uten avtale'
 
 open_questions:
-  - "Skal vi beholde alle gamle release-filer i docs/updates/, eller bare latest + latest-1?"
-  - "Trenger vi både package.json i root OG dist/? (electron-builder kopierer den)"
+  - 'Skal vi beholde alle gamle release-filer i docs/updates/, eller bare latest + latest-1?'
+  - 'Trenger vi både package.json i root OG dist/? (electron-builder kopierer den)'
 
 resolved_questions:
-  - "2025-11-10: Git LFS vs GitHub Releases - Valgt GitHub Releases (systemet bruker allerede dette). Gamle .exe-filer fjernet fra git."
+  - '2025-11-10: Git LFS vs GitHub Releases - Valgt GitHub Releases (systemet bruker allerede dette). Gamle .exe-filer fjernet fra git.'
 
 completed:
-  - "2025-11-10: Repository inventory fullført - 17 duplikater funnet, 260+ MB binaries identifisert"
-  - "2025-11-10: P1.1 - Fjernet gamle .exe-filer fra docs/updates/ (260 MB redusert). Backup opprettet i backup/exe-files/. Commit: 3d632ea"
-  - "2025-11-10: P1.2 - Verifisert at dist/ og release/ er korrekt gitignored. Ingen endringer nødvendig."
-  - "2025-11-10: P2.1 - Slettet 7 duplikate temp-icon-filer fra resources/. Commit: 9dfb334"
-  - "2025-11-10: P2.2 - Konsolidert app icons til resources/. Fjernet supplychain.png og supplychain.ico fra root. Oppdatert src/main/index.ts. Commit: 58c11b1"
-  - "2025-11-10: P4.1 - Konsolidert email templates til src/services/. Slettet duplikat fra src/renderer/services/emailTemplates/. Build script bruker allerede korrekt path. Email template build testet og fungerer."
-  - "2025-11-10: P4.2 - Dokumentert og organisert scripts-mappen. Opprettet scripts/README.md med beskrivelse av alle 27 scripts. Identifisert 7 deprecated scripts (dokumentert, ikke slettet). Flyttet troubleshoot-native-modules.md til docs/development/. Commit: bafc291"
-  - "2025-11-10: P4.3 - Opprettet .cursorignore for AI context optimalisering. Ekskluderer build outputs, dependencies, store binaries, coverage reports, cache-filer og temporary files. Commit: 770f097"
+  - '2025-11-10: Repository inventory fullført - 17 duplikater funnet, 260+ MB binaries identifisert'
+  - '2025-11-10: P1.1 - Fjernet gamle .exe-filer fra docs/updates/ (260 MB redusert). Backup opprettet i backup/exe-files/. Commit: 3d632ea'
+  - '2025-11-10: P1.2 - Verifisert at dist/ og release/ er korrekt gitignored. Ingen endringer nødvendig.'
+  - '2025-11-10: P2.1 - Slettet 7 duplikate temp-icon-filer fra resources/. Commit: 9dfb334'
+  - '2025-11-10: P2.2 - Konsolidert app icons til resources/. Fjernet supplychain.png og supplychain.ico fra root. Oppdatert src/main/index.ts. Commit: 58c11b1'
+  - '2025-11-10: P4.1 - Konsolidert email templates til src/services/. Slettet duplikat fra src/renderer/services/emailTemplates/. Build script bruker allerede korrekt path. Email template build testet og fungerer.'
+  - '2025-11-10: P4.2 - Dokumentert og organisert scripts-mappen. Opprettet scripts/README.md med beskrivelse av alle 27 scripts. Identifisert 7 deprecated scripts (dokumentert, ikke slettet). Flyttet troubleshoot-native-modules.md til docs/development/. Commit: bafc291'
+  - '2025-11-10: P4.3 - Opprettet .cursorignore for AI context optimalisering. Ekskluderer build outputs, dependencies, store binaries, coverage reports, cache-filer og temporary files. Commit: 770f097'
   - "2025-11-10: P4.4 - Rename application fra 'OneMed SupplyChain' til 'Pulse'. Oppdatert package.json (productName, description, shortcutName), alle kildefiler (main, renderer, locales), build scripts, installer.nsh, og HTML-filer. Artifact names endret til 'Pulse'. Commits: ce89919, 9c5dbe0"
-  - "2025-11-10: License set to ISC; LICENSE updated with copyright Andreas Elvethun. Commit: 08e5993"
-  - "2025-11-10: Test setup moved to tests/; vitest.config.ts updated to point to tests/setup.ts. Commit: 08e5993"
-  - "2025-11-10: CODEOWNERS added with @AndreasElvethun. Commit: 517ab19"
-  - "2025-11-10: Root config files added: .editorconfig, .gitattributes. SECURITY.md moved from docs/ to root. Commits: 3a020a5"
-  - "2025-11-10: Removed emojis from all scripts (15+ files), documentation (CHANGELOG.md, backlog.md), package.json, locale files, and HTML templates. Commits: f46430c, 525aaf9"
+  - '2025-11-10: License set to ISC; LICENSE updated with copyright Andreas Elvethun. Commit: 08e5993'
+  - '2025-11-10: Test setup moved to tests/; vitest.config.ts updated to point to tests/setup.ts. Commit: 08e5993'
+  - '2025-11-10: CODEOWNERS added with @AndreasElvethun. Commit: 517ab19'
+  - '2025-11-10: Root config files added: .editorconfig, .gitattributes. SECURITY.md moved from docs/ to root. Commits: 3a020a5'
+  - '2025-11-10: Removed emojis from all scripts (15+ files), documentation (CHANGELOG.md, backlog.md), package.json, locale files, and HTML templates. Commits: f46430c, 525aaf9'
+  - '2025-11-10: Prettier integrated. Installed prettier and eslint-config-prettier. Created .prettierrc.json and .prettierignore. Updated eslint.config.js to use eslint-config-prettier. Added format and format:check scripts to package.json. Formatted entire codebase. Updated README.md with format commands.'
 
 in_progress: []
 

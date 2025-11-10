@@ -1,5 +1,5 @@
-import React from "react";
-import { DashboardFilter } from "../../types/Dashboard";
+import React from 'react';
+import { DashboardFilter } from '../../types/Dashboard';
 
 interface DashboardFiltersProps {
   activeFilter: DashboardFilter | null;
@@ -16,11 +16,11 @@ export const DashboardFilters: React.FC<DashboardFiltersProps> = ({
 }) => {
   const handlePlannerChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const value = e.target.value;
-    if (value === "") {
+    if (value === '') {
       onFilterChange(null);
     } else {
       onFilterChange({
-        type: "planner",
+        type: 'planner',
         value,
         label: `Innkjøper: ${value}`,
       });
@@ -29,11 +29,11 @@ export const DashboardFilters: React.FC<DashboardFiltersProps> = ({
 
   const handleSupplierChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const value = e.target.value;
-    if (value === "") {
+    if (value === '') {
       onFilterChange(null);
     } else {
       onFilterChange({
-        type: "supplier",
+        type: 'supplier',
         value,
         label: `Leverandør: ${value}`,
       });
@@ -49,7 +49,7 @@ export const DashboardFilters: React.FC<DashboardFiltersProps> = ({
               Filtrer på innkjøper:
             </label>
             <select
-              value={activeFilter?.type === "planner" ? activeFilter.value : ""}
+              value={activeFilter?.type === 'planner' ? activeFilter.value : ''}
               onChange={handlePlannerChange}
               className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               aria-label="Filtrer på innkjøper"
@@ -69,7 +69,7 @@ export const DashboardFilters: React.FC<DashboardFiltersProps> = ({
             Filtrer på leverandør:
           </label>
           <select
-            value={activeFilter?.type === "supplier" ? activeFilter.value : ""}
+            value={activeFilter?.type === 'supplier' ? activeFilter.value : ''}
             onChange={handleSupplierChange}
             className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
             aria-label="Filtrer på leverandør"

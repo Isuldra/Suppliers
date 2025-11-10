@@ -78,7 +78,9 @@ export async function parseProductCatalog(buffer: ArrayBuffer): Promise<ImportRe
       }
     });
 
-    log.info(`Parsed ${products.length} products (${duplicates} duplicates skipped, ${rowsProcessed} rows processed)`);
+    log.info(
+      `Parsed ${products.length} products (${duplicates} duplicates skipped, ${rowsProcessed} rows processed)`
+    );
 
     return {
       success: true,
@@ -151,4 +153,3 @@ export async function parseProductCatalogForUpload(buffer: ArrayBuffer): Promise
     };
   }
 }
-

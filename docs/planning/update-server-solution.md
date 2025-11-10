@@ -57,8 +57,8 @@ Host on internal company server:
 ```typescript
 // Custom update server configuration
 autoUpdater.setFeedURL({
-  provider: "generic",
-  url: "https://updates.onemed.no/",
+  provider: 'generic',
+  url: 'https://updates.onemed.no/',
 });
 ```
 

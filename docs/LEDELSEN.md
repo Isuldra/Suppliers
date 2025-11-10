@@ -2,7 +2,7 @@
 
 **Dato:** 21. april 2025
 
-**Til:** Den det måtte gjelde. 
+**Til:** Den det måtte gjelde.
 
 **Fra:** [Andreas Elvethun / Kundeservice]
 

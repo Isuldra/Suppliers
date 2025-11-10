@@ -1,10 +1,10 @@
-import fs from "fs";
-import path from "path";
-import crypto from "crypto";
+import fs from 'fs';
+import path from 'path';
+import crypto from 'crypto';
 
 const __dirname = path.dirname(new URL(import.meta.url).pathname);
-const releaseDir = path.join(__dirname, "..", "release");
-const cloudflareDir = path.join(__dirname, "..", "docs", "updates");
+const releaseDir = path.join(__dirname, '..', 'release');
+const cloudflareDir = path.join(__dirname, '..', 'docs', 'updates');
 
 // Create updates directory for Cloudflare Pages
 if (!fs.existsSync(cloudflareDir)) {
@@ -12,9 +12,7 @@ if (!fs.existsSync(cloudflareDir)) {
 }
 
 // Get version from package.json
-const packageJson = JSON.parse(
-  fs.readFileSync(path.join(__dirname, "..", "package.json"), "utf8")
-);
+const packageJson = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'package.json'), 'utf8'));
 const version = packageJson.version;
 
 console.log(`Deploying version ${version} to Cloudflare Pages...`);
@@ -22,7 +20,7 @@ console.log(`Deploying version ${version} to Cloudflare Pages...`);
 // Copy release files to Cloudflare directory
 const files = fs.readdirSync(releaseDir);
 const releaseFiles = files.filter(
-  (f) => f.endsWith(".exe") || f.endsWith(".zip") || f.endsWith(".yml")
+  (f) => f.endsWith('.exe') || f.endsWith('.zip') || f.endsWith('.yml')
 );
 
 console.log(`Found ${releaseFiles.length} release files:`);
@@ -34,18 +32,13 @@ releaseFiles.forEach((file) => {
 });
 
 // Generate latest.json for portable auto-updater
-const portableFile = releaseFiles.find((f) => f.includes("Portable"));
-const nsisFile = releaseFiles.find(
-  (f) => f.endsWith(".exe") && !f.includes("Portable")
-);
+const portableFile = releaseFiles.find((f) => f.includes('Portable'));
+const nsisFile = releaseFiles.find((f) => f.endsWith('.exe') && !f.includes('Portable'));
 
 if (portableFile) {
   const filePath = path.join(cloudflareDir, portableFile);
   const fileBuffer = fs.readFileSync(filePath);
-  const sha512 = crypto
-    .createHash("sha512")
-    .update(fileBuffer)
-    .digest("base64");
+  const sha512 = crypto.createHash('sha512').update(fileBuffer).digest('base64');
   const size = fileBuffer.length;
 
   const latestJson = {
@@ -62,20 +55,14 @@ if (portableFile) {
     releaseDate: new Date().toISOString(),
   };
 
-  fs.writeFileSync(
-    path.join(cloudflareDir, "latest.json"),
-    JSON.stringify(latestJson, null, 2)
-  );
-  console.log("Success: Generated latest.json for portable updates");
+  fs.writeFileSync(path.join(cloudflareDir, 'latest.json'), JSON.stringify(latestJson, null, 2));
+  console.log('Success: Generated latest.json for portable updates');
 }
 
 if (nsisFile) {
   const filePath = path.join(cloudflareDir, nsisFile);
   const fileBuffer = fs.readFileSync(filePath);
-  const sha512 = crypto
-    .createHash("sha512")
-    .update(fileBuffer)
-    .digest("base64");
+  const sha512 = crypto.createHash('sha512').update(fileBuffer).digest('base64');
   const size = fileBuffer.length;
 
   const appUpdateJson = {
@@ -93,10 +80,10 @@ if (nsisFile) {
   };
 
   fs.writeFileSync(
-    path.join(cloudflareDir, "app-update.json"),
+    path.join(cloudflareDir, 'app-update.json'),
     JSON.stringify(appUpdateJson, null, 2)
   );
-  console.log("Success: Generated app-update.json for NSIS updates");
+  console.log('Success: Generated app-update.json for NSIS updates');
 }
 
 // Create index.html for manual downloads
@@ -224,9 +211,7 @@ const indexHtml = `<!DOCTYPE html>
             <div class="download">
                 <h3>ZIP Archive</h3>
                 <p>Arkiv med alle filer for manuell distribusjon eller backup. Inkluderer alle nødvendige komponenter.</p>
-                <a href="${releaseFiles.find((f) =>
-                  f.endsWith(".zip")
-                )}">Last ned ZIP</a>
+                <a href="${releaseFiles.find((f) => f.endsWith('.zip'))}">Last ned ZIP</a>
             </div>
         </div>
         
@@ -238,8 +223,8 @@ const indexHtml = `<!DOCTYPE html>
 </body>
 </html>`;
 
-fs.writeFileSync(path.join(cloudflareDir, "index.html"), indexHtml);
-console.log("Success: Generated index.html for manual downloads");
+fs.writeFileSync(path.join(cloudflareDir, 'index.html'), indexHtml);
+console.log('Success: Generated index.html for manual downloads');
 
 // Create _redirects file for Cloudflare Pages
 const redirectsContent = `# Cloudflare Pages redirects
@@ -251,13 +236,13 @@ const redirectsContent = `# Cloudflare Pages redirects
 / /index.html 200
 `;
 
-fs.writeFileSync(path.join(cloudflareDir, "_redirects"), redirectsContent);
-console.log("Success: Generated _redirects for Cloudflare Pages");
+fs.writeFileSync(path.join(cloudflareDir, '_redirects'), redirectsContent);
+console.log('Success: Generated _redirects for Cloudflare Pages');
 
-console.log("\nCloudflare Pages deployment ready!");
-console.log("Next steps:");
-console.log("1. Commit and push the docs/updates/ directory");
-console.log("2. Connect your GitHub repo to Cloudflare Pages");
-console.log("3. Set build command to: npm run deploy:cloudflare");
-console.log("4. Set build output directory to: docs/updates");
-console.log("5. Update auto-updater to use: https://suppliers-anx.pages.dev/");
+console.log('\nCloudflare Pages deployment ready!');
+console.log('Next steps:');
+console.log('1. Commit and push the docs/updates/ directory');
+console.log('2. Connect your GitHub repo to Cloudflare Pages');
+console.log('3. Set build command to: npm run deploy:cloudflare');
+console.log('4. Set build output directory to: docs/updates');
+console.log('5. Update auto-updater to use: https://suppliers-anx.pages.dev/');
