@@ -144,7 +144,7 @@ function createApplicationMenu() {
                 dialog.showMessageBox({
                   type: "info",
                   title: "Ingen oppdateringer",
-                  message: "Du har den nyeste versjonen av OneMed SupplyChain.",
+                  message: "Du har den nyeste versjonen av Pulse.",
                   buttons: ["OK"],
                 });
               }
@@ -170,12 +170,12 @@ function createApplicationMenu() {
         },
         { type: "separator" },
         {
-          label: "Om OneMed SupplyChain",
+          label: "Om Pulse",
           click: async () => {
             dialog.showMessageBox({
               type: "info",
-              title: "Om OneMed SupplyChain",
-              message: `OneMed SupplyChain v${app.getVersion()}`,
+              title: "Om Pulse",
+              message: `Pulse v${app.getVersion()}`,
               detail:
                 "En applikasjon for håndtering av leverandørkjeden til OneMed.\n\n© 2024 OneMed",
               buttons: ["OK"],
@@ -265,8 +265,8 @@ function setupHelpMenuHandlers() {
     log.info("Showing about dialog");
     dialog.showMessageBox({
       type: "info",
-      title: "Om OneMed SupplyChain",
-      message: `OneMed SupplyChain v${app.getVersion()}`,
+      title: "Om Pulse",
+      message: `Pulse v${app.getVersion()}`,
       detail:
         "En applikasjon for håndtering av leverandørkjeden til OneMed.\n\n© 2024 OneMed",
       buttons: ["OK"],

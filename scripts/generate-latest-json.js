@@ -40,7 +40,7 @@ function getFileSize(filePath) {
 }
 
 // Find portable executable
-const portableExe = "OneMed SupplyChain-Portable.exe";
+const portableExe = "Pulse-Portable.exe";
 const portableExePath = path.join(releaseDir, portableExe);
 
 if (fs.existsSync(portableExePath)) {
