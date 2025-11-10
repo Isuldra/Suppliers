@@ -79,6 +79,36 @@ supplier-reminder-pro/
 | `npm run test:coverage` | Run tests with coverage       |
 | `npm run dist`          | Build production artifacts    |
 
+### Quality Gates
+
+The project uses standardized quality gates for code validation:
+
+| Command                | Description                                                                     |
+| ---------------------- | ------------------------------------------------------------------------------- |
+| `npm run quality`      | **Canonical command** - Runs all quality checks (format, lint, typecheck, test) |
+| `npm run quality:fix`  | Auto-fix formatting and linting issues, then typecheck                          |
+| `npm run quality:fast` | Quick validation without tests (format, lint, typecheck)                        |
+| `npm run ci:check`     | Alias for `quality` - use in CI/CD pipelines                                    |
+
+**Technology Stack:**
+
+- **JS/TS**: Prettier + ESLint + TypeScript typecheck
+- **Testing**: Vitest
+
+**Usage:**
+
+- Before committing: Run `npm run quality` to ensure all checks pass
+- For quick feedback: Use `npm run quality:fast` (skips tests)
+- To auto-fix issues: Use `npm run quality:fix` (fixes formatting and linting)
+
+**CI/CD Integration:**
+
+The quality checks run automatically on GitHub Actions:
+
+- **Trigger:** Pull requests and pushes to `main`
+- **Workflow:** `.github/workflows/quality.yml`
+- **Steps:** Checkout → Cache → Install → Run `npm run quality`
+
 ---
 
 ## Security Practices
