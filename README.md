@@ -1,8 +1,8 @@
-# SupplyChain OneMed
+# Pulse
 
-SupplyChain OneMed is a desktop application for managing supplier workflows and data. It's built with Electron, React, and TypeScript, and follows OneMed's design system.
+Pulse is a desktop application for managing supplier workflows and data. It's built with Electron, React, and TypeScript, and follows OneMed's design system.
 
-## 📖 End-User Documentation
+## End-User Documentation
 
 **For users of the application:**
 
@@ -11,7 +11,7 @@ SupplyChain OneMed is a desktop application for managing supplier workflows and 
 
 ---
 
-## 🚀 Getting Started (Developers)
+## Getting Started (Developers)
 
 1. Clone the repo
 2. Install dependencies: `npm install`
@@ -22,7 +22,7 @@ SupplyChain OneMed is a desktop application for managing supplier workflows and 
 
 ---
 
-## 📚 Documentation Overview
+## Documentation Overview
 
 | Area                                                             | Description                                               |
 | ---------------------------------------------------------------- | --------------------------------------------------------- |
@@ -34,7 +34,7 @@ SupplyChain OneMed is a desktop application for managing supplier workflows and 
 
 ---
 
-## 📦 Technologies
+## Technologies
 
 - Electron
 - React + TypeScript
@@ -45,31 +45,34 @@ SupplyChain OneMed is a desktop application for managing supplier workflows and 
 
 ---
 
-## 🛠️ Dev Tools & Scripts
+## Dev Tools & Scripts
 
-| Script          | Description                   |
-| --------------- | ----------------------------- |
-| `npm run dev`   | Start development server      |
-| `npm run build` | Build renderer + Electron app |
-| `npm run lint`  | Lint codebase                 |
-| `npm run dist`  | Build production artifacts    |
+| Script                  | Description                   |
+| ----------------------- | ----------------------------- |
+| `npm run dev`           | Start development server      |
+| `npm run build`         | Build renderer + Electron app |
+| `npm run lint`          | Lint codebase                 |
+| `npm run typecheck`     | Type check TypeScript files   |
+| `npm run test`          | Run tests                     |
+| `npm run test:coverage` | Run tests with coverage       |
+| `npm run dist`          | Build production artifacts    |
 
 ---
 
-## 🔐 Security Practices
+## Security Practices
 
 - Context Isolation & Node Integration disabled
 - CSP enforced via headers
 - Secure external link handling with `shell.openExternal()`
 - Prepared SQL statements and audit logging
 
-> For full technical security info, see [Security Features](docs/features/security-features.md)
+> For security policy and vulnerability reporting, see [SECURITY.md](SECURITY.md)
 
 ---
 
-## 📤 Releases & Updates
+## Releases & Updates
 
-SupplyChain OneMed uses `electron-updater` with **manual GitHub Releases**.
+Pulse uses `electron-updater` with **manual GitHub Releases**.
 
 - CI builds artifacts (EXE, portable, latest.yml)
 - Maintainers publish updates manually
@@ -79,6 +82,10 @@ See: [Publishing Updates](docs/development/publishing-updates.md)
 
 ---
 
-## 👥 Maintainers & Contact
+## License
+
+This project is licensed under the ISC License - see the [LICENSE](LICENSE) file for details.
+
+## Maintainers & Contact
 
 This project is maintained by the OneMed team. Please refer to internal documentation or reach out via standard channels.
