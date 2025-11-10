@@ -40,7 +40,6 @@ export default [
       '*.config.cjs',
       'scripts/',
       '**/*.cjs', // Ignore all .cjs files
-      'src/main/shims/', // Ignore shims directory
     ],
   },
   // Prettier config must be last to override other formatting rules
