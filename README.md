@@ -22,6 +22,34 @@ Pulse is a desktop application for managing supplier workflows and data. It's bu
 
 ---
 
+## How to Run
+
+### Development Mode
+
+```bash
+npm run dev                # Start with hot reload
+npm run dev:no-warnings    # Start without Node warnings
+```
+
+### Production Build
+
+```bash
+npm run build              # Build the app
+npm run dist               # Create distributable packages (Windows)
+npm run dist:portable      # Create portable executable
+npm run dist:nsis          # Create NSIS installer
+```
+
+### Testing
+
+```bash
+npm run test               # Run tests
+npm run test:watch         # Run tests in watch mode
+npm run test:coverage      # Run with coverage report
+```
+
+---
+
 ## Documentation Overview
 
 | Area                                                            | Description                                               |
@@ -30,6 +58,33 @@ Pulse is a desktop application for managing supplier workflows and data. It's bu
 | [CI/CD Pipeline](docs/development/ci-cd-pipeline.md)            | GitHub Actions build setup                                |
 | [Manual Update Process](docs/development/publishing-updates.md) | How to publish app updates manually                       |
 | [Security Policy](SECURITY.md)                                  | Security policy and vulnerability reporting               |
+
+---
+
+## Testing
+
+The project uses Vitest for testing with comprehensive quality gates.
+
+### Running Tests
+
+- `npm run test` - Run all tests
+- `npm run test:watch` - Watch mode for development
+- `npm run test:coverage` - Generate coverage reports
+
+### Quality Checks
+
+Before committing, always run quality checks:
+
+- `npm run quality` - Full quality gate (format, lint, typecheck, test)
+- `npm run quality:fast` - Quick check without tests
+- `npm run quality:fix` - Auto-fix formatting and linting issues
+
+The quality gates enforce:
+
+1. **Prettier formatting** - Code style consistency
+2. **ESLint linting** - Code quality and best practices
+3. **TypeScript type checking** - Type safety
+4. **Vitest tests** - Functional correctness
 
 ---
 
@@ -44,23 +99,50 @@ Pulse is a desktop application for managing supplier workflows and data. It's bu
 
 ---
 
-## Repository Structure
+## Project Structure
 
 ```
 supplier-reminder-pro/
-├── .github/          # GitHub Actions workflows, CODEOWNERS
-├── docs/             # All documentation (features, development, distribution)
-├── resources/        # Static assets (icons, installer scripts, Excel templates)
-├── scripts/          # Build and deployment scripts
+├── .github/              # GitHub Actions workflows
+│   └── workflows/        # CI/CD pipeline definitions
+│       ├── quality.yml   # Quality checks (lint, format, typecheck, test)
+│       ├── build.yml     # Build workflow
+│       └── ...
+├── docs/                 # All documentation
+│   ├── development/      # Developer guides
+│   ├── distribution/     # Distribution & deployment guides
+│   ├── features/         # Feature documentation
+│   └── planning/         # Future plans & roadmaps
+├── resources/            # Static assets
+│   ├── icon-*.png        # Application icons (various sizes)
+│   ├── installer.nsh     # NSIS installer configuration
+│   └── Produktkatalog.xlsx # Example Excel template
+├── scripts/              # Build & deployment scripts
+│   ├── build-*.js        # Build automation scripts
+│   ├── generate-*.js     # Release metadata generators
+│   └── README.md         # Scripts documentation
 ├── src/
-│   ├── main/         # Electron main process
-│   ├── preload/      # Preload scripts
-│   ├── renderer/     # React frontend application
-│   ├── services/     # Shared services (email, database, templates)
-│   ├── types/        # Shared TypeScript types
-│   └── utils/        # Utility functions
-├── tests/            # Test setup and test files
-└── [config files]    # Root config files (tsconfig, vite, eslint, etc.)
+│   ├── main/             # Electron main process
+│   │   ├── index.ts      # Main entry point
+│   │   ├── main.ts       # Application logic
+│   │   ├── database.ts   # Database handlers
+│   │   └── importer.ts   # Excel import logic
+│   ├── preload/          # Preload scripts (context bridge)
+│   │   └── index.ts      # IPC API exposure
+│   ├── renderer/         # React frontend
+│   │   ├── components/   # React components
+│   │   │   └── dashboard/ # Dashboard-specific components
+│   │   ├── locales/      # Translations (no, en, se, da, fi)
+│   │   ├── services/     # Frontend services
+│   │   └── App.tsx       # Main React app
+│   ├── services/         # Shared services (main + renderer)
+│   │   ├── emailService.ts
+│   │   ├── databaseService.ts
+│   │   └── emailTemplates/ # Handlebars templates
+│   ├── types/            # TypeScript type definitions
+│   └── utils/            # Utility functions
+└── tests/                # Test files and setup
+    └── setup.ts          # Vitest configuration
 ```
 
 ---
@@ -131,6 +213,49 @@ Pulse uses `electron-updater` with **manual GitHub Releases**.
 - App checks for updates on startup
 
 See: [Publishing Updates](docs/development/publishing-updates.md)
+
+---
+
+## Contributing
+
+### Code Quality Standards
+
+All code must pass quality gates before merging:
+
+1. **Prettier formatting** - Consistent code style
+2. **ESLint linting** - Code quality and best practices
+3. **TypeScript type checking** - Type safety
+4. **Test coverage** - Functional correctness
+
+Run `npm run quality` before committing.
+
+### Git Workflow
+
+1. Create feature branch from `main`
+2. Make changes in small, focused commits
+3. Run quality checks: `npm run quality`
+4. Push and create Pull Request
+5. CI/CD will run quality checks automatically
+6. Wait for approval and merge
+
+### Commit Message Format
+
+Follow conventional commits:
+
+- `feat: Add new feature`
+- `fix: Bug fix`
+- `docs: Documentation update`
+- `refactor: Code refactoring`
+- `test: Add or update tests`
+- `chore: Maintenance tasks`
+
+### Code Style
+
+- Use TypeScript for all new code
+- Follow existing naming conventions
+- Add JSDoc comments for public APIs
+- Keep components small and focused
+- Prefer functional components with hooks
 
 ---
 
