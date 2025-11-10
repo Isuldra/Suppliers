@@ -18,17 +18,14 @@
  *   node scripts/send-changelog-to-slack.js 1.3.8 https://hooks.slack.com/...
  */
 
-import {
-  parseChangelogVersion,
-  getLatestChangelogEntry,
-} from "./parse-changelog.js";
+import { parseChangelogVersion, getLatestChangelogEntry } from './parse-changelog.js';
 
 const args = process.argv.slice(2);
 const version = args[0];
 const webhookUrl = args[1] || process.env.SLACK_WEBHOOK_URL;
 // For local usage, default to "Andreas" if not set
 // For GitHub Actions, this will be set via SLACK_DISPLAY_NAME env var
-const displayName = process.env.SLACK_DISPLAY_NAME || "Andreas";
+const displayName = process.env.SLACK_DISPLAY_NAME || 'Andreas';
 
 /**
  * Send message to Slack
@@ -40,19 +37,19 @@ async function sendToSlack(webhookUrl, message) {
       // Remove duplicate "https://hooks.slack.com/services/" prefix
       webhookUrl = webhookUrl.replace(
         /https:\/\/hooks\.slack\.com\/services\/https:\/\/hooks\.slack\.com\/services\//,
-        "https://hooks.slack.com/services/"
+        'https://hooks.slack.com/services/'
       );
     }
 
     // Validate webhook URL (don't log the URL for security)
-    if (!webhookUrl || !webhookUrl.startsWith("https://hooks.slack.com/")) {
-      throw new Error("Invalid Slack webhook URL format");
+    if (!webhookUrl || !webhookUrl.startsWith('https://hooks.slack.com/')) {
+      throw new Error('Invalid Slack webhook URL format');
     }
 
     const response = await fetch(webhookUrl, {
-      method: "POST",
+      method: 'POST',
       headers: {
-        "Content-Type": "application/json",
+        'Content-Type': 'application/json',
       },
       body: JSON.stringify(message),
     });
@@ -62,19 +59,19 @@ async function sendToSlack(webhookUrl, message) {
       // Don't expose webhook URL in error messages
       throw new Error(
         `Slack API error: ${response.status} ${response.statusText}${
-          errorText ? ` - ${errorText.substring(0, 100)}` : ""
+          errorText ? ` - ${errorText.substring(0, 100)}` : ''
         }`
       );
     }
 
     const responseText = await response.text();
-    if (responseText !== "ok") {
+    if (responseText !== 'ok') {
       throw new Error(`Slack API unexpected response: ${responseText}`);
     }
 
     return true;
   } catch (error) {
-    console.error("Failed to send Slack notification:", error);
+    console.error('Failed to send Slack notification:', error);
     throw error;
   }
 }
@@ -87,17 +84,17 @@ function formatChangelogForSlack(entry, displayName) {
 
   const blocks = [
     {
-      type: "header",
+      type: 'header',
       text: {
-        type: "plain_text",
+        type: 'plain_text',
         text: `📋 Release ${entry.version}`,
         emoji: true,
       },
     },
     {
-      type: "section",
+      type: 'section',
       text: {
-        type: "mrkdwn",
+        type: 'mrkdwn',
         text: `*${entry.title}*\n\n${entry.description}`,
       },
     },
@@ -108,31 +105,31 @@ function formatChangelogForSlack(entry, displayName) {
 
   if (entry.completedDate) {
     fields.push({
-      type: "mrkdwn",
+      type: 'mrkdwn',
       text: `*Completed:*\n${entry.completedDate}`,
     });
   }
 
-  const timestamp = new Date().toLocaleString("no-NO", {
-    dateStyle: "short",
-    timeStyle: "short",
+  const timestamp = new Date().toLocaleString('no-NO', {
+    dateStyle: 'short',
+    timeStyle: 'short',
   });
 
   fields.push({
-    type: "mrkdwn",
+    type: 'mrkdwn',
     text: `*Released:*\n${timestamp}`,
   });
 
   if (displayName) {
     fields.push({
-      type: "mrkdwn",
+      type: 'mrkdwn',
       text: `*Released by:*\n${displayName}`,
     });
   }
 
   if (fields.length > 0) {
     blocks.push({
-      type: "section",
+      type: 'section',
       fields: fields.slice(0, 3), // Max 3 fields per section
     });
   }
@@ -140,7 +137,7 @@ function formatChangelogForSlack(entry, displayName) {
   // Add key sections if available
   if (entry.sections && Object.keys(entry.sections).length > 0) {
     blocks.push({
-      type: "divider",
+      type: 'divider',
     });
 
     // Add key sections (limit to first 3 to avoid too long messages)
@@ -150,20 +147,20 @@ function formatChangelogForSlack(entry, displayName) {
 
       // Clean up markdown formatting for Slack
       sectionContent = sectionContent
-        .replace(/^#{1,6}\s+/gm, "") // Remove markdown headers
-        .replace(/\*\*(.+?)\*\*/g, "*$1*") // Convert **bold** to *bold*
-        .replace(/`(.+?)`/g, "`$1`") // Keep code blocks
+        .replace(/^#{1,6}\s+/gm, '') // Remove markdown headers
+        .replace(/\*\*(.+?)\*\*/g, '*$1*') // Convert **bold** to *bold*
+        .replace(/`(.+?)`/g, '`$1`') // Keep code blocks
         .trim();
 
       // Truncate long sections to avoid message limits
       if (sectionContent.length > 1000) {
-        sectionContent = sectionContent.substring(0, 1000) + "...";
+        sectionContent = sectionContent.substring(0, 1000) + '...';
       }
 
       blocks.push({
-        type: "section",
+        type: 'section',
         text: {
-          type: "mrkdwn",
+          type: 'mrkdwn',
           text: `*${sectionKey}*\n${sectionContent}`,
         },
       });
@@ -172,9 +169,9 @@ function formatChangelogForSlack(entry, displayName) {
     // If there are more sections, add a note
     if (Object.keys(entry.sections).length > 3) {
       blocks.push({
-        type: "section",
+        type: 'section',
         text: {
-          type: "mrkdwn",
+          type: 'mrkdwn',
           text: `_...and ${
             Object.keys(entry.sections).length - 3
           } more sections. See full CHANGELOG for details._`,
@@ -185,13 +182,13 @@ function formatChangelogForSlack(entry, displayName) {
 
   // Add divider and link to full CHANGELOG
   blocks.push({
-    type: "divider",
+    type: 'divider',
   });
 
   blocks.push({
-    type: "section",
+    type: 'section',
     text: {
-      type: "mrkdwn",
+      type: 'mrkdwn',
       text: `📖 <https://github.com/Isuldra/Suppliers/blob/main/docs/CHANGELOG.md|View full CHANGELOG on GitHub>`,
     },
   });
@@ -209,29 +206,25 @@ async function main() {
   try {
     // Check if webhook URL is provided
     if (!webhookUrl) {
-      console.error("❌ Error: Slack webhook URL is required");
-      console.error("");
-      console.error("Usage:");
+      console.error('❌ Error: Slack webhook URL is required');
+      console.error('');
+      console.error('Usage:');
+      console.error('  node scripts/send-changelog-to-slack.js [version] [webhook-url]');
+      console.error('');
+      console.error('Environment Variables:');
+      console.error('  SLACK_WEBHOOK_URL - Slack webhook URL');
+      console.error('  SLACK_DISPLAY_NAME - Display name (optional)');
+      console.error('');
+      console.error('Examples:');
       console.error(
-        "  node scripts/send-changelog-to-slack.js [version] [webhook-url]"
+        '  SLACK_WEBHOOK_URL=https://hooks.slack.com/... node scripts/send-changelog-to-slack.js'
       );
-      console.error("");
-      console.error("Environment Variables:");
-      console.error("  SLACK_WEBHOOK_URL - Slack webhook URL");
-      console.error("  SLACK_DISPLAY_NAME - Display name (optional)");
-      console.error("");
-      console.error("Examples:");
-      console.error(
-        "  SLACK_WEBHOOK_URL=https://hooks.slack.com/... node scripts/send-changelog-to-slack.js"
-      );
-      console.error(
-        "  node scripts/send-changelog-to-slack.js 1.3.8 https://hooks.slack.com/..."
-      );
+      console.error('  node scripts/send-changelog-to-slack.js 1.3.8 https://hooks.slack.com/...');
       process.exit(1);
     }
 
     // Parse CHANGELOG
-    console.log("📋 Parsing CHANGELOG...");
+    console.log('📋 Parsing CHANGELOG...');
     let entry;
 
     if (version) {
@@ -242,10 +235,10 @@ async function main() {
         process.exit(1);
       }
     } else {
-      console.log("   Getting latest version...");
+      console.log('   Getting latest version...');
       entry = await getLatestChangelogEntry();
       if (!entry) {
-        console.error("❌ Error: No CHANGELOG entries found");
+        console.error('❌ Error: No CHANGELOG entries found');
         process.exit(1);
       }
     }
@@ -253,18 +246,18 @@ async function main() {
     console.log(`✅ Found version ${entry.version}: ${entry.title}`);
 
     // Format for Slack
-    console.log("📨 Formatting message for Slack...");
+    console.log('📨 Formatting message for Slack...');
     const message = formatChangelogForSlack(entry, displayName);
 
     // Send to Slack
-    console.log("🚀 Sending to Slack...");
+    console.log('🚀 Sending to Slack...');
     await sendToSlack(webhookUrl, message);
 
-    console.log("✅ Successfully sent CHANGELOG to Slack!");
+    console.log('✅ Successfully sent CHANGELOG to Slack!');
     console.log(`   Version: ${entry.version}`);
     console.log(`   Title: ${entry.title}`);
   } catch (error) {
-    console.error("❌ Error:", error.message);
+    console.error('❌ Error:', error.message);
     process.exit(1);
   }
 }

@@ -1,14 +1,14 @@
-import i18n from "i18next";
-import { initReactI18next } from "react-i18next";
-import LanguageDetector from "i18next-browser-languagedetector";
-import { detectAppLanguage } from "../services/languageDetectionService";
+import i18n from 'i18next';
+import { initReactI18next } from 'react-i18next';
+import LanguageDetector from 'i18next-browser-languagedetector';
+import { detectAppLanguage } from '../services/languageDetectionService';
 
 // Import translation files
-import noTranslation from "../locales/no.json";
-import seTranslation from "../locales/se.json";
-import daTranslation from "../locales/da.json";
-import fiTranslation from "../locales/fi.json";
-import enTranslation from "../locales/en.json";
+import noTranslation from '../locales/no.json';
+import seTranslation from '../locales/se.json';
+import daTranslation from '../locales/da.json';
+import fiTranslation from '../locales/fi.json';
+import enTranslation from '../locales/en.json';
 
 const resources = {
   no: {
@@ -41,21 +41,21 @@ export const initializeI18n = async () => {
     .init({
       resources,
       lng: detectedLanguage, // Use detected language
-      fallbackLng: "en",
+      fallbackLng: 'en',
 
       // Language detection configuration
       detection: {
-        order: ["localStorage", "navigator"],
-        caches: ["localStorage"],
-        lookupLocalStorage: "i18nextLng",
+        order: ['localStorage', 'navigator'],
+        caches: ['localStorage'],
+        lookupLocalStorage: 'i18nextLng',
       },
 
       interpolation: {
         escapeValue: false,
       },
 
-      defaultNS: "translation",
-      ns: ["translation"],
+      defaultNS: 'translation',
+      ns: ['translation'],
       debug: false,
 
       react: {

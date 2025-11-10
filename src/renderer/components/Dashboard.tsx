@@ -1,19 +1,14 @@
-import React, { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
-import { ExcelData, ValidationError } from "../types/ExcelData";
-import LanguageSelector from "./LanguageSelector";
-import SettingsModal from "./SettingsModal";
-import { KPICard } from "./dashboard/KPICard";
-import { TopSuppliersChart } from "./dashboard/TopSuppliersChart";
-import { OrderTimelineChart } from "./dashboard/OrderTimelineChart";
-import { DashboardFilters } from "./dashboard/DashboardFilters";
-import { TopItemsTable } from "./dashboard/TopItemsTable";
-import type {
-  DashboardStats,
-  SupplierStat,
-  WeekStat,
-  DashboardFilter,
-} from "../types/Dashboard";
+import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
+import { ExcelData, ValidationError } from '../types/ExcelData';
+import LanguageSelector from './LanguageSelector';
+import SettingsModal from './SettingsModal';
+import { KPICard } from './dashboard/KPICard';
+import { TopSuppliersChart } from './dashboard/TopSuppliersChart';
+import { OrderTimelineChart } from './dashboard/OrderTimelineChart';
+import { DashboardFilters } from './dashboard/DashboardFilters';
+import { TopItemsTable } from './dashboard/TopItemsTable';
+import type { DashboardStats, SupplierStat, WeekStat, DashboardFilter } from '../types/Dashboard';
 import {
   ChartBarIcon,
   ClockIcon,
@@ -21,7 +16,7 @@ import {
   Cog6ToothIcon,
   HomeIcon,
   PresentationChartBarIcon,
-} from "@heroicons/react/24/outline";
+} from '@heroicons/react/24/outline';
 
 interface AppState {
   excelData?: ExcelData;
@@ -73,16 +68,12 @@ const Dashboard: React.FC<DashboardProps> = ({ appState: _appState }) => {
       supplierCount: number;
     }>
   >([]);
-  const [activeFilter, setActiveFilter] = useState<DashboardFilter | null>(
-    null
-  );
+  const [activeFilter, setActiveFilter] = useState<DashboardFilter | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [appVersion, setAppVersion] = useState<string>("");
+  const [appVersion, setAppVersion] = useState<string>('');
   const [showSettings, setShowSettings] = useState(false);
-  const [activeTab, setActiveTab] = useState<
-    "oversikt" | "varenummer" | "timeline"
-  >("oversikt");
+  const [activeTab, setActiveTab] = useState<'oversikt' | 'varenummer' | 'timeline'>('oversikt');
 
   // For filters
   const [availableSuppliers, setAvailableSuppliers] = useState<string[]>([]);
@@ -96,7 +87,7 @@ const Dashboard: React.FC<DashboardProps> = ({ appState: _appState }) => {
         const version = await window.electron.getAppVersion();
         setAppVersion(version);
       } catch (error) {
-        console.error("Failed to fetch app version:", error);
+        console.error('Failed to fetch app version:', error);
       }
     };
 
@@ -110,10 +101,7 @@ const Dashboard: React.FC<DashboardProps> = ({ appState: _appState }) => {
 
       // Timeout promise (10 seconds)
       const timeoutPromise = new Promise<never>((_, reject) =>
-        setTimeout(
-          () => reject(new Error("Request timed out after 10 seconds")),
-          10000
-        )
+        setTimeout(() => reject(new Error('Request timed out after 10 seconds')), 10000)
       );
 
       // Load all dashboard data in parallel
@@ -136,23 +124,19 @@ const Dashboard: React.FC<DashboardProps> = ({ appState: _appState }) => {
 
       // Check for errors
       if (!statsResponse.success) {
-        throw new Error(
-          statsResponse.error || "Failed to load dashboard stats"
-        );
+        throw new Error(statsResponse.error || 'Failed to load dashboard stats');
       }
       if (!suppliersResponse.success) {
-        throw new Error(suppliersResponse.error || "Failed to load suppliers");
+        throw new Error(suppliersResponse.error || 'Failed to load suppliers');
       }
       if (!allSuppliersResponse.success) {
-        throw new Error(
-          allSuppliersResponse.error || "Failed to load supplier names"
-        );
+        throw new Error(allSuppliersResponse.error || 'Failed to load supplier names');
       }
       if (!weeksResponse.success) {
-        throw new Error(weeksResponse.error || "Failed to load weekly data");
+        throw new Error(weeksResponse.error || 'Failed to load weekly data');
       }
       if (!topItemsResponse.success) {
-        throw new Error(topItemsResponse.error || "Failed to load top items");
+        throw new Error(topItemsResponse.error || 'Failed to load top items');
       }
 
       // Set data
@@ -164,10 +148,10 @@ const Dashboard: React.FC<DashboardProps> = ({ appState: _appState }) => {
       // Extract available filters - now from ALL suppliers
       setAvailableSuppliers(allSuppliersResponse.data || []);
 
-      console.log("Dashboard data loaded successfully");
+      console.log('Dashboard data loaded successfully');
     } catch (err) {
-      console.error("Error loading dashboard data:", err);
-      setError(err instanceof Error ? err.message : "Unknown error");
+      console.error('Error loading dashboard data:', err);
+      setError(err instanceof Error ? err.message : 'Unknown error');
     } finally {
       setIsLoading(false);
     }
@@ -206,7 +190,7 @@ const Dashboard: React.FC<DashboardProps> = ({ appState: _appState }) => {
                 disabled={isLoading}
                 aria-label="Oppdater dashboard"
               >
-                {isLoading ? "Laster..." : "Oppdater"}
+                {isLoading ? 'Laster...' : 'Oppdater'}
               </button>
               <Link
                 to="/"
@@ -256,9 +240,7 @@ const Dashboard: React.FC<DashboardProps> = ({ appState: _appState }) => {
           {/* Error State */}
           {error && (
             <div className="text-center py-8">
-              <h2 className="text-xl font-bold text-neutral mb-4">
-                Feil ved lasting av dashboard
-              </h2>
+              <h2 className="text-xl font-bold text-neutral mb-4">Feil ved lasting av dashboard</h2>
               <p className="text-neutral-secondary mb-4">{error}</p>
               <button onClick={handleRefresh} className="btn btn-primary">
                 Prøv igjen
@@ -271,10 +253,7 @@ const Dashboard: React.FC<DashboardProps> = ({ appState: _appState }) => {
             <div className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 {[...Array(4)].map((_, i) => (
-                  <div
-                    key={i}
-                    className="h-32 bg-gray-200 animate-pulse rounded-xl"
-                  ></div>
+                  <div key={i} className="h-32 bg-gray-200 animate-pulse rounded-xl"></div>
                 ))}
               </div>
             </div>
@@ -286,31 +265,31 @@ const Dashboard: React.FC<DashboardProps> = ({ appState: _appState }) => {
               {/* Tabs */}
               <div className="flex gap-2 mb-6 border-b border-neutral-light">
                 <button
-                  onClick={() => setActiveTab("oversikt")}
+                  onClick={() => setActiveTab('oversikt')}
                   className={`px-4 py-2 font-medium transition-colors ${
-                    activeTab === "oversikt"
-                      ? "border-b-2 border-primary text-primary"
-                      : "text-neutral-secondary hover:text-neutral"
+                    activeTab === 'oversikt'
+                      ? 'border-b-2 border-primary text-primary'
+                      : 'text-neutral-secondary hover:text-neutral'
                   }`}
                 >
                   Oversikt
                 </button>
                 <button
-                  onClick={() => setActiveTab("varenummer")}
+                  onClick={() => setActiveTab('varenummer')}
                   className={`px-4 py-2 font-medium transition-colors ${
-                    activeTab === "varenummer"
-                      ? "border-b-2 border-primary text-primary"
-                      : "text-neutral-secondary hover:text-neutral"
+                    activeTab === 'varenummer'
+                      ? 'border-b-2 border-primary text-primary'
+                      : 'text-neutral-secondary hover:text-neutral'
                   }`}
                 >
                   Varenummer
                 </button>
                 <button
-                  onClick={() => setActiveTab("timeline")}
+                  onClick={() => setActiveTab('timeline')}
                   className={`px-4 py-2 font-medium transition-colors ${
-                    activeTab === "timeline"
-                      ? "border-b-2 border-primary text-primary"
-                      : "text-neutral-secondary hover:text-neutral"
+                    activeTab === 'timeline'
+                      ? 'border-b-2 border-primary text-primary'
+                      : 'text-neutral-secondary hover:text-neutral'
                   }`}
                 >
                   Timeline
@@ -318,7 +297,7 @@ const Dashboard: React.FC<DashboardProps> = ({ appState: _appState }) => {
               </div>
 
               {/* Tab Content */}
-              {activeTab === "oversikt" && (
+              {activeTab === 'oversikt' && (
                 <>
                   {/* KPI Cards */}
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
@@ -362,9 +341,7 @@ const Dashboard: React.FC<DashboardProps> = ({ appState: _appState }) => {
                     <KPICard
                       title="Eldste utestående ordre"
                       value={stats.oldestOutstandingOrderDate}
-                      icon={
-                        <CalendarIcon className="w-6 h-6 text-yellow-600" />
-                      }
+                      icon={<CalendarIcon className="w-6 h-6 text-yellow-600" />}
                       formatType="date"
                       loading={isLoading}
                     />
@@ -376,9 +353,9 @@ const Dashboard: React.FC<DashboardProps> = ({ appState: _appState }) => {
                       data={topSuppliers}
                       loading={isLoading}
                       onSupplierClick={(supplier) => {
-                        console.log("Clicked supplier:", supplier);
+                        console.log('Clicked supplier:', supplier);
                         handleFilterChange({
-                          type: "supplier",
+                          type: 'supplier',
                           value: supplier,
                           label: `Leverandør: ${supplier}`,
                         });
@@ -387,30 +364,28 @@ const Dashboard: React.FC<DashboardProps> = ({ appState: _appState }) => {
                   </div>
 
                   {/* Data Source Indicator */}
-                  {stats.dataSource === "cache" && (
+                  {stats.dataSource === 'cache' && (
                     <div className="text-center text-sm text-neutral-secondary mt-4">
-                      Data fra cache (sist oppdatert:{" "}
-                      {new Date(stats.lastUpdated).toLocaleString("nb-NO")})
+                      Data fra cache (sist oppdatert:{' '}
+                      {new Date(stats.lastUpdated).toLocaleString('nb-NO')})
                     </div>
                   )}
                 </>
               )}
 
               {/* Varenummer Tab */}
-              {activeTab === "varenummer" && (
-                <TopItemsTable data={topItems} loading={isLoading} />
-              )}
+              {activeTab === 'varenummer' && <TopItemsTable data={topItems} loading={isLoading} />}
 
               {/* Timeline Tab */}
-              {activeTab === "timeline" && (
+              {activeTab === 'timeline' && (
                 <div className="space-y-6">
                   <OrderTimelineChart data={weeklyData} loading={isLoading} />
 
                   {/* Data Source Indicator */}
-                  {stats.dataSource === "cache" && (
+                  {stats.dataSource === 'cache' && (
                     <div className="text-center text-sm text-neutral-secondary mt-4">
-                      Data fra cache (sist oppdatert:{" "}
-                      {new Date(stats.lastUpdated).toLocaleString("nb-NO")})
+                      Data fra cache (sist oppdatert:{' '}
+                      {new Date(stats.lastUpdated).toLocaleString('nb-NO')})
                     </div>
                   )}
                 </div>
@@ -421,10 +396,7 @@ const Dashboard: React.FC<DashboardProps> = ({ appState: _appState }) => {
       </div>
 
       {/* Settings Modal */}
-      <SettingsModal
-        isOpen={showSettings}
-        onClose={() => setShowSettings(false)}
-      />
+      <SettingsModal isOpen={showSettings} onClose={() => setShowSettings(false)} />
     </div>
   );
 };

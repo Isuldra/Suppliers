@@ -13,13 +13,11 @@ Dette prosjektet har nå en fullstendig automatiserte release-workflow som løse
 ### Valg 1: Automatisk release via GitHub Actions (Anbefalt)
 
 1. **Gå til GitHub Actions:**
-
    - Åpne GitHub-repositoryet ditt
    - Klikk på "Actions" fanen
    - Velg "Manual Release" workflow
 
 2. **Start en release:**
-
    - Klikk "Run workflow"
    - Skriv inn versjonsnummeret (f.eks. `1.3.5`)
    - Klikk "Run workflow"

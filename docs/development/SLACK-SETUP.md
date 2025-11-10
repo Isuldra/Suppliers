@@ -71,14 +71,12 @@ git push origin main --follow-tags
 ### Notifications not appearing in Slack?
 
 1. **Check GitHub Actions logs:**
-
    - Go to your repository on GitHub
    - Click **Actions** tab
    - Find the latest workflow run
    - Check the "Send CHANGELOG to Slack" step for errors
 
 2. **Verify secret is set:**
-
    - Go to **Settings** → **Secrets and variables** → **Actions**
    - Make sure `SLACK_WEBHOOK_URL` exists and is correct
 

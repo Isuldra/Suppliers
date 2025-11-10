@@ -1,56 +1,44 @@
-import {
-  app,
-  BrowserWindow,
-  session,
-  Menu,
-  dialog,
-  shell,
-  ipcMain,
-} from "electron";
-import type { OnHeadersReceivedListenerDetails } from "electron";
-import { join } from "path";
-import { setupAutoUpdater, checkForUpdatesManually } from "./auto-updater";
-import log from "electron-log";
+import { app, BrowserWindow, session, Menu, dialog, shell, ipcMain } from 'electron';
+import type { OnHeadersReceivedListenerDetails } from 'electron';
+import { join } from 'path';
+import { setupAutoUpdater, checkForUpdatesManually } from './auto-updater';
+import log from 'electron-log';
 
 let mainWindow: BrowserWindow | null = null;
 let securityHeadersListener:
   | ((
       details: OnHeadersReceivedListenerDetails,
-      callback: (response: {
-        responseHeaders?: Record<string, string[]>;
-      }) => void
+      callback: (response: { responseHeaders?: Record<string, string[]> }) => void
     ) => void)
   | null = null;
 let cspListener:
   | ((
       details: OnHeadersReceivedListenerDetails,
-      callback: (response: {
-        responseHeaders?: Record<string, string[]>;
-      }) => void
+      callback: (response: { responseHeaders?: Record<string, string[]> }) => void
     ) => void)
   | null = null;
 
-const isDevelopment = process.env.NODE_ENV === "development";
+const isDevelopment = process.env.NODE_ENV === 'development';
 
 // Configure logging
-log.transports.file.level = "info";
-log.transports.console.level = isDevelopment ? "debug" : "info";
+log.transports.file.level = 'info';
+log.transports.console.level = isDevelopment ? 'debug' : 'info';
 
 // Define Content Security Policy
 const cspPolicy = {
-  "default-src": ["'self'"],
-  "script-src": ["'self'"],
-  "style-src": ["'self'", "'unsafe-inline'"],
-  "img-src": ["'self'", "data:", "blob:"],
-  "font-src": ["'self'"],
-  "connect-src": ["'self'"],
-  "worker-src": ["'self'", "blob:"],
+  'default-src': ["'self'"],
+  'script-src': ["'self'"],
+  'style-src': ["'self'", "'unsafe-inline'"],
+  'img-src': ["'self'", 'data:', 'blob:'],
+  'font-src': ["'self'"],
+  'connect-src': ["'self'"],
+  'worker-src': ["'self'", 'blob:'],
 };
 
 // Create application menu
 function createApplicationMenu() {
-  const isMac = process.platform === "darwin";
-  log.info("Creating application menu...");
+  const isMac = process.platform === 'darwin';
+  log.info('Creating application menu...');
 
   const template = [
     // App menu (macOS only)
@@ -59,15 +47,15 @@ function createApplicationMenu() {
           {
             label: app.name,
             submenu: [
-              { role: "about" },
-              { type: "separator" },
-              { role: "services" },
-              { type: "separator" },
-              { role: "hide" },
-              { role: "hideOthers" },
-              { role: "unhide" },
-              { type: "separator" },
-              { role: "quit" },
+              { role: 'about' },
+              { type: 'separator' },
+              { role: 'services' },
+              { type: 'separator' },
+              { role: 'hide' },
+              { role: 'hideOthers' },
+              { role: 'unhide' },
+              { type: 'separator' },
+              { role: 'quit' },
             ],
           },
         ]
@@ -75,63 +63,62 @@ function createApplicationMenu() {
 
     // File menu
     {
-      label: "Fil",
-      submenu: [isMac ? { role: "close" } : { role: "quit", label: "Avslutt" }],
+      label: 'Fil',
+      submenu: [isMac ? { role: 'close' } : { role: 'quit', label: 'Avslutt' }],
     },
 
     // Edit menu
     {
-      label: "Rediger",
+      label: 'Rediger',
       submenu: [
-        { role: "undo", label: "Angre" },
-        { role: "redo", label: "Gjør om" },
-        { type: "separator" },
-        { role: "cut", label: "Klipp ut" },
-        { role: "copy", label: "Kopier" },
-        { role: "paste", label: "Lim inn" },
+        { role: 'undo', label: 'Angre' },
+        { role: 'redo', label: 'Gjør om' },
+        { type: 'separator' },
+        { role: 'cut', label: 'Klipp ut' },
+        { role: 'copy', label: 'Kopier' },
+        { role: 'paste', label: 'Lim inn' },
         ...(isMac
           ? [
-              { role: "delete", label: "Slett" },
-              { role: "selectAll", label: "Velg alt" },
+              { role: 'delete', label: 'Slett' },
+              { role: 'selectAll', label: 'Velg alt' },
             ]
           : [
-              { role: "delete", label: "Slett" },
-              { type: "separator" },
-              { role: "selectAll", label: "Velg alt" },
+              { role: 'delete', label: 'Slett' },
+              { type: 'separator' },
+              { role: 'selectAll', label: 'Velg alt' },
             ]),
       ],
     },
 
     // View menu
     {
-      label: "Vis",
+      label: 'Vis',
       submenu: [
-        { role: "reload", label: "Last på nytt" },
-        { role: "forceReload", label: "Tving opplasting" },
-        { role: "toggleDevTools", label: "Vis/skjul utviklerverktøy" },
-        { type: "separator" },
-        { role: "resetZoom", label: "Tilbakestill zoom" },
-        { role: "zoomIn", label: "Zoom inn" },
-        { role: "zoomOut", label: "Zoom ut" },
-        { type: "separator" },
-        { role: "togglefullscreen", label: "Fullskjerm" },
+        { role: 'reload', label: 'Last på nytt' },
+        { role: 'forceReload', label: 'Tving opplasting' },
+        { role: 'toggleDevTools', label: 'Vis/skjul utviklerverktøy' },
+        { type: 'separator' },
+        { role: 'resetZoom', label: 'Tilbakestill zoom' },
+        { role: 'zoomIn', label: 'Zoom inn' },
+        { role: 'zoomOut', label: 'Zoom ut' },
+        { type: 'separator' },
+        { role: 'togglefullscreen', label: 'Fullskjerm' },
       ],
     },
 
     // Help menu - bruk samme mønster som i testmenyen
     {
-      label: "Hjelp",
+      label: 'Hjelp',
       submenu: [
         {
-          label: "Sjekk for oppdateringer",
+          label: 'Sjekk for oppdateringer',
           click: async () => {
             if (isDevelopment) {
               dialog.showMessageBox({
-                type: "info",
-                title: "Utviklermodus",
-                message:
-                  "Automatiske oppdateringer er deaktivert i utviklermodus.",
-                buttons: ["OK"],
+                type: 'info',
+                title: 'Utviklermodus',
+                message: 'Automatiske oppdateringer er deaktivert i utviklermodus.',
+                buttons: ['OK'],
               });
               return;
             }
@@ -142,43 +129,43 @@ function createApplicationMenu() {
               // If no update is available, show a message
               if (!result.updateAvailable) {
                 dialog.showMessageBox({
-                  type: "info",
-                  title: "Ingen oppdateringer",
-                  message: "Du har den nyeste versjonen av Pulse.",
-                  buttons: ["OK"],
+                  type: 'info',
+                  title: 'Ingen oppdateringer',
+                  message: 'Du har den nyeste versjonen av Pulse.',
+                  buttons: ['OK'],
                 });
               }
               // If update is available, it will be handled by the auto-updater events
             } catch (error) {
               dialog.showMessageBox({
-                type: "error",
-                title: "Feil ved oppdateringssjekk",
-                message: "Kunne ikke sjekke for oppdateringer.",
-                detail: error instanceof Error ? error.message : "Ukjent feil",
-                buttons: ["OK"],
+                type: 'error',
+                title: 'Feil ved oppdateringssjekk',
+                message: 'Kunne ikke sjekke for oppdateringer.',
+                detail: error instanceof Error ? error.message : 'Ukjent feil',
+                buttons: ['OK'],
               });
             }
           },
         },
         {
-          label: "Kontakt support",
+          label: 'Kontakt support',
           click: async () => {
             await shell.openExternal(
-              "mailto:andreas.elvethun@onemed.com?subject=Supplier%20Reminder%20Pro%20Support"
+              'mailto:andreas.elvethun@onemed.com?subject=Supplier%20Reminder%20Pro%20Support'
             );
           },
         },
-        { type: "separator" },
+        { type: 'separator' },
         {
-          label: "Om Pulse",
+          label: 'Om Pulse',
           click: async () => {
             dialog.showMessageBox({
-              type: "info",
-              title: "Om Pulse",
+              type: 'info',
+              title: 'Om Pulse',
               message: `Pulse v${app.getVersion()}`,
               detail:
-                "En applikasjon for håndtering av leverandørkjeden til OneMed.\n\n© 2024 OneMed",
-              buttons: ["OK"],
+                'En applikasjon for håndtering av leverandørkjeden til OneMed.\n\n© 2024 OneMed',
+              buttons: ['OK'],
             });
           },
         },
@@ -187,13 +174,13 @@ function createApplicationMenu() {
   ];
 
   try {
-    log.info("Setting application menu...");
+    log.info('Setting application menu...');
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const menu = Menu.buildFromTemplate(template as any);
     Menu.setApplicationMenu(menu);
-    log.info("Application menu set successfully!");
+    log.info('Application menu set successfully!');
   } catch (error: unknown) {
-    log.error("Failed to set application menu:", error);
+    log.error('Failed to set application menu:', error);
   }
 }
 
@@ -204,45 +191,45 @@ function clearExistingHandlers() {
     // remove the old ones, as the API doesn't support direct removal.
     // The new listeners will replace the old ones.
   } catch (error: unknown) {
-    log.error("Error clearing handlers:", error);
+    log.error('Error clearing handlers:', error);
   }
 }
 
 // Setup IPC handlers for help menu functions
 function setupHelpMenuHandlers() {
-  log.info("Setting up help menu IPC handlers...");
+  log.info('Setting up help menu IPC handlers...');
 
   // Handler for opening external URLs (needs handle for invoke calls)
-  ipcMain.handle("openExternalLink", async (_event, url: string) => {
-    log.info("Opening external URL:", url);
+  ipcMain.handle('openExternalLink', async (_event, url: string) => {
+    log.info('Opening external URL:', url);
     try {
       await shell.openExternal(url);
       return { success: true };
     } catch (error: unknown) {
-      log.error("Failed to open external URL:", error);
+      log.error('Failed to open external URL:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : "Unknown error",
+        error: error instanceof Error ? error.message : 'Unknown error',
       };
     }
   });
 
   // Handler for checking updates - now returns result to UI
-  ipcMain.handle("check-for-updates", async () => {
-    log.info("Check for updates requested");
+  ipcMain.handle('check-for-updates', async () => {
+    log.info('Check for updates requested');
     try {
       if (isDevelopment) {
-        log.info("In development mode");
+        log.info('In development mode');
         return {
           success: false,
-          error: "Automatiske oppdateringer er deaktivert i utviklermodus.",
+          error: 'Automatiske oppdateringer er deaktivert i utviklermodus.',
           updateAvailable: false,
         };
       }
 
-      log.info("Checking for updates...");
+      log.info('Checking for updates...');
       const result = await checkForUpdatesManually();
-      log.info("Update check result:", result);
+      log.info('Update check result:', result);
 
       return {
         success: true,
@@ -251,30 +238,29 @@ function setupHelpMenuHandlers() {
         error: null,
       };
     } catch (error: unknown) {
-      log.error("Failed to check for updates:", error);
+      log.error('Failed to check for updates:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : "Ukjent feil",
+        error: error instanceof Error ? error.message : 'Ukjent feil',
         updateAvailable: false,
       };
     }
   });
 
   // Handler for showing about dialog
-  ipcMain.on("show-about-dialog", () => {
-    log.info("Showing about dialog");
+  ipcMain.on('show-about-dialog', () => {
+    log.info('Showing about dialog');
     dialog.showMessageBox({
-      type: "info",
-      title: "Om Pulse",
+      type: 'info',
+      title: 'Om Pulse',
       message: `Pulse v${app.getVersion()}`,
-      detail:
-        "En applikasjon for håndtering av leverandørkjeden til OneMed.\n\n© 2024 OneMed",
-      buttons: ["OK"],
+      detail: 'En applikasjon for håndtering av leverandørkjeden til OneMed.\n\n© 2024 OneMed',
+      buttons: ['OK'],
     });
   });
 
   // Handler for getting app version
-  ipcMain.handle("get-app-version", async () => {
+  ipcMain.handle('get-app-version', async () => {
     return app.getVersion();
   });
 }
@@ -290,7 +276,7 @@ async function createWindow() {
     width: 1200,
     height: 800,
     webPreferences: {
-      preload: join(__dirname, "../preload/index.js"),
+      preload: join(__dirname, '../preload/index.js'),
       nodeIntegration: false,
       contextIsolation: true,
       // Sandbox causes issues with certain integrations, so we'll disable it for now
@@ -305,17 +291,15 @@ async function createWindow() {
   if (!cspListener) {
     cspListener = (
       details: OnHeadersReceivedListenerDetails,
-      callback: (response: {
-        responseHeaders?: Record<string, string[]>;
-      }) => void
+      callback: (response: { responseHeaders?: Record<string, string[]> }) => void
     ) => {
       callback({
         responseHeaders: {
           ...details.responseHeaders,
-          "Content-Security-Policy": [
+          'Content-Security-Policy': [
             Object.entries(cspPolicy)
-              .map(([key, values]) => `${key} ${values.join(" ")}`)
-              .join("; "),
+              .map(([key, values]) => `${key} ${values.join(' ')}`)
+              .join('; '),
           ],
         },
       });
@@ -339,56 +323,49 @@ async function createWindow() {
       mainWindow.webContents.openDevTools();
 
       // Enable hot reload
-      mainWindow.webContents.on("did-fail-load", () => {
-        log.info("Page failed to load, retrying...");
+      mainWindow.webContents.on('did-fail-load', () => {
+        log.info('Page failed to load, retrying...');
         setTimeout(async () => {
           try {
             await mainWindow?.loadURL(url);
           } catch (err) {
-            log.error("Failed to reload:", err);
+            log.error('Failed to reload:', err);
           }
         }, 1000);
       });
     } catch (err: unknown) {
-      log.error("Failed to load development URL:", err);
+      log.error('Failed to load development URL:', err);
     }
   } else {
-    await mainWindow.loadFile(join(__dirname, "../renderer/index.html"));
+    await mainWindow.loadFile(join(__dirname, '../renderer/index.html'));
   }
 
   // Ekstra forsøk på å sette menyen etter at vinduet er lastet
-  log.info("Window loaded, trying to set menu again...");
+  log.info('Window loaded, trying to set menu again...');
   try {
     createApplicationMenu();
   } catch (error: unknown) {
-    log.error("Error setting menu after window load:", error);
+    log.error('Error setting menu after window load:', error);
   }
 
   // Prevent memory leaks by explicitly setting mainWindow to null when closed
-  mainWindow.on("closed", () => {
+  mainWindow.on('closed', () => {
     mainWindow = null;
   });
 
   // Handle external links opened via middle-click or ctrl+click in renderer
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
     // Ensure only expected protocols are opened externally
-    if (
-      url.startsWith("http:") ||
-      url.startsWith("https:") ||
-      url.startsWith("mailto:")
-    ) {
+    if (url.startsWith('http:') || url.startsWith('https:') || url.startsWith('mailto:')) {
       shell.openExternal(url);
     }
-    return { action: "deny" }; // Prevent Electron from creating a new window
+    return { action: 'deny' }; // Prevent Electron from creating a new window
   });
 
   // Optional: Intercept navigation to ensure it stays within the app or opens externally
-  mainWindow.webContents.on("will-navigate", (_event, url) => {
+  mainWindow.webContents.on('will-navigate', (_event, url) => {
     // Prevent navigation if it's not to the expected localhost URL during dev
-    if (
-      process.env.NODE_ENV === "development" &&
-      !url.startsWith("http://localhost:5173")
-    ) {
+    if (process.env.NODE_ENV === 'development' && !url.startsWith('http://localhost:5173')) {
       // event.preventDefault(); // Original logic commented out
       shell.openExternal(url); // Open external links in default browser
     }
@@ -398,54 +375,50 @@ async function createWindow() {
 }
 
 app.whenReady().then(() => {
-  log.info("App is ready, setting up environment...");
+  log.info('App is ready, setting up environment...');
 
   // Set global security settings - only add them once
   if (!securityHeadersListener) {
     securityHeadersListener = (
       details: OnHeadersReceivedListenerDetails,
-      callback: (response: {
-        responseHeaders?: Record<string, string[]>;
-      }) => void
+      callback: (response: { responseHeaders?: Record<string, string[]> }) => void
     ) => {
       callback({
         responseHeaders: {
           ...details.responseHeaders,
-          "X-Content-Type-Options": ["nosniff"],
-          "X-Frame-Options": ["SAMEORIGIN"],
-          "X-XSS-Protection": ["1; mode=block"],
+          'X-Content-Type-Options': ['nosniff'],
+          'X-Frame-Options': ['SAMEORIGIN'],
+          'X-XSS-Protection': ['1; mode=block'],
         },
       });
     };
 
     app.whenReady().then(() => {
-      session.defaultSession.webRequest.onHeadersReceived(
-        securityHeadersListener
-      );
+      session.defaultSession.webRequest.onHeadersReceived(securityHeadersListener);
     });
   }
 
   // Sett opp IPC handlere før noe annet
-  log.info("Setting up IPC handlers early...");
+  log.info('Setting up IPC handlers early...');
   setupHelpMenuHandlers();
 
   // Sett menyen først, før vinduet opprettes
-  log.info("About to create application menu...");
+  log.info('About to create application menu...');
   createApplicationMenu();
 
   // Initialiser auto-updater
   setupAutoUpdater();
-  log.info("App version:", app.getVersion());
+  log.info('App version:', app.getVersion());
 
   createWindow();
 
   // Prøv å sette menyen igjen etter at vinduet er opprettet
   setTimeout(() => {
-    log.info("Trying to set menu again after window creation...");
+    log.info('Trying to set menu again after window creation...');
     createApplicationMenu();
   }, 500);
 
-  app.on("activate", () => {
+  app.on('activate', () => {
     if (mainWindow === null) {
       createWindow();
     }
@@ -456,7 +429,7 @@ app.whenReady().then(() => {
 
 // Create a single handler for app cleanup
 function cleanupApp() {
-  log.info("Cleaning up application resources...");
+  log.info('Cleaning up application resources...');
 
   // We don't need to call app.quit() here since it will be handled by will-quit
   // Just let the natural process continue
@@ -464,21 +437,21 @@ function cleanupApp() {
   // Only actually quit for non-macOS platforms
   // On macOS, the app stays running when all windows are closed
   // This is standard macOS behavior
-  if (process.platform !== "darwin") {
+  if (process.platform !== 'darwin') {
     // Instead of calling quit directly, we'll set a short timeout
     // This helps prevent multiple quit attempts happening simultaneously
     setTimeout(() => {
-      log.info("Platform is not macOS, exiting app...");
+      log.info('Platform is not macOS, exiting app...');
       app.quit();
     }, 100);
   }
 }
 
 // Handle window-all-closed event for app
-app.on("window-all-closed", cleanupApp);
+app.on('window-all-closed', cleanupApp);
 
 // Also handle app before-quit event to ensure cleanup
-app.on("before-quit", () => {
-  log.info("Application is about to quit, performing cleanup...");
+app.on('before-quit', () => {
+  log.info('Application is about to quit, performing cleanup...');
   // Clear any global listeners or resources here if needed
 });

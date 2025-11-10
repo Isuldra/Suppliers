@@ -51,6 +51,8 @@ Pulse is a desktop application for managing supplier workflows and data. It's bu
 | `npm run dev`           | Start development server      |
 | `npm run build`         | Build renderer + Electron app |
 | `npm run lint`          | Lint codebase                 |
+| `npm run format`        | Format code with Prettier     |
+| `npm run format:check`  | Check code formatting         |
 | `npm run typecheck`     | Type check TypeScript files   |
 | `npm run test`          | Run tests                     |
 | `npm run test:coverage` | Run tests with coverage       |

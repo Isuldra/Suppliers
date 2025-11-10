@@ -1,15 +1,12 @@
-import React, { useState } from "react";
-import supplyPlannersData from "../data/supplyPlanners.json";
+import React, { useState } from 'react';
+import supplyPlannersData from '../data/supplyPlanners.json';
 
 interface PlannerSelectProps {
   onPlannerSelected: (planner: string) => void;
   currentPlanner?: string;
 }
 
-const PlannerSelect: React.FC<PlannerSelectProps> = ({
-  onPlannerSelected,
-  currentPlanner,
-}) => {
+const PlannerSelect: React.FC<PlannerSelectProps> = ({ onPlannerSelected, currentPlanner }) => {
   const [selectedPlanner, setSelectedPlanner] = useState<string>(
     currentPlanner || supplyPlannersData.planners[0].name
   );
@@ -24,12 +21,9 @@ const PlannerSelect: React.FC<PlannerSelectProps> = ({
 
   return (
     <div className="w-full">
-      <h2 className="text-xl font-bold mb-4 text-neutral">
-        Velg innkjøpsplanlegger
-      </h2>
+      <h2 className="text-xl font-bold mb-4 text-neutral">Velg innkjøpsplanlegger</h2>
       <p className="mb-6 text-neutral-secondary">
-        Velg hvilken innkjøpsplanlegger du er. Dette bestemmer hvilke
-        leverandører som vises.
+        Velg hvilken innkjøpsplanlegger du er. Dette bestemmer hvilke leverandører som vises.
       </p>
 
       <div className="grid grid-cols-2 gap-3 mb-6">
@@ -38,8 +32,8 @@ const PlannerSelect: React.FC<PlannerSelectProps> = ({
             key={planner.name}
             className={`py-3 px-4 text-center rounded-sm transition-default ${
               selectedPlanner === planner.name
-                ? "bg-primary text-neutral-white"
-                : "bg-neutral-light hover:bg-neutral-secondary hover:bg-opacity-20 text-neutral"
+                ? 'bg-primary text-neutral-white'
+                : 'bg-neutral-light hover:bg-neutral-secondary hover:bg-opacity-20 text-neutral'
             }`}
             onClick={() => handlePlannerSelect(planner.name)}
           >

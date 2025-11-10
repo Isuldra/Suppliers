@@ -34,20 +34,18 @@ export function getSupabaseClient() {
     const supabaseAnonKey = (import.meta as any).env?.VITE_SUPABASE_ANON_KEY;
 
     if (!supabaseUrl || !supabaseAnonKey) {
-      console.warn(
-        "Supabase credentials not found. Product catalog sync will be disabled."
-      );
-      initError = new Error("Supabase credentials not configured");
+      console.warn('Supabase credentials not found. Product catalog sync will be disabled.');
+      initError = new Error('Supabase credentials not configured');
       return null;
     }
 
     // Dynamic import to avoid bundling issues
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { createClient } = require("@supabase/supabase-js");
+    const { createClient } = require('@supabase/supabase-js');
     supabaseInstance = createClient(supabaseUrl, supabaseAnonKey);
     return supabaseInstance;
   } catch (error) {
-    console.error("Failed to initialize Supabase client:", error);
+    console.error('Failed to initialize Supabase client:', error);
     initError = error as Error;
     return null;
   }

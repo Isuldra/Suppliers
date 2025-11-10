@@ -1,21 +1,21 @@
-import { dialog } from "electron";
-import { autoUpdater } from "electron-updater";
+import { dialog } from 'electron';
+import { autoUpdater } from 'electron-updater';
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const log = require("electron-log/main");
-import type { UpdateInfo, ProgressInfo } from "electron-updater";
-import { app, shell, BrowserWindow } from "electron";
-import path from "path";
-import fs from "fs";
+const log = require('electron-log/main');
+import type { UpdateInfo, ProgressInfo } from 'electron-updater';
+import { app, shell, BrowserWindow } from 'electron';
+import path from 'path';
+import fs from 'fs';
 
 // Create a logger instance specifically for the auto-updater
-const updateLogger = log.scope("autoUpdater");
+const updateLogger = log.scope('autoUpdater');
 autoUpdater.logger = updateLogger;
 
 // Configure auto-updater to use Cloudflare Pages for metadata
 // The latest.yml file contains full GitHub Releases URLs
 autoUpdater.setFeedURL({
-  provider: "generic",
-  url: "https://suppliers-anx.pages.dev/",
+  provider: 'generic',
+  url: 'https://suppliers-anx.pages.dev/',
 });
 
 // Configure auto-download based on version type (will be set in setup functions)
@@ -41,19 +41,18 @@ function isPortableVersion(): boolean {
 
     // Check if running from a portable executable
     // Portable versions often have "Portable" in the filename
-    if (execPath.includes("Portable") || execPath.includes("portable")) {
-      updateLogger.info("Detected portable version by filename");
+    if (execPath.includes('Portable') || execPath.includes('portable')) {
+      updateLogger.info('Detected portable version by filename');
       return true;
     }
 
     // Check if app is running from a non-standard location
     // Standard installations are usually in Program Files or AppData
     const normalizedPath = path.normalize(appPath).toLowerCase();
-    const isInProgramFiles = normalizedPath.includes("program files");
-    const isInAppData = normalizedPath.includes("appdata");
+    const isInProgramFiles = normalizedPath.includes('program files');
+    const isInAppData = normalizedPath.includes('appdata');
     const isInUserProfile =
-      normalizedPath.includes("users") &&
-      (isInAppData || normalizedPath.includes("local"));
+      normalizedPath.includes('users') && (isInAppData || normalizedPath.includes('local'));
 
     updateLogger.info(`Normalized path: ${normalizedPath}`);
     updateLogger.info(`Is in Program Files: ${isInProgramFiles}`);
@@ -64,11 +63,9 @@ function isPortableVersion(): boolean {
     // NSIS installations typically create proper folder structures
     if (isInAppData) {
       // Check if it has a proper installation structure (resources, locales, etc.)
-      const hasResources = fs.existsSync(path.join(appPath, "resources"));
-      const hasLocales = fs.existsSync(path.join(appPath, "locales"));
-      const hasUninstaller = fs.existsSync(
-        path.join(path.dirname(appPath), "uninstall.exe")
-      );
+      const hasResources = fs.existsSync(path.join(appPath, 'resources'));
+      const hasLocales = fs.existsSync(path.join(appPath, 'locales'));
+      const hasUninstaller = fs.existsSync(path.join(path.dirname(appPath), 'uninstall.exe'));
 
       updateLogger.info(`Has resources folder: ${hasResources}`);
       updateLogger.info(`Has locales folder: ${hasLocales}`);
@@ -76,46 +73,34 @@ function isPortableVersion(): boolean {
 
       // If it has proper installation structure, it's not portable
       if (hasResources || hasLocales || hasUninstaller) {
-        updateLogger.info(
-          "Detected as installed version (has proper structure)"
-        );
+        updateLogger.info('Detected as installed version (has proper structure)');
         return false;
       }
     }
 
     // If not in standard installation paths, likely portable
     if (!isInProgramFiles && !isInUserProfile) {
-      updateLogger.info("Detected portable version (not in standard paths)");
+      updateLogger.info('Detected portable version (not in standard paths)');
       return true;
     }
 
     // Additional check: portable versions often run from Downloads, Desktop, or removable drives
     // But only if they don't have proper installation structure
-    const portableIndicators = [
-      "downloads",
-      "desktop",
-      "documents",
-      "temp",
-      "tmp",
-    ];
+    const portableIndicators = ['downloads', 'desktop', 'documents', 'temp', 'tmp'];
 
-    if (
-      portableIndicators.some((indicator) => normalizedPath.includes(indicator))
-    ) {
+    if (portableIndicators.some((indicator) => normalizedPath.includes(indicator))) {
       // Double-check: if it has installation structure, it might be a portable installation
-      const hasResources = fs.existsSync(path.join(appPath, "resources"));
+      const hasResources = fs.existsSync(path.join(appPath, 'resources'));
       if (!hasResources) {
-        updateLogger.info(
-          "Detected portable version (in portable location without resources)"
-        );
+        updateLogger.info('Detected portable version (in portable location without resources)');
         return true;
       }
     }
 
-    updateLogger.info("Detected as installed version (default)");
+    updateLogger.info('Detected as installed version (default)');
     return false;
   } catch (error) {
-    updateLogger.warn("Error detecting portable version:", error);
+    updateLogger.warn('Error detecting portable version:', error);
     return false;
   }
 }
@@ -124,33 +109,30 @@ function isPortableVersion(): boolean {
  * Setup auto-updater for portable versions with manual download approach
  */
 function setupPortableUpdater() {
-  updateLogger.info("Konfigurerer portable auto-updater...");
+  updateLogger.info('Konfigurerer portable auto-updater...');
 
   // Configure for portable - enable automatic download but manual installation
   autoUpdater.autoDownload = true;
   autoUpdater.autoInstallOnAppQuit = false;
   // Disable differential downloads to avoid 404 errors with missing old versions
-  (
-    autoUpdater as typeof autoUpdater & { differentialDownload?: boolean }
-  ).differentialDownload = false;
+  (autoUpdater as typeof autoUpdater & { differentialDownload?: boolean }).differentialDownload =
+    false;
 
   // Handle update check
-  autoUpdater.on("checking-for-update", () => {
-    updateLogger.info("Sjekker for oppdateringer (portable modus)...");
+  autoUpdater.on('checking-for-update', () => {
+    updateLogger.info('Sjekker for oppdateringer (portable modus)...');
   });
 
   // No updates available
-  autoUpdater.on("update-not-available", ((info: UpdateInfo) => {
-    updateLogger.info("Ingen nye oppdateringer tilgjengelig (portable):", info);
+  autoUpdater.on('update-not-available', ((info: UpdateInfo) => {
+    updateLogger.info('Ingen nye oppdateringer tilgjengelig (portable):', info);
   }) as (...args: unknown[]) => void);
 
   // Update available - automatically download for portable
-  autoUpdater.on("update-available", ((info: UpdateInfo) => {
-    updateLogger.info("Ny oppdatering tilgjengelig (portable):", info);
+  autoUpdater.on('update-available', ((info: UpdateInfo) => {
+    updateLogger.info('Ny oppdatering tilgjengelig (portable):', info);
     updateLogger.info(
-      `Current app version: ${app.getVersion()}, Available version: ${
-        info.version
-      }`
+      `Current app version: ${app.getVersion()}, Available version: ${info.version}`
     );
 
     // Check if we've already shown this update notification recently
@@ -159,9 +141,7 @@ function setupPortableUpdater() {
       lastShownUpdateVersion === info.version &&
       now - lastUpdateNotificationTime < UPDATE_NOTIFICATION_COOLDOWN
     ) {
-      updateLogger.info(
-        `Skipping duplicate update notification for version ${info.version}`
-      );
+      updateLogger.info(`Skipping duplicate update notification for version ${info.version}`);
       return;
     }
 
@@ -172,32 +152,31 @@ function setupPortableUpdater() {
     // Show notification that download is starting
     dialog
       .showMessageBox({
-        type: "info",
-        title: "Oppdatering tilgjengelig",
+        type: 'info',
+        title: 'Oppdatering tilgjengelig',
         message: `En ny versjon (${info.version}) av Pulse er tilgjengelig`,
         detail:
-          "Oppdateringen lastes ned automatisk. Du kan installere den manuelt når nedlastingen er ferdig.",
-        buttons: ["OK", "Åpne nedlastingsside"],
+          'Oppdateringen lastes ned automatisk. Du kan installere den manuelt når nedlastingen er ferdig.',
+        buttons: ['OK', 'Åpne nedlastingsside'],
         defaultId: 0,
       })
       .then((result) => {
         if (result.response === 1) {
           // Open download page
-          const downloadUrl =
-            "https://github.com/Isuldra/Suppliers/releases/latest";
+          const downloadUrl = 'https://github.com/Isuldra/Suppliers/releases/latest';
           shell.openExternal(downloadUrl).catch((err) => {
-            updateLogger.error("Kunne ikke åpne nedlastingsside:", err);
+            updateLogger.error('Kunne ikke åpne nedlastingsside:', err);
           });
         }
       });
 
     // Automatically start download
-    updateLogger.info("Starter automatisk nedlasting av oppdatering...");
+    updateLogger.info('Starter automatisk nedlasting av oppdatering...');
 
     // Send update available to UI
     const mainWindow = BrowserWindow.getAllWindows()[0];
     if (mainWindow) {
-      mainWindow.webContents.send("update-available", {
+      mainWindow.webContents.send('update-available', {
         version: info.version,
         releaseNotes: info.releaseNotes,
         releaseDate: info.releaseDate,
@@ -206,16 +185,14 @@ function setupPortableUpdater() {
   }) as (...args: unknown[]) => void);
 
   // Handle download progress
-  autoUpdater.on("download-progress", ((progressObj: ProgressInfo) => {
-    const message = `Laster ned oppdatering: ${Math.round(
-      progressObj.percent
-    )}%`;
+  autoUpdater.on('download-progress', ((progressObj: ProgressInfo) => {
+    const message = `Laster ned oppdatering: ${Math.round(progressObj.percent)}%`;
     updateLogger.info(message);
 
     // Send progress to UI
     const mainWindow = BrowserWindow.getAllWindows()[0];
     if (mainWindow) {
-      mainWindow.webContents.send("update-download-progress", {
+      mainWindow.webContents.send('update-download-progress', {
         percent: Math.round(progressObj.percent),
         bytesPerSecond: progressObj.bytesPerSecond,
         total: progressObj.total,
@@ -225,13 +202,13 @@ function setupPortableUpdater() {
   }) as (...args: unknown[]) => void);
 
   // Update downloaded - provide manual installation instructions
-  autoUpdater.on("update-downloaded", ((info: UpdateInfo) => {
-    updateLogger.info("Oppdatering lastet ned (portable):", info);
+  autoUpdater.on('update-downloaded', ((info: UpdateInfo) => {
+    updateLogger.info('Oppdatering lastet ned (portable):', info);
 
     // Send update downloaded to UI
     const mainWindow = BrowserWindow.getAllWindows()[0];
     if (mainWindow) {
-      mainWindow.webContents.send("update-downloaded", {
+      mainWindow.webContents.send('update-downloaded', {
         version: info.version,
         releaseNotes: info.releaseNotes,
         releaseDate: info.releaseDate,
@@ -243,11 +220,11 @@ function setupPortableUpdater() {
 
     dialog
       .showMessageBox({
-        type: "info",
-        title: "Oppdatering klar",
+        type: 'info',
+        title: 'Oppdatering klar',
         message: `Versjon ${info.version} er lastet ned`,
         detail: `Oppdateringen er lagret i:\n${downloadPath}\n\nFor å installere:\n1. Lukk denne applikasjonen\n2. Erstatt den gamle .exe-filen med den nye\n3. Start applikasjonen på nytt\n\nVil du åpne mappen med den nye filen?`,
-        buttons: ["Åpne mappe", "Lukk app og installer", "Senere"],
+        buttons: ['Åpne mappe', 'Lukk app og installer', 'Senere'],
         defaultId: 0,
       })
       .then((result) => {
@@ -258,20 +235,20 @@ function setupPortableUpdater() {
           } catch {
             // Fallback to opening the directory
             shell.openPath(path.dirname(downloadPath)).catch((openErr) => {
-              updateLogger.error("Kunne ikke åpne mappe:", openErr);
+              updateLogger.error('Kunne ikke åpne mappe:', openErr);
             });
           }
         } else if (result.response === 1) {
           // Quit app for manual installation
-          updateLogger.info("Avslutter app for manuell installasjon...");
+          updateLogger.info('Avslutter app for manuell installasjon...');
           app.quit();
         }
       });
   }) as (...args: unknown[]) => void);
 
   // Handle errors
-  autoUpdater.on("error", ((error: Error) => {
-    updateLogger.error("Feil ved oppdatering (portable):", error);
+  autoUpdater.on('error', ((error: Error) => {
+    updateLogger.error('Feil ved oppdatering (portable):', error);
     showPortableUpdateError(error);
   }) as (...args: unknown[]) => void);
 }
@@ -280,8 +257,8 @@ function setupPortableUpdater() {
  * Get the expected path for portable update downloads
  */
 function getPortableUpdatePath(): string {
-  const userDataPath = app.getPath("userData");
-  const updatesDir = path.join(userDataPath, "updates");
+  const userDataPath = app.getPath('userData');
+  const updatesDir = path.join(userDataPath, 'updates');
 
   // Ensure updates directory exists
   try {
@@ -289,48 +266,44 @@ function getPortableUpdatePath(): string {
       fs.mkdirSync(updatesDir, { recursive: true });
     }
   } catch (error) {
-    updateLogger.warn("Could not create updates directory:", error);
+    updateLogger.warn('Could not create updates directory:', error);
   }
 
-  return path.join(updatesDir, "Pulse-Portable.exe");
+  return path.join(updatesDir, 'Pulse-Portable.exe');
 }
 
 /**
  * Show error dialog for portable update issues
  */
 function showPortableUpdateError(error: Error) {
-  const isNetworkError =
-    error.message.includes("net::") || error.message.includes("ENOTFOUND");
-  const isFileError =
-    error.message.includes("ENOENT") ||
-    error.message.includes("app-update.yml");
+  const isNetworkError = error.message.includes('net::') || error.message.includes('ENOTFOUND');
+  const isFileError = error.message.includes('ENOENT') || error.message.includes('app-update.yml');
 
-  let message = "Det oppstod en feil under oppdatering";
+  let message = 'Det oppstod en feil under oppdatering';
   let detail = `Detaljer: ${error.message}`;
 
   if (isNetworkError) {
-    message = "Nettverksfeil ved oppdatering";
-    detail = "Sjekk internettforbindelsen og prøv igjen senere.";
+    message = 'Nettverksfeil ved oppdatering';
+    detail = 'Sjekk internettforbindelsen og prøv igjen senere.';
   } else if (isFileError) {
-    message = "Oppdateringsfiler ikke tilgjengelige";
-    detail = "Du kan laste ned den nyeste versjonen manuelt fra GitHub.";
+    message = 'Oppdateringsfiler ikke tilgjengelige';
+    detail = 'Du kan laste ned den nyeste versjonen manuelt fra GitHub.';
   }
 
   dialog
     .showMessageBox({
-      type: "error",
-      title: "Oppdateringsfeil",
+      type: 'error',
+      title: 'Oppdateringsfeil',
       message,
       detail,
-      buttons: ["OK", "Åpne nedlastingsside"],
+      buttons: ['OK', 'Åpne nedlastingsside'],
       defaultId: 0,
     })
     .then((result) => {
       if (result.response === 1) {
-        const downloadUrl =
-          "https://github.com/Isuldra/Suppliers/releases/latest";
+        const downloadUrl = 'https://github.com/Isuldra/Suppliers/releases/latest';
         shell.openExternal(downloadUrl).catch((err) => {
-          updateLogger.error("Kunne ikke åpne nedlastingsside:", err);
+          updateLogger.error('Kunne ikke åpne nedlastingsside:', err);
         });
       }
     });
@@ -338,28 +311,22 @@ function showPortableUpdateError(error: Error) {
 
 export function setupAutoUpdater() {
   // Ikke kjør auto-oppdatering i utviklingsmodus
-  if (process.env.NODE_ENV === "development") {
-    updateLogger.info(
-      "Kjører i utviklingsmodus - automatiske oppdateringer er deaktivert"
-    );
+  if (process.env.NODE_ENV === 'development') {
+    updateLogger.info('Kjører i utviklingsmodus - automatiske oppdateringer er deaktivert');
     return;
   }
 
-  updateLogger.info("Auto-updater configured to use GitHub Releases");
+  updateLogger.info('Auto-updater configured to use GitHub Releases');
   updateLogger.info(`Current app version: ${app.getVersion()}`);
 
   // Check if running as portable version
   const isPortable = isPortableVersion();
 
   if (isPortable) {
-    updateLogger.info(
-      "Portable versjon oppdaget - bruker portable auto-updater"
-    );
+    updateLogger.info('Portable versjon oppdaget - bruker portable auto-updater');
     setupPortableUpdater();
   } else {
-    updateLogger.info(
-      "Installert versjon oppdaget - bruker standard auto-updater"
-    );
+    updateLogger.info('Installert versjon oppdaget - bruker standard auto-updater');
     setupStandardUpdater();
   }
 
@@ -367,9 +334,7 @@ export function setupAutoUpdater() {
   setTimeout(() => {
     autoUpdater
       .checkForUpdates()
-      .catch((err: Error) =>
-        updateLogger.error("Feil ved sjekk for oppdateringer:", err)
-      );
+      .catch((err: Error) => updateLogger.error('Feil ved sjekk for oppdateringer:', err));
   }, 10000);
 
   // Check for updates every 6 hours to reduce spam
@@ -378,7 +343,7 @@ export function setupAutoUpdater() {
     autoUpdater
       .checkForUpdates()
       .catch((err: Error) =>
-        updateLogger.error("Feil ved periodisk sjekk for oppdateringer:", err)
+        updateLogger.error('Feil ved periodisk sjekk for oppdateringer:', err)
       );
   }, SIX_HOURS);
 }
@@ -391,27 +356,24 @@ function setupStandardUpdater() {
   autoUpdater.autoDownload = true;
   autoUpdater.autoInstallOnAppQuit = true;
   // Disable differential downloads to avoid 404 errors with missing old versions
-  (
-    autoUpdater as typeof autoUpdater & { differentialDownload?: boolean }
-  ).differentialDownload = false;
+  (autoUpdater as typeof autoUpdater & { differentialDownload?: boolean }).differentialDownload =
+    false;
 
   // Handle update-sjekk
-  autoUpdater.on("checking-for-update", () => {
-    updateLogger.info("Sjekker for oppdateringer...");
+  autoUpdater.on('checking-for-update', () => {
+    updateLogger.info('Sjekker for oppdateringer...');
   });
 
   // Ingen oppdateringer er tilgjengelige
-  autoUpdater.on("update-not-available", ((info: UpdateInfo) => {
-    updateLogger.info("Ingen nye oppdateringer tilgjengelig:", info);
+  autoUpdater.on('update-not-available', ((info: UpdateInfo) => {
+    updateLogger.info('Ingen nye oppdateringer tilgjengelig:', info);
   }) as (...args: unknown[]) => void);
 
   // Oppdatering funnet
-  autoUpdater.on("update-available", ((info: UpdateInfo) => {
-    updateLogger.info("Ny oppdatering tilgjengelig:", info);
+  autoUpdater.on('update-available', ((info: UpdateInfo) => {
+    updateLogger.info('Ny oppdatering tilgjengelig:', info);
     updateLogger.info(
-      `Current app version: ${app.getVersion()}, Available version: ${
-        info.version
-      }`
+      `Current app version: ${app.getVersion()}, Available version: ${info.version}`
     );
 
     // Check if we've already shown this update notification recently
@@ -420,9 +382,7 @@ function setupStandardUpdater() {
       lastShownUpdateVersion === info.version &&
       now - lastUpdateNotificationTime < UPDATE_NOTIFICATION_COOLDOWN
     ) {
-      updateLogger.info(
-        `Skipping duplicate update notification for version ${info.version}`
-      );
+      updateLogger.info(`Skipping duplicate update notification for version ${info.version}`);
       return;
     }
 
@@ -432,20 +392,20 @@ function setupStandardUpdater() {
 
     // Varsle bruker om at nedlasting starter
     dialog.showMessageBox({
-      type: "info",
-      title: "Oppdatering tilgjengelig",
+      type: 'info',
+      title: 'Oppdatering tilgjengelig',
       message: `En ny versjon (${info.version}) av Pulse er tilgjengelig`,
-      detail: "Oppdateringen lastes ned og installeres automatisk...",
-      buttons: ["OK"],
+      detail: 'Oppdateringen lastes ned og installeres automatisk...',
+      buttons: ['OK'],
     });
 
     // Automatically start download
-    updateLogger.info("Starter automatisk nedlasting av oppdatering...");
+    updateLogger.info('Starter automatisk nedlasting av oppdatering...');
 
     // Send update available to UI
     const mainWindow = BrowserWindow.getAllWindows()[0];
     if (mainWindow) {
-      mainWindow.webContents.send("update-available", {
+      mainWindow.webContents.send('update-available', {
         version: info.version,
         releaseNotes: info.releaseNotes,
         releaseDate: info.releaseDate,
@@ -454,16 +414,14 @@ function setupStandardUpdater() {
   }) as (...args: unknown[]) => void);
 
   // Håndtere nedlastningsfremdrift
-  autoUpdater.on("download-progress", ((progressObj: ProgressInfo) => {
-    const message = `Laster ned oppdatering: ${Math.round(
-      progressObj.percent
-    )}%`;
+  autoUpdater.on('download-progress', ((progressObj: ProgressInfo) => {
+    const message = `Laster ned oppdatering: ${Math.round(progressObj.percent)}%`;
     updateLogger.info(message);
 
     // Send progress to UI
     const mainWindow = BrowserWindow.getAllWindows()[0];
     if (mainWindow) {
-      mainWindow.webContents.send("update-download-progress", {
+      mainWindow.webContents.send('update-download-progress', {
         percent: Math.round(progressObj.percent),
         bytesPerSecond: progressObj.bytesPerSecond,
         total: progressObj.total,
@@ -473,13 +431,13 @@ function setupStandardUpdater() {
   }) as (...args: unknown[]) => void);
 
   // Oppdatering er lastet ned og klar for installasjon
-  autoUpdater.on("update-downloaded", ((info: UpdateInfo) => {
-    updateLogger.info("Oppdatering lastet ned:", info);
+  autoUpdater.on('update-downloaded', ((info: UpdateInfo) => {
+    updateLogger.info('Oppdatering lastet ned:', info);
 
     // Send update downloaded to UI
     const mainWindow = BrowserWindow.getAllWindows()[0];
     if (mainWindow) {
-      mainWindow.webContents.send("update-downloaded", {
+      mainWindow.webContents.send('update-downloaded', {
         version: info.version,
         releaseNotes: info.releaseNotes,
         releaseDate: info.releaseDate,
@@ -489,62 +447,58 @@ function setupStandardUpdater() {
     // Show notification that update is ready and will install on next restart
     dialog
       .showMessageBox({
-        type: "info",
-        title: "Oppdatering klar",
+        type: 'info',
+        title: 'Oppdatering klar',
         message: `Versjon ${info.version} er lastet ned og klar`,
         detail:
-          "Oppdateringen vil installeres automatisk når du lukker applikasjonen. Du kan også installere nå.",
-        buttons: ["Installer nå", "Installer ved neste lukking"],
+          'Oppdateringen vil installeres automatisk når du lukker applikasjonen. Du kan også installere nå.',
+        buttons: ['Installer nå', 'Installer ved neste lukking'],
         defaultId: 0,
       })
       .then((returnValue) => {
         if (returnValue.response === 0) {
           // Install immediately
-          updateLogger.info("Installerer oppdatering nå...");
+          updateLogger.info('Installerer oppdatering nå...');
           autoUpdater.quitAndInstall(false, true);
         } else {
           // Will install on app quit (autoInstallOnAppQuit is already true)
-          updateLogger.info(
-            "Oppdatering vil installeres ved neste lukking av applikasjonen"
-          );
+          updateLogger.info('Oppdatering vil installeres ved neste lukking av applikasjonen');
         }
       });
   }) as (...args: unknown[]) => void);
 
   // Håndtere feil
-  autoUpdater.on("error", ((error: Error) => {
-    updateLogger.error("Feil ved oppdatering:", error);
+  autoUpdater.on('error', ((error: Error) => {
+    updateLogger.error('Feil ved oppdatering:', error);
 
     dialog.showMessageBox({
-      type: "error",
-      title: "Oppdateringsfeil",
-      message: "Det oppstod en feil under oppdatering",
-      detail: `Detaljer: ${error ? error.toString() : "Ukjent feil"}`,
-      buttons: ["OK"],
+      type: 'error',
+      title: 'Oppdateringsfeil',
+      message: 'Det oppstod en feil under oppdatering',
+      detail: `Detaljer: ${error ? error.toString() : 'Ukjent feil'}`,
+      buttons: ['OK'],
     });
   }) as (...args: unknown[]) => void);
 }
 
 // Funksjon for å manuelt sjekke for oppdateringer
 export function checkForUpdatesManually() {
-  if (process.env.NODE_ENV === "development") {
-    updateLogger.info(
-      "Kjører i utviklingsmodus - manuelle oppdateringer er deaktivert"
-    );
+  if (process.env.NODE_ENV === 'development') {
+    updateLogger.info('Kjører i utviklingsmodus - manuelle oppdateringer er deaktivert');
     return Promise.resolve({ updateAvailable: false });
   }
 
-  updateLogger.info("Manuell sjekk for oppdateringer startet...");
+  updateLogger.info('Manuell sjekk for oppdateringer startet...');
   updateLogger.info(`Current app version: ${app.getVersion()}`);
 
   return autoUpdater
     .checkForUpdates()
     .then((result) => {
-      updateLogger.info("Manual update check result:", result);
+      updateLogger.info('Manual update check result:', result);
       return result;
     })
     .catch((error) => {
-      updateLogger.error("Manual update check failed:", error);
+      updateLogger.error('Manual update check failed:', error);
       throw error;
     });
 }

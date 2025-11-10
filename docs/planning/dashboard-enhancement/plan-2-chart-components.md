@@ -655,11 +655,11 @@ const mockSuppliers = [
 Check that all components can be imported:
 
 ```typescript
-import { KPICard } from "./components/dashboard/KPICard";
-import { TopSuppliersChart } from "./components/dashboard/TopSuppliersChart";
-import { PlannerDistributionChart } from "./components/dashboard/PlannerDistributionChart";
-import { OrderTimelineChart } from "./components/dashboard/OrderTimelineChart";
-import { DashboardFilters } from "./components/dashboard/DashboardFilters";
+import { KPICard } from './components/dashboard/KPICard';
+import { TopSuppliersChart } from './components/dashboard/TopSuppliersChart';
+import { PlannerDistributionChart } from './components/dashboard/PlannerDistributionChart';
+import { OrderTimelineChart } from './components/dashboard/OrderTimelineChart';
+import { DashboardFilters } from './components/dashboard/DashboardFilters';
 ```
 
 ### 4. Check Recharts Functionality

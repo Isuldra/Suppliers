@@ -83,12 +83,9 @@ CREATE INDEX idx_supplier_emails_name ON supplier_emails(supplier_name);
 
 ```typescript
 // Kalles ved første oppstart
-async function importAlleArk(
-  source: string | ArrayBuffer,
-  db: Database
-): Promise<boolean> {
+async function importAlleArk(source: string | ArrayBuffer, db: Database): Promise<boolean> {
   // 1. Ryd eksisterende data
-  db.prepare("DELETE FROM purchase_order").run();
+  db.prepare('DELETE FROM purchase_order').run();
 
   // 2. Import BP ark data
   const bpData = parseBPSheet(workbook);
@@ -134,7 +131,7 @@ async function importAlleArk(
 // Kalles ved ny fil opplasting
 async function saveOrdersToDatabase(fileBuffer: ArrayBuffer): Promise<boolean> {
   // 1. Ryd eksisterende ordre
-  db.prepare("DELETE FROM purchase_order").run();
+  db.prepare('DELETE FROM purchase_order').run();
 
   // 2. Import ny data
   const success = await importAlleArk(fileBuffer, db);
@@ -223,7 +220,7 @@ function recordEmailSent(supplier: string, orderIds: string[]): void {
     `
     UPDATE purchase_order 
     SET email_sent_at = ? 
-    WHERE supplier_name = ? AND nøkkel IN (${orderIds.map(() => "?").join(",")})
+    WHERE supplier_name = ? AND nøkkel IN (${orderIds.map(() => '?').join(',')})
   `
   ).run(timestamp, supplier, ...orderIds);
 }
@@ -235,11 +232,8 @@ function recordEmailSent(supplier: string, orderIds: string[]): void {
 
 ```typescript
 async function createBackup(): Promise<void> {
-  const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
-  const backupPath = path.join(
-    backupDir,
-    `supplier-reminder-backup-${timestamp}.db`
-  );
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+  const backupPath = path.join(backupDir, `supplier-reminder-backup-${timestamp}.db`);
 
   // Kopier database fil
   await fs.copyFile(dbPath, backupPath);
@@ -347,10 +341,10 @@ function getOrdersByWeekday(): WeekdayStat[] {
 ```typescript
 function optimizeDatabase(): void {
   // VACUUM for å rydde opp fragmentering
-  db.prepare("VACUUM").run();
+  db.prepare('VACUUM').run();
 
   // ANALYZE for å oppdatere statistikk
-  db.prepare("ANALYZE").run();
+  db.prepare('ANALYZE').run();
 }
 ```
 
@@ -359,13 +353,11 @@ function optimizeDatabase(): void {
 ```typescript
 function runMigrations(): void {
   // Sjekk om nye kolonner trengs
-  const columns = db.prepare("PRAGMA table_info(purchase_order)").all();
+  const columns = db.prepare('PRAGMA table_info(purchase_order)').all();
   const columnNames = columns.map((col) => col.name);
 
-  if (!columnNames.includes("email_sent_at")) {
-    db.prepare(
-      "ALTER TABLE purchase_order ADD COLUMN email_sent_at TEXT"
-    ).run();
+  if (!columnNames.includes('email_sent_at')) {
+    db.prepare('ALTER TABLE purchase_order ADD COLUMN email_sent_at TEXT').run();
   }
 }
 ```
@@ -376,13 +368,13 @@ function runMigrations(): void {
 
 ```typescript
 function handleDatabaseError(error: Error): void {
-  console.error("Database error:", error);
+  console.error('Database error:', error);
 
   // Logg feilen
-  logError("Database operation failed", error);
+  logError('Database operation failed', error);
 
   // Vis brukervennlig feilmelding
-  showError("Database operasjon feilet. Prøv å starte applikasjonen på nytt.");
+  showError('Database operasjon feilet. Prøv å starte applikasjonen på nytt.');
 }
 ```
 
@@ -397,7 +389,7 @@ async function recoverFromBackup(): Promise<boolean> {
       return true;
     }
   } catch (error) {
-    console.error("Recovery failed:", error);
+    console.error('Recovery failed:', error);
   }
   return false;
 }

@@ -90,7 +90,6 @@ This version introduces comprehensive dashboard improvements with advanced KPIs,
 #### Enhanced Dashboard KPIs
 
 - **New Performance Metrics**:
-
   - Gjennomsnittlig forsinkelse (Average delay in days)
   - Kritisk forsinkede ordre (Orders delayed >30 days)
   - On-Time Delivery Rate (Percentage of orders delivered on time)
@@ -105,13 +104,11 @@ This version introduces comprehensive dashboard improvements with advanced KPIs,
 #### Tabbed Dashboard Interface
 
 - **Oversikt Tab**:
-
   - 6 key performance indicators
   - Top 5 suppliers by outstanding lines
   - Enhanced tooltips with delay and on-time delivery metrics
 
 - **Varenummer Tab** (NEW):
-
   - Display top 200 items with outstanding quantities
   - Full product names from Supabase catalog
   - Real-time search functionality across item numbers and product names
@@ -125,14 +122,12 @@ This version introduces comprehensive dashboard improvements with advanced KPIs,
 #### Supabase Product Catalog Integration
 
 - **Cloud-Based Product Names**:
-
   - 10,000+ products stored in Supabase
   - Automatic synchronization on app startup
   - Local caching for fast lookups (5-minute TTL)
   - Fallback to BP description if product not found
 
 - **Excel Upload Feature**:
-
   - Drag-and-drop interface in Settings modal
   - Parse Produktkatalog.xlsx (Column A: Item No., Column C: Item description)
   - Batch upload (1000 products at a time)
@@ -147,7 +142,6 @@ This version introduces comprehensive dashboard improvements with advanced KPIs,
 #### Database Enhancements
 
 - **New Database Methods**:
-
   - `getTopItemsByOutstanding(limit)`: Fetch top items with quantities and supplier counts
   - `getDashboardStats()`: Extended with new KPI calculations
   - `getTopSuppliersByOutstanding()`: Now sorts by line count instead of quantity
@@ -162,7 +156,6 @@ This version introduces comprehensive dashboard improvements with advanced KPIs,
 #### UI/UX Improvements
 
 - **TopItemsTable Component**:
-
   - Responsive design with mobile-friendly layout
   - Large search field with instant filtering
   - Color-coded table rows for better readability
@@ -170,7 +163,6 @@ This version introduces comprehensive dashboard improvements with advanced KPIs,
   - Dynamic result counter
 
 - **TopSuppliersChart Component**:
-
   - Updated to show line count instead of quantity
   - Enhanced tooltips with average delay and on-time delivery percentage
   - Better data visualization
@@ -185,7 +177,6 @@ This version introduces comprehensive dashboard improvements with advanced KPIs,
 ### Security & Configuration
 
 - **Environment Variables**:
-
   - `.env.example` template for Supabase credentials
   - `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`
   - Secure credential management
@@ -324,7 +315,6 @@ This version introduces comprehensive multi-language support for the OneMed Supp
 ### Key Features:
 
 - **Multi-Language Interface Support:**
-
   - Norwegian (Norsk) - Primary language
   - Swedish (Svenska) - Full interface translation
   - Danish (Dansk) - Complete localization
@@ -332,13 +322,11 @@ This version introduces comprehensive multi-language support for the OneMed Supp
   - English - International accessibility
 
 - **Language Detection and Selection:**
-
   - Automatic language detection based on system locale
   - Manual language selector component for user preference
   - Persistent language settings across application sessions
 
 - **Comprehensive Documentation:**
-
   - Multi-language user guide covering all 5 supported languages
   - End-user focused documentation with clear navigation
   - Developer documentation updates for internationalization
@@ -351,13 +339,11 @@ This version introduces comprehensive multi-language support for the OneMed Supp
 ### Technical Implementation:
 
 - **Internationalization Framework:**
-
   - Integrated i18next and react-i18next for React component translation
   - Language detection service for automatic locale identification
   - Comprehensive translation files for all supported languages
 
 - **Component Updates:**
-
   - Language selector component for manual language switching
   - Updated all major UI components with translation support
   - Maintained backward compatibility with existing functionality
@@ -402,12 +388,10 @@ This phase updated the email template column headers to better reflect the actua
 ### Key Changes:
 
 - **Norwegian Email Template:**
-
   - Changed column header from "Beskrivelse" to "Lev. ArtNr" to accurately reflect supplier article numbers
   - The column displays data from BP sheet column I (artnrlev) which contains the supplier's article number
 
 - **English Email Template:**
-
   - Changed column header from "Description" to "Supplier ArtNo" to accurately reflect supplier article numbers
   - The column displays data from BP sheet column I (artnrlev) which contains the supplier's article number
 
@@ -419,7 +403,6 @@ This phase updated the email template column headers to better reflect the actua
 ### Technical Implementation:
 
 - **Email Service Changes (`src/renderer/services/emailService.ts`):**
-
   - Updated Norwegian template table header on line 85: "Beskrivelse" → "Lev. ArtNr"
   - Updated English template table header on line 164: "Description" → "Supplier ArtNo"
   - No changes to data mapping or template logic required
@@ -453,14 +436,12 @@ This phase focused on unifying the supplier selection logic between single and b
 ### Key Changes:
 
 - **SupplierSelect Component (Single Mode) Logic Unification:**
-
   - **Database Integration**: Now uses `getSuppliersForWeekday()` to fetch suppliers from database instead of hardcoded data
   - **Order Filtering**: Implements same filtering logic as BulkSupplierSelect - only shows suppliers with `outstandingCount > 0`
   - **Data Source Consistency**: Both components now use identical data sources and filtering criteria
   - **Outstanding Order Calculation**: Uses `getAllOrders()` to calculate outstanding orders per supplier
 
 - **BulkSupplierSelect Component (Bulk Mode) - Unchanged:**
-
   - **Existing Logic Preserved**: Maintains existing database integration and filtering logic
   - **Consistent Behavior**: Already used correct database sources and filtering
 
@@ -473,7 +454,6 @@ This phase focused on unifying the supplier selection logic between single and b
 ### Technical Implementation:
 
 - **SupplierSelect.tsx Changes:**
-
   - Replaced hardcoded supplier data with database calls
   - Added `getAllOrders()` integration for outstanding order counting
   - Implemented same filtering logic as BulkSupplierSelect
@@ -508,20 +488,17 @@ This phase involved a complete overhaul of the documentation to reflect the curr
 ### Key Changes:
 
 - **Complete Documentation Restructure:**
-
   - **Removed obsolete files**: Deleted `wizard-interface.md`, `order-tracking.md`, `security-features.md`, `external-links.md`, `auto-updates.md`, `end-user-installation.md`, `README-installer.txt`, `onboarding.md`
   - **Updated core documentation**: Completely rewrote `README.md`, `user-guide.md`, `excel-import.md` to reflect current streamlined interface
   - **New documentation**: Created `getting-started.md`, `architecture.md`, `database.md`, `development/setup.md`
 
 - **New Documentation Structure:**
-
   - **User Guides**: `getting-started.md`, `user-guide.md` - Modern, user-friendly guides
   - **Technical Docs**: `architecture.md`, `database.md` - Comprehensive technical documentation
   - **Development**: `development/setup.md` - Complete development environment setup
   - **Features**: Updated `excel-import.md`, `email-reminders.md`, `email-templates.md` - Current feature documentation
 
 - **Content Improvements:**
-
   - **Norwegian language**: All documentation now in Norwegian for better user experience
   - **Modern UI/UX**: Documentation reflects current streamlined interface without wizard steps
   - **New features**: Added documentation for progress indicator, keyboard shortcuts, dashboard
@@ -529,7 +506,6 @@ This phase involved a complete overhaul of the documentation to reflect the curr
   - **Visual improvements**: Added emojis, better formatting, tables, and code examples
 
 - **Key New Features Documented:**
-
   - **Progress Indicator**: Visual progress tracking through workflow steps
   - **Keyboard Shortcuts**: Complete shortcut reference and help system
   - **Dashboard**: Comprehensive overview and statistics functionality

@@ -1,5 +1,5 @@
-import { ExcelData } from "../renderer/types/ExcelData";
-import { ExcelRow } from "../types/ExcelRow";
+import { ExcelData } from '../renderer/types/ExcelData';
+import { ExcelRow } from '../types/ExcelRow';
 
 // Define specific type for validateData return value
 type ValidateDataResult = {
@@ -13,10 +13,7 @@ type ValidateDataResult = {
 // Define the interface for the API exposed via contextBridge
 interface ElectronAPI {
   send: (channel: string, data: unknown) => void;
-  receive: (
-    channel: string,
-    func: (...args: unknown[]) => void
-  ) => (() => void) | undefined;
+  receive: (channel: string, func: (...args: unknown[]) => void) => (() => void) | undefined;
   handleError: (error: Error) => void;
   parseExcel: (data: unknown) => void;
   onExcelValidation: (callback: (data: unknown) => void) => () => void;
@@ -84,14 +81,8 @@ interface ElectronAPI {
   getOrdersBySupplier: (supplier: string) => Promise<ExcelRow[]>;
   getAllOrders: () => Promise<ExcelRow[]>;
   getOrdersDueWithinDays: (days: number) => Promise<ExcelRow[]>;
-  markOrderAsConfirmed: (
-    supplier: string,
-    orderNumber: string | null
-  ) => Promise<boolean>;
-  deleteOrder: (
-    supplier: string,
-    orderNumber: string | null
-  ) => Promise<boolean>;
+  markOrderAsConfirmed: (supplier: string, orderNumber: string | null) => Promise<boolean>;
+  deleteOrder: (supplier: string, orderNumber: string | null) => Promise<boolean>;
 
   // Auto-updater methods
   checkForUpdates: () => Promise<void>;
@@ -102,9 +93,7 @@ interface ElectronAPI {
     error?: string | null;
   }>;
   onUpdateAvailable: (callback: (info: unknown) => void) => () => void;
-  onUpdateDownloaded: (
-    callback: (info: { version: string }) => void
-  ) => () => void;
+  onUpdateDownloaded: (callback: (info: { version: string }) => void) => () => void;
   onUpdateDownloadProgress: (
     callback: (progress: {
       percent: number;
@@ -117,9 +106,7 @@ interface ElectronAPI {
   installUpdate: () => Promise<void>;
 
   // New API methods
-  openExternalLink: (
-    url: string
-  ) => Promise<{ success: boolean; error?: string }>;
+  openExternalLink: (url: string) => Promise<{ success: boolean; error?: string }>;
 
   // Logging functions
   getLogs: () => Promise<{
@@ -176,22 +163,16 @@ interface ElectronAPI {
   // Settings methods
   getSettings: () => Promise<{
     success: boolean;
-    data?: import("../renderer/types/Settings").SettingsData;
+    data?: import('../renderer/types/Settings').SettingsData;
     error?: string;
   }>;
-  saveSettings: (
-    settings: import("../renderer/types/Settings").SettingsData
-  ) => Promise<{
+  saveSettings: (settings: import('../renderer/types/Settings').SettingsData) => Promise<{
     success: boolean;
     error?: string;
   }>;
 
   // Debug methods
-  saveDebugHtml: (payload: {
-    filename: string;
-    content: string;
-    description: string;
-  }) => Promise<{
+  saveDebugHtml: (payload: { filename: string; content: string; description: string }) => Promise<{
     success: boolean;
     filePath?: string;
     error?: string;
@@ -215,17 +196,17 @@ interface ElectronAPI {
   // Dashboard methods
   getDashboardStats: () => Promise<{
     success: boolean;
-    data?: import("../renderer/types/Dashboard").DashboardStats;
+    data?: import('../renderer/types/Dashboard').DashboardStats;
     error?: string;
   }>;
   getTopSuppliers: (limit?: number) => Promise<{
     success: boolean;
-    data?: import("../renderer/types/Dashboard").SupplierStat[];
+    data?: import('../renderer/types/Dashboard').SupplierStat[];
     error?: string;
   }>;
   getSupplierDetails: (supplierName: string) => Promise<{
     success: boolean;
-    data?: import("../renderer/types/Dashboard").SupplierStat;
+    data?: import('../renderer/types/Dashboard').SupplierStat;
     error?: string;
   }>;
   getOrdersByWeek: (
@@ -233,7 +214,7 @@ interface ElectronAPI {
     weeksBehind?: number
   ) => Promise<{
     success: boolean;
-    data?: import("../renderer/types/Dashboard").WeekStat[];
+    data?: import('../renderer/types/Dashboard').WeekStat[];
     error?: string;
   }>;
 

@@ -1,10 +1,10 @@
-import { dialog } from "electron";
-import { app, shell } from "electron";
-import https from "https";
-import http from "http";
-import log from "electron-log/main";
+import { dialog } from 'electron';
+import { app, shell } from 'electron';
+import https from 'https';
+import http from 'http';
+import log from 'electron-log/main';
 
-const updateLogger = log.scope("simpleUpdater");
+const updateLogger = log.scope('simpleUpdater');
 
 interface UpdateInfo {
   version: string;
@@ -45,11 +45,11 @@ export class SimpleUpdater {
         updateLogger.info(`New version available: ${updateInfo.version}`);
         return updateInfo;
       } else {
-        updateLogger.info("No updates available");
+        updateLogger.info('No updates available');
         return null;
       }
     } catch (error) {
-      updateLogger.error("Failed to check for updates:", error);
+      updateLogger.error('Failed to check for updates:', error);
       return null;
     }
   }
@@ -64,11 +64,11 @@ export class SimpleUpdater {
 
       // Show download dialog
       const result = await dialog.showMessageBox({
-        type: "info",
-        title: "Oppdatering tilgjengelig",
+        type: 'info',
+        title: 'Oppdatering tilgjengelig',
         message: `Versjon ${updateInfo.version} er tilgjengelig`,
-        detail: "Vil du laste ned og installere oppdateringen nå?",
-        buttons: ["Last ned", "Avbryt"],
+        detail: 'Vil du laste ned og installere oppdateringen nå?',
+        buttons: ['Last ned', 'Avbryt'],
         defaultId: 0,
         cancelId: 1,
       });
@@ -79,16 +79,15 @@ export class SimpleUpdater {
 
         // Show instructions
         await dialog.showMessageBox({
-          type: "info",
-          title: "Instruksjoner",
-          message: "Oppdateringen er åpnet i nettleseren",
-          detail:
-            "Last ned og kjør den nye versjonen for å oppdatere applikasjonen.",
-          buttons: ["OK"],
+          type: 'info',
+          title: 'Instruksjoner',
+          message: 'Oppdateringen er åpnet i nettleseren',
+          detail: 'Last ned og kjør den nye versjonen for å oppdatere applikasjonen.',
+          buttons: ['OK'],
         });
       }
     } catch (error) {
-      updateLogger.error("Failed to download update:", error);
+      updateLogger.error('Failed to download update:', error);
       throw error;
     }
   }
@@ -98,25 +97,21 @@ export class SimpleUpdater {
    */
   private downloadJson(url: string): Promise<UpdateInfo> {
     return new Promise((resolve, reject) => {
-      const client = url.startsWith("https:") ? https : http;
+      const client = url.startsWith('https:') ? https : http;
 
       client
         .get(url, (response) => {
           if (response.statusCode !== 200) {
-            reject(
-              new Error(
-                `HTTP ${response.statusCode}: ${response.statusMessage}`
-              )
-            );
+            reject(new Error(`HTTP ${response.statusCode}: ${response.statusMessage}`));
             return;
           }
 
-          let data = "";
-          response.on("data", (chunk) => {
+          let data = '';
+          response.on('data', (chunk) => {
             data += chunk;
           });
 
-          response.on("end", () => {
+          response.on('end', () => {
             try {
               const json = JSON.parse(data);
               resolve(json);
@@ -124,14 +119,14 @@ export class SimpleUpdater {
               reject(
                 new Error(
                   `Invalid JSON response: ${
-                    error instanceof Error ? error.message : "Unknown error"
+                    error instanceof Error ? error.message : 'Unknown error'
                   }`
                 )
               );
             }
           });
         })
-        .on("error", (error) => {
+        .on('error', (error) => {
           reject(error);
         });
     });
@@ -140,10 +135,7 @@ export class SimpleUpdater {
   /**
    * Compare version strings
    */
-  private isNewerVersion(
-    remoteVersion: string,
-    currentVersion: string
-  ): boolean {
+  private isNewerVersion(remoteVersion: string, currentVersion: string): boolean {
     const remote = this.parseVersion(remoteVersion);
     const current = this.parseVersion(currentVersion);
 
@@ -158,7 +150,7 @@ export class SimpleUpdater {
    * Parse version string to array of numbers
    */
   private parseVersion(version: string): number[] {
-    return version.split(".").map((num) => parseInt(num, 10) || 0);
+    return version.split('.').map((num) => parseInt(num, 10) || 0);
   }
 }
 
@@ -167,8 +159,8 @@ export class SimpleUpdater {
  */
 export function setupSimpleUpdater() {
   // Don't run in development
-  if (process.env.NODE_ENV === "development") {
-    updateLogger.info("Development mode - auto-updates disabled");
+  if (process.env.NODE_ENV === 'development') {
+    updateLogger.info('Development mode - auto-updates disabled');
     return;
   }
 
@@ -176,8 +168,8 @@ export function setupSimpleUpdater() {
 
   // Try multiple update sources in order of preference
   const updateSources = [
-    "https://suppliers-anx.pages.dev", // Cloudflare Pages
-    "https://raw.githubusercontent.com/Isuldra/Suppliers/main/docs/updates", // GitHub raw files
+    'https://suppliers-anx.pages.dev', // Cloudflare Pages
+    'https://raw.githubusercontent.com/Isuldra/Suppliers/main/docs/updates', // GitHub raw files
   ];
 
   let updater: SimpleUpdater | null = null;
@@ -185,7 +177,7 @@ export function setupSimpleUpdater() {
 
   const tryNextSource = async () => {
     if (currentSourceIndex >= updateSources.length) {
-      updateLogger.error("All update sources failed");
+      updateLogger.error('All update sources failed');
       return;
     }
 

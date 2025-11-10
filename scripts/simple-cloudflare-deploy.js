@@ -1,10 +1,10 @@
-import fs from "fs";
-import path from "path";
-import { fileURLToPath } from "url";
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const cloudflareDir = path.join(__dirname, "..", "docs", "updates");
+const cloudflareDir = path.join(__dirname, '..', 'docs', 'updates');
 
 // Create updates directory for Cloudflare Pages
 if (!fs.existsSync(cloudflareDir)) {
@@ -12,9 +12,7 @@ if (!fs.existsSync(cloudflareDir)) {
 }
 
 // Get version from package.json
-const packageJson = JSON.parse(
-  fs.readFileSync(path.join(__dirname, "..", "package.json"), "utf8")
-);
+const packageJson = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'package.json'), 'utf8'));
 const version = packageJson.version;
 
 console.log(`Setting up Cloudflare Pages for version ${version}...`);
@@ -140,8 +138,8 @@ const indexHtml = `<!DOCTYPE html>
 </body>
 </html>`;
 
-fs.writeFileSync(path.join(cloudflareDir, "index.html"), indexHtml);
-console.log("Success: Generated index.html");
+fs.writeFileSync(path.join(cloudflareDir, 'index.html'), indexHtml);
+console.log('Success: Generated index.html');
 
 // Create _redirects file for Cloudflare Pages
 const redirectsContent = `# Cloudflare Pages redirects
@@ -153,13 +151,9 @@ const redirectsContent = `# Cloudflare Pages redirects
 / /index.html 200
 `;
 
-fs.writeFileSync(path.join(cloudflareDir, "_redirects"), redirectsContent);
-console.log("Success: Generated _redirects for Cloudflare Pages");
+fs.writeFileSync(path.join(cloudflareDir, '_redirects'), redirectsContent);
+console.log('Success: Generated _redirects for Cloudflare Pages');
 
-console.log("\nCloudflare Pages setup complete!");
-console.log(
-  "Your site should now be available at: https://suppliers-anx.pages.dev/"
-);
-console.log(
-  "Update files will be generated automatically when you create releases."
-);
+console.log('\nCloudflare Pages setup complete!');
+console.log('Your site should now be available at: https://suppliers-anx.pages.dev/');
+console.log('Update files will be generated automatically when you create releases.');

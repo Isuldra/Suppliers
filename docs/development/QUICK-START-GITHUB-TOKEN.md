@@ -31,11 +31,13 @@ echo $GITHUB_TOKEN | sed 's/./*/g'
 ## 🎯 When Do You Need This?
 
 **You DON'T need this for:**
+
 - ✅ Pushing to GitHub (normal commits)
 - ✅ GitHub Actions (automatic release creation)
 - ✅ Deploying to Cloudflare Pages
 
 **You DO need this for:**
+
 - 🔧 Testing `npm run release:github` locally
 - 🔧 Manually creating releases from your computer
 
@@ -44,6 +46,7 @@ echo $GITHUB_TOKEN | sed 's/./*/g'
 **For most releases, you don't need to do anything!**
 
 Just push a tag:
+
 ```bash
 git tag v1.3.2
 git push origin v1.3.2

@@ -16,7 +16,7 @@ export interface DashboardStats {
 
   // Metadata
   lastUpdated: Date;
-  dataSource: "cache" | "database";
+  dataSource: 'cache' | 'database';
 }
 
 // Supplier statistics for bar chart
@@ -52,7 +52,7 @@ export interface WeekStat {
 
 // Filter interface for dashboard filtering
 export interface DashboardFilter {
-  type: "planner" | "supplier" | "week";
+  type: 'planner' | 'supplier' | 'week';
   value: string;
   label?: string;
 }

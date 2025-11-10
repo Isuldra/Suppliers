@@ -5,9 +5,9 @@
  * Extracts version entries from CHANGELOG.md
  */
 
-import fs from "fs/promises";
-import path from "path";
-import { fileURLToPath } from "url";
+import fs from 'fs/promises';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -19,17 +19,14 @@ const __dirname = path.dirname(__filename);
  */
 export async function parseChangelogVersion(version) {
   try {
-    const projectRoot = path.resolve(__dirname, "..");
-    const changelogPath = path.join(projectRoot, "docs", "CHANGELOG.md");
-    const changelogContent = await fs.readFile(changelogPath, "utf8");
+    const projectRoot = path.resolve(__dirname, '..');
+    const changelogPath = path.join(projectRoot, 'docs', 'CHANGELOG.md');
+    const changelogContent = await fs.readFile(changelogPath, 'utf8');
 
     // Find the section for this version
     const versionPattern = new RegExp(
-      `## Version ${version.replace(
-        /\./g,
-        "\\."
-      )}:([\\s\\S]*?)(?=## Version|$)`,
-      "i"
+      `## Version ${version.replace(/\./g, '\\.')}:([\\s\\S]*?)(?=## Version|$)`,
+      'i'
     );
     const match = changelogContent.match(versionPattern);
 
@@ -41,19 +38,17 @@ export async function parseChangelogVersion(version) {
 
     // Extract title (first line after version header)
     const titleMatch = versionContent.match(/^([^\n]+)/);
-    const title = titleMatch ? titleMatch[1].replace(/^_|_$/g, "").trim() : "";
+    const title = titleMatch ? titleMatch[1].replace(/^_|_$/g, '').trim() : '';
 
     // Extract completion date
     const dateMatch = versionContent.match(/_Completed ([^_]+)_/);
-    const completedDate = dateMatch ? dateMatch[1].trim() : "";
+    const completedDate = dateMatch ? dateMatch[1].trim() : '';
 
     // Extract main description (content after date, before first ###)
-    const descriptionMatch = versionContent.match(
-      /_Completed [^_]+_\s*([\s\S]*?)(?=###|$)/
-    );
+    const descriptionMatch = versionContent.match(/_Completed [^_]+_\s*([\s\S]*?)(?=###|$)/);
     const description = descriptionMatch
       ? descriptionMatch[1].trim()
-      : versionContent.split("\n###")[0].trim();
+      : versionContent.split('\n###')[0].trim();
 
     // Extract sections
     const sections = {};
@@ -85,9 +80,9 @@ export async function parseChangelogVersion(version) {
  */
 export async function getLatestChangelogEntry() {
   try {
-    const projectRoot = path.resolve(__dirname, "..");
-    const changelogPath = path.join(projectRoot, "docs", "CHANGELOG.md");
-    const changelogContent = await fs.readFile(changelogPath, "utf8");
+    const projectRoot = path.resolve(__dirname, '..');
+    const changelogPath = path.join(projectRoot, 'docs', 'CHANGELOG.md');
+    const changelogContent = await fs.readFile(changelogPath, 'utf8');
 
     // Find the first version entry
     const versionMatch = changelogContent.match(/^## Version ([^\s:]+):/m);
@@ -98,7 +93,7 @@ export async function getLatestChangelogEntry() {
     const version = versionMatch[1];
     return await parseChangelogVersion(version);
   } catch (error) {
-    console.error("Error getting latest CHANGELOG entry:", error);
+    console.error('Error getting latest CHANGELOG entry:', error);
     return null;
   }
 }
@@ -119,12 +114,12 @@ if (isMainModule || import.meta.url === `file://${process.argv[1]}`) {
         if (entry) {
           console.log(JSON.stringify(entry, null, 2));
         } else {
-          console.error("No CHANGELOG entry found");
+          console.error('No CHANGELOG entry found');
           process.exit(1);
         }
       })
       .catch((error) => {
-        console.error("Error:", error);
+        console.error('Error:', error);
         process.exit(1);
       });
   } else {
@@ -139,7 +134,7 @@ if (isMainModule || import.meta.url === `file://${process.argv[1]}`) {
         }
       })
       .catch((error) => {
-        console.error("Error:", error);
+        console.error('Error:', error);
         process.exit(1);
       });
   }

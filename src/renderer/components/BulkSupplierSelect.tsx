@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useMemo } from "react";
-import { useTranslation } from "react-i18next";
-import { ChevronDownIcon, ChevronRightIcon } from "@heroicons/react/24/outline";
-import { ExcelRow } from "../types/ExcelData";
-import supplierData from "../data/supplierData.json";
-import SelectToggleButton from "./SelectToggleButton";
+import React, { useState, useEffect, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
+import { ChevronDownIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
+import { ExcelRow } from '../types/ExcelData';
+import supplierData from '../data/supplierData.json';
+import SelectToggleButton from './SelectToggleButton';
 
 interface BulkSupplierSelectProps {
   onSuppliersSelected: (suppliers: string[]) => void;
@@ -20,7 +20,7 @@ interface SupplierInfo {
   companyId: number;
   epost: string;
   språk: string;
-  språkKode: "NO" | "ENG";
+  språkKode: 'NO' | 'ENG';
   purredag: string;
 }
 
@@ -29,7 +29,7 @@ interface SupplierWithDetails {
   outstandingCount: number;
   email: string;
   language: string;
-  languageCode: "NO" | "ENG";
+  languageCode: 'NO' | 'ENG';
   isExpanded: boolean;
 }
 
@@ -43,7 +43,7 @@ const BulkSupplierSelect: React.FC<BulkSupplierSelectProps> = ({
   bulkSupplierEmails,
 }) => {
   const { t } = useTranslation();
-  console.log("🟡 BulkSupplierSelect: Component rendered with props:", {
+  console.log('🟡 BulkSupplierSelect: Component rendered with props:', {
     selectedWeekday,
     selectedPlanner,
     selectedSuppliers,
@@ -51,29 +51,19 @@ const BulkSupplierSelect: React.FC<BulkSupplierSelectProps> = ({
   });
   const [suppliers, setSuppliers] = useState<SupplierWithDetails[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [expandedSuppliers, setExpandedSuppliers] = useState<Set<string>>(
-    new Set()
-  );
-  const [supplierEmails, setSupplierEmails] = useState<Map<string, string>>(
-    new Map()
-  );
-  const [excludedOrderLines, setExcludedOrderLines] = useState<Set<string>>(
-    new Set()
-  );
+  const [expandedSuppliers, setExpandedSuppliers] = useState<Set<string>>(new Set());
+  const [supplierEmails, setSupplierEmails] = useState<Map<string, string>>(new Map());
+  const [excludedOrderLines, setExcludedOrderLines] = useState<Set<string>>(new Set());
   const [userHasManuallySelected, setUserHasManuallySelected] = useState(false);
-  const [supplierOrders, setSupplierOrders] = useState<Map<string, ExcelRow[]>>(
-    new Map()
-  );
+  const [supplierOrders, setSupplierOrders] = useState<Map<string, ExcelRow[]>>(new Map());
 
   // Get supplier info from supplierData.json
   const getSupplierInfo = (supplierName: string): SupplierInfo | null => {
-    const supplier = supplierData.leverandører.find(
-      (s) => s.leverandør === supplierName
-    );
+    const supplier = supplierData.leverandører.find((s) => s.leverandør === supplierName);
     return supplier
       ? {
           ...supplier,
-          språkKode: supplier.språkKode as "NO" | "ENG",
+          språkKode: supplier.språkKode as 'NO' | 'ENG',
         }
       : null;
   };
@@ -81,7 +71,7 @@ const BulkSupplierSelect: React.FC<BulkSupplierSelectProps> = ({
   // Fetch suppliers with outstanding orders for the selected weekday
   useEffect(() => {
     const fetchSuppliers = async () => {
-      console.log("🟠 BulkSupplierSelect: fetchSuppliers called with:", {
+      console.log('🟠 BulkSupplierSelect: fetchSuppliers called with:', {
         selectedWeekday,
         selectedPlanner,
       });
@@ -93,7 +83,7 @@ const BulkSupplierSelect: React.FC<BulkSupplierSelectProps> = ({
           selectedPlanner
         );
 
-        console.log("🟠 Suppliers response:", suppliersResponse);
+        console.log('🟠 Suppliers response:', suppliersResponse);
 
         let weekdaySuppliers: string[] = [];
         if (
@@ -106,11 +96,11 @@ const BulkSupplierSelect: React.FC<BulkSupplierSelectProps> = ({
         }
         // No fallback to hardcoded data - Excel is the only source of truth
 
-        console.log("🟠 Final weekday suppliers:", weekdaySuppliers);
+        console.log('🟠 Final weekday suppliers:', weekdaySuppliers);
 
         // Get outstanding orders to count per supplier
         const outstandingOrders = await window.electron.getAllOrders();
-        console.log("🟠 Outstanding orders:", outstandingOrders);
+        console.log('🟠 Outstanding orders:', outstandingOrders);
 
         // Create supplier details with counts
         const suppliersWithDetails: SupplierWithDetails[] = weekdaySuppliers
@@ -123,19 +113,19 @@ const BulkSupplierSelect: React.FC<BulkSupplierSelectProps> = ({
             return {
               supplier,
               outstandingCount,
-              email: supplierInfo?.epost || "",
-              language: supplierInfo?.språk || "Norsk",
-              languageCode: supplierInfo?.språkKode || "NO",
+              email: supplierInfo?.epost || '',
+              language: supplierInfo?.språk || 'Norsk',
+              languageCode: supplierInfo?.språkKode || 'NO',
               isExpanded: expandedSuppliers.has(supplier),
             };
           })
           .filter((s) => s.outstandingCount > 0) // Only show suppliers with outstanding orders
           .sort((a, b) => a.supplier.localeCompare(b.supplier));
 
-        console.log("🟠 Final suppliers with details:", suppliersWithDetails);
+        console.log('🟠 Final suppliers with details:', suppliersWithDetails);
         setSuppliers(suppliersWithDetails);
       } catch (error) {
-        console.error("Error fetching suppliers:", error);
+        console.error('Error fetching suppliers:', error);
         setSuppliers([]);
       } finally {
         setIsLoading(false);
@@ -149,18 +139,14 @@ const BulkSupplierSelect: React.FC<BulkSupplierSelectProps> = ({
 
   // Debug effect to track selectedSuppliers prop changes
   useEffect(() => {
-    console.log(
-      "🟡 BulkSupplierSelect: selectedSuppliers prop changed to:",
-      selectedSuppliers
-    );
-    console.log("🟡 selectedSuppliers length:", selectedSuppliers.length);
+    console.log('🟡 BulkSupplierSelect: selectedSuppliers prop changed to:', selectedSuppliers);
+    console.log('🟡 selectedSuppliers length:', selectedSuppliers.length);
   }, [selectedSuppliers]);
 
   // Handle select all suppliers
   const handleSelectAll = () => {
     const allSupplierNames = suppliers.map((s) => s.supplier);
-    const newSelection =
-      selectedSuppliers.length === suppliers.length ? [] : allSupplierNames;
+    const newSelection = selectedSuppliers.length === suppliers.length ? [] : allSupplierNames;
     setUserHasManuallySelected(true); // Mark that user has manually selected
     onSuppliersSelected(newSelection);
   };
@@ -171,19 +157,11 @@ const BulkSupplierSelect: React.FC<BulkSupplierSelectProps> = ({
     if (suppliers.length > 0 && !userHasManuallySelected) {
       const allSupplierNames = suppliers.map((s) => s.supplier);
       // Only auto-select if the current selection is different
-      if (
-        JSON.stringify(selectedSuppliers.sort()) !==
-        JSON.stringify(allSupplierNames.sort())
-      ) {
+      if (JSON.stringify(selectedSuppliers.sort()) !== JSON.stringify(allSupplierNames.sort())) {
         onSuppliersSelected(allSupplierNames);
       }
     }
-  }, [
-    suppliers,
-    selectedSuppliers,
-    onSuppliersSelected,
-    userHasManuallySelected,
-  ]);
+  }, [suppliers, selectedSuppliers, onSuppliersSelected, userHasManuallySelected]);
 
   // Send filtered order lines to parent component
   useEffect(() => {
@@ -192,8 +170,8 @@ const BulkSupplierSelect: React.FC<BulkSupplierSelectProps> = ({
         const orders = supplierOrders.get(supplier) || [];
         const filteredOrderKeys = new Set(
           orders
-            .filter((order) => !excludedOrderLines.has(order.key || ""))
-            .map((order) => order.key || "")
+            .filter((order) => !excludedOrderLines.has(order.key || ''))
+            .map((order) => order.key || '')
         );
         onOrderLinesSelected(supplier, filteredOrderKeys);
       });
@@ -202,22 +180,16 @@ const BulkSupplierSelect: React.FC<BulkSupplierSelectProps> = ({
 
   // Handle individual supplier selection
   const handleSupplierSelect = (supplier: string) => {
-    console.log(
-      "🔵 BulkSupplierSelect: handleSupplierSelect called with:",
-      supplier
-    );
-    console.log("🔵 Current selectedSuppliers:", selectedSuppliers);
-    console.log("🔵 selectedSuppliers type:", typeof selectedSuppliers);
-    console.log(
-      "🔵 selectedSuppliers is array:",
-      Array.isArray(selectedSuppliers)
-    );
+    console.log('🔵 BulkSupplierSelect: handleSupplierSelect called with:', supplier);
+    console.log('🔵 Current selectedSuppliers:', selectedSuppliers);
+    console.log('🔵 selectedSuppliers type:', typeof selectedSuppliers);
+    console.log('🔵 selectedSuppliers is array:', Array.isArray(selectedSuppliers));
 
     // Create a completely new array to ensure immutability
     const currentSelection = [...selectedSuppliers];
     const isCurrentlySelected = currentSelection.includes(supplier);
 
-    console.log("🔵 Is currently selected:", isCurrentlySelected);
+    console.log('🔵 Is currently selected:', isCurrentlySelected);
 
     const newSelection = isCurrentlySelected
       ? currentSelection.filter((s) => s !== supplier)
@@ -226,9 +198,9 @@ const BulkSupplierSelect: React.FC<BulkSupplierSelectProps> = ({
     // Remove any duplicates to prevent counting issues
     const uniqueSelection = [...new Set(newSelection)];
 
-    console.log("🔵 New selection will be:", uniqueSelection);
-    console.log("🔵 New selection length:", uniqueSelection.length);
-    console.log("🔵 Calling onSuppliersSelected with:", uniqueSelection);
+    console.log('🔵 New selection will be:', uniqueSelection);
+    console.log('🔵 New selection length:', uniqueSelection.length);
+    console.log('🔵 Calling onSuppliersSelected with:', uniqueSelection);
 
     // Mark that user has manually selected
     setUserHasManuallySelected(true);
@@ -260,9 +232,7 @@ const BulkSupplierSelect: React.FC<BulkSupplierSelectProps> = ({
   };
 
   // Check for mixed languages
-  const selectedSuppliersInfo = suppliers.filter((s) =>
-    selectedSuppliers.includes(s.supplier)
-  );
+  const selectedSuppliersInfo = suppliers.filter((s) => selectedSuppliers.includes(s.supplier));
   const hasMixedLanguages = useMemo(() => {
     if (selectedSuppliersInfo.length <= 1) return false;
     const languages = new Set(selectedSuppliersInfo.map((s) => s.languageCode));
@@ -274,16 +244,12 @@ const BulkSupplierSelect: React.FC<BulkSupplierSelectProps> = ({
   const fetchSupplierOrders = async (supplier: string) => {
     try {
       const allOrders = await window.electron.getAllOrders();
-      const filteredOrders = allOrders.filter(
-        (order) => order.supplier === supplier
-      );
+      const filteredOrders = allOrders.filter((order) => order.supplier === supplier);
       setSupplierOrders(
-        new Map(
-          supplierOrders.set(supplier, filteredOrders as unknown as ExcelRow[])
-        )
+        new Map(supplierOrders.set(supplier, filteredOrders as unknown as ExcelRow[]))
       );
     } catch (error) {
-      console.error("Error fetching orders for supplier:", error);
+      console.error('Error fetching orders for supplier:', error);
     }
   };
 
@@ -310,8 +276,7 @@ const BulkSupplierSelect: React.FC<BulkSupplierSelectProps> = ({
   // Get count of non-excluded orders for a supplier
   const getNonExcludedOrderCount = (supplier: string): number => {
     const orders = supplierOrders.get(supplier) || [];
-    return orders.filter((order) => !excludedOrderLines.has(order.key || ""))
-      .length;
+    return orders.filter((order) => !excludedOrderLines.has(order.key || '')).length;
   };
 
   if (isLoading) {
@@ -319,9 +284,7 @@ const BulkSupplierSelect: React.FC<BulkSupplierSelectProps> = ({
       <div className="w-full">
         <div className="flex items-center justify-center p-8">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-          <span className="ml-2 text-neutral-secondary">
-            {t("bulkSupplierSelect.loading")}
-          </span>
+          <span className="ml-2 text-neutral-secondary">{t('bulkSupplierSelect.loading')}</span>
         </div>
       </div>
     );
@@ -331,18 +294,13 @@ const BulkSupplierSelect: React.FC<BulkSupplierSelectProps> = ({
     <div className="w-full">
       <div className="mb-4 p-4 bg-primary-light bg-opacity-10 border border-primary-light rounded-md">
         <p className="text-primary">
-          <span className="font-medium">{t("bulkSupplierSelect.planner")}</span>{" "}
-          {selectedPlanner}
+          <span className="font-medium">{t('bulkSupplierSelect.planner')}</span> {selectedPlanner}
         </p>
         <p className="text-primary mt-1">
-          <span className="font-medium">
-            {t("bulkSupplierSelect.selectedWeekday")}
-          </span>{" "}
+          <span className="font-medium">{t('bulkSupplierSelect.selectedWeekday')}</span>{' '}
           {selectedWeekday}
         </p>
-        <p className="text-sm text-neutral-secondary mt-1">
-          {t("bulkSupplierSelect.description")}
-        </p>
+        <p className="text-sm text-neutral-secondary mt-1">{t('bulkSupplierSelect.description')}</p>
       </div>
 
       {/* Language warning */}
@@ -350,11 +308,7 @@ const BulkSupplierSelect: React.FC<BulkSupplierSelectProps> = ({
         <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
           <div className="flex">
             <div className="flex-shrink-0">
-              <svg
-                className="h-5 w-5 text-yellow-400"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-              >
+              <svg className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
                 <path
                   fillRule="evenodd"
                   d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
@@ -364,7 +318,7 @@ const BulkSupplierSelect: React.FC<BulkSupplierSelectProps> = ({
             </div>
             <div className="ml-3">
               <p className="text-sm text-yellow-800">
-                {t("bulkSupplierSelect.mixedLanguageWarning")}
+                {t('bulkSupplierSelect.mixedLanguageWarning')}
               </p>
             </div>
           </div>
@@ -381,8 +335,8 @@ const BulkSupplierSelect: React.FC<BulkSupplierSelectProps> = ({
           size="md"
         />
         <span className="ml-2 text-sm text-neutral-secondary">
-          {selectedSuppliers.length} av {suppliers.length}{" "}
-          {t("bulkSupplierSelect.suppliersSelected")}
+          {selectedSuppliers.length} av {suppliers.length}{' '}
+          {t('bulkSupplierSelect.suppliersSelected')}
         </span>
       </div>
 
@@ -393,42 +347,35 @@ const BulkSupplierSelect: React.FC<BulkSupplierSelectProps> = ({
             <thead className="bg-neutral-light">
               <tr>
                 <th className="px-4 py-3 text-left text-sm font-medium text-neutral">
-                  {t("bulkSupplierSelect.tableHeaders.select")}
+                  {t('bulkSupplierSelect.tableHeaders.select')}
                 </th>
                 <th className="px-4 py-3 text-left text-sm font-medium text-neutral">
-                  {t("bulkSupplierSelect.tableHeaders.supplier")}
+                  {t('bulkSupplierSelect.tableHeaders.supplier')}
                 </th>
                 <th className="px-4 py-3 text-left text-sm font-medium text-neutral">
-                  {t("bulkSupplierSelect.tableHeaders.outstandingLines")}
+                  {t('bulkSupplierSelect.tableHeaders.outstandingLines')}
                 </th>
                 <th className="px-4 py-3 text-left text-sm font-medium text-neutral">
-                  {t("bulkSupplierSelect.tableHeaders.email")}
+                  {t('bulkSupplierSelect.tableHeaders.email')}
                 </th>
                 <th className="px-4 py-3 text-left text-sm font-medium text-neutral">
-                  {t("bulkSupplierSelect.tableHeaders.language")}
+                  {t('bulkSupplierSelect.tableHeaders.language')}
                 </th>
                 <th className="px-4 py-3 text-left text-sm font-medium text-neutral">
-                  {t("bulkSupplierSelect.tableHeaders.details")}
+                  {t('bulkSupplierSelect.tableHeaders.details')}
                 </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-neutral-light">
               {suppliers.map((supplier) => {
-                console.log(
-                  "🟣 Rendering supplier row for:",
-                  supplier.supplier
-                );
+                console.log('🟣 Rendering supplier row for:', supplier.supplier);
                 return (
                   <React.Fragment key={supplier.supplier}>
                     <tr className="hover:bg-neutral-light bg-opacity-50">
                       <td className="px-4 py-3">
                         <SelectToggleButton
-                          isSelected={selectedSuppliers.includes(
-                            supplier.supplier
-                          )}
-                          onToggle={() =>
-                            handleSupplierSelect(supplier.supplier)
-                          }
+                          isSelected={selectedSuppliers.includes(supplier.supplier)}
+                          onToggle={() => handleSupplierSelect(supplier.supplier)}
                           selectLabelKey="bulkSupplierSelect.select"
                           removeLabelKey="bulkSupplierSelect.unselect"
                           size="sm"
@@ -452,21 +399,17 @@ const BulkSupplierSelect: React.FC<BulkSupplierSelectProps> = ({
                             supplierEmails.get(supplier.supplier) ||
                             supplier.email
                           }
-                          onChange={(e) =>
-                            handleEmailChange(supplier.supplier, e.target.value)
-                          }
+                          onChange={(e) => handleEmailChange(supplier.supplier, e.target.value)}
                           className="form-control text-sm w-full min-w-64"
-                          placeholder={t(
-                            "bulkSupplierSelect.tableHeaders.email"
-                          )}
+                          placeholder={t('bulkSupplierSelect.tableHeaders.email')}
                         />
                       </td>
                       <td className="px-4 py-3 text-sm">
                         <span
                           className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            supplier.languageCode === "NO"
-                              ? "bg-blue-100 text-blue-800"
-                              : "bg-green-100 text-green-800"
+                            supplier.languageCode === 'NO'
+                              ? 'bg-blue-100 text-blue-800'
+                              : 'bg-green-100 text-green-800'
                           }`}
                         >
                           {supplier.language}
@@ -474,20 +417,18 @@ const BulkSupplierSelect: React.FC<BulkSupplierSelectProps> = ({
                       </td>
                       <td className="px-4 py-3">
                         <button
-                          onClick={() =>
-                            handleExpandWithOrders(supplier.supplier)
-                          }
+                          onClick={() => handleExpandWithOrders(supplier.supplier)}
                           className="flex items-center text-primary hover:text-primary-dark transition-colors"
                         >
                           {expandedSuppliers.has(supplier.supplier) ? (
                             <>
                               <ChevronDownIcon className="h-4 w-4 mr-1" />
-                              {t("bulkSupplierSelect.show")}
+                              {t('bulkSupplierSelect.show')}
                             </>
                           ) : (
                             <>
                               <ChevronRightIcon className="h-4 w-4 mr-1" />
-                              {t("bulkSupplierSelect.show")}
+                              {t('bulkSupplierSelect.show')}
                             </>
                           )}
                         </button>
@@ -499,7 +440,7 @@ const BulkSupplierSelect: React.FC<BulkSupplierSelectProps> = ({
                         <td colSpan={6} className="px-4 py-4">
                           <div className="bg-neutral-white rounded-md border border-neutral-light p-4">
                             <h4 className="text-sm font-medium text-neutral mb-3">
-                              {t("bulkSupplierSelect.outstandingOrdersFor", {
+                              {t('bulkSupplierSelect.outstandingOrdersFor', {
                                 supplier: supplier.supplier,
                               })}
                             </h4>
@@ -509,106 +450,75 @@ const BulkSupplierSelect: React.FC<BulkSupplierSelectProps> = ({
                                   <thead>
                                     <tr className="border-b border-neutral-light">
                                       <th className="text-left py-2 px-2">
-                                        {t(
-                                          "bulkDataReview.tableHeaders.select"
-                                        )}
+                                        {t('bulkDataReview.tableHeaders.select')}
                                       </th>
                                       <th className="text-left py-2 px-2">
-                                        {t(
-                                          "bulkDataReview.tableHeaders.poNumber"
-                                        )}
+                                        {t('bulkDataReview.tableHeaders.poNumber')}
                                       </th>
                                       <th className="text-left py-2 px-2">
-                                        {t(
-                                          "bulkDataReview.tableHeaders.oneMedNumber"
-                                        )}
+                                        {t('bulkDataReview.tableHeaders.oneMedNumber')}
                                       </th>
                                       <th className="text-left py-2 px-2">
-                                        {t(
-                                          "bulkDataReview.tableHeaders.description"
-                                        )}
+                                        {t('bulkDataReview.tableHeaders.description')}
                                       </th>
                                       <th className="text-left py-2 px-2">
-                                        {t(
-                                          "bulkDataReview.tableHeaders.ordered"
-                                        )}
+                                        {t('bulkDataReview.tableHeaders.ordered')}
                                       </th>
                                       <th className="text-left py-2 px-2">
-                                        {t(
-                                          "bulkDataReview.tableHeaders.received"
-                                        )}
+                                        {t('bulkDataReview.tableHeaders.received')}
                                       </th>
                                       <th className="text-left py-2 px-2">
-                                        {t(
-                                          "bulkDataReview.tableHeaders.outstanding"
-                                        )}
+                                        {t('bulkDataReview.tableHeaders.outstanding')}
                                       </th>
                                       <th className="text-left py-2 px-2">
-                                        {t("bulkDataReview.tableHeaders.eta")}
+                                        {t('bulkDataReview.tableHeaders.eta')}
                                       </th>
                                     </tr>
                                   </thead>
                                   <tbody>
                                     {supplierOrders
                                       .get(supplier.supplier)
-                                      ?.map(
-                                        (order: ExcelRow, index: number) => (
-                                          <tr
-                                            key={order.key || index}
-                                            className={`border-b border-neutral-light ${
-                                              excludedOrderLines.has(
-                                                order.key || ""
-                                              )
-                                                ? "bg-gray-100 opacity-60"
-                                                : ""
-                                            }`}
-                                          >
-                                            <td className="py-2 px-2">
-                                              <input
-                                                type="checkbox"
-                                                checked={
-                                                  !excludedOrderLines.has(
-                                                    order.key || ""
-                                                  )
-                                                }
-                                                onChange={() =>
-                                                  handleOrderLineExclusion(
-                                                    order.key || ""
-                                                  )
-                                                }
-                                                className="form-checkbox h-4 w-4 text-primary"
-                                              />
-                                            </td>
-                                            <td className="py-2 px-2 font-medium">
-                                              {order.poNumber}
-                                            </td>
-                                            <td className="py-2 px-2">
-                                              {order.itemNo}
-                                            </td>
-                                            <td className="py-2 px-2">
-                                              {order.description}
-                                            </td>
-                                            <td className="py-2 px-2 text-center">
-                                              {order.orderQty}
-                                            </td>
-                                            <td className="py-2 px-2 text-center">
-                                              {order.receivedQty}
-                                            </td>
-                                            <td className="py-2 px-2 text-center font-medium text-primary">
-                                              {order.outstandingQty ||
-                                                order.orderQty -
-                                                  order.receivedQty}
-                                            </td>
-                                            <td className="py-2 px-2">
-                                              {order.dueDate
-                                                ? new Date(
-                                                    order.dueDate
-                                                  ).toLocaleDateString("nb-NO")
-                                                : "Ikke spesifisert"}
-                                            </td>
-                                          </tr>
-                                        )
-                                      )}
+                                      ?.map((order: ExcelRow, index: number) => (
+                                        <tr
+                                          key={order.key || index}
+                                          className={`border-b border-neutral-light ${
+                                            excludedOrderLines.has(order.key || '')
+                                              ? 'bg-gray-100 opacity-60'
+                                              : ''
+                                          }`}
+                                        >
+                                          <td className="py-2 px-2">
+                                            <input
+                                              type="checkbox"
+                                              checked={!excludedOrderLines.has(order.key || '')}
+                                              onChange={() =>
+                                                handleOrderLineExclusion(order.key || '')
+                                              }
+                                              className="form-checkbox h-4 w-4 text-primary"
+                                            />
+                                          </td>
+                                          <td className="py-2 px-2 font-medium">
+                                            {order.poNumber}
+                                          </td>
+                                          <td className="py-2 px-2">{order.itemNo}</td>
+                                          <td className="py-2 px-2">{order.description}</td>
+                                          <td className="py-2 px-2 text-center">
+                                            {order.orderQty}
+                                          </td>
+                                          <td className="py-2 px-2 text-center">
+                                            {order.receivedQty}
+                                          </td>
+                                          <td className="py-2 px-2 text-center font-medium text-primary">
+                                            {order.outstandingQty ||
+                                              order.orderQty - order.receivedQty}
+                                          </td>
+                                          <td className="py-2 px-2">
+                                            {order.dueDate
+                                              ? new Date(order.dueDate).toLocaleDateString('nb-NO')
+                                              : 'Ikke spesifisert'}
+                                          </td>
+                                        </tr>
+                                      ))}
                                   </tbody>
                                 </table>
                               </div>
@@ -631,7 +541,7 @@ const BulkSupplierSelect: React.FC<BulkSupplierSelectProps> = ({
 
         {suppliers.length === 0 && (
           <div className="text-center py-8 text-neutral-secondary">
-            <p>{t("bulkSupplierSelect.noSuppliersFound")}</p>
+            <p>{t('bulkSupplierSelect.noSuppliersFound')}</p>
           </div>
         )}
       </div>
@@ -640,18 +550,16 @@ const BulkSupplierSelect: React.FC<BulkSupplierSelectProps> = ({
       {selectedSuppliers.length > 0 && (
         <div className="mt-4 p-4 bg-primary-light bg-opacity-10 border border-primary-light rounded-md">
           <h3 className="text-sm font-medium text-primary mb-2">
-            {t("bulkSupplierSelect.summary")}
+            {t('bulkSupplierSelect.summary')}
           </h3>
           <p className="text-sm text-neutral">
-            <strong>{[...new Set(selectedSuppliers)].length}</strong>{" "}
-            {t("bulkSupplierSelect.suppliersSelected")}
+            <strong>{[...new Set(selectedSuppliers)].length}</strong>{' '}
+            {t('bulkSupplierSelect.suppliersSelected')}
           </p>
           <p className="text-sm text-neutral">
             <strong>
               {selectedSuppliers.reduce((total, supplier) => {
-                const supplierData = suppliers.find(
-                  (s) => s.supplier === supplier
-                );
+                const supplierData = suppliers.find((s) => s.supplier === supplier);
                 return (
                   total +
                   (supplierData
@@ -661,12 +569,12 @@ const BulkSupplierSelect: React.FC<BulkSupplierSelectProps> = ({
                     : 0)
                 );
               }, 0)}
-            </strong>{" "}
-            {t("bulkSupplierSelect.totalOutstandingLines")}
+            </strong>{' '}
+            {t('bulkSupplierSelect.totalOutstandingLines')}
           </p>
           {hasMixedLanguages && (
             <p className="text-sm text-yellow-700 mt-1">
-              {t("bulkSupplierSelect.mixedLanguageInfo")}
+              {t('bulkSupplierSelect.mixedLanguageInfo')}
             </p>
           )}
         </div>

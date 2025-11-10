@@ -28,7 +28,6 @@ Applikasjonen validerer tilstedeværelsen av følgende ark:
 ### Behandlede Ark og Data Bruk
 
 - **BP**: Data fra dette arket parses og brukes i hovedarbeidsflyten (Data Review, E-post). Den lagres i `purchase_order` tabellen i databasen.
-
   - **Nøkkelfelter**: Parseren mapper kolonner til interne felter med fleksible headernavn:
     - `nøkkel` fra 'Nøkkel'/'Key'/'ID'/'A'
     - `ordreNr` fra 'PO'/'Purchase Order'/'C'
@@ -94,7 +93,7 @@ Når parsing eller initial valideringsfeil oppstår:
 // Eksempel på fil opplasting i FileUpload komponenten
 const onDrop = useCallback((acceptedFiles: File[]) => {
   const file = acceptedFiles[0];
-  if (file && file.name.endsWith(".xlsx")) {
+  if (file && file.name.endsWith('.xlsx')) {
     const reader = new FileReader();
     reader.onload = async (e) => {
       const buffer = e.target?.result as ArrayBuffer;
@@ -104,7 +103,7 @@ const onDrop = useCallback((acceptedFiles: File[]) => {
           onDataParsed(parsedData);
         }
       } catch (error) {
-        console.error("Import failed:", error);
+        console.error('Import failed:', error);
       }
     };
     reader.readAsArrayBuffer(file);

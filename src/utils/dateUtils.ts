@@ -53,8 +53,8 @@ export function endOfWeek(date: Date): Date {
  */
 export function formatDate(date: Date): string {
   const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
 
   return `${year}-${month}-${day}`;
 }
@@ -69,9 +69,9 @@ export function formatDate(date: Date): string {
 export function formatLocalDate(
   date: Date,
   options: Intl.DateTimeFormatOptions = {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
   }
 ): string {
   return new Intl.DateTimeFormat(undefined, options).format(date);
@@ -116,10 +116,7 @@ export function getWeekNumber(date: Date): number {
   return (
     1 +
     Math.round(
-      ((target.getTime() - firstWeek.getTime()) / 86400000 -
-        3 +
-        ((firstWeek.getDay() + 6) % 7)) /
-        7
+      ((target.getTime() - firstWeek.getTime()) / 86400000 - 3 + ((firstWeek.getDay() + 6) % 7)) / 7
     )
   );
 }

@@ -1,6 +1,6 @@
-import { app, BrowserWindow } from "electron";
-import { fileURLToPath } from "url";
-import path from "path";
+import { app, BrowserWindow } from 'electron';
+import { fileURLToPath } from 'url';
+import path from 'path';
 
 // This ensures __dirname is correctly set in ES modules environment
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -14,21 +14,21 @@ function createWindow() {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      preload: path.join(__dirname, "preload/index.js"),
+      preload: path.join(__dirname, 'preload/index.js'),
     },
   });
 
   // In development, load from localhost
-  if (process.env.NODE_ENV === "development") {
-    mainWindow.loadURL("http://localhost:3000");
+  if (process.env.NODE_ENV === 'development') {
+    mainWindow.loadURL('http://localhost:3000');
     mainWindow.webContents.openDevTools();
   } else {
     // In production, load the built index.html
-    mainWindow.loadFile(path.join(__dirname, "../renderer/index.html"));
+    mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'));
   }
 
   // Prevent memory leaks by explicitly setting mainWindow to null when closed
-  mainWindow.on("closed", () => {
+  mainWindow.on('closed', () => {
     // This helps ensure resources are properly released
     // @ts-expect-error // Allow setting mainWindow to null despite BrowserWindow type
     mainWindow = null;
@@ -39,7 +39,7 @@ function createWindow() {
 app.whenReady().then(() => {
   createWindow();
 
-  app.on("activate", () => {
+  app.on('activate', () => {
     // On macOS, recreate window when dock icon is clicked and no windows are open
     if (BrowserWindow.getAllWindows().length === 0) {
       createWindow();
@@ -48,8 +48,8 @@ app.whenReady().then(() => {
 });
 
 // Quit the app when all windows are closed (except on macOS)
-app.on("window-all-closed", () => {
-  if (process.platform !== "darwin") {
+app.on('window-all-closed', () => {
+  if (process.platform !== 'darwin') {
     app.quit();
   }
 });

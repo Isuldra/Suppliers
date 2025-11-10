@@ -1,13 +1,13 @@
-import React from "react";
-import { useTranslation } from "react-i18next";
-import { CheckCircleIcon, XCircleIcon } from "@heroicons/react/24/outline";
+import React from 'react';
+import { useTranslation } from 'react-i18next';
+import { CheckCircleIcon, XCircleIcon } from '@heroicons/react/24/outline';
 
 interface SelectToggleButtonProps {
   isSelected: boolean;
   onToggle: () => void;
   selectLabelKey: string;
   removeLabelKey: string;
-  size?: "sm" | "md";
+  size?: 'sm' | 'md';
   className?: string;
 }
 
@@ -16,12 +16,12 @@ const SelectToggleButton: React.FC<SelectToggleButtonProps> = ({
   onToggle,
   selectLabelKey,
   removeLabelKey,
-  size = "md",
-  className = "",
+  size = 'md',
+  className = '',
 }) => {
   const { t } = useTranslation();
 
-  const sizeClasses = size === "sm" ? "btn-sm" : "";
+  const sizeClasses = size === 'sm' ? 'btn-sm' : '';
   const baseClasses = `btn ${sizeClasses} px-4 py-2 rounded-sm font-medium ease-in-out transition-all duration-200 inline-flex items-center justify-center gap-2`;
 
   if (isSelected) {

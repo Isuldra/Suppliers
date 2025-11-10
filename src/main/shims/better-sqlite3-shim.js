@@ -2,7 +2,7 @@
 const Database = class {
   constructor() {
     this.open = true;
-    console.log("Using better-sqlite3 shim in development mode");
+    console.log('Using better-sqlite3 shim in development mode');
   }
 
   pragma() {

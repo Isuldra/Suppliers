@@ -159,9 +159,9 @@ on:
   workflow_dispatch:
     inputs:
       version_type:
-        description: "Version type to create"
+        description: 'Version type to create'
         required: true
-        default: "patch"
+        default: 'patch'
         type: choice
         options:
           - patch
@@ -172,14 +172,14 @@ on:
           - premajor
           - prerelease
       push_changes:
-        description: "Automatically push changes and tags"
+        description: 'Automatically push changes and tags'
         required: true
         default: true
         type: boolean
       tag_prefix:
-        description: "Git tag prefix (default: v)"
+        description: 'Git tag prefix (default: v)'
         required: false
-        default: "v"
+        default: 'v'
         type: string
 ```
 
@@ -191,9 +191,9 @@ The build workflow automatically triggers after version management:
 on:
   push:
     branches: [main]
-    tags: ["v*"] # Trigger on version tags
+    tags: ['v*'] # Trigger on version tags
   workflow_run:
-    workflows: ["🏷️ Version Management"]
+    workflows: ['🏷️ Version Management']
     types: [completed]
 ```
 

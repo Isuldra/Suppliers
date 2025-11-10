@@ -1,14 +1,6 @@
-import React from "react";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-  Cell,
-} from "recharts";
-import { SupplierStat } from "../../types/Dashboard";
+import React from 'react';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import { SupplierStat } from '../../types/Dashboard';
 
 interface TopSuppliersChartProps {
   data: SupplierStat[];
@@ -16,7 +8,7 @@ interface TopSuppliersChartProps {
   loading?: boolean;
 }
 
-const COLORS = ["#3b82f6", "#8b5cf6", "#ec4899", "#f59e0b", "#10b981"];
+const COLORS = ['#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981'];
 
 const TopSuppliersChartComponent: React.FC<TopSuppliersChartProps> = ({
   data,
@@ -59,14 +51,13 @@ const TopSuppliersChartComponent: React.FC<TopSuppliersChartProps> = ({
         <div className="bg-white p-3 rounded-lg shadow-lg border border-gray-200">
           <p className="font-bold text-neutral">{data.name}</p>
           <p className="text-sm text-neutral-secondary">
-            Antall linjer:{" "}
-            {data.outstandingLines?.toLocaleString("nb-NO") ||
-              data.orderCount.toLocaleString("nb-NO")}
+            Antall linjer:{' '}
+            {data.outstandingLines?.toLocaleString('nb-NO') ||
+              data.orderCount.toLocaleString('nb-NO')}
           </p>
           {data.averageDelayDays !== undefined && (
             <p className="text-sm text-neutral-secondary">
-              Gjennomsnittlig forsinkelse: {data.averageDelayDays.toFixed(1)}{" "}
-              dager
+              Gjennomsnittlig forsinkelse: {data.averageDelayDays.toFixed(1)} dager
             </p>
           )}
           {data.onTimeDeliveryRate !== undefined && (
@@ -86,21 +77,9 @@ const TopSuppliersChartComponent: React.FC<TopSuppliersChartProps> = ({
         Topp 5 leverandører - Antall restlinjer
       </h3>
       <ResponsiveContainer width="100%" height={300}>
-        <BarChart
-          data={data}
-          margin={{ top: 5, right: 30, left: 20, bottom: 60 }}
-        >
-          <XAxis
-            dataKey="name"
-            angle={-45}
-            textAnchor="end"
-            height={80}
-            tick={{ fontSize: 12 }}
-          />
-          <YAxis
-            tickFormatter={(value) => value.toLocaleString("nb-NO")}
-            tick={{ fontSize: 12 }}
-          />
+        <BarChart data={data} margin={{ top: 5, right: 30, left: 20, bottom: 60 }}>
+          <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} tick={{ fontSize: 12 }} />
+          <YAxis tickFormatter={(value) => value.toLocaleString('nb-NO')} tick={{ fontSize: 12 }} />
           <Tooltip content={<CustomTooltip />} />
           <Bar
             dataKey="outstandingLines"
@@ -109,14 +88,11 @@ const TopSuppliersChartComponent: React.FC<TopSuppliersChartProps> = ({
                 onSupplierClick(data.name);
               }
             }}
-            style={{ cursor: onSupplierClick ? "pointer" : "default" }}
+            style={{ cursor: onSupplierClick ? 'pointer' : 'default' }}
             aria-label="Leverandør stolpediagram"
           >
             {data.map((entry, index) => (
-              <Cell
-                key={`cell-${index}`}
-                fill={COLORS[index % COLORS.length]}
-              />
+              <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
             ))}
           </Bar>
         </BarChart>
@@ -125,6 +101,6 @@ const TopSuppliersChartComponent: React.FC<TopSuppliersChartProps> = ({
   );
 };
 
-TopSuppliersChartComponent.displayName = "TopSuppliersChart";
+TopSuppliersChartComponent.displayName = 'TopSuppliersChart';
 
 export const TopSuppliersChart = React.memo(TopSuppliersChartComponent);

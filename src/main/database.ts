@@ -1,75 +1,66 @@
-import { ipcMain } from "electron";
-import { databaseService } from "../services/databaseService";
-import { ExcelRow } from "../types/ExcelRow";
+import { ipcMain } from 'electron';
+import { databaseService } from '../services/databaseService';
+import { ExcelRow } from '../types/ExcelRow';
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const log = require("electron-log/main");
+const log = require('electron-log/main');
 
 // STEG 1: Legg til denne logglinjen for å bekrefte at filen leses
-log.info("--- VERIFIKASJON: Filen database.ts blir nå kjørt. ---");
+log.info('--- VERIFIKASJON: Filen database.ts blir nå kjørt. ---');
 
 // Database interface for IPC communication
 export function setupDatabaseHandlers() {
   // STEG 2: Legg til denne for å bekrefte at funksjonen kalles
-  log.info(
-    "--- VERIFIKASJON: Funksjonen setupDatabaseHandlers() blir nå kalt. ---"
-  );
+  log.info('--- VERIFIKASJON: Funksjonen setupDatabaseHandlers() blir nå kalt. ---');
 
   // Initialize database
   try {
     // Database is automatically initialized when the singleton is accessed
-    console.log("Database service initialized");
+    console.log('Database service initialized');
   } catch (error) {
-    console.error("Failed to initialize database:", error);
+    console.error('Failed to initialize database:', error);
   }
 
   // Handle insert or update of a single order
-  ipcMain.handle("db:insertOrUpdateOrder", async (_event, order: ExcelRow) => {
+  ipcMain.handle('db:insertOrUpdateOrder', async (_event, order: ExcelRow) => {
     try {
       return databaseService.insertOrUpdateOrder(order);
     } catch (error) {
-      console.error("Error inserting or updating order:", error);
+      console.error('Error inserting or updating order:', error);
       throw error;
     }
   });
 
   // Handle batch insert/update of orders
-  ipcMain.handle(
-    "db:insertOrUpdateOrders",
-    async (_event, orders: ExcelRow[]) => {
-      try {
-        const results = [];
-        for (const order of orders) {
-          const id = databaseService.insertOrUpdateOrder(order);
-          results.push(id);
-        }
-        return results;
-      } catch (error) {
-        console.error("Error inserting or updating orders:", error);
-        throw error;
+  ipcMain.handle('db:insertOrUpdateOrders', async (_event, orders: ExcelRow[]) => {
+    try {
+      const results = [];
+      for (const order of orders) {
+        const id = databaseService.insertOrUpdateOrder(order);
+        results.push(id);
       }
+      return results;
+    } catch (error) {
+      console.error('Error inserting or updating orders:', error);
+      throw error;
     }
-  );
+  });
 
   // Get orders by supplier
-  ipcMain.handle("db:getOrdersBySupplier", async (_event, supplier: string) => {
+  ipcMain.handle('db:getOrdersBySupplier', async (_event, supplier: string) => {
     try {
       return databaseService.getOrdersBySupplier(supplier);
     } catch (error) {
-      console.error("Error getting orders by supplier:", error);
+      console.error('Error getting orders by supplier:', error);
       throw error;
     }
   });
 
   // Get all orders
-  ipcMain.handle("db:getAllOrders", async () => {
-    log.info(
-      "--- VERIFIKASJON: IPC-handler for 'db:getAllOrders' ble kalt. ---"
-    );
+  ipcMain.handle('db:getAllOrders', async () => {
+    log.info("--- VERIFIKASJON: IPC-handler for 'db:getAllOrders' ble kalt. ---");
     try {
       const orders = databaseService.getAllOrders();
-      log.info(
-        `--- VERIFIKASJON: getAllOrders returnerte ${orders.length} ordre. ---`
-      );
+      log.info(`--- VERIFIKASJON: getAllOrders returnerte ${orders.length} ordre. ---`);
       return orders;
     } catch (error) {
       log.error("Feil i 'db:getAllOrders' handler:", error);
@@ -78,197 +69,175 @@ export function setupDatabaseHandlers() {
   });
 
   // Get orders due within a certain number of days
-  ipcMain.handle("db:getOrdersDueWithinDays", async (_event, days: number) => {
+  ipcMain.handle('db:getOrdersDueWithinDays', async (_event, days: number) => {
     try {
       return databaseService.getOrdersDueWithinDays(days);
     } catch (error) {
-      console.error("Error getting orders due within days:", error);
+      console.error('Error getting orders due within days:', error);
       throw error;
     }
   });
 
   // Mark an order as confirmed
   ipcMain.handle(
-    "db:markOrderAsConfirmed",
+    'db:markOrderAsConfirmed',
     async (_event, supplier: string, orderNumber: string | null) => {
       try {
         return databaseService.markOrderAsConfirmed(supplier, orderNumber);
       } catch (error) {
-        console.error("Error marking order as confirmed:", error);
+        console.error('Error marking order as confirmed:', error);
         throw error;
       }
     }
   );
 
   // Delete an order
-  ipcMain.handle(
-    "db:deleteOrder",
-    async (_event, supplier: string, orderNumber: string | null) => {
-      try {
-        return databaseService.deleteOrder(supplier, orderNumber);
-      } catch (error) {
-        console.error("Error deleting order:", error);
-        throw error;
-      }
+  ipcMain.handle('db:deleteOrder', async (_event, supplier: string, orderNumber: string | null) => {
+    try {
+      return databaseService.deleteOrder(supplier, orderNumber);
+    } catch (error) {
+      console.error('Error deleting order:', error);
+      throw error;
     }
-  );
+  });
 
   // Dashboard data handlers
-  ipcMain.handle("get-dashboard-stats", async () => {
+  ipcMain.handle('get-dashboard-stats', async () => {
     try {
       const stats = databaseService.getDashboardStats();
       return { success: true, data: stats };
     } catch (error) {
-      log.error("Error in get-dashboard-stats handler:", error);
+      log.error('Error in get-dashboard-stats handler:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : "Unknown error",
+        error: error instanceof Error ? error.message : 'Unknown error',
       };
     }
   });
 
-  ipcMain.handle("get-top-suppliers", async (_event, limit: number = 5) => {
+  ipcMain.handle('get-top-suppliers', async (_event, limit: number = 5) => {
     try {
       const suppliers = databaseService.getTopSuppliersByOutstanding(limit);
       return { success: true, data: suppliers };
     } catch (error) {
-      log.error("Error in get-top-suppliers handler:", error);
+      log.error('Error in get-top-suppliers handler:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : "Unknown error",
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
+  });
+
+  ipcMain.handle('get-supplier-details', async (_event, supplierName: string) => {
+    try {
+      const supplier = databaseService.getSupplierDetails(supplierName);
+      if (!supplier) {
+        return {
+          success: false,
+          error: `Supplier '${supplierName}' not found`,
+        };
+      }
+      return { success: true, data: supplier };
+    } catch (error) {
+      log.error('Error in get-supplier-details handler:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
       };
     }
   });
 
   ipcMain.handle(
-    "get-supplier-details",
-    async (_event, supplierName: string) => {
-      try {
-        const supplier = databaseService.getSupplierDetails(supplierName);
-        if (!supplier) {
-          return {
-            success: false,
-            error: `Supplier '${supplierName}' not found`,
-          };
-        }
-        return { success: true, data: supplier };
-      } catch (error) {
-        log.error("Error in get-supplier-details handler:", error);
-        return {
-          success: false,
-          error: error instanceof Error ? error.message : "Unknown error",
-        };
-      }
-    }
-  );
-
-  ipcMain.handle(
-    "get-orders-by-week",
+    'get-orders-by-week',
     async (_event, weeksAhead: number = 8, weeksBehind: number = 2) => {
       try {
         const weeks = databaseService.getOrdersByWeek(weeksAhead, weeksBehind);
         return { success: true, data: weeks };
       } catch (error) {
-        log.error("Error in get-orders-by-week handler:", error);
+        log.error('Error in get-orders-by-week handler:', error);
         return {
           success: false,
-          error: error instanceof Error ? error.message : "Unknown error",
+          error: error instanceof Error ? error.message : 'Unknown error',
         };
       }
     }
   );
 
   // Product Catalog handlers
-  ipcMain.handle("product-catalog:sync", async () => {
+  ipcMain.handle('product-catalog:sync', async () => {
     try {
-      const { productCatalogService } = await import(
-        "../services/productCatalogService"
-      );
+      const { productCatalogService } = await import('../services/productCatalogService');
       const result = await productCatalogService.syncFromCloud();
       return result;
     } catch (error) {
-      log.error("Error in product-catalog:sync handler:", error);
+      log.error('Error in product-catalog:sync handler:', error);
       return {
         success: false,
         count: 0,
-        error: error instanceof Error ? error.message : "Unknown error",
+        error: error instanceof Error ? error.message : 'Unknown error',
       };
     }
   });
 
-  ipcMain.handle(
-    "product-catalog:upload",
-    async (_event, buffer: ArrayBuffer) => {
-      try {
-        const { parseProductCatalogForUpload } = await import(
-          "./productCatalogImporter"
-        );
-        const { productCatalogService } = await import(
-          "../services/productCatalogService"
-        );
+  ipcMain.handle('product-catalog:upload', async (_event, buffer: ArrayBuffer) => {
+    try {
+      const { parseProductCatalogForUpload } = await import('./productCatalogImporter');
+      const { productCatalogService } = await import('../services/productCatalogService');
 
-        // Parse Excel file
-        const parseResult = await parseProductCatalogForUpload(buffer);
-        if (!parseResult.success || !parseResult.products) {
-          return {
-            success: false,
-            count: 0,
-            error: parseResult.error || "Failed to parse Excel file",
-          };
-        }
-
-        // Upload to Supabase
-        const uploadResult = await productCatalogService.uploadToCloud(
-          parseResult.products
-        );
-        return uploadResult;
-      } catch (error) {
-        log.error("Error in product-catalog:upload handler:", error);
+      // Parse Excel file
+      const parseResult = await parseProductCatalogForUpload(buffer);
+      if (!parseResult.success || !parseResult.products) {
         return {
           success: false,
           count: 0,
-          error: error instanceof Error ? error.message : "Unknown error",
+          error: parseResult.error || 'Failed to parse Excel file',
         };
       }
-    }
-  );
 
-  ipcMain.handle("product-catalog:get-stats", async () => {
-    try {
-      const { productCatalogService } = await import(
-        "../services/productCatalogService"
-      );
-      const stats = productCatalogService.getCacheStats();
-      return { success: true, data: stats };
+      // Upload to Supabase
+      const uploadResult = await productCatalogService.uploadToCloud(parseResult.products);
+      return uploadResult;
     } catch (error) {
-      log.error("Error in product-catalog:get-stats handler:", error);
+      log.error('Error in product-catalog:upload handler:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : "Unknown error",
+        count: 0,
+        error: error instanceof Error ? error.message : 'Unknown error',
       };
     }
   });
 
-  ipcMain.handle("get-top-items", async (_event, limit: number = 30) => {
+  ipcMain.handle('product-catalog:get-stats', async () => {
+    try {
+      const { productCatalogService } = await import('../services/productCatalogService');
+      const stats = productCatalogService.getCacheStats();
+      return { success: true, data: stats };
+    } catch (error) {
+      log.error('Error in product-catalog:get-stats handler:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
+  });
+
+  ipcMain.handle('get-top-items', async (_event, limit: number = 30) => {
     try {
       const items = databaseService.getTopItemsByOutstanding(limit);
 
       // Enrich with product names from catalog
-      const { productCatalogService } = await import(
-        "../services/productCatalogService"
-      );
+      const { productCatalogService } = await import('../services/productCatalogService');
       const enrichedItems = items.map((item) => ({
         ...item,
-        productName:
-          productCatalogService.getProductName(item.itemNo) || item.description,
+        productName: productCatalogService.getProductName(item.itemNo) || item.description,
       }));
 
       return { success: true, data: enrichedItems };
     } catch (error) {
-      log.error("Error in get-top-items handler:", error);
+      log.error('Error in get-top-items handler:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : "Unknown error",
+        error: error instanceof Error ? error.message : 'Unknown error',
       };
     }
   });
@@ -281,12 +250,12 @@ export function closeDatabaseConnection() {
 
     // Close the database connection
     databaseService.close();
-    console.log("Database connection closed successfully");
+    console.log('Database connection closed successfully');
 
     // Return true to indicate successful closure
     return true;
   } catch (error) {
-    console.error("Error closing database connection:", error);
+    console.error('Error closing database connection:', error);
 
     // Even with an error, return true so the app can continue shutting down
     // Better to have a slightly messy shutdown than getting stuck

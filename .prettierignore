@@ -1,0 +1,12 @@
+node_modules/
+dist/
+release/
+coverage/
+.github/
+*.min.js
+package-lock.json
+docs/updates/
+backup/
+*.log
+.cursorignore
+
