@@ -47,6 +47,10 @@ completed:
   - '2025-11-10: Root config files added: .editorconfig, .gitattributes. SECURITY.md moved from docs/ to root. Commits: 3a020a5'
   - '2025-11-10: Removed emojis from all scripts (15+ files), documentation (CHANGELOG.md, backlog.md), package.json, locale files, and HTML templates. Commits: f46430c, 525aaf9'
   - '2025-11-10: Prettier integrated. Installed prettier and eslint-config-prettier. Created .prettierrc.json and .prettierignore. Updated eslint.config.js to use eslint-config-prettier. Added format and format:check scripts to package.json. Formatted entire codebase. Updated README.md with format commands. Commit: 0ad8f8c'
+  - '2025-11-10: P2.3 - Fjernet duplikat OneMed logo fra root (OneMed part of Asker white text below.webp).'
+  - '2025-11-10: P3.1 - Konsolidert dokumentasjon til docs/. Flyttet documentation.md, LESEMEG_LEDELSEN.md, GITHUB_TOKEN_SETUP.md, EMAIL_SETUP.md, SUPPLIER_EMAIL_UPDATE.md. Slettet DISTRIBUTION-OPTIONS.md duplikat. Commit: 5ace9e4'
+  - '2025-11-10: P3.2 - Fjernet WiP-planer (allerede implementert). Slettet fix-auto-update-system.plan.md, fix-cloudflare-pages-routing.plan.md, multi-language-documentation-push.plan.md. Commit: 1e3c839'
+  - '2025-11-10: P3.3 - Fjernet security audit-filer (security-audit-before.json, security-fix-plan.json). Commit: 5ace9e4'
 
 in_progress: []
 
