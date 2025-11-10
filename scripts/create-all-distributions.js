@@ -119,10 +119,10 @@ async function createAllDistributions() {
     console.log("\n🔨 Step 5/5: Creating installation guide...");
     const readmeContent = `
 =================================================
-OneMed SupplyChain- INSTALLATION OPTIONS
+Pulse - INSTALLATION OPTIONS
 =================================================
 
-This package contains multiple installation options for OneMed SupplyChain.
+This package contains multiple installation options for Pulse.
 
 PACKAGE CONTENTS:
 ----------------

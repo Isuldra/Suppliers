@@ -104,7 +104,7 @@ if (nsisFile) {
 const indexHtml = `<!DOCTYPE html>
 <html>
 <head>
-    <title>OneMed SupplyChain - Downloads</title>
+    <title>Pulse - Downloads</title>
     <style>
         body { font-family: Arial, sans-serif; margin: 40px; }
         .download { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
@@ -113,7 +113,7 @@ const indexHtml = `<!DOCTYPE html>
     </style>
 </head>
 <body>
-    <h1>OneMed SupplyChain v${version}</h1>
+    <h1>Pulse v${version}</h1>
     <p>Velg nedlastingsformat:</p>
     
     <div class="download">
