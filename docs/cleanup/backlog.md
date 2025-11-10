@@ -102,7 +102,7 @@
 
 - [x] **P4.3.1** Opprett `.cursorignore` i root
 - [x] **P4.3.2** Legg til: `dist/`, `release/`, `node_modules/`, `docs/updates/*.exe`, `*.dll`, `*.pak`, `coverage/` _(Inkludert også andre build artifacts og cache-filer)_
-- [ ] **P4.3.3** Commit: "Add .cursorignore for AI context optimization"
+- [x] **P4.3.3** Commit: "Add .cursorignore for AI context optimization"
 
 ### P4.4 - Fix package.json naming
 
