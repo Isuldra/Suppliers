@@ -18,7 +18,7 @@ const packageJsonPath = path.join(projectRoot, "package.json");
 const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, "utf8"));
 const version = packageJson.version;
 
-console.log(`🚀 Generating latest.json for portable version ${version}...`);
+console.log(`Generating latest.json for portable version ${version}...`);
 
 // Ensure updates directory exists
 if (!fs.existsSync(updatesDir)) {
@@ -44,7 +44,7 @@ const portableExe = "Pulse-Portable.exe";
 const portableExePath = path.join(releaseDir, portableExe);
 
 if (fs.existsSync(portableExePath)) {
-  console.log(`✅ Found portable executable: ${portableExe}`);
+  console.log(`Success: Found portable executable: ${portableExe}`);
 
   // Calculate hash and size
   const fileHash = calculateSHA512(portableExePath);
@@ -66,16 +66,16 @@ if (fs.existsSync(portableExePath)) {
 
   const latestJsonPath = path.join(updatesDir, "latest.json");
   fs.writeFileSync(latestJsonPath, JSON.stringify(latestJson, null, 2));
-  console.log(`✅ Generated: latest.json`);
+  console.log(`Success: Generated: latest.json`);
 
-  console.log(`📋 Portable version info:`);
+  console.log(`Portable version info:`);
   console.log(`   - Version: ${version}`);
   console.log(`   - File: ${portableExe}`);
   console.log(`   - Size: ${Math.round(fileSize / 1024)} KB`);
   console.log(`   - SHA512: ${fileHash.substring(0, 16)}...`);
 } else {
-  console.log(`⚠️  Portable executable not found: ${portableExe}`);
+  console.log(`Warning: Portable executable not found: ${portableExe}`);
   console.log(`   Make sure to run 'npm run dist:portable' first`);
 }
 
-console.log("\n🎉 latest.json generation complete!");
+console.log("\nlatest.json generation complete!");

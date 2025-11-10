@@ -18,7 +18,7 @@ const packageJsonPath = path.join(projectRoot, "package.json");
 const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, "utf8"));
 const version = packageJson.version;
 
-console.log(`🚀 Preparing Cloudflare release for version ${version}...`);
+console.log(`Preparing Cloudflare release for version ${version}...`);
 
 // Ensure updates directory exists
 if (!fs.existsSync(updatesDir)) {
@@ -46,7 +46,7 @@ function copyFile(source, destination) {
     fs.mkdirSync(destDir, { recursive: true });
   }
   fs.copyFileSync(source, destination);
-  console.log(`✅ Copied: ${path.basename(source)}`);
+  console.log(`Success: Copied: ${path.basename(source)}`);
 }
 
 // Find the latest NSIS installer
@@ -72,9 +72,9 @@ if (fs.existsSync(nsisInstallerPath)) {
     name: nsisInstaller,
     path: nsisInstallerPath,
   });
-  console.log(`✅ Found NSIS installer: ${nsisInstaller}`);
+  console.log(`Success: Found NSIS installer: ${nsisInstaller}`);
 } else {
-  console.log(`⚠️  NSIS installer not found: ${nsisInstaller}`);
+  console.log(`Warning: NSIS installer not found: ${nsisInstaller}`);
 }
 
 if (fs.existsSync(nsisBlockmapPath)) {
@@ -82,9 +82,9 @@ if (fs.existsSync(nsisBlockmapPath)) {
     source: nsisBlockmapPath,
     destination: path.join(updatesDir, nsisBlockmap),
   });
-  console.log(`✅ Found NSIS blockmap: ${nsisBlockmap}`);
+  console.log(`Success: Found NSIS blockmap: ${nsisBlockmap}`);
 } else {
-  console.log(`⚠️  NSIS blockmap not found: ${nsisBlockmap}`);
+  console.log(`Warning: NSIS blockmap not found: ${nsisBlockmap}`);
 }
 
 if (fs.existsSync(portableExePath)) {
@@ -92,20 +92,20 @@ if (fs.existsSync(portableExePath)) {
     source: portableExePath,
     destination: path.join(updatesDir, portableExe),
   });
-  console.log(`✅ Found portable executable: ${portableExe}`);
+  console.log(`Success: Found portable executable: ${portableExe}`);
 } else {
-  console.log(`⚠️  Portable executable not found: ${portableExe}`);
+  console.log(`Warning: Portable executable not found: ${portableExe}`);
 }
 
 // Note: Large files (exe, blockmap) are now hosted on GitHub Releases
 // Only copy small files to docs/updates/ for Cloudflare Pages
-console.log("\n📁 Preparing Cloudflare Pages files...");
+console.log("\nPreparing Cloudflare Pages files...");
 console.log("   Large files will be uploaded to GitHub Releases");
 console.log("   Only metadata files will be copied to docs/updates/");
 
 // Generate latest.yml for auto-updates
 if (filesToInclude.length > 0) {
-  console.log("\n📝 Generating latest.yml...");
+  console.log("\nGenerating latest.yml...");
 
   const mainFile = filesToInclude[0]; // Use the first file (NSIS installer) as main
   const fileHash = calculateSHA512(mainFile.path);
@@ -130,22 +130,24 @@ releaseDate: '${releaseDate}'`;
 
   const latestYmlPath = path.join(updatesDir, "latest.yml");
   fs.writeFileSync(latestYmlPath, latestYml);
-  console.log(`✅ Generated: latest.yml`);
+  console.log(`Success: Generated: latest.yml`);
   console.log(`   Filename: ${mainFile.name}`);
   console.log(`   URL: ${githubReleaseUrl}`);
 
   // Also copy to release/ directory for GitHub Release upload
   const releaseLatestYmlPath = path.join(releaseDir, "latest.yml");
   fs.writeFileSync(releaseLatestYmlPath, latestYml);
-  console.log(`✅ Copied latest.yml to release/ directory for GitHub Release`);
+  console.log(
+    `Success: Copied latest.yml to release/ directory for GitHub Release`
+  );
 } else {
-  console.log("\n⚠️  No NSIS installer found for latest.yml generation");
+  console.log("\nWarning: No NSIS installer found for latest.yml generation");
   console.log("   Run 'npm run dist' to build the NSIS installer first");
 }
 
 // Generate latest.json for portable version
 if (fs.existsSync(portableExePath)) {
-  console.log("\n📝 Generating latest.json...");
+  console.log("\nGenerating latest.json...");
 
   const portableHash = calculateSHA512(portableExePath);
   const portableSize = getFileSize(portableExePath);
@@ -172,13 +174,13 @@ if (fs.existsSync(portableExePath)) {
 
   const latestJsonPath = path.join(updatesDir, "latest.json");
   fs.writeFileSync(latestJsonPath, JSON.stringify(latestJson, null, 2));
-  console.log(`✅ Generated: latest.json`);
+  console.log(`Success: Generated: latest.json`);
   console.log(`   Filename: ${portableExe}`);
   console.log(`   URL: ${portableReleaseUrl}`);
 }
 
 // Update index.html with current version
-console.log("\n📄 Updating index.html...");
+console.log("\nUpdating index.html...");
 const indexPath = path.join(updatesDir, "index.html");
 let indexContent = fs.readFileSync(indexPath, "utf8");
 
@@ -190,14 +192,14 @@ indexContent = indexContent.replace(
 
 // Update status message and replace all version entries
 indexContent = indexContent.replace(
-  /<h3>✅ Cloudflare Pages er konfigurert!<\/h3>/,
-  `<h3>✅ Release v${version} er klar!</h3>`
+  /<h3>Cloudflare Pages er konfigurert!<\/h3>/,
+  `<h3>Release v${version} er klar!</h3>`
 );
 
 // Replace the entire status section to avoid duplicates
 const statusSectionRegex = /<div class="status">[\s\S]*?<\/div>/;
 const newStatusSection = `<div class="status">
-                <h3>✅ Release v${version} er klar!</h3>
+                <h3>Release v${version} er klar!</h3>
                 <p>Automatiske oppdateringer er nå tilgjengelige via Cloudflare Pages.</p>
                 <p><strong>Ny versjon:</strong> v${version} - ${new Date().toLocaleDateString(
   "no-NO"
@@ -207,7 +209,7 @@ const newStatusSection = `<div class="status">
 indexContent = indexContent.replace(statusSectionRegex, newStatusSection);
 
 fs.writeFileSync(indexPath, indexContent);
-console.log(`✅ Updated: index.html with version ${version}`);
+console.log(`Success: Updated: index.html with version ${version}`);
 
 // Ensure _redirects file exists
 const redirectsPath = path.join(updatesDir, "_redirects");
@@ -220,11 +222,11 @@ if (!fs.existsSync(redirectsPath)) {
 /* /index.html 200`;
 
   fs.writeFileSync(redirectsPath, redirectsContent);
-  console.log(`✅ Created: _redirects`);
+  console.log(`Success: Created: _redirects`);
 }
 
-console.log("\n🎉 Hybrid release preparation complete!");
-console.log("\n📋 Next steps:");
+console.log("\nHybrid release preparation complete!");
+console.log("\nNext steps:");
 console.log("1. Review the metadata files in docs/updates/");
 console.log("2. Run: npm run release:github (creates GitHub Release)");
 console.log(
@@ -233,7 +235,7 @@ console.log(
 console.log("4. Cloudflare Pages will serve latest.yml with GitHub URLs");
 console.log("5. Users will download installers from GitHub Releases");
 
-console.log("\n📁 Files ready for deployment:");
+console.log("\nFiles ready for deployment:");
 const deployedFiles = fs.readdirSync(updatesDir);
 deployedFiles.forEach((file) => {
   const filePath = path.join(updatesDir, file);
