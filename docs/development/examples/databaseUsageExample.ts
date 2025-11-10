@@ -4,8 +4,10 @@
  */
 
 // Main process example (in Electron main)
-import { databaseService } from '../services/databaseService';
-import { ExcelRow } from '../types/ExcelRow';
+// Note: Adjust import paths based on where this file is located
+// If in docs/development/examples/, use: ../../src/services/databaseService
+import { databaseService } from '../../../src/services/databaseService';
+import { ExcelRow } from '../../../src/types/ExcelRow';
 
 // Example data
 const sampleOrders: ExcelRow[] = [
@@ -74,8 +76,8 @@ async function insertSampleOrders() {
 // ---------------------------------------------------------------------------
 
 // In the renderer, we would use the API we defined in src/renderer/api/database.ts
-
-import { databaseAPI } from '../renderer/api/database';
+// Note: Adjust import paths based on where this file is located
+import { databaseAPI } from '../../../src/renderer/api/database';
 
 // Example usage of the database API
 async function exampleUsage() {

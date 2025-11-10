@@ -52,6 +52,7 @@ completed:
   - '2025-11-10: P3.2 - Fjernet WiP-planer (allerede implementert). Slettet fix-auto-update-system.plan.md, fix-cloudflare-pages-routing.plan.md, multi-language-documentation-push.plan.md. Commit: 1e3c839'
   - '2025-11-10: P3.3 - Fjernet security audit-filer (security-audit-before.json, security-fix-plan.json). Commit: 5ace9e4'
   - '2025-11-10: Rotmappe-finalisering. Lagt til Repository Structure-seksjon i README.md. Oppdatert .editorconfig med TypeScript/JavaScript og Makefile-regler. Verifisert at .env.example inneholder Supabase-konfigurasjon. Identifisert potensielle cleanup-kandidater: src/main.ts (ubrukt legacy entry point), src/examples/ (eksempelkode), supplier-reminder-pro.code-workspace (VSCode workspace-fil).'
+  - '2025-11-10: Cleanup av identifiserte kandidater. Slettet src/main.ts (ubrukt legacy entry point). Flyttet src/examples/databaseUsageExample.ts til docs/development/examples/. Lagt til *.code-workspace i .gitignore og fjernet supplier-reminder-pro.code-workspace fra git tracking. Oppdatert import-paths i eksempelfilen.'
 
 in_progress: []
 
