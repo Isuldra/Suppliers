@@ -24,13 +24,12 @@ Pulse is a desktop application for managing supplier workflows and data. It's bu
 
 ## Documentation Overview
 
-| Area                                                             | Description                                               |
-| ---------------------------------------------------------------- | --------------------------------------------------------- |
-| [Installation Guide](docs/installation/end-user-installation.md) | How to install the app (NSIS, portable, DMG)              |
-| [CI/CD Pipeline](docs/development/ci-cd-pipeline.md)             | GitHub Actions build setup                                |
-| [Manual Update Process](docs/development/publishing-updates.md)  | How to publish app updates manually                       |
-| [Feature Documentation](docs/features/README.md)                 | Overview of app functionality (email, Excel import, etc.) |
-| [Security Policy](SECURITY.md)                                   | Security policy and vulnerability reporting               |
+| Area                                                            | Description                                               |
+| --------------------------------------------------------------- | --------------------------------------------------------- |
+| [Distribution Guide](docs/distribution/DISTRIBUTION.md)         | How to build and distribute the app (NSIS, portable, DMG) |
+| [CI/CD Pipeline](docs/development/ci-cd-pipeline.md)            | GitHub Actions build setup                                |
+| [Manual Update Process](docs/development/publishing-updates.md) | How to publish app updates manually                       |
+| [Security Policy](SECURITY.md)                                  | Security policy and vulnerability reporting               |
 
 ---
 
