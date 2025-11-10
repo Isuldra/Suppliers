@@ -116,7 +116,7 @@ function createWindow(): BrowserWindow {
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
-    icon: path.join(__dirname, "../../supplychain.png"),
+    icon: path.join(__dirname, "../../resources/supplychain.png"),
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
