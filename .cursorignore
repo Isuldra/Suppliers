@@ -1,0 +1,65 @@
+# Cursor AI Context Optimization
+# Files and directories excluded from AI context to improve performance
+
+# Build outputs
+dist/
+out/
+release/
+
+# Dependencies
+node_modules/
+
+# Coverage reports
+coverage/
+.nyc_output/
+
+# Large binary files in docs/updates (exe files are hosted on GitHub Releases)
+docs/updates/*.exe
+docs/updates/*.dll
+docs/updates/*.pak
+
+# Electron build artifacts
+*.dll
+*.pak
+*.exe
+*.dmg
+*.pkg
+*.deb
+*.rpm
+*.msi
+*.zip
+*.tar.gz
+*.7z
+
+# Logs
+*.log
+logs/
+
+# Cache directories
+.cache/
+.parcel-cache/
+.npm/
+.yarn/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Test outputs
+.nyc_output/
+
+# Temporary files
+*.tmp
+*.temp
+
