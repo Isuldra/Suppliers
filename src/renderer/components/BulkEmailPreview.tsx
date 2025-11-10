@@ -1,11 +1,11 @@
-import React, { useState, useEffect, useMemo } from "react";
-import { useTranslation } from "react-i18next";
-import { EyeIcon, PaperAirplaneIcon } from "@heroicons/react/24/outline";
-import { EmailService, EmailData } from "../services/emailService";
-import { ExcelRow } from "../types/ExcelData";
-import supplierData from "../data/supplierData.json";
-import EmailPreviewModal from "./EmailPreviewModal";
-import { SlackService } from "../services/slackService";
+import React, { useState, useEffect, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
+import { EyeIcon, PaperAirplaneIcon } from '@heroicons/react/24/outline';
+import { EmailService, EmailData } from '../services/emailService';
+import { ExcelRow } from '../types/ExcelData';
+import supplierData from '../data/supplierData.json';
+import EmailPreviewModal from './EmailPreviewModal';
+import { SlackService } from '../services/slackService';
 
 interface BulkEmailPreviewProps {
   selectedSuppliers: string[];
@@ -20,14 +20,14 @@ interface SupplierInfo {
   companyId: number;
   epost: string;
   språk: string;
-  språkKode: "NO" | "ENG";
+  språkKode: 'NO' | 'ENG';
   purredag: string;
 }
 
 interface EmailPreviewData {
   supplier: string;
   email: string;
-  language: "no" | "en";
+  language: 'no' | 'en';
   languageDisplay: string;
   orderCount: number;
   orders: ExcelRow[];
@@ -43,19 +43,15 @@ const BulkEmailPreview: React.FC<BulkEmailPreviewProps> = ({
   onComplete,
 }) => {
   const { t } = useTranslation();
-  const [emailPreviewData, setEmailPreviewData] = useState<EmailPreviewData[]>(
-    []
-  );
+  const [emailPreviewData, setEmailPreviewData] = useState<EmailPreviewData[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [sendingProgress, setSendingProgress] = useState(0);
   // Preview functionality
   const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [previewSupplier, setPreviewSupplier] = useState<string | null>(null);
-  const [previewHtml, setPreviewHtml] = useState<string>("");
-  const [customEmails, setCustomEmails] = useState<Map<string, string>>(
-    new Map()
-  );
+  const [previewHtml, setPreviewHtml] = useState<string>('');
+  const [customEmails, setCustomEmails] = useState<Map<string, string>>(new Map());
 
   const emailService = new EmailService();
 
@@ -63,9 +59,7 @@ const BulkEmailPreview: React.FC<BulkEmailPreviewProps> = ({
   const getSupplierInfo = (supplierName: string): SupplierInfo | null => {
     console.log(`🔍 BulkEmailPreview: Looking for supplier: "${supplierName}"`);
     // First try exact match
-    let supplier = supplierData.leverandører.find(
-      (s) => s.leverandør === supplierName
-    );
+    let supplier = supplierData.leverandører.find((s) => s.leverandør === supplierName);
 
     // If no exact match, try case-insensitive match
     if (!supplier) {
@@ -88,7 +82,7 @@ const BulkEmailPreview: React.FC<BulkEmailPreviewProps> = ({
       const customEmail = bulkSupplierEmails?.get(supplierName);
       return {
         ...supplier,
-        språkKode: supplier.språkKode as "NO" | "ENG",
+        språkKode: supplier.språkKode as 'NO' | 'ENG',
         epost: customEmail !== undefined ? customEmail : supplier.epost,
       };
     } else {
@@ -104,9 +98,9 @@ const BulkEmailPreview: React.FC<BulkEmailPreviewProps> = ({
   // Prepare email data for all suppliers
   useEffect(() => {
     const prepareEmailData = async () => {
-      console.log("🔵 BulkEmailPreview: prepareEmailData called");
-      console.log("🔵 selectedSuppliers:", selectedSuppliers);
-      console.log("🔵 selectedOrders:", selectedOrders);
+      console.log('🔵 BulkEmailPreview: prepareEmailData called');
+      console.log('🔵 selectedSuppliers:', selectedSuppliers);
+      console.log('🔵 selectedOrders:', selectedOrders);
       setIsLoading(true);
       try {
         const allOrders = await window.electron.getAllOrders();
@@ -114,26 +108,20 @@ const BulkEmailPreview: React.FC<BulkEmailPreviewProps> = ({
 
         for (const supplierName of selectedSuppliers) {
           const supplierInfo = getSupplierInfo(supplierName);
-          const supplierOrderKeys =
-            selectedOrders.get(supplierName) || new Set();
-          console.log(
-            `🔵 Supplier: ${supplierName}, OrderKeys:`,
-            supplierOrderKeys
-          );
+          const supplierOrderKeys = selectedOrders.get(supplierName) || new Set();
+          console.log(`🔵 Supplier: ${supplierName}, OrderKeys:`, supplierOrderKeys);
           const orders = allOrders.filter(
-            (order) =>
-              order.supplier === supplierName &&
-              supplierOrderKeys.has(order.key)
+            (order) => order.supplier === supplierName && supplierOrderKeys.has(order.key)
           );
           console.log(`🔵 Filtered orders for ${supplierName}:`, orders.length);
 
           if (orders.length > 0) {
-            const language = supplierInfo?.språkKode === "ENG" ? "en" : "no";
-            const languageDisplay = supplierInfo?.språk || "Norsk";
+            const language = supplierInfo?.språkKode === 'ENG' ? 'en' : 'no';
+            const languageDisplay = supplierInfo?.språk || 'Norsk';
 
             emailData.push({
               supplier: supplierName,
-              email: supplierInfo?.epost || "",
+              email: supplierInfo?.epost || '',
               language,
               languageDisplay,
               orderCount: orders.length,
@@ -143,10 +131,10 @@ const BulkEmailPreview: React.FC<BulkEmailPreviewProps> = ({
           }
         }
 
-        console.log("🔵 Final emailData:", emailData);
+        console.log('🔵 Final emailData:', emailData);
         setEmailPreviewData(emailData);
       } catch (error) {
-        console.error("Error preparing email data:", error);
+        console.error('Error preparing email data:', error);
       } finally {
         setIsLoading(false);
       }
@@ -163,17 +151,14 @@ const BulkEmailPreview: React.FC<BulkEmailPreviewProps> = ({
   };
 
   // Get email for supplier (custom or default)
-  const getEmailForSupplier = (
-    supplier: string,
-    defaultEmail: string
-  ): string => {
+  const getEmailForSupplier = (supplier: string, defaultEmail: string): string => {
     // First check if supplier has a bulk email from BulkSupplierSelect
     if (bulkSupplierEmails?.has(supplier)) {
-      return bulkSupplierEmails.get(supplier) || "";
+      return bulkSupplierEmails.get(supplier) || '';
     }
     // Then check if supplier has a custom email in this component (including empty string)
     if (customEmails.has(supplier)) {
-      return customEmails.get(supplier) || "";
+      return customEmails.get(supplier) || '';
     }
     // Return default email only if no custom email has been set
     return defaultEmail;
@@ -186,27 +171,24 @@ const BulkEmailPreview: React.FC<BulkEmailPreviewProps> = ({
 
     const emailData: EmailData = {
       supplier: supplierData.supplier,
-      recipientEmail: getEmailForSupplier(
-        supplierData.supplier,
-        supplierData.email
-      ),
+      recipientEmail: getEmailForSupplier(supplierData.supplier, supplierData.email),
       orders: supplierData.orders.map((order) => ({
         key: order.key,
         poNumber: order.poNumber,
-        itemNo: order.itemNo || "",
-        description: order.supplierArticleNo || order.description || "",
-        specification: order.specification || "",
+        itemNo: order.itemNo || '',
+        description: order.supplierArticleNo || order.description || '',
+        specification: order.specification || '',
         orderQty: order.orderQty,
         receivedQty: order.receivedQty,
         estReceiptDate: order.dueDate
-          ? new Date(order.dueDate).toLocaleDateString("nb-NO")
-          : "Ikke spesifisert",
+          ? new Date(order.dueDate).toLocaleDateString('nb-NO')
+          : 'Ikke spesifisert',
         outstandingQty: order.outstandingQty,
         orderRowNumber: order.orderRowNumber,
       })),
       language: supplierData.language,
       subject:
-        supplierData.language === "no"
+        supplierData.language === 'no'
           ? `Purring på manglende leveranser – ${supplierData.supplier}`
           : `Reminder: Outstanding Deliveries – ${supplierData.supplier}`,
     };
@@ -232,22 +214,15 @@ const BulkEmailPreview: React.FC<BulkEmailPreviewProps> = ({
 
         // Update sending status
         setEmailPreviewData((prev) =>
-          prev.map((s) =>
-            s.supplier === supplierData.supplier ? { ...s, isSending: true } : s
-          )
+          prev.map((s) => (s.supplier === supplierData.supplier ? { ...s, isSending: true } : s))
         );
 
         try {
-          const recipientEmail = getEmailForSupplier(
-            supplierData.supplier,
-            supplierData.email
-          );
+          const recipientEmail = getEmailForSupplier(supplierData.supplier, supplierData.email);
 
           // Skip sending if no email address is provided
-          if (!recipientEmail || recipientEmail.trim() === "") {
-            console.warn(
-              `Skipping email for ${supplierData.supplier} - no email address provided`
-            );
+          if (!recipientEmail || recipientEmail.trim() === '') {
+            console.warn(`Skipping email for ${supplierData.supplier} - no email address provided`);
             setEmailPreviewData((prev) =>
               prev.map((s) =>
                 s.supplier === supplierData.supplier
@@ -256,7 +231,7 @@ const BulkEmailPreview: React.FC<BulkEmailPreviewProps> = ({
                       isSending: false,
                       sendResult: {
                         success: false,
-                        error: t("bulkEmailPreview.noEmailProvided"),
+                        error: t('bulkEmailPreview.noEmailProvided'),
                       },
                     }
                   : s
@@ -271,20 +246,20 @@ const BulkEmailPreview: React.FC<BulkEmailPreviewProps> = ({
             orders: supplierData.orders.map((order) => ({
               key: order.key,
               poNumber: order.poNumber,
-              itemNo: order.itemNo || "",
-              description: order.supplierArticleNo || order.description || "",
-              specification: order.specification || "",
+              itemNo: order.itemNo || '',
+              description: order.supplierArticleNo || order.description || '',
+              specification: order.specification || '',
               orderQty: order.orderQty,
               receivedQty: order.receivedQty,
               estReceiptDate: order.dueDate
-                ? new Date(order.dueDate).toLocaleDateString("nb-NO")
-                : "Ikke spesifisert",
+                ? new Date(order.dueDate).toLocaleDateString('nb-NO')
+                : 'Ikke spesifisert',
               outstandingQty: order.outstandingQty,
               orderRowNumber: order.orderRowNumber,
             })),
             language: supplierData.language,
             subject:
-              supplierData.language === "no"
+              supplierData.language === 'no'
                 ? `Purring på manglende leveranser – ${supplierData.supplier}`
                 : `Reminder: Outstanding Deliveries – ${supplierData.supplier}`,
           };
@@ -311,10 +286,7 @@ const BulkEmailPreview: React.FC<BulkEmailPreviewProps> = ({
             failCount++;
           }
         } catch (error) {
-          console.error(
-            `Error sending email to ${supplierData.supplier}:`,
-            error
-          );
+          console.error(`Error sending email to ${supplierData.supplier}:`, error);
           setEmailPreviewData((prev) =>
             prev.map((s) =>
               s.supplier === supplierData.supplier
@@ -339,41 +311,39 @@ const BulkEmailPreview: React.FC<BulkEmailPreviewProps> = ({
           .filter((s) => s.sendResult && !s.sendResult.success)
           .map((s) => ({
             supplier: s.supplier,
-            error: s.sendResult?.error || "Unknown error",
+            error: s.sendResult?.error || 'Unknown error',
           }));
 
         await SlackService.sendBulkEmailNotification({
           recipientCount: totalEmails,
-          template: "Standard Reminder (Norwegian/English)",
-          scheduled: "Immediate",
+          template: 'Standard Reminder (Norwegian/English)',
+          scheduled: 'Immediate',
           successCount,
           failCount,
           failures: failures.length > 0 ? failures : undefined,
         });
       } catch (slackError) {
-        console.error("Failed to send Slack notification:", slackError);
+        console.error('Failed to send Slack notification:', slackError);
         // Don't show error to user - Slack is optional
       }
 
       // Show completion message
       if (successCount === totalEmails) {
-        alert(
-          t("bulkEmailPreview.allEmailsSentSuccess", { count: successCount })
-        );
+        alert(t('bulkEmailPreview.allEmailsSentSuccess', { count: successCount }));
         onComplete();
       } else if (successCount > 0) {
         alert(
-          t("bulkEmailPreview.partialSuccess", {
+          t('bulkEmailPreview.partialSuccess', {
             success: successCount,
             failed: failCount,
           })
         );
       } else {
-        alert(t("bulkEmailPreview.allEmailsFailed", { count: failCount }));
+        alert(t('bulkEmailPreview.allEmailsFailed', { count: failCount }));
       }
     } catch (error) {
-      console.error("Error in bulk email sending:", error);
-      alert(t("email.emailError"));
+      console.error('Error in bulk email sending:', error);
+      alert(t('email.emailError'));
     } finally {
       setIsSending(false);
       setSendingProgress(0);
@@ -383,17 +353,10 @@ const BulkEmailPreview: React.FC<BulkEmailPreviewProps> = ({
   // Calculate totals
   const totals = useMemo(() => {
     const totalSuppliers = emailPreviewData.length;
-    const totalOrders = emailPreviewData.reduce(
-      (sum, s) => sum + s.orderCount,
-      0
-    );
+    const totalOrders = emailPreviewData.reduce((sum, s) => sum + s.orderCount, 0);
     const sendingCount = emailPreviewData.filter((s) => s.isSending).length;
-    const successCount = emailPreviewData.filter(
-      (s) => s.sendResult?.success
-    ).length;
-    const failCount = emailPreviewData.filter(
-      (s) => s.sendResult && !s.sendResult.success
-    ).length;
+    const successCount = emailPreviewData.filter((s) => s.sendResult?.success).length;
+    const failCount = emailPreviewData.filter((s) => s.sendResult && !s.sendResult.success).length;
 
     return {
       totalSuppliers,
@@ -416,9 +379,7 @@ const BulkEmailPreview: React.FC<BulkEmailPreviewProps> = ({
       <div className="w-full">
         <div className="flex items-center justify-center p-8">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-          <span className="ml-2 text-slate-800">
-            {t("bulkEmailPreview.preparingData")}
-          </span>
+          <span className="ml-2 text-slate-800">{t('bulkEmailPreview.preparingData')}</span>
         </div>
       </div>
     );
@@ -429,31 +390,25 @@ const BulkEmailPreview: React.FC<BulkEmailPreviewProps> = ({
       {/* Header with summary */}
       <div className="mb-6 p-6 bg-white/50 backdrop-blur-2xl rounded-2xl border border-white/40 shadow-xl">
         <h2 className="text-lg font-semibold text-slate-900 mb-2 drop-shadow-sm">
-          {t("bulkEmailPreview.title")}
+          {t('bulkEmailPreview.title')}
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
           <div>
-            <span className="font-medium text-slate-900">
-              {t("bulkEmailPreview.suppliers")}
-            </span>{" "}
+            <span className="font-medium text-slate-900">{t('bulkEmailPreview.suppliers')}</span>{' '}
             {totals.totalSuppliers}
           </div>
           <div>
-            <span className="font-medium text-slate-900">
-              {t("bulkEmailPreview.orderLines")}
-            </span>{" "}
+            <span className="font-medium text-slate-900">{t('bulkEmailPreview.orderLines')}</span>{' '}
             {totals.totalOrders}
           </div>
           <div>
-            <span className="font-medium text-slate-900">
-              {t("bulkEmailPreview.emails")}
-            </span>{" "}
+            <span className="font-medium text-slate-900">{t('bulkEmailPreview.emails')}</span>{' '}
             {totals.totalSuppliers}
           </div>
         </div>
         {hasMixedLanguages && (
           <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-sm text-yellow-800">
-            {t("bulkEmailPreview.mixedLanguageInfo")}
+            {t('bulkEmailPreview.mixedLanguageInfo')}
           </div>
         )}
       </div>
@@ -463,14 +418,12 @@ const BulkEmailPreview: React.FC<BulkEmailPreviewProps> = ({
         <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-md">
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm font-medium text-blue-800">
-              {t("bulkEmailPreview.sendingEmails", {
+              {t('bulkEmailPreview.sendingEmails', {
                 current: totals.sendingCount,
                 total: totals.totalSuppliers,
               })}
             </span>
-            <span className="text-sm text-blue-600">
-              {Math.round(sendingProgress)}%
-            </span>
+            <span className="text-sm text-blue-600">{Math.round(sendingProgress)}%</span>
           </div>
           <div className="w-full bg-blue-200 rounded-full h-2">
             <div
@@ -491,20 +444,17 @@ const BulkEmailPreview: React.FC<BulkEmailPreviewProps> = ({
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-4">
                 <div>
-                  <h3 className="font-medium text-slate-900">
-                    {supplierData.supplier}
-                  </h3>
+                  <h3 className="font-medium text-slate-900">{supplierData.supplier}</h3>
                   <p className="text-sm text-slate-800">
-                    {supplierData.orderCount} ordrelinjer •{" "}
-                    {supplierData.languageDisplay}
+                    {supplierData.orderCount} ordrelinjer • {supplierData.languageDisplay}
                   </p>
                 </div>
 
                 <span
                   className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                    supplierData.language === "no"
-                      ? "bg-blue-100 text-blue-800"
-                      : "bg-green-100 text-green-800"
+                    supplierData.language === 'no'
+                      ? 'bg-blue-100 text-blue-800'
+                      : 'bg-green-100 text-green-800'
                   }`}
                 >
                   {supplierData.languageDisplay}
@@ -516,24 +466,20 @@ const BulkEmailPreview: React.FC<BulkEmailPreviewProps> = ({
                 {supplierData.isSending && (
                   <div className="flex items-center text-blue-600">
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
-                    <span className="text-sm">
-                      {t("bulkEmailPreview.sending")}
-                    </span>
+                    <span className="text-sm">{t('bulkEmailPreview.sending')}</span>
                   </div>
                 )}
 
                 {supplierData.sendResult && (
                   <div
                     className={`flex items-center ${
-                      supplierData.sendResult.success
-                        ? "text-green-600"
-                        : "text-red-600"
+                      supplierData.sendResult.success ? 'text-green-600' : 'text-red-600'
                     }`}
                   >
                     <span className="text-sm font-medium">
                       {supplierData.sendResult.success
-                        ? t("bulkEmailPreview.sent")
-                        : t("bulkEmailPreview.failed")}
+                        ? t('bulkEmailPreview.sent')
+                        : t('bulkEmailPreview.failed')}
                     </span>
                   </div>
                 )}
@@ -545,12 +491,12 @@ const BulkEmailPreview: React.FC<BulkEmailPreviewProps> = ({
                   disabled={supplierData.isSending}
                   title={
                     supplierData.isSending
-                      ? t("bulkEmailPreview.sending")
-                      : t("bulkEmailPreview.preview")
+                      ? t('bulkEmailPreview.sending')
+                      : t('bulkEmailPreview.preview')
                   }
                 >
                   <EyeIcon className="h-4 w-4 mr-1" />
-                  {t("bulkEmailPreview.preview")}
+                  {t('bulkEmailPreview.preview')}
                 </button>
               </div>
             </div>
@@ -559,7 +505,7 @@ const BulkEmailPreview: React.FC<BulkEmailPreviewProps> = ({
             <div className="mt-3 pt-3 border-t border-white/20">
               <div className="flex items-center justify-between mb-1">
                 <label className="block text-sm font-medium text-slate-900">
-                  {t("bulkEmailPreview.emailAddress")}
+                  {t('bulkEmailPreview.emailAddress')}
                 </label>
                 {(customEmails.has(supplierData.supplier) ||
                   bulkSupplierEmails?.has(supplierData.supplier)) && (
@@ -570,59 +516,35 @@ const BulkEmailPreview: React.FC<BulkEmailPreviewProps> = ({
                       setCustomEmails(newCustomEmails);
                     }}
                     className="text-xs text-slate-700 hover:text-teal-600 transition-colors"
-                    disabled={
-                      supplierData.isSending || supplierData.sendResult?.success
-                    }
+                    disabled={supplierData.isSending || supplierData.sendResult?.success}
                   >
-                    {t("bulkEmailPreview.resetToDefault")}
+                    {t('bulkEmailPreview.resetToDefault')}
                   </button>
                 )}
               </div>
               <input
                 type="email"
-                value={getEmailForSupplier(
-                  supplierData.supplier,
-                  supplierData.email
-                )}
-                onChange={(e) =>
-                  handleEmailChange(supplierData.supplier, e.target.value)
-                }
+                value={getEmailForSupplier(supplierData.supplier, supplierData.email)}
+                onChange={(e) => handleEmailChange(supplierData.supplier, e.target.value)}
                 className={`text-sm max-w-md bg-white/50 backdrop-blur-md border border-white/30 rounded-lg shadow-inner focus:border-teal-400/60 focus:ring-2 focus:ring-teal-400/30 focus:outline-none transition-all duration-200 px-3 py-2 ${
-                  !getEmailForSupplier(
-                    supplierData.supplier,
-                    supplierData.email
-                  ) ||
-                  getEmailForSupplier(
-                    supplierData.supplier,
-                    supplierData.email
-                  ).trim() === ""
-                    ? "border-red-300 bg-red-50/60"
-                    : ""
+                  !getEmailForSupplier(supplierData.supplier, supplierData.email) ||
+                  getEmailForSupplier(supplierData.supplier, supplierData.email).trim() === ''
+                    ? 'border-red-300 bg-red-50/60'
+                    : ''
                 }`}
                 placeholder={supplierData.email}
-                disabled={
-                  supplierData.isSending || supplierData.sendResult?.success
-                }
+                disabled={supplierData.isSending || supplierData.sendResult?.success}
               />
-              {(!getEmailForSupplier(
-                supplierData.supplier,
-                supplierData.email
-              ) ||
-                getEmailForSupplier(
-                  supplierData.supplier,
-                  supplierData.email
-                ).trim() === "") && (
-                <p className="text-xs text-red-600 mt-1">
-                  {t("bulkEmailPreview.noEmailWarning")}
-                </p>
+              {(!getEmailForSupplier(supplierData.supplier, supplierData.email) ||
+                getEmailForSupplier(supplierData.supplier, supplierData.email).trim() === '') && (
+                <p className="text-xs text-red-600 mt-1">{t('bulkEmailPreview.noEmailWarning')}</p>
               )}
             </div>
 
             {/* Error message */}
             {supplierData.sendResult && !supplierData.sendResult.success && (
               <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded text-sm text-red-800">
-                <strong>{t("bulkEmailPreview.error")}</strong>{" "}
-                {supplierData.sendResult.error}
+                <strong>{t('bulkEmailPreview.error')}</strong> {supplierData.sendResult.error}
               </div>
             )}
           </div>
@@ -636,7 +558,7 @@ const BulkEmailPreview: React.FC<BulkEmailPreviewProps> = ({
           className="btn btn-secondary bg-white/60 backdrop-blur-md border border-white/40 hover:bg-white/80 transition-all duration-200"
           disabled={isSending}
         >
-          {t("bulkEmailPreview.backToOrderSelection")}
+          {t('bulkEmailPreview.backToOrderSelection')}
         </button>
 
         <button
@@ -645,9 +567,7 @@ const BulkEmailPreview: React.FC<BulkEmailPreviewProps> = ({
           disabled={isSending || totals.totalSuppliers === 0}
         >
           <PaperAirplaneIcon className="h-4 w-4 mr-2" />
-          {isSending
-            ? t("bulkEmailPreview.sending")
-            : t("bulkEmailPreview.sendAll")}
+          {isSending ? t('bulkEmailPreview.sending') : t('bulkEmailPreview.sendAll')}
         </button>
       </div>
 
@@ -658,8 +578,7 @@ const BulkEmailPreview: React.FC<BulkEmailPreviewProps> = ({
             supplier: previewSupplier,
             recipientEmail: getEmailForSupplier(
               previewSupplier,
-              emailPreviewData.find((s) => s.supplier === previewSupplier)
-                ?.email || ""
+              emailPreviewData.find((s) => s.supplier === previewSupplier)?.email || ''
             ),
             orders:
               emailPreviewData
@@ -667,24 +586,21 @@ const BulkEmailPreview: React.FC<BulkEmailPreviewProps> = ({
                 ?.orders.map((order) => ({
                   key: order.key,
                   poNumber: order.poNumber,
-                  itemNo: order.itemNo || "",
-                  description:
-                    order.supplierArticleNo || order.description || "",
-                  specification: order.specification || "",
+                  itemNo: order.itemNo || '',
+                  description: order.supplierArticleNo || order.description || '',
+                  specification: order.specification || '',
                   orderQty: order.orderQty,
                   receivedQty: order.receivedQty,
                   estReceiptDate: order.dueDate
-                    ? new Date(order.dueDate).toLocaleDateString("nb-NO")
-                    : "Ikke spesifisert",
+                    ? new Date(order.dueDate).toLocaleDateString('nb-NO')
+                    : 'Ikke spesifisert',
                   outstandingQty: order.outstandingQty,
                   orderRowNumber: order.orderRowNumber,
                 })) || [],
             language:
-              emailPreviewData.find((s) => s.supplier === previewSupplier)
-                ?.language || "no",
+              emailPreviewData.find((s) => s.supplier === previewSupplier)?.language || 'no',
             subject:
-              emailPreviewData.find((s) => s.supplier === previewSupplier)
-                ?.language === "no"
+              emailPreviewData.find((s) => s.supplier === previewSupplier)?.language === 'no'
                 ? `Purring på manglende leveranser – ${previewSupplier}`
                 : `Reminder: Outstanding Deliveries – ${previewSupplier}`,
           }}

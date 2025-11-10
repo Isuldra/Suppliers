@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from "react";
-import toast from "react-hot-toast";
+import React, { useState, useEffect } from 'react';
+import toast from 'react-hot-toast';
 
 // Vi bruker eksisterende deklarasjon fra window.electron i stedet for å opprette en ny
 // declare global {
@@ -12,11 +12,11 @@ import toast from "react-hot-toast";
 // }
 
 const LogViewer: React.FC = () => {
-  const [logs, setLogs] = useState<string>("");
-  const [logPath, setLogPath] = useState<string>("");
+  const [logs, setLogs] = useState<string>('');
+  const [logPath, setLogPath] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
-  const [sendStatus, setSendStatus] = useState<string>("");
-  const [sendError, setSendError] = useState<string>("");
+  const [sendStatus, setSendStatus] = useState<string>('');
+  const [sendError, setSendError] = useState<string>('');
   const [isSending, setIsSending] = useState(false);
 
   const fetchLogs = async () => {
@@ -29,13 +29,11 @@ const LogViewer: React.FC = () => {
           setLogPath(result.path);
         }
       } else {
-        toast.error(
-          `Kunne ikke hente logger: ${result.error || "Ukjent feil"}`
-        );
+        toast.error(`Kunne ikke hente logger: ${result.error || 'Ukjent feil'}`);
       }
     } catch (error) {
-      console.error("Error fetching logs:", error);
-      toast.error("Feil under henting av logger");
+      console.error('Error fetching logs:', error);
+      toast.error('Feil under henting av logger');
     } finally {
       setIsLoading(false);
     }
@@ -48,58 +46,53 @@ const LogViewer: React.FC = () => {
   const copyLogsToClipboard = () => {
     try {
       navigator.clipboard.writeText(logs);
-      toast.success("Logger kopiert til utklippstavlen");
+      toast.success('Logger kopiert til utklippstavlen');
     } catch (error) {
-      console.error("Failed to copy logs:", error);
-      toast.error("Kunne ikke kopiere logger");
+      console.error('Failed to copy logs:', error);
+      toast.error('Kunne ikke kopiere logger');
     }
   };
 
   const downloadLogs = () => {
     try {
-      const blob = new Blob([logs], { type: "text/plain" });
+      const blob = new Blob([logs], { type: 'text/plain' });
       const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
+      const a = document.createElement('a');
       a.href = url;
-      a.download = "supplier-reminder-logs.txt";
+      a.download = 'supplier-reminder-logs.txt';
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      toast.success("Logger lastet ned");
+      toast.success('Logger lastet ned');
     } catch (error) {
-      console.error("Failed to download logs:", error);
-      toast.error("Kunne ikke laste ned logger");
+      console.error('Failed to download logs:', error);
+      toast.error('Kunne ikke laste ned logger');
     }
   };
 
   const handleSendLogs = async () => {
     setIsSending(true);
-    setSendStatus("");
-    setSendError("");
+    setSendStatus('');
+    setSendError('');
     try {
       if (!window.electron || !window.electron.sendLogsToSupport) {
-        setSendError(
-          "Denne funksjonen er ikke tilgjengelig i denne versjonen av appen."
-        );
-        toast.error("Kan ikke sende logger: Mangler backend-funksjon.");
+        setSendError('Denne funksjonen er ikke tilgjengelig i denne versjonen av appen.');
+        toast.error('Kan ikke sende logger: Mangler backend-funksjon.');
         return;
       }
       const result = await window.electron.sendLogsToSupport();
       if (result.success) {
-        setSendStatus("Logger åpnet i e-postklient.");
-        toast.success(
-          "Logger åpnet i e-postklient. Klikk send for å sende til support."
-        );
+        setSendStatus('Logger åpnet i e-postklient.');
+        toast.success('Logger åpnet i e-postklient. Klikk send for å sende til support.');
       } else {
-        setSendError(result.error || "Ukjent feil ved sending av logger.");
-        toast.error(result.error || "Kunne ikke sende logger.");
+        setSendError(result.error || 'Ukjent feil ved sending av logger.');
+        toast.error(result.error || 'Kunne ikke sende logger.');
       }
     } catch (err) {
-      setSendError(err instanceof Error ? err.message : "Ukjent feil");
+      setSendError(err instanceof Error ? err.message : 'Ukjent feil');
       toast.error(
-        "Kunne ikke sende logger: " +
-          (err instanceof Error ? err.message : "Ukjent feil")
+        'Kunne ikke sende logger: ' + (err instanceof Error ? err.message : 'Ukjent feil')
       );
     } finally {
       setIsSending(false);
@@ -116,7 +109,7 @@ const LogViewer: React.FC = () => {
             className="px-3 py-1 bg-neutral text-white rounded hover:bg-neutral-dark disabled:opacity-50"
             disabled={isLoading}
           >
-            {isLoading ? "Laster..." : "Oppdater"}
+            {isLoading ? 'Laster...' : 'Oppdater'}
           </button>
           <button
             onClick={copyLogsToClipboard}
@@ -138,7 +131,7 @@ const LogViewer: React.FC = () => {
             disabled={isLoading || !logs || isSending}
             title="Åpner Outlook med logger vedlagt. Fungerer kun med Outlook Desktop på Windows."
           >
-            {isSending ? "Sender..." : "Send til support"}
+            {isSending ? 'Sender...' : 'Send til support'}
           </button>
         </div>
       </div>

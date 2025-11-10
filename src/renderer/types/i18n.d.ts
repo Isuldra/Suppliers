@@ -1,4 +1,4 @@
-import "react-i18next";
+import 'react-i18next';
 
 // Define the structure of our translation files
 interface TranslationResources {
@@ -73,9 +73,9 @@ interface TranslationResources {
   };
 }
 
-declare module "react-i18next" {
+declare module 'react-i18next' {
   interface CustomTypeOptions {
-    defaultNS: "translation";
+    defaultNS: 'translation';
     resources: {
       translation: TranslationResources;
     };

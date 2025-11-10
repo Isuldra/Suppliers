@@ -1,21 +1,21 @@
 #!/usr/bin/env node
 
-import fs from "fs";
-import path from "path";
-import crypto from "crypto";
-import { fileURLToPath } from "url";
+import fs from 'fs';
+import path from 'path';
+import crypto from 'crypto';
+import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Get project root directory
-const projectRoot = path.resolve(__dirname, "..");
-const releaseDir = path.join(projectRoot, "release");
-const updatesDir = path.join(projectRoot, "docs", "updates");
+const projectRoot = path.resolve(__dirname, '..');
+const releaseDir = path.join(projectRoot, 'release');
+const updatesDir = path.join(projectRoot, 'docs', 'updates');
 
 // Read package.json to get current version
-const packageJsonPath = path.join(projectRoot, "package.json");
-const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, "utf8"));
+const packageJsonPath = path.join(projectRoot, 'package.json');
+const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
 const version = packageJson.version;
 
 console.log(`Preparing Cloudflare release for version ${version}...`);
@@ -28,9 +28,9 @@ if (!fs.existsSync(updatesDir)) {
 // Function to calculate SHA512 hash
 function calculateSHA512(filePath) {
   const fileBuffer = fs.readFileSync(filePath);
-  const hash = crypto.createHash("sha512");
+  const hash = crypto.createHash('sha512');
   hash.update(fileBuffer);
-  return hash.digest("base64");
+  return hash.digest('base64');
 }
 
 // Function to get file size
@@ -56,7 +56,7 @@ const nsisBlockmap = `Pulse-${version}-setup.exe.blockmap`;
 const nsisBlockmapPath = path.join(releaseDir, nsisBlockmap);
 
 // Find portable executable
-const portableExe = "Pulse-Portable.exe";
+const portableExe = 'Pulse-Portable.exe';
 const portableExePath = path.join(releaseDir, portableExe);
 
 // Check if files exist
@@ -99,13 +99,13 @@ if (fs.existsSync(portableExePath)) {
 
 // Note: Large files (exe, blockmap) are now hosted on GitHub Releases
 // Only copy small files to docs/updates/ for Cloudflare Pages
-console.log("\nPreparing Cloudflare Pages files...");
-console.log("   Large files will be uploaded to GitHub Releases");
-console.log("   Only metadata files will be copied to docs/updates/");
+console.log('\nPreparing Cloudflare Pages files...');
+console.log('   Large files will be uploaded to GitHub Releases');
+console.log('   Only metadata files will be copied to docs/updates/');
 
 // Generate latest.yml for auto-updates
 if (filesToInclude.length > 0) {
-  console.log("\nGenerating latest.yml...");
+  console.log('\nGenerating latest.yml...');
 
   const mainFile = filesToInclude[0]; // Use the first file (NSIS installer) as main
   const fileHash = calculateSHA512(mainFile.path);
@@ -113,7 +113,7 @@ if (filesToInclude.length > 0) {
   const releaseDate = new Date().toISOString();
 
   // Use filename with dots instead of spaces for GitHub Releases URL
-  const githubFilename = mainFile.name.replace(/ /g, ".");
+  const githubFilename = mainFile.name.replace(/ /g, '.');
 
   // Use full GitHub Releases URL since we're serving from Cloudflare Pages
   // but the files are hosted on GitHub Releases
@@ -128,33 +128,31 @@ path: ${githubFilename}
 sha512: ${fileHash}
 releaseDate: '${releaseDate}'`;
 
-  const latestYmlPath = path.join(updatesDir, "latest.yml");
+  const latestYmlPath = path.join(updatesDir, 'latest.yml');
   fs.writeFileSync(latestYmlPath, latestYml);
   console.log(`Success: Generated: latest.yml`);
   console.log(`   Filename: ${mainFile.name}`);
   console.log(`   URL: ${githubReleaseUrl}`);
 
   // Also copy to release/ directory for GitHub Release upload
-  const releaseLatestYmlPath = path.join(releaseDir, "latest.yml");
+  const releaseLatestYmlPath = path.join(releaseDir, 'latest.yml');
   fs.writeFileSync(releaseLatestYmlPath, latestYml);
-  console.log(
-    `Success: Copied latest.yml to release/ directory for GitHub Release`
-  );
+  console.log(`Success: Copied latest.yml to release/ directory for GitHub Release`);
 } else {
-  console.log("\nWarning: No NSIS installer found for latest.yml generation");
+  console.log('\nWarning: No NSIS installer found for latest.yml generation');
   console.log("   Run 'npm run dist' to build the NSIS installer first");
 }
 
 // Generate latest.json for portable version
 if (fs.existsSync(portableExePath)) {
-  console.log("\nGenerating latest.json...");
+  console.log('\nGenerating latest.json...');
 
   const portableHash = calculateSHA512(portableExePath);
   const portableSize = getFileSize(portableExePath);
   const releaseDate = new Date().toISOString();
 
   // Use filename with dots instead of spaces for GitHub Releases URL
-  const portableFilename = portableExe.replace(/ /g, ".");
+  const portableFilename = portableExe.replace(/ /g, '.');
 
   // Use full GitHub Releases URL since we're serving from Cloudflare Pages
   // but the files are hosted on GitHub Releases
@@ -172,7 +170,7 @@ if (fs.existsSync(portableExePath)) {
     releaseDate: releaseDate,
   };
 
-  const latestJsonPath = path.join(updatesDir, "latest.json");
+  const latestJsonPath = path.join(updatesDir, 'latest.json');
   fs.writeFileSync(latestJsonPath, JSON.stringify(latestJson, null, 2));
   console.log(`Success: Generated: latest.json`);
   console.log(`   Filename: ${portableExe}`);
@@ -180,9 +178,9 @@ if (fs.existsSync(portableExePath)) {
 }
 
 // Update index.html with current version
-console.log("\nUpdating index.html...");
-const indexPath = path.join(updatesDir, "index.html");
-let indexContent = fs.readFileSync(indexPath, "utf8");
+console.log('\nUpdating index.html...');
+const indexPath = path.join(updatesDir, 'index.html');
+let indexContent = fs.readFileSync(indexPath, 'utf8');
 
 // Update version in the HTML
 indexContent = indexContent.replace(
@@ -202,8 +200,8 @@ const newStatusSection = `<div class="status">
                 <h3>Release v${version} er klar!</h3>
                 <p>Automatiske oppdateringer er nå tilgjengelige via Cloudflare Pages.</p>
                 <p><strong>Ny versjon:</strong> v${version} - ${new Date().toLocaleDateString(
-  "no-NO"
-)}</p>
+                  'no-NO'
+                )}</p>
             </div>`;
 
 indexContent = indexContent.replace(statusSectionRegex, newStatusSection);
@@ -212,7 +210,7 @@ fs.writeFileSync(indexPath, indexContent);
 console.log(`Success: Updated: index.html with version ${version}`);
 
 // Ensure _redirects file exists
-const redirectsPath = path.join(updatesDir, "_redirects");
+const redirectsPath = path.join(updatesDir, '_redirects');
 if (!fs.existsSync(redirectsPath)) {
   const redirectsContent = `# Cloudflare Pages redirects
 # Serve latest.yml for auto-updates
@@ -225,17 +223,15 @@ if (!fs.existsSync(redirectsPath)) {
   console.log(`Success: Created: _redirects`);
 }
 
-console.log("\nHybrid release preparation complete!");
-console.log("\nNext steps:");
-console.log("1. Review the metadata files in docs/updates/");
-console.log("2. Run: npm run release:github (creates GitHub Release)");
-console.log(
-  "3. GitHub Actions will automatically commit and push metadata files"
-);
-console.log("4. Cloudflare Pages will serve latest.yml with GitHub URLs");
-console.log("5. Users will download installers from GitHub Releases");
+console.log('\nHybrid release preparation complete!');
+console.log('\nNext steps:');
+console.log('1. Review the metadata files in docs/updates/');
+console.log('2. Run: npm run release:github (creates GitHub Release)');
+console.log('3. GitHub Actions will automatically commit and push metadata files');
+console.log('4. Cloudflare Pages will serve latest.yml with GitHub URLs');
+console.log('5. Users will download installers from GitHub Releases');
 
-console.log("\nFiles ready for deployment:");
+console.log('\nFiles ready for deployment:');
 const deployedFiles = fs.readdirSync(updatesDir);
 deployedFiles.forEach((file) => {
   const filePath = path.join(updatesDir, file);

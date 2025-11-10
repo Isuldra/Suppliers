@@ -1,2 +1,2 @@
 // Enkel preload-fil for menytest
-console.log("Preload script loaded successfully");
+console.log('Preload script loaded successfully');

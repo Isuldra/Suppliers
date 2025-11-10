@@ -189,17 +189,14 @@ If you need to customize the distribution process further, you can examine and m
 ### Common Issues
 
 1. **Admin Rights Issues**
-
    - Ensure `perMachine` is `false` in `nsis` or `msi` config for per-user installs.
    - Use the Portable version if installation is prohibited.
 
 2. **Missing Dependencies**
-
    - Ensure `npm install` was run before building.
    - Ensure build tools (Python/C++) are correctly installed on the build machine.
 
 3. **Build Errors**
-
    - Windows targets should be built on Windows.
    - Check logs from `electron-builder` for specific errors.
 

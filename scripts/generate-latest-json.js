@@ -1,21 +1,21 @@
 #!/usr/bin/env node
 
-import fs from "fs";
-import path from "path";
-import crypto from "crypto";
-import { fileURLToPath } from "url";
+import fs from 'fs';
+import path from 'path';
+import crypto from 'crypto';
+import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Get project root directory
-const projectRoot = path.resolve(__dirname, "..");
-const releaseDir = path.join(projectRoot, "release");
-const updatesDir = path.join(projectRoot, "docs", "updates");
+const projectRoot = path.resolve(__dirname, '..');
+const releaseDir = path.join(projectRoot, 'release');
+const updatesDir = path.join(projectRoot, 'docs', 'updates');
 
 // Read package.json to get current version
-const packageJsonPath = path.join(projectRoot, "package.json");
-const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, "utf8"));
+const packageJsonPath = path.join(projectRoot, 'package.json');
+const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
 const version = packageJson.version;
 
 console.log(`Generating latest.json for portable version ${version}...`);
@@ -28,9 +28,9 @@ if (!fs.existsSync(updatesDir)) {
 // Function to calculate SHA512 hash
 function calculateSHA512(filePath) {
   const fileBuffer = fs.readFileSync(filePath);
-  const hash = crypto.createHash("sha512");
+  const hash = crypto.createHash('sha512');
   hash.update(fileBuffer);
-  return hash.digest("base64");
+  return hash.digest('base64');
 }
 
 // Function to get file size
@@ -40,7 +40,7 @@ function getFileSize(filePath) {
 }
 
 // Find portable executable
-const portableExe = "Pulse-Portable.exe";
+const portableExe = 'Pulse-Portable.exe';
 const portableExePath = path.join(releaseDir, portableExe);
 
 if (fs.existsSync(portableExePath)) {
@@ -64,7 +64,7 @@ if (fs.existsSync(portableExePath)) {
     releaseDate: releaseDate,
   };
 
-  const latestJsonPath = path.join(updatesDir, "latest.json");
+  const latestJsonPath = path.join(updatesDir, 'latest.json');
   fs.writeFileSync(latestJsonPath, JSON.stringify(latestJson, null, 2));
   console.log(`Success: Generated: latest.json`);
 
@@ -78,4 +78,4 @@ if (fs.existsSync(portableExePath)) {
   console.log(`   Make sure to run 'npm run dist:portable' first`);
 }
 
-console.log("\nlatest.json generation complete!");
+console.log('\nlatest.json generation complete!');

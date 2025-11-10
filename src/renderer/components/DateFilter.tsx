@@ -1,16 +1,16 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from 'react';
 import {
   ChevronDownIcon,
   ChevronUpIcon,
   FunnelIcon,
   XCircleIcon,
-} from "@heroicons/react/24/outline";
+} from '@heroicons/react/24/outline';
 
 export interface DateFilterSettings {
   selectAll: boolean;
   selectedValues: string[]; // Years and months that are selected
   searchText: string; // For searching in the filter list
-  sortOrder: "asc" | "desc" | null;
+  sortOrder: 'asc' | 'desc' | null;
   isActive: boolean; // Whether the filter is currently active
 }
 
@@ -18,9 +18,7 @@ interface DateFilterProps {
   _columnId: string;
   data: unknown[];
   dateFilterSettings: DateFilterSettings;
-  setDateFilterSettings: React.Dispatch<
-    React.SetStateAction<DateFilterSettings>
-  >;
+  setDateFilterSettings: React.Dispatch<React.SetStateAction<DateFilterSettings>>;
   onApplyFilter: () => void;
   getDateValue: (row: unknown) => Date | null;
 }
@@ -42,17 +40,14 @@ const DateFilter: React.FC<DateFilterProps> = ({
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(event.target as Node)
-      ) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setIsOpen(false);
       }
     };
 
-    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener('mousedown', handleClickOutside);
     return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener('mousedown', handleClickOutside);
     };
   }, []);
 
@@ -66,7 +61,7 @@ const DateFilter: React.FC<DateFilterProps> = ({
         const date = getDateValue(row);
         if (date instanceof Date && !isNaN(date.getTime())) {
           years.add(date.getFullYear().toString());
-          months.add(date.toLocaleString("no-NO", { month: "long" }));
+          months.add(date.toLocaleString('no-NO', { month: 'long' }));
         }
       });
 
@@ -91,7 +86,7 @@ const DateFilter: React.FC<DateFilterProps> = ({
     setIsOpen(!isOpen);
   };
 
-  const handleSortChange = (order: "asc" | "desc") => {
+  const handleSortChange = (order: 'asc' | 'desc') => {
     setDateFilterSettings((prev) => ({
       ...prev,
       sortOrder: order,
@@ -149,7 +144,7 @@ const DateFilter: React.FC<DateFilterProps> = ({
     setDateFilterSettings({
       selectAll: true,
       selectedValues: [],
-      searchText: "",
+      searchText: '',
       sortOrder: null,
       isActive: false,
     });
@@ -160,7 +155,7 @@ const DateFilter: React.FC<DateFilterProps> = ({
     <div className="relative inline-block" ref={dropdownRef}>
       <button
         className={`inline-flex items-center ${
-          dateFilterSettings.isActive ? "text-blue-600" : "text-gray-500"
+          dateFilterSettings.isActive ? 'text-blue-600' : 'text-gray-500'
         } hover:text-blue-700 focus:outline-none`}
         onClick={toggleDropdown}
         aria-label="Filter dates"
@@ -186,13 +181,13 @@ const DateFilter: React.FC<DateFilterProps> = ({
               <div className="space-x-2">
                 <button
                   className="text-gray-700 hover:text-blue-600"
-                  onClick={() => handleSortChange("asc")}
+                  onClick={() => handleSortChange('asc')}
                 >
                   <ChevronUpIcon className="h-4 w-4" />
                 </button>
                 <button
                   className="text-gray-700 hover:text-blue-600"
-                  onClick={() => handleSortChange("desc")}
+                  onClick={() => handleSortChange('desc')}
                 >
                   <ChevronDownIcon className="h-4 w-4" />
                 </button>
@@ -202,9 +197,7 @@ const DateFilter: React.FC<DateFilterProps> = ({
 
           <div className="p-2">
             <details>
-              <summary className="cursor-pointer font-medium text-sm mb-1">
-                Date Filters
-              </summary>
+              <summary className="cursor-pointer font-medium text-sm mb-1">Date Filters</summary>
               <div className="pl-2 mt-1 space-y-1 text-sm">
                 <div className="flex items-center">
                   <button
@@ -292,9 +285,7 @@ const DateFilter: React.FC<DateFilterProps> = ({
                 ))}
               </div>
             ) : (
-              <div className="text-sm text-gray-500 italic">
-                No items match your search
-              </div>
+              <div className="text-sm text-gray-500 italic">No items match your search</div>
             )}
           </div>
 

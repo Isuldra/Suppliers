@@ -7,19 +7,16 @@
 **Phase 1: Information Gathering & Context Validation (MANDATORY)**
 
 1.  **Understand the Problem:**
-
     - Re-state the reported issue (`{my query}`) to confirm understanding.
     - Gather specifics: Exact error messages, full stack traces, relevant log snippets (`electron-log`), steps to reproduce, expected vs. actual behavior.
 
 2.  **Verify Environment & Initial Context:**
-
     - `pwd` to confirm CWD.
     - `git status --porcelain` to check for uncommitted changes that might influence behavior.
     - `cat -n <path>` on the primary file(s) implicated by the error/query to verify existence and get initial context. If not found, STOP and ask.
     - `tree -L 3 --gitignore | cat` focused on the suspected area (`src/main`, `src/renderer`, etc.).
 
 3.  **Check Relevant Logs:**
-
     - Identify potential log locations (e.g., `app.getPath('userData')/logs/supplier-reminder-app.log`, browser console).
     - Use `read_file` or `cat` to examine recent log entries related to the error/behavior. Note timestamps.
 
@@ -31,13 +28,11 @@
 **Phase 2: Deep Dive & Root Cause Analysis (MANDATORY)**
 
 5.  **Analyze Code Execution Flow:**
-
     - Use `read_file` to thoroughly review code sections identified in Phase 1 (error trace, implicated files).
     - Trace the likely execution path: Identify relevant components (React), functions, hooks, IPC calls (`ipcMain.handle`, `ipcRenderer.invoke`), main vs. renderer logic, state updates, and database interactions (`databaseService`).
     - Verify assumptions against actual code logic. Note discrepancies.
 
 6.  **Formulate & Validate Hypotheses:**
-
     - Based _only_ on verified evidence, list 2-3 specific, plausible root causes (e.g., "IPC handler error", "Incorrect state update", "Race condition", "Config mismatch in `package.json` main for build", "Type error", "Missing dependency").
     - Use `read_file`, `grep_search`, or `codebase_search` to find _concrete evidence_ supporting or refuting each hypothesis.
 
@@ -46,14 +41,12 @@
 **Phase 3: Solution Design & Proposal (MANDATORY Confirmation Required)**
 
 8.  **Consider Solution Context & Constraints:**
-
     - Is the fix needed in `main`, `renderer`, `preload`, or `shared`?
     - Does it involve IPC? Are types defined in `src/shared/types`?
     - Are there Electron security implications (contextIsolation, nodeIntegration)?
     - Is this related to a specific build context (`dev` vs. `dist`)?
 
 9.  **Search for Existing Patterns/Solutions:**
-
     - Use `codebase_search` / `grep_search` for reusable functions, hooks, types, error handlers, or utilities. Prioritize reuse.
 
 10. **Propose Solution(s):**

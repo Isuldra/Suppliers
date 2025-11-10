@@ -1,8 +1,8 @@
-import "@testing-library/jest-dom";
-import { vi } from "vitest";
+import '@testing-library/jest-dom';
+import { vi } from 'vitest';
 
 // Mock IPC renderer
-vi.mock("electron", () => ({
+vi.mock('electron', () => ({
   ipcRenderer: {
     invoke: vi.fn(),
     on: vi.fn(),
@@ -11,7 +11,7 @@ vi.mock("electron", () => ({
 }));
 
 // Mock electron-log
-vi.mock("electron-log", () => ({
+vi.mock('electron-log', () => ({
   default: {
     error: vi.fn(),
     warn: vi.fn(),

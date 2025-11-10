@@ -33,24 +33,19 @@ Add imports for all new components and types:
 
 ```typescript
 // At the top of Dashboard.tsx, add these imports:
-import { KPICard } from "./dashboard/KPICard";
-import { TopSuppliersChart } from "./dashboard/TopSuppliersChart";
-import { PlannerDistributionChart } from "./dashboard/PlannerDistributionChart";
-import { OrderTimelineChart } from "./dashboard/OrderTimelineChart";
-import { DashboardFilters } from "./dashboard/DashboardFilters";
+import { KPICard } from './dashboard/KPICard';
+import { TopSuppliersChart } from './dashboard/TopSuppliersChart';
+import { PlannerDistributionChart } from './dashboard/PlannerDistributionChart';
+import { OrderTimelineChart } from './dashboard/OrderTimelineChart';
+import { DashboardFilters } from './dashboard/DashboardFilters';
 import type {
   DashboardStats,
   SupplierStat,
   PlannerStat,
   WeekStat,
   DashboardFilter,
-} from "../types/Dashboard";
-import {
-  ChartBarIcon,
-  UsersIcon,
-  ClockIcon,
-  CalendarIcon,
-} from "@heroicons/react/24/outline";
+} from '../types/Dashboard';
+import { ChartBarIcon, UsersIcon, ClockIcon, CalendarIcon } from '@heroicons/react/24/outline';
 ```
 
 Add new state variables:
@@ -63,7 +58,7 @@ const [weeklyData, setWeeklyData] = useState<WeekStat[]>([]);
 const [activeFilter, setActiveFilter] = useState<DashboardFilter | null>(null);
 const [isLoading, setIsLoading] = useState(true);
 const [error, setError] = useState<string | null>(null);
-const [appVersion, setAppVersion] = useState<string>("");
+const [appVersion, setAppVersion] = useState<string>('');
 
 // For filters
 const [availablePlanners, setAvailablePlanners] = useState<string[]>([]);
@@ -86,36 +81,32 @@ const loadDashboardData = async () => {
 
     // Timeout promise (10 seconds)
     const timeoutPromise = new Promise<never>((_, reject) =>
-      setTimeout(
-        () => reject(new Error("Request timed out after 10 seconds")),
-        10000
-      )
+      setTimeout(() => reject(new Error('Request timed out after 10 seconds')), 10000)
     );
 
     // Load all dashboard data in parallel
-    const [statsResponse, suppliersResponse, plannersResponse, weeksResponse] =
-      await Promise.race([
-        Promise.all([
-          window.electron.getDashboardStats(),
-          window.electron.getTopSuppliers(5),
-          window.electron.getOrdersByPlanner(),
-          window.electron.getOrdersByWeek(8, 2),
-        ]),
-        timeoutPromise,
-      ]);
+    const [statsResponse, suppliersResponse, plannersResponse, weeksResponse] = await Promise.race([
+      Promise.all([
+        window.electron.getDashboardStats(),
+        window.electron.getTopSuppliers(5),
+        window.electron.getOrdersByPlanner(),
+        window.electron.getOrdersByWeek(8, 2),
+      ]),
+      timeoutPromise,
+    ]);
 
     // Check for errors
     if (!statsResponse.success) {
-      throw new Error(statsResponse.error || "Failed to load dashboard stats");
+      throw new Error(statsResponse.error || 'Failed to load dashboard stats');
     }
     if (!suppliersResponse.success) {
-      throw new Error(suppliersResponse.error || "Failed to load suppliers");
+      throw new Error(suppliersResponse.error || 'Failed to load suppliers');
     }
     if (!plannersResponse.success) {
-      throw new Error(plannersResponse.error || "Failed to load planners");
+      throw new Error(plannersResponse.error || 'Failed to load planners');
     }
     if (!weeksResponse.success) {
-      throw new Error(weeksResponse.error || "Failed to load weekly data");
+      throw new Error(weeksResponse.error || 'Failed to load weekly data');
     }
 
     // Set data
@@ -128,10 +119,10 @@ const loadDashboardData = async () => {
     setAvailablePlanners(plannersResponse.data!.map((p) => p.planner));
     setAvailableSuppliers(suppliersResponse.data!.map((s) => s.name));
 
-    log.info("Dashboard data loaded successfully");
+    log.info('Dashboard data loaded successfully');
   } catch (err) {
-    console.error("Error loading dashboard data:", err);
-    setError(err instanceof Error ? err.message : "Unknown error");
+    console.error('Error loading dashboard data:', err);
+    setError(err instanceof Error ? err.message : 'Unknown error');
   } finally {
     setIsLoading(false);
   }
@@ -150,7 +141,7 @@ useEffect(() => {
       const version = await window.electron.getAppVersion();
       setAppVersion(version);
     } catch (error) {
-      console.error("Failed to fetch app version:", error);
+      console.error('Failed to fetch app version:', error);
     }
   };
 

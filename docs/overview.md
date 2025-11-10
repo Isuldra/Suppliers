@@ -13,32 +13,29 @@ CODE:
 
 ```javascript
 const options = {
-  sharedStrings: "emit",
-  hyperlinks: "emit",
-  worksheets: "emit",
+  sharedStrings: 'emit',
+  hyperlinks: 'emit',
+  worksheets: 'emit',
 };
-const workbookReader = new ExcelJS.stream.xlsx.WorkbookReader(
-  "./file.xlsx",
-  options
-);
+const workbookReader = new ExcelJS.stream.xlsx.WorkbookReader('./file.xlsx', options);
 workbookReader.read();
 
-workbookReader.on("worksheet", (worksheet) => {
-  worksheet.on("row", (row) => {});
+workbookReader.on('worksheet', (worksheet) => {
+  worksheet.on('row', (row) => {});
 });
 
-workbookReader.on("shared-strings", (sharedString) => {
+workbookReader.on('shared-strings', (sharedString) => {
   // ...
 });
 
-workbookReader.on("hyperlinks", (hyperlinksReader) => {
+workbookReader.on('hyperlinks', (hyperlinksReader) => {
   // ...
 });
 
-workbookReader.on("end", () => {
+workbookReader.on('end', () => {
   // ...
 });
-workbookReader.on("error", (err) => {
+workbookReader.on('error', (err) => {
   // ...
 });
 ```
@@ -89,7 +86,7 @@ await workbook.xlsx.load(data);
 const workbook = new Excel.Workbook();
 await workbook.xlsx.load(data, {
   ignoreNodes: [
-    "dataValidations", // ignores the workbook's Data Validations
+    'dataValidations', // ignores the workbook's Data Validations
   ],
 });
 // ... use workbook
@@ -116,7 +113,7 @@ const worksheet = await workbook.csv.read(stream);
 // read from a file with European Dates
 const workbook = new Excel.Workbook();
 const options = {
-  dateFormats: ["DD/MM/YYYY"],
+  dateFormats: ['DD/MM/YYYY'],
 };
 const worksheet = await workbook.csv.readFile(filename, options);
 // ... use workbook or worksheet
@@ -142,7 +139,7 @@ const options = {
   },
   // https://c2fo.github.io/fast-csv/docs/parsing/options
   parserOptions: {
-    delimiter: "\t",
+    delimiter: '\t',
     quote: false,
   },
 };
@@ -165,12 +162,12 @@ await workbook.csv.writeFile(filename);
 // write to a stream
 // Be careful that you need to provide sheetName or
 // sheetId for correct import to csv.
-await workbook.csv.write(stream, { sheetName: "Page name" });
+await workbook.csv.write(stream, { sheetName: 'Page name' });
 
 // write to a file with European Date-Times
 const workbook = new Excel.Workbook();
 const options = {
-  dateFormat: "DD/MM/YYYY HH:mm:ss",
+  dateFormat: 'DD/MM/YYYY HH:mm:ss',
   dateUTC: true, // use utc when rendering dates
 };
 await workbook.csv.writeFile(filename, options);
@@ -185,7 +182,7 @@ const options = {
         return value;
       case 1:
         // column 2 is a date
-        return dayjs(value).format("YYYY-MM-DD");
+        return dayjs(value).format('YYYY-MM-DD');
       case 2:
         // column 3 is a formula, write just the result
         return value.result;
@@ -196,7 +193,7 @@ const options = {
   },
   // https://c2fo.github.io/fast-csv/docs/formatting/options
   formatterOptions: {
-    delimiter: "\t",
+    delimiter: '\t',
     quote: false,
   },
 };
@@ -214,7 +211,7 @@ LANGUAGE: javascript
 CODE:
 
 ```javascript
-const workbookReader = new ExcelJS.stream.xlsx.WorkbookReader("./file.xlsx");
+const workbookReader = new ExcelJS.stream.xlsx.WorkbookReader('./file.xlsx');
 for await (const worksheetReader of workbookReader) {
   for await (const row of worksheetReader) {
     // ...
@@ -222,18 +219,18 @@ for await (const worksheetReader of workbookReader) {
 }
 
 const options = {
-  sharedStrings: "emit",
-  hyperlinks: "emit",
-  worksheets: "emit",
+  sharedStrings: 'emit',
+  hyperlinks: 'emit',
+  worksheets: 'emit',
 };
-const workbook = new ExcelJS.stream.xlsx.WorkbookReader("./file.xlsx", options);
+const workbook = new ExcelJS.stream.xlsx.WorkbookReader('./file.xlsx', options);
 for await (const { eventType, value } of workbook.parse()) {
   switch (eventType) {
-    case "shared-strings":
+    case 'shared-strings':
     // value is the shared string
-    case "worksheet":
+    case 'worksheet':
     // value is the worksheetReader
-    case "hyperlinks":
+    case 'hyperlinks':
     // value is the hyperlinksReader
   }
 }
@@ -249,8 +246,8 @@ CODE:
 ```javascript
 const workbook = new ExcelJS.Workbook();
 
-workbook.creator = "Me";
-workbook.lastModifiedBy = "Her";
+workbook.creator = 'Me';
+workbook.lastModifiedBy = 'Her';
 workbook.created = new Date(1985, 8, 30);
 workbook.modified = new Date();
 workbook.lastPrinted = new Date(2016, 9, 27);
@@ -280,21 +277,21 @@ CODE:
 ```javascript
 // add image to workbook by filename
 const imageId1 = workbook.addImage({
-  filename: "path/to/image.jpg",
-  extension: "jpeg",
+  filename: 'path/to/image.jpg',
+  extension: 'jpeg',
 });
 
 // add image to workbook by buffer
 const imageId2 = workbook.addImage({
-  buffer: fs.readFileSync("path/to.image.png"),
-  extension: "png",
+  buffer: fs.readFileSync('path/to.image.png'),
+  extension: 'png',
 });
 
 // add image to workbook by base64
-const myBase64Image = "data:image/png;base64,iVBORw0KG...";
+const myBase64Image = 'data:image/png;base64,iVBORw0KG...';
 const imageId2 = workbook.addImage({
   base64: myBase64Image,
-  extension: "png",
+  extension: 'png',
 });
 ```
 
@@ -306,26 +303,26 @@ LANGUAGE: javascript
 CODE:
 
 ```javascript
-const sheet = workbook.addWorksheet("My Sheet");
+const sheet = workbook.addWorksheet('My Sheet');
 
-const sheet1 = workbook.addWorksheet("My Sheet", {
-  properties: { tabColor: { argb: "FFC0000" } },
+const sheet1 = workbook.addWorksheet('My Sheet', {
+  properties: { tabColor: { argb: 'FFC0000' } },
 });
 
-const sheet2 = workbook.addWorksheet("My Sheet", {
+const sheet2 = workbook.addWorksheet('My Sheet', {
   views: [{ showGridLines: false }],
 });
 
-const sheet3 = workbook.addWorksheet("My Sheet", {
-  views: [{ state: "frozen", xSplit: 1, ySplit: 1 }],
+const sheet3 = workbook.addWorksheet('My Sheet', {
+  views: [{ state: 'frozen', xSplit: 1, ySplit: 1 }],
 });
 
-const sheet4 = workbook.addWorksheet("My Sheet", {
-  headerFooter: { firstHeader: "Hello Exceljs", firstFooter: "Hello World" },
+const sheet4 = workbook.addWorksheet('My Sheet', {
+  headerFooter: { firstHeader: 'Hello Exceljs', firstFooter: 'Hello World' },
 });
 
-const worksheet = workbook.addWorksheet("My Sheet", {
-  pageSetup: { paperSize: 9, orientation: "landscape" },
+const worksheet = workbook.addWorksheet('My Sheet', {
+  pageSetup: { paperSize: 9, orientation: 'landscape' },
 });
 ```
 
@@ -337,7 +334,7 @@ workbook.eachSheet(function (worksheet, sheetId) {
   // ...
 });
 
-const worksheet1 = workbook.getWorksheet("My Sheet");
+const worksheet1 = workbook.getWorksheet('My Sheet');
 
 const worksheet2 = workbook.getWorksheet(1);
 
@@ -363,7 +360,7 @@ LANGUAGE: javascript
 CODE:
 
 ```javascript
-const ExcelJS = require("exceljs");
+const ExcelJS = require('exceljs');
 ```
 
 **TITLE: Browserify Bundle Integration**
@@ -396,7 +393,7 @@ CODE:
 ```javascript
 // construct a streaming XLSX workbook writer with styles and shared strings
 const options = {
-  filename: "./streamed-workbook.xlsx",
+  filename: './streamed-workbook.xlsx',
   useStyles: true,
   useSharedStrings: true,
 };
@@ -410,10 +407,10 @@ worksheet
   })
   .commit();
 
-worksheet.mergeCells("A1:B2");
-worksheet.getCell("A1").value = "I am merged";
-worksheet.getCell("C1").value = "I am not";
-worksheet.getCell("C2").value = "Neither am I";
+worksheet.mergeCells('A1:B2');
+worksheet.getCell('A1').value = 'I am merged';
+worksheet.getCell('C1').value = 'I am not';
+worksheet.getCell('C2').value = 'Neither am I';
 worksheet.getRow(2).commit(); // now rows 1 and two are committed.
 
 // Finished adding data. Commit the worksheet
@@ -432,7 +429,7 @@ LANGUAGE: javascript
 CODE:
 
 ```javascript
-const cell = worksheet.getCell("C3");
+const cell = worksheet.getCell('C3');
 
 // Modify/Add individual cell
 cell.value = new Date(1968, 5, 1);
@@ -444,7 +441,7 @@ expect(cell.type).toEqual(Excel.ValueType.Date);
 myInput.value = cell.text;
 
 // use html-safe string for rendering...
-const html = "<div>" + cell.html + "</div>";
+const html = '<div>' + cell.html + '</div>';
 ```
 
 **TITLE: Setting Cell Values to Null in ExcelJS**
@@ -455,7 +452,7 @@ LANGUAGE: javascript
 CODE:
 
 ```javascript
-worksheet.getCell("A1").value = null;
+worksheet.getCell('A1').value = null;
 ```
 
 **TITLE: Managing Columns in ExcelJS**
@@ -467,18 +464,18 @@ CODE:
 
 ```javascript
 worksheet.columns = [
-  { header: "Id", key: "id", width: 10 },
-  { header: "Name", key: "name", width: 32 },
-  { header: "D.O.B.", key: "DOB", width: 10, outlineLevel: 1 },
+  { header: 'Id', key: 'id', width: 10 },
+  { header: 'Name', key: 'name', width: 32 },
+  { header: 'D.O.B.', key: 'DOB', width: 10, outlineLevel: 1 },
 ];
 
-const idCol = worksheet.getColumn("id");
-const nameCol = worksheet.getColumn("B");
+const idCol = worksheet.getColumn('id');
+const nameCol = worksheet.getColumn('B');
 const dobCol = worksheet.getColumn(3);
 
-dobCol.header = "Date of Birth";
-dobCol.header = ["Date of Birth", "A.K.A. D.O.B."];
-dobCol.key = "dob";
+dobCol.header = 'Date of Birth';
+dobCol.header = ['Date of Birth', 'A.K.A. D.O.B.'];
+dobCol.key = 'dob';
 dobCol.width = 15;
 dobCol.hidden = true;
 
@@ -498,7 +495,7 @@ worksheet.getColumn(7).values = [, , 2, 3, , 5, , 7, , , , 11];
 worksheet.spliceColumns(3, 2);
 
 const newCol3Values = [1, 2, 3, 4, 5];
-const newCol4Values = ["one", "two", "three", "four", "five"];
+const newCol4Values = ['one', 'two', 'three', 'four', 'five'];
 worksheet.spliceColumns(3, 1, newCol3Values, newCol4Values);
 ```
 
@@ -510,16 +507,16 @@ LANGUAGE: javascript
 CODE:
 
 ```javascript
-const table = ws.getTable("MyTable");
+const table = ws.getTable('MyTable');
 
 // remove first two rows
 table.removeRows(0, 2);
 
 // insert new rows at index 5
-table.addRow([new Date("2019-08-05"), 5, "Mid"], 5);
+table.addRow([new Date('2019-08-05'), 5, 'Mid'], 5);
 
 // append new row to bottom of table
-table.addRow([new Date("2019-08-10"), 10, "End"]);
+table.addRow([new Date('2019-08-10'), 10, 'End']);
 
 // commit the table changes into the sheet
 table.commit();
@@ -533,7 +530,7 @@ LANGUAGE: javascript
 CODE:
 
 ```javascript
-const table = ws.getTable("MyTable");
+const table = ws.getTable('MyTable');
 
 // remove second column
 table.removeColumns(1, 1);
@@ -541,13 +538,13 @@ table.removeColumns(1, 1);
 // insert new column (with data) at index 1
 table.addColumn(
   {
-    name: "Letter",
-    totalsRowFunction: "custom",
-    totalsRowFormula: "ROW()",
+    name: 'Letter',
+    totalsRowFunction: 'custom',
+    totalsRowFormula: 'ROW()',
     totalsRowResult: 6,
     filterButton: true,
   },
-  ["a", "b", "c", "d"],
+  ['a', 'b', 'c', 'd'],
   2
 );
 
@@ -563,7 +560,7 @@ LANGUAGE: javascript
 CODE:
 
 ```javascript
-worksheet.getCell("B2").value = { sharedFormula: "A2", result: 10 };
+worksheet.getCell('B2').value = { sharedFormula: 'A2', result: 10 };
 ```
 
 **TITLE: Protecting and Unprotecting Excel Worksheets with JavaScript**
@@ -574,7 +571,7 @@ LANGUAGE: javascript
 CODE:
 
 ```javascript
-await worksheet.protect("the-password", options);
+await worksheet.protect('the-password', options);
 ```
 
 LANGUAGE: javascript
@@ -606,11 +603,11 @@ expect(worksheet.getRow(4).collapsed).to.equal(false);
 expect(worksheet.getRow(5).collapsed).to.equal(true);
 
 row.getCell(1).value = 5;
-row.getCell("name").value = "Zeb";
-row.getCell("C").value = new Date();
+row.getCell('name').value = 'Zeb';
+row.getCell('C').value = new Date();
 
 row = worksheet.getRow(4).values;
-expect(row[5]).toEqual("Kyle");
+expect(row[5]).toEqual('Kyle');
 
 row.values = [1, 2, 3];
 expect(row.getCell(1).value).toEqual(1);
@@ -619,28 +616,28 @@ expect(row.getCell(3).value).toEqual(3);
 
 const values = [];
 values[5] = 7;
-values[10] = "Hello, World!";
+values[10] = 'Hello, World!';
 row.values = values;
 expect(row.getCell(1).value).toBeNull();
 expect(row.getCell(5).value).toEqual(7);
-expect(row.getCell(10).value).toEqual("Hello, World!");
+expect(row.getCell(10).value).toEqual('Hello, World!');
 
 row.addPageBreak();
 
 worksheet.eachRow(function (row, rowNumber) {
-  console.log("Row " + rowNumber + " = " + JSON.stringify(row.values));
+  console.log('Row ' + rowNumber + ' = ' + JSON.stringify(row.values));
 });
 
 worksheet.eachRow({ includeEmpty: true }, function (row, rowNumber) {
-  console.log("Row " + rowNumber + " = " + JSON.stringify(row.values));
+  console.log('Row ' + rowNumber + ' = ' + JSON.stringify(row.values));
 });
 
 row.eachCell(function (cell, colNumber) {
-  console.log("Cell " + colNumber + " = " + cell.value);
+  console.log('Cell ' + colNumber + ' = ' + cell.value);
 });
 
 row.eachCell({ includeEmpty: true }, function (cell, colNumber) {
-  console.log("Cell " + colNumber + " = " + cell.value);
+  console.log('Cell ' + colNumber + ' = ' + cell.value);
 });
 
 row.commit();
@@ -659,11 +656,11 @@ LANGUAGE: javascript
 CODE:
 
 ```javascript
-import formatDistance from "./_lib/formatDistance/index.js";
-import formatLong from "./_lib/formatLong/index.js";
-import formatRelative from "./_lib/formatRelative/index.js";
-import localize from "./_lib/localize/index.js";
-import match from "./_lib/match/index.js";
+import formatDistance from './_lib/formatDistance/index.js';
+import formatLong from './_lib/formatLong/index.js';
+import formatRelative from './_lib/formatRelative/index.js';
+import localize from './_lib/localize/index.js';
+import match from './_lib/match/index.js';
 
 /**
  * @type {Locale}
@@ -686,7 +683,7 @@ import match from "./_lib/match/index.js";
  * @author Lesha Koss [@leshakoss]{@link https://github.com/leshakoss}
  */
 var locale = {
-  code: "en",
+  code: 'en',
   formatDistance: formatDistance,
   formatLong: formatLong,
   formatRelative: formatRelative,
@@ -715,16 +712,12 @@ LANGUAGE: javascript
 CODE:
 
 ```javascript
-import { compareAsc, format } from "date-fns";
+import { compareAsc, format } from 'date-fns';
 
-format(new Date(2014, 1, 11), "yyyy-MM-dd");
+format(new Date(2014, 1, 11), 'yyyy-MM-dd');
 //=> '2014-02-11'
 
-const dates = [
-  new Date(1995, 6, 2),
-  new Date(1987, 1, 11),
-  new Date(1989, 6, 10),
-];
+const dates = [new Date(1995, 6, 2), new Date(1987, 1, 11), new Date(1989, 6, 10)];
 dates.sort(compareAsc);
 //=> [
 //   Wed Feb 11 1987 00:00:00,
@@ -742,13 +735,13 @@ CODE:
 
 ```javascript
 // Same as en-US
-import formatDistance from "../en-US/_lib/formatDistance/index.js";
-import formatRelative from "../en-US/_lib/formatRelative/index.js";
-import localize from "../en-US/_lib/localize/index.js";
-import match from "../en-US/_lib/match/index.js";
+import formatDistance from '../en-US/_lib/formatDistance/index.js';
+import formatRelative from '../en-US/_lib/formatRelative/index.js';
+import localize from '../en-US/_lib/localize/index.js';
+import match from '../en-US/_lib/match/index.js';
 
 // Unique for en-GB
-import formatLong from "./_lib/formatLong/index.js";
+import formatLong from './_lib/formatLong/index.js';
 
 /**
  * @type {Locale}
@@ -784,10 +777,10 @@ CODE:
 
 ```javascript
 // The main submodule:
-import { addDays } from "date-fns";
+import { addDays } from 'date-fns';
 
 // FP variation:
-import { addDays, format } from "date-fns/fp";
+import { addDays, format } from 'date-fns/fp';
 ```
 
 **TITLE: Creating a Locale-Aware Format Wrapper for date-fns**
@@ -800,14 +793,14 @@ CODE:
 ```javascript
 // app/_lib/format.js
 
-import { format } from "date-fns";
-import { enGB, eo, ru } from "date-fns/locale";
+import { format } from 'date-fns';
+import { enGB, eo, ru } from 'date-fns/locale';
 
 const locales = { enGB, eo, ru };
 
 // by providing a default string of 'PP' or any of its variants for `formatStr`
 // it will format dates in whichever way is appropriate to the locale
-export default function (date, formatStr = "PP") {
+export default function (date, formatStr = 'PP') {
   return format(date, formatStr, {
     locale: locales[window.__localeId__], // or global.__localeId__
   });
@@ -815,22 +808,22 @@ export default function (date, formatStr = "PP") {
 
 // Later:
 
-import format from "app/_lib/format";
+import format from 'app/_lib/format';
 
-window.__localeId__ = "enGB";
-format(friday13, "EEEE d");
+window.__localeId__ = 'enGB';
+format(friday13, 'EEEE d');
 //=> 'Friday 13'
 
-window.__localeId__ = "eo";
-format(friday13, "EEEE d");
+window.__localeId__ = 'eo';
+format(friday13, 'EEEE d');
 //=> 'vendredo 13'
 
 // If the format string is omitted, it will take the default for the locale.
-window.__localeId__ = "enGB";
+window.__localeId__ = 'enGB';
 format(friday13);
 //=> Jul 13, 2019
 
-window.__localeId__ = "eo";
+window.__localeId__ = 'eo';
 format(friday13);
 //=> 2019-jul-13
 ```
@@ -843,7 +836,7 @@ LANGUAGE: javascript
 CODE:
 
 ```javascript
-import { formatDistance, subDays } from "date-fns";
+import { formatDistance, subDays } from 'date-fns';
 
 formatDistance(subDays(new Date(), 3), new Date(), { addSuffix: true });
 //=> "3 days ago"
@@ -857,16 +850,12 @@ LANGUAGE: javascript
 CODE:
 
 ```javascript
-import { format, compareAsc } from "date-fns";
+import { format, compareAsc } from 'date-fns';
 
-format(new Date(2014, 1, 11), "MM/dd/yyyy");
+format(new Date(2014, 1, 11), 'MM/dd/yyyy');
 //=> '02/11/2014'
 
-const dates = [
-  new Date(1995, 6, 2),
-  new Date(1987, 1, 11),
-  new Date(1989, 6, 10),
-];
+const dates = [new Date(1995, 6, 2), new Date(1987, 1, 11), new Date(1989, 6, 10)];
 dates.sort(compareAsc);
 //=> [
 //   Wed Feb 11 1987 00:00:00,
@@ -957,8 +946,8 @@ CODE:
 
 ```js
 // In `en-US` locale:
-import buildMatchPatternFn from "../../../_lib/buildMatchPatternFn/index.js";
-import buildMatchFn from "../../../_lib/buildMatchFn/index.js";
+import buildMatchPatternFn from '../../../_lib/buildMatchPatternFn/index.js';
+import buildMatchFn from '../../../_lib/buildMatchFn/index.js';
 
 var matchOrdinalNumberPattern = /^(\d+)(th|st|nd|rd)?/i;
 var parseOrdinalNumberPattern = /\d+/i;
@@ -987,20 +976,7 @@ var matchMonthPatterns = {
   wide: /^(january|february|march|april|may|june|july|august|september|october|november|december)/i,
 };
 var parseMonthPatterns = {
-  narrow: [
-    /^j/i,
-    /^f/i,
-    /^m/i,
-    /^a/i,
-    /^m/i,
-    /^j/i,
-    /^j/i,
-    /^a/i,
-    /^s/i,
-    /^o/i,
-    /^n/i,
-    /^d/i,
-  ],
+  narrow: [/^j/i, /^f/i, /^m/i, /^a/i, /^m/i, /^j/i, /^j/i, /^a/i, /^s/i, /^o/i, /^n/i, /^d/i],
   any: [
     /^ja/i,
     /^f/i,
@@ -1056,16 +1032,16 @@ var match = {
 
   era: buildMatchFn({
     matchPatterns: matchEraPatterns,
-    defaultMatchWidth: "wide",
+    defaultMatchWidth: 'wide',
     parsePatterns: parseEraPatterns,
-    defaultParseWidth: "any",
+    defaultParseWidth: 'any',
   }),
 
   quarter: buildMatchFn({
     matchPatterns: matchQuarterPatterns,
-    defaultMatchWidth: "wide",
+    defaultMatchWidth: 'wide',
     parsePatterns: parseQuarterPatterns,
-    defaultParseWidth: "any",
+    defaultParseWidth: 'any',
     valueCallback: function (index) {
       return index + 1;
     },
@@ -1073,23 +1049,23 @@ var match = {
 
   month: buildMatchFn({
     matchPatterns: matchMonthPatterns,
-    defaultMatchWidth: "wide",
+    defaultMatchWidth: 'wide',
     parsePatterns: parseMonthPatterns,
-    defaultParseWidth: "any",
+    defaultParseWidth: 'any',
   }),
 
   day: buildMatchFn({
     matchPatterns: matchDayPatterns,
-    defaultMatchWidth: "wide",
+    defaultMatchWidth: 'wide',
     parsePatterns: parseDayPatterns,
-    defaultParseWidth: "any",
+    defaultParseWidth: 'any',
   }),
 
   dayPeriod: buildMatchFn({
     matchPatterns: matchDayPeriodPatterns,
-    defaultMatchWidth: "any",
+    defaultMatchWidth: 'any',
     parsePatterns: parseDayPeriodPatterns,
-    defaultParseWidth: "any",
+    defaultParseWidth: 'any',
   }),
 };
 
@@ -1105,19 +1081,19 @@ CODE:
 
 ```javascript
 // ❌ Wrong!
-format(new Date(), "YYYY-MM-DD");
+format(new Date(), 'YYYY-MM-DD');
 //=> 2018-10-283
 
 // ✅ Correct
-format(new Date(), "yyyy-MM-dd");
+format(new Date(), 'yyyy-MM-dd');
 //=> 2018-10-10
 
 // ❌ Wrong!
-parse("11.02.87", "D.MM.YY", new Date()).toString();
+parse('11.02.87', 'D.MM.YY', new Date()).toString();
 //=> 'Sat Jan 11 1986 00:00:00 GMT+0200 (EET)'
 
 // ✅ Correct
-parse("11.02.87", "d.MM.yy", new Date()).toString();
+parse('11.02.87', 'd.MM.yy', new Date()).toString();
 //=> 'Wed Feb 11 1987 00:00:00 GMT+0200 (EET)'
 ```
 
@@ -1130,19 +1106,19 @@ CODE:
 
 ```javascript
 // In `en-US` locale:
-import buildLocalizeFn from "../../../_lib/buildLocalizeFn/index.js";
+import buildLocalizeFn from '../../../_lib/buildLocalizeFn/index.js';
 
 var eraValues = {
-  narrow: ["B", "A"],
-  abbreviated: ["BC", "AD"],
-  wide: ["Before Christ", "Anno Domini"],
+  narrow: ['B', 'A'],
+  abbreviated: ['BC', 'AD'],
+  wide: ['Before Christ', 'Anno Domini'],
 };
 
 var localize = {
   // ...
   era: buildLocalizeFn({
     values: eraValues,
-    defaultWidth: "wide",
+    defaultWidth: 'wide',
   }),
   // ...
 };
@@ -1181,9 +1157,9 @@ LANGUAGE: javascript
 CODE:
 
 ```javascript
-import { formatDistance } from "date-fns";
+import { formatDistance } from 'date-fns';
 // Require Esperanto locale
-import { eo } from "date-fns/locale";
+import { eo } from 'date-fns/locale';
 
 const result = formatDistance(
   new Date(2016, 7, 1),
@@ -1271,7 +1247,7 @@ LANGUAGE: tsx
 CODE:
 
 ```tsx
-import { useReactTable } from "@tanstack/react-table";
+import { useReactTable } from '@tanstack/react-table';
 
 function App() {
   const table = useReactTable(options);
@@ -1384,7 +1360,7 @@ LANGUAGE: jsx
 CODE:
 
 ```jsx
-import { flexRender } from "@tanstack/qwik-table";
+import { flexRender } from '@tanstack/qwik-table';
 //...
 return (
   <tbody>
@@ -1392,9 +1368,7 @@ return (
       return (
         <tr key={row.id}>
           {row.getVisibleCells().map((cell) => (
-            <td key={cell.id}>
-              {flexRender(cell.column.columnDef.cell, cell.getContext())}
-            </td>
+            <td key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</td>
           ))}
         </tr>
       );
@@ -1416,7 +1390,7 @@ const table = useReactTable({
   columns,
   getCoreRowModel: getCoreRowModel(),
   getFilteredRowModel: getFilteredRowModel(),
-  globalFilterFn: "text", // built-in filter function
+  globalFilterFn: 'text', // built-in filter function
 });
 ```
 
@@ -1461,9 +1435,9 @@ LANGUAGE: tsx
 CODE:
 
 ```tsx
-import { sortingFns } from "@tanstack/react-table";
+import { sortingFns } from '@tanstack/react-table';
 
-import { rankItem, compareItems } from "@tanstack/match-sorter-utils";
+import { rankItem, compareItems } from '@tanstack/match-sorter-utils';
 
 const fuzzyFilter = (row, columnId, value, addMeta) => {
   // Rank the item
@@ -1481,10 +1455,7 @@ const fuzzySort = (rowA, rowB, columnId) => {
 
   // Only sort by rank if the column has ranking information
   if (rowA.columnFiltersMeta[columnId]) {
-    dir = compareItems(
-      rowA.columnFiltersMeta[columnId]!,
-      rowB.columnFiltersMeta[columnId]!
-    );
+    dir = compareItems(rowA.columnFiltersMeta[columnId]!, rowB.columnFiltersMeta[columnId]!);
   }
 
   // Provide an alphanumeric fallback for when the item ranks are equal
@@ -1542,7 +1513,7 @@ CODE:
 const columnFilters = Qwik.useSignal([]); //no default filters
 const sorting = Qwik.useSignal([
   {
-    id: "age",
+    id: 'age',
     desc: true, //sort by age in descending order by default
   },
 ]);
@@ -1550,9 +1521,8 @@ const pagination = Qwik.useSignal({ pageIndex: 0, pageSize: 15 });
 
 //Use our controlled state values to fetch data
 const tableQuery = useQuery({
-  queryKey: ["users", columnFilters.value, sorting.value, pagination.value],
-  queryFn: () =>
-    fetchUsers(columnFilters.value, sorting.value, pagination.value),
+  queryKey: ['users', columnFilters.value, sorting.value, pagination.value],
+  queryFn: () => fetchUsers(columnFilters.value, sorting.value, pagination.value),
   //...
 });
 
@@ -1566,16 +1536,13 @@ const table = useQwikTable({
     pagination: pagination.value,
   },
   onColumnFiltersChange: (updater) => {
-    columnFilters.value =
-      updater instanceof Function ? updater(columnFilters.value) : updater; //hoist columnFilters state into our own state management
+    columnFilters.value = updater instanceof Function ? updater(columnFilters.value) : updater; //hoist columnFilters state into our own state management
   },
   onSortingChange: (updater) => {
-    sorting.value =
-      updater instanceof Function ? updater(sorting.value) : updater;
+    sorting.value = updater instanceof Function ? updater(sorting.value) : updater;
   },
   onPaginationChange: (updater) => {
-    pagination.value =
-      updater instanceof Function ? updater(pagination.value) : updater;
+    pagination.value = updater instanceof Function ? updater(pagination.value) : updater;
   },
 });
 //...

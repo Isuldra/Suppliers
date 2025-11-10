@@ -1,13 +1,6 @@
-import React from "react";
-import {
-  PieChart,
-  Pie,
-  Cell,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-} from "recharts";
-import { PlannerStat } from "../../types/Dashboard";
+import React from 'react';
+import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { PlannerStat } from '../../types/Dashboard';
 
 interface PlannerDistributionChartProps {
   data: PlannerStat[];
@@ -16,19 +9,21 @@ interface PlannerDistributionChartProps {
 }
 
 const COLORS = [
-  "#3b82f6",
-  "#8b5cf6",
-  "#ec4899",
-  "#f59e0b",
-  "#10b981",
-  "#06b6d4",
-  "#f97316",
-  "#ef4444",
+  '#3b82f6',
+  '#8b5cf6',
+  '#ec4899',
+  '#f59e0b',
+  '#10b981',
+  '#06b6d4',
+  '#f97316',
+  '#ef4444',
 ];
 
-const PlannerDistributionChartComponent: React.FC<
-  PlannerDistributionChartProps
-> = ({ data, onPlannerClick, loading = false }) => {
+const PlannerDistributionChartComponent: React.FC<PlannerDistributionChartProps> = ({
+  data,
+  onPlannerClick,
+  loading = false,
+}) => {
   if (loading) {
     return (
       <div className="bg-white/60 backdrop-blur-2xl rounded-xl border border-white/50 shadow-xl p-6">
@@ -43,9 +38,7 @@ const PlannerDistributionChartComponent: React.FC<
   if (!data || data.length === 0) {
     return (
       <div className="bg-white/60 backdrop-blur-2xl rounded-xl border border-white/50 shadow-xl p-6">
-        <h3 className="text-lg font-bold text-neutral mb-4">
-          Restordrer per innkjøper
-        </h3>
+        <h3 className="text-lg font-bold text-neutral mb-4">Restordrer per innkjøper</h3>
         <p className="text-neutral-secondary">Ingen data tilgjengelig</p>
       </div>
     );
@@ -64,11 +57,9 @@ const PlannerDistributionChartComponent: React.FC<
       return (
         <div className="bg-white p-3 rounded-lg shadow-lg border border-gray-200">
           <p className="font-bold text-neutral">{data.planner}</p>
+          <p className="text-sm text-neutral-secondary">Antall ordre: {data.orderCount}</p>
           <p className="text-sm text-neutral-secondary">
-            Antall ordre: {data.orderCount}
-          </p>
-          <p className="text-sm text-neutral-secondary">
-            Restantall: {data.outstandingQty.toLocaleString("nb-NO")}
+            Restantall: {data.outstandingQty.toLocaleString('nb-NO')}
           </p>
           <p className="text-sm text-neutral-secondary">
             Prosentandel: {data.percentage.toFixed(1)}%
@@ -81,9 +72,7 @@ const PlannerDistributionChartComponent: React.FC<
 
   return (
     <div className="bg-white/60 backdrop-blur-2xl rounded-xl border border-white/50 shadow-xl p-6 transition-all duration-300 hover:bg-white/70 hover:shadow-2xl">
-      <h3 className="text-lg font-bold text-neutral mb-4">
-        Restordrer per innkjøper
-      </h3>
+      <h3 className="text-lg font-bold text-neutral mb-4">Restordrer per innkjøper</h3>
       <ResponsiveContainer width="100%" height={300}>
         <PieChart>
           <Pie
@@ -100,22 +89,17 @@ const PlannerDistributionChartComponent: React.FC<
                 onPlannerClick(data.planner);
               }
             }}
-            style={{ cursor: onPlannerClick ? "pointer" : "default" }}
+            style={{ cursor: onPlannerClick ? 'pointer' : 'default' }}
           >
             {data.map((entry, index) => (
-              <Cell
-                key={`cell-${index}`}
-                fill={COLORS[index % COLORS.length]}
-              />
+              <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
             ))}
           </Pie>
           <Tooltip content={<CustomTooltip />} />
           <Legend
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             formatter={(value, entry: any) =>
-              entry?.payload &&
-              typeof entry.payload === "object" &&
-              "planner" in entry.payload
+              entry?.payload && typeof entry.payload === 'object' && 'planner' in entry.payload
                 ? `${entry.payload.planner}: ${entry.payload.orderCount} ordre`
                 : value
             }
@@ -126,8 +110,6 @@ const PlannerDistributionChartComponent: React.FC<
   );
 };
 
-PlannerDistributionChartComponent.displayName = "PlannerDistributionChart";
+PlannerDistributionChartComponent.displayName = 'PlannerDistributionChart';
 
-export const PlannerDistributionChart = React.memo(
-  PlannerDistributionChartComponent
-);
+export const PlannerDistributionChart = React.memo(PlannerDistributionChartComponent);
