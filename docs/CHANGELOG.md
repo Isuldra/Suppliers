@@ -6,7 +6,7 @@ _Fullført November 2025_
 
 Denne versjonen fokuserer på repository cleanup, kodeorganisering og applikasjonsnavnendring fra "OneMed SupplyChain" til "Pulse".
 
-### 🧹 Repository Cleanup
+### Repository Cleanup
 
 #### Git Repository Størrelsesreduksjon
 
@@ -33,7 +33,7 @@ Denne versjonen fokuserer på repository cleanup, kodeorganisering og applikasjo
 - **AI Kontekst Optimalisering**: Lagt til `.cursorignore` fil for å ekskludere build artifacts fra AI kontekst
   - Ekskluderer: `dist/`, `release/`, `node_modules/`, `*.exe`, `*.dll`, `*.pak`, `coverage/`
 
-### 🏷️ Applikasjonsnavnendring
+### Applikasjonsnavnendring
 
 #### Omdøping til "Pulse"
 
@@ -55,7 +55,7 @@ Denne versjonen fokuserer på repository cleanup, kodeorganisering og applikasjo
   - Avinstallerings registry oppføringer oppdatert
 - **HTML Filer**: Oppdatert `docs/updates/index.html` og `docs/updates/404.html`
 
-### 📦 Påvirkning
+### Påvirkning
 
 - **Repository Størrelse**: Redusert med 260+ MB (fjernet store binærfiler)
 - **Kodeorganisering**: Forbedret struktur med konsoliderte maler og dokumenterte scripts
@@ -63,7 +63,7 @@ Denne versjonen fokuserer på repository cleanup, kodeorganisering og applikasjo
 - **Konsistens**: Enhetlig applikasjonsnavngiving gjennom hele kodebasen
 - **Vedlikeholdbarhet**: Bedre dokumentasjon og organisering
 
-### 🔄 Breaking Changes
+### Breaking Changes
 
 - **Artifact Navn**: Build artifacts bruker nå "Pulse" navngiving i stedet for "OneMed SupplyChain"
   - Eksisterende auto-update URLs må oppdateres
@@ -71,7 +71,7 @@ Denne versjonen fokuserer på repository cleanup, kodeorganisering og applikasjo
 - **Windows Registry**: Registry nøkler endret fra "OneMed SupplyChain" til "Pulse"
   - Kan kreve reinstallasjon for korrekt registry opprydding
 
-### 📝 Tekniske Notater
+### Tekniske Notater
 
 - Alle cleanup oppgaver sporet i `docs/cleanup/backlog.md` og `docs/cleanup/state.yaml`
 - Commits følger atomisk mønster for enkel rollback hvis nødvendig
@@ -85,9 +85,9 @@ _Completed November 2025_
 
 This version introduces comprehensive dashboard improvements with advanced KPIs, Supabase cloud integration for product catalog, and a new tabbed interface for better data visualization.
 
-### 🚀 Major Features:
+### Major Features:
 
-#### 📊 Enhanced Dashboard KPIs
+#### Enhanced Dashboard KPIs
 
 - **New Performance Metrics**:
 
@@ -102,7 +102,7 @@ This version introduces comprehensive dashboard improvements with advanced KPIs,
   - More relevant metrics based on actual BP sheet data
   - Real-time calculations using SQLite queries
 
-#### 🗂️ Tabbed Dashboard Interface
+#### Tabbed Dashboard Interface
 
 - **Oversikt Tab**:
 
@@ -122,7 +122,7 @@ This version introduces comprehensive dashboard improvements with advanced KPIs,
   - Weekly overview of orders
   - Moved from Oversikt tab for better organization
 
-#### ☁️ Supabase Product Catalog Integration
+#### Supabase Product Catalog Integration
 
 - **Cloud-Based Product Names**:
 
@@ -144,7 +144,7 @@ This version introduces comprehensive dashboard improvements with advanced KPIs,
   - Public read/write access for internal use
   - Environment variable configuration for credentials
 
-#### 🔧 Database Enhancements
+#### Database Enhancements
 
 - **New Database Methods**:
 
@@ -159,7 +159,7 @@ This version introduces comprehensive dashboard improvements with advanced KPIs,
   - On-time delivery rate calculations
   - MIN date for oldest outstanding order
 
-#### 🎨 UI/UX Improvements
+#### UI/UX Improvements
 
 - **TopItemsTable Component**:
 
@@ -182,7 +182,7 @@ This version introduces comprehensive dashboard improvements with advanced KPIs,
   - Drag-and-drop file upload area with visual feedback
   - Success/error message display
 
-### 🔐 Security & Configuration
+### Security & Configuration
 
 - **Environment Variables**:
 
@@ -203,16 +203,16 @@ This version introduces comprehensive dashboard improvements with advanced KPIs,
 - Fixed TypeScript/ESLint errors for Supabase client
 - Removed navigation logic that caused re-render loops
 
-### 📦 Dependencies
+### Dependencies
 
 - **New**: `@supabase/supabase-js` - Cloud database integration
 
-### 🔄 Breaking Changes
+### Breaking Changes
 
 - Dashboard filter navigation temporarily disabled to prevent infinite loops
 - KPIs now measure lines instead of pieces (more accurate representation)
 
-### 📝 Technical Notes
+### Technical Notes
 
 - Supabase table: `product_catalog` with indexes on `item_no` and `item_name`
 - Product catalog enrichment happens at IPC handler level
@@ -229,7 +229,7 @@ This version introduces a comprehensive visual redesign with glassmorphism effec
 
 ### Key Features:
 
-#### 🎨 Bulk Email Preview UI Overhaul
+#### Bulk Email Preview UI Overhaul
 
 - **Wider Container**: Expanded bulk mode container from `max-w-4xl` to `max-w-7xl` for better content visibility
 - **Glassmorphism Design**: Complete glassmorphism implementation with:
@@ -241,7 +241,7 @@ This version introduces a comprehensive visual redesign with glassmorphism effec
 - **Text Contrast**: Enhanced text readability with `text-slate-900/800` instead of `text-neutral`
 - **Responsive Design**: Added responsive max-width classes (`max-w-7xl lg:max-w-6xl md:max-w-4xl`)
 
-#### 🎯 Header Navigation Standardization
+#### Header Navigation Standardization
 
 - **Consistent Heights**: All navigation buttons now use `h-11` for uniform appearance
 - **Glassmorphism Styling**: All header buttons feature glassmorphism effects:
@@ -465,10 +465,10 @@ This phase focused on unifying the supplier selection logic between single and b
   - **Consistent Behavior**: Already used correct database sources and filtering
 
 - **Result - Identical Logic Implementation:**
-  - ✅ **Same Database Source**: Both components use `getSuppliersForWeekday()` for supplier data
-  - ✅ **Same Order Source**: Both components use `getAllOrders()` for order data
-  - ✅ **Same Filtering**: Both components filter suppliers based on `outstandingCount > 0`
-  - ✅ **Same Calculation**: Both components use identical outstanding order calculation logic
+  - **Same Database Source**: Both components use `getSuppliersForWeekday()` for supplier data
+  - **Same Order Source**: Both components use `getAllOrders()` for order data
+  - **Same Filtering**: Both components filter suppliers based on `outstandingCount > 0`
+  - **Same Calculation**: Both components use identical outstanding order calculation logic
 
 ### Technical Implementation:
 
