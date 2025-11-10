@@ -4,10 +4,10 @@
 
 We actively support the following versions of OneMed SupplyChain:
 
-| Version | Supported          |
-| ------- | ------------------ |
-| 1.1.x   | :white_check_mark: |
-| < 1.1   | :x:                |
+| Version | Supported |
+| ------- | --------- |
+| 1.1.x   | Yes       |
+| < 1.1   | No        |
 
 ## Security Best Practices
 
@@ -56,12 +56,12 @@ If you discover a security vulnerability, please:
 
 ### Security Features
 
-- ✅ Automatic dependency auditing
-- ✅ Content Security Policy (CSP)
-- ✅ Secure email handling
-- ✅ Input validation and sanitization
-- ✅ SQL injection prevention
-- ✅ XSS protection
+- Automatic dependency auditing
+- Content Security Policy (CSP)
+- Secure email handling
+- Input validation and sanitization
+- SQL injection prevention
+- XSS protection
 
 ### Development Security
 
