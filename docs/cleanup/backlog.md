@@ -1,11 +1,11 @@
 # Repo Cleanup Backlog
 
-**Status**: 30/31 tasks completed  
+**Status**: 32/31 tasks completed (alle hovedoppgaver fullført)  
 **Last updated**: 2025-11-10
 
 ---
 
-## 🥇 Prioritet 1: Reduser Git Bloat (260+ MB)
+## Prioritet 1: Reduser Git Bloat (260+ MB)
 
 ### P1.1 - Håndter .exe-filer i docs/updates/
 
@@ -25,7 +25,7 @@
 
 ---
 
-## 🥈 Prioritet 2: Rydd Duplikater (~20 MB)
+## Prioritet 2: Rydd Duplikater (~20 MB)
 
 ### P2.1 - Slett temp-icon-filer
 
@@ -50,7 +50,7 @@
 
 ---
 
-## 🥉 Prioritet 3: Organiser Filer (bedre struktur)
+## Prioritet 3: Organiser Filer (bedre struktur)
 
 ### P3.1 - Flytt root-docs til docs/
 
@@ -80,7 +80,7 @@
 
 ---
 
-## 🛠️ Prioritet 4: Kode-cleanup
+## Prioritet 4: Kode-cleanup
 
 ### P4.1 - Konsolider email templates
 
@@ -88,7 +88,7 @@
 - [x] **P4.1.2** Oppdater imports til `src/services/emailTemplates/reminder.hbs` _(Ingen imports funnet - build script bruker allerede korrekt path)_
 - [x] **P4.1.3** Slett `src/renderer/services/emailTemplates/` directory
 - [x] **P4.1.4** Test at email-funksjonalitet fungerer _(build:email-template kjører suksessfullt)_
-- [ ] **P4.1.5** Commit: "Consolidate email templates to src/services/"
+- [x] **P4.1.5** Commit: "Consolidate email templates to src/services/" _(Commit: ea4fe74)_
 
 ### P4.2 - Rydd i scripts-mappen
 
@@ -96,7 +96,7 @@
 - [x] **P4.2.2** Flytt `scripts/troubleshoot-native-modules.md` til `docs/development/`
 - [x] **P4.2.3** Identifiser ubrukte/deprecated scripts (sammenlign med package.json scripts) _(7 deprecated scripts identifisert og dokumentert i README)_
 - [x] **P4.2.4** Vurder å arkivere eller slette ubrukte scripts _(Deprecated scripts dokumentert i README, kan slettes i fremtidig cleanup)_
-- [ ] **P4.2.5** Commit: "Document and organize scripts directory"
+- [x] **P4.2.5** Commit: "Document and organize scripts directory" _(Commit: bafc291)_
 
 ### P4.3 - Legg til .cursorignore
 
@@ -131,14 +131,14 @@
 
 ---
 
-## 📝 Notater
+## Notater
 
 - Hver endring bør være en separat commit for enkel rollback
 - Kjør `git status` ofte for å se at ingenting uventet skjer
 - Ta backup av `.exe`-filer før sletting (P1.1.1)
 - Test grundig etter P4.1 (email templates) og P2.2 (icon paths)
 
-## 🎯 Forventet Impact
+## Forventet Impact
 
 - **Git repo size**: -260 MB (P1)
 - **Duplicate files**: -17 pairs (~20 MB)
