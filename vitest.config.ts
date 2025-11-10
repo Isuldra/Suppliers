@@ -6,13 +6,13 @@ export default defineConfig({
   plugins: [react()],
   test: {
     environment: "jsdom",
-    setupFiles: ["./src/test/setup.ts"],
+    setupFiles: ["./tests/setup.ts"],
     globals: true,
     coverage: {
       reporter: ["text", "json", "html"],
       exclude: [
         "node_modules/",
-        "src/test/",
+        "tests/",
         "**/*.d.ts",
         "**/*.test.{ts,tsx}",
         "**/*.spec.{ts,tsx}",
