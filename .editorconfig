@@ -28,3 +28,11 @@ indent_size = 2
 [{package.json,package-lock.json}]
 indent_size = 2
 
+# TypeScript and JavaScript files
+[*.{ts,tsx,js,jsx}]
+indent_size = 2
+
+# Makefile
+[Makefile]
+indent_style = tab
+
