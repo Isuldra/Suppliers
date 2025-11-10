@@ -39,6 +39,7 @@ completed:
   - "2025-11-10: P4.1 - Konsolidert email templates til src/services/. Slettet duplikat fra src/renderer/services/emailTemplates/. Build script bruker allerede korrekt path. Email template build testet og fungerer."
   - "2025-11-10: P4.2 - Dokumentert og organisert scripts-mappen. Opprettet scripts/README.md med beskrivelse av alle 27 scripts. Identifisert 7 deprecated scripts (dokumentert, ikke slettet). Flyttet troubleshoot-native-modules.md til docs/development/. Commit: bafc291"
   - "2025-11-10: P4.3 - Opprettet .cursorignore for AI context optimalisering. Ekskluderer build outputs, dependencies, store binaries, coverage reports, cache-filer og temporary files. Commit: 770f097"
+  - "2025-11-10: P4.4 - Rename application fra 'OneMed SupplyChain' til 'Pulse'. Oppdatert package.json (productName, description, shortcutName), alle kildefiler (main, renderer, locales), build scripts, installer.nsh, og HTML-filer. Artifact names endret til 'Pulse'. Commits: ce89919, 9c5dbe0"
 
 in_progress: []
 
