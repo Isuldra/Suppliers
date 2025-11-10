@@ -1,6 +1,6 @@
 # Repo Cleanup Backlog
 
-**Status**: 32/31 tasks completed (alle hovedoppgaver fullført)  
+**Status**: 43/43 tasks completed (ALL CLEANUP TASKS COMPLETE)  
 **Last updated**: 2025-11-10
 
 ---
@@ -43,10 +43,10 @@
 
 ### P2.3 - Fjern duplikert logo
 
-- [ ] **P2.3.1** Søk etter referanser til `OneMed part of Asker white text below.webp` (root)
-- [ ] **P2.3.2** Oppdater referanser til `src/renderer/assets/onemed-logo.webp`
-- [ ] **P2.3.3** Slett `OneMed part of Asker white text below.webp` fra root
-- [ ] **P2.3.4** Commit: "Remove duplicate OneMed logo from root"
+- [x] **P2.3.1** Søk etter referanser til `OneMed part of Asker white text below.webp` (root)
+- [x] **P2.3.2** Oppdater referanser til `src/renderer/assets/onemed-logo.webp`
+- [x] **P2.3.3** Slett `OneMed part of Asker white text below.webp` fra root
+- [x] **P2.3.4** Commit: "Remove duplicate OneMed logo from root"
 
 ---
 
@@ -54,29 +54,29 @@
 
 ### P3.1 - Flytt root-docs til docs/
 
-- [ ] **P3.1.1** `git mv documentation.md docs/overview.md` (eller merge med docs/README.md)
-- [ ] **P3.1.2** `git mv LESEMEG_LEDELSEN.md docs/LEDELSEN.md`
-- [ ] **P3.1.3** `git mv SECURITY.md docs/security.md` (oppdater lenke hvis referert fra README)
-- [ ] **P3.1.4** Evaluer `EMAIL_SETUP.md` - merge med `docs/features/email-reminders.md` eller flytt
-- [ ] **P3.1.5** Evaluer `SUPPLIER_EMAIL_UPDATE.md` - flytt til `docs/features/` eller `docs/planning/`
-- [ ] **P3.1.6** Sjekk `GITHUB_TOKEN_SETUP.md` vs `docs/development/QUICK-START-GITHUB-TOKEN.md` - behold én
-- [ ] **P3.1.7** Sjekk `DISTRIBUTION-OPTIONS.md` (root) vs `docs/distribution/DISTRIBUTION-OPTIONS.md` - slett duplikat
-- [ ] **P3.1.8** Commit: "Consolidate documentation to docs/ directory"
+- [x] **P3.1.1** `git mv documentation.md docs/overview.md` (eller merge med docs/README.md)
+- [x] **P3.1.2** `git mv LESEMEG_LEDELSEN.md docs/LEDELSEN.md`
+- [x] **P3.1.3** `git mv SECURITY.md docs/security.md` (oppdater lenke hvis referert fra README) _(Note: SECURITY.md flyttet til root i P4.5.8)_
+- [x] **P3.1.4** Evaluer `EMAIL_SETUP.md` - merge med `docs/features/email-reminders.md` eller flytt _(Flyttet til docs/features/email-setup.md)_
+- [x] **P3.1.5** Evaluer `SUPPLIER_EMAIL_UPDATE.md` - flytt til `docs/features/` eller `docs/planning/` _(Flyttet til docs/features/supplier-email-update.md)_
+- [x] **P3.1.6** Sjekk `GITHUB_TOKEN_SETUP.md` vs `docs/development/QUICK-START-GITHUB-TOKEN.md` - behold én _(Flyttet til docs/development/github-token-setup.md)_
+- [x] **P3.1.7** Sjekk `DISTRIBUTION-OPTIONS.md` (root) vs `docs/distribution/DISTRIBUTION-OPTIONS.md` - slett duplikat _(Duplikat slettet)_
+- [x] **P3.1.8** Commit: "Consolidate documentation to docs/ directory" _(Commit: 5ace9e4)_
 
 ### P3.2 - Flytt WiP til docs/planning
 
-- [ ] **P3.2.1** `git mv WiP/fix-auto-update-system.plan.md docs/planning/`
-- [ ] **P3.2.2** `git mv WiP/fix-cloudflare-pages-routing.plan.md docs/planning/`
-- [ ] **P3.2.3** `git mv WiP/multi-language-documentation-push.plan.md docs/planning/`
-- [ ] **P3.2.4** `rmdir WiP/`
-- [ ] **P3.2.5** Commit: "Move WiP plans to docs/planning/"
+- [x] **P3.2.1** `git mv WiP/fix-auto-update-system.plan.md docs/planning/` _(Slettet - allerede implementert)_
+- [x] **P3.2.2** `git mv WiP/fix-cloudflare-pages-routing.plan.md docs/planning/` _(Slettet - allerede implementert)_
+- [x] **P3.2.3** `git mv WiP/multi-language-documentation-push.plan.md docs/planning/` _(Slettet - allerede implementert)_
+- [x] **P3.2.4** `rmdir WiP/` _(WiP/ directory fjernet)_
+- [x] **P3.2.5** Commit: "Move WiP plans to docs/planning/" _(Commit: 1e3c839 - "Remove implemented WiP plans")_
 
 ### P3.3 - Rydd security-filer
 
-- [ ] **P3.3.1** Evaluer om `security-audit-before.json` og `security-fix-plan.json` skal beholdes
-- [ ] **P3.3.2** Hvis ja: flytt til `docs/security/` eller `docs/planning/`
-- [ ] **P3.3.3** Hvis nei: slett (commit historikk beholder dem)
-- [ ] **P3.3.4** Commit endringer
+- [x] **P3.3.1** Evaluer om `security-audit-before.json` og `security-fix-plan.json` skal beholdes _(Slettet - ikke lenger nødvendig)_
+- [x] **P3.3.2** Hvis ja: flytt til `docs/security/` eller `docs/planning/` _(Ikke nødvendig - slettet)_
+- [x] **P3.3.3** Hvis nei: slett (commit historikk beholder dem) _(Slettet)_
+- [x] **P3.3.4** Commit endringer _(Commit: 5ace9e4)_
 
 ---
 
