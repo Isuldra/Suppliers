@@ -170,3 +170,25 @@
 - **Duplicate files**: -17 pairs (~20 MB)
 - **Root directory**: -10+ filer (bedre oversikt)
 - **Developer experience**: Raskere AI-kontekst, klarere struktur
+
+---
+
+## Fremtidige Oppgaver (Post-Cleanup)
+
+### Scripts Verification
+
+**Status**: Pending verification
+
+**Scripts to verify and potentially remove:**
+
+- scripts/ensure-database-modules.js - Verify if electron-vite build process handles database module copying
+- scripts/fix-native-modules.js - Verify if ensure-electron-modules.js covers all functionality
+
+**Verification steps:**
+
+1. Test build process without these scripts
+2. Verify database modules are correctly copied to dist/
+3. Test native modules work in dev and production
+4. If all tests pass, remove the scripts
+
+**Reference**: See `scripts/README.md` for full context
