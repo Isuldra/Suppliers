@@ -71,12 +71,14 @@ Designet bygger på den eksisterende arkitekturen med React frontend, Electron b
 **File**: `src/renderer/components/Dashboard.tsx`
 
 **Responsibilities**:
+
 - Orkestrere alle dashboard-komponenter
 - Håndtere data-lasting og feilhåndtering
 - Administrere filter-state
 - Koordinere oppdateringer
 
 **State**:
+
 ```typescript
 interface DashboardState {
   stats: DashboardStats | null;
@@ -99,6 +101,7 @@ interface DashboardFilter {
 **Purpose**: Gjenbrukbar komponent for å vise KPI-kort
 
 **Props**:
+
 ```typescript
 interface KPICardProps {
   title: string;
@@ -115,6 +118,7 @@ interface KPICardProps {
 ```
 
 **Features**:
+
 - Animert lasting-state
 - Hover-effekter
 - Klikk-handling for drill-down
@@ -128,6 +132,7 @@ interface KPICardProps {
 **Purpose**: Stolpediagram for topp 5 leverandører
 
 **Props**:
+
 ```typescript
 interface TopSuppliersChartProps {
   data: SupplierStat[];
@@ -144,6 +149,7 @@ interface SupplierStat {
 ```
 
 **Recharts Configuration**:
+
 - `<BarChart>` med responsiv bredde
 - `<XAxis>` med leverandørnavn (rotert 45° hvis lange navn)
 - `<YAxis>` med formatert tall
@@ -157,6 +163,7 @@ interface SupplierStat {
 **Purpose**: Kakediagram for fordeling av restordrer per innkjøper
 
 **Props**:
+
 ```typescript
 interface PlannerDistributionChartProps {
   data: PlannerStat[];
@@ -172,6 +179,7 @@ interface PlannerStat {
 ```
 
 **Recharts Configuration**:
+
 - `<PieChart>` med responsiv størrelse
 - `<Pie>` med dataKey="orderCount"
 - Custom `<Cell>` med distinkte farger
@@ -185,6 +193,7 @@ interface PlannerStat {
 **Purpose**: Linjediagram for ordre over tid
 
 **Props**:
+
 ```typescript
 interface OrderTimelineChartProps {
   data: WeekStat[];
@@ -203,6 +212,7 @@ interface WeekStat {
 ```
 
 **Recharts Configuration**:
+
 - `<LineChart>` med responsiv bredde
 - `<XAxis>` med uke-labels
 - `<YAxis>` med antall ordre
@@ -218,6 +228,7 @@ interface WeekStat {
 **Purpose**: Filter-kontroller for dashboard
 
 **Props**:
+
 ```typescript
 interface DashboardFiltersProps {
   activeFilter: DashboardFilter | null;
@@ -228,6 +239,7 @@ interface DashboardFiltersProps {
 ```
 
 **Features**:
+
 - Dropdown for innkjøper-filter
 - Dropdown for leverandør-filter
 - "Fjern filter"-knapp
@@ -349,14 +361,14 @@ ipcMain.handle('get-filtered-dashboard-stats', async (_, filter: DashboardFilter
 ```typescript
 const electronAPI = {
   // ... existing methods ...
-  
+
   // Dashboard methods
   getDashboardStats: () => ipcRenderer.invoke('get-dashboard-stats'),
   getTopSuppliers: (limit: number) => ipcRenderer.invoke('get-top-suppliers', limit),
   getOrdersByPlanner: () => ipcRenderer.invoke('get-orders-by-planner'),
-  getOrdersByWeek: (weeksAhead: number, weeksBehind: number) => 
+  getOrdersByWeek: (weeksAhead: number, weeksBehind: number) =>
     ipcRenderer.invoke('get-orders-by-week', weeksAhead, weeksBehind),
-  getFilteredDashboardStats: (filter: DashboardFilter) => 
+  getFilteredDashboardStats: (filter: DashboardFilter) =>
     ipcRenderer.invoke('get-filtered-dashboard-stats', filter),
 };
 ```
@@ -372,12 +384,12 @@ interface DashboardStats {
   uniqueSuppliers: number;
   overdueOrders: number;
   nextFollowUpDate: Date | null;
-  
+
   // Aggregated data for charts
   topSuppliers: SupplierStat[];
   plannerDistribution: PlannerStat[];
   weeklyTimeline: WeekStat[];
-  
+
   // Metadata
   lastUpdated: Date;
   dataSource: 'cache' | 'database';
@@ -445,19 +457,19 @@ const loadDashboardData = async () => {
   try {
     setIsLoading(true);
     setError(null);
-    
-    const timeoutPromise = new Promise((_, reject) => 
+
+    const timeoutPromise = new Promise((_, reject) =>
       setTimeout(() => reject(new Error('Timeout')), 10000)
     );
-    
+
     const dataPromise = window.electron.getDashboardStats();
-    
+
     const response = await Promise.race([dataPromise, timeoutPromise]);
-    
+
     if (!response.success) {
       throw new Error(response.error || 'Ukjent feil');
     }
-    
+
     setStats(response.data);
   } catch (err) {
     setError(err.message);
@@ -478,7 +490,7 @@ public getDashboardStats(): DashboardStats {
   if (!this.db) {
     throw new Error('Database not connected');
   }
-  
+
   try {
     // Execute queries...
   } catch (error) {
@@ -564,20 +576,20 @@ private readonly CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
 public getDashboardStats(): DashboardStats {
   const now = Date.now();
-  
-  if (this.dashboardCache.data && 
+
+  if (this.dashboardCache.data &&
       (now - this.dashboardCache.timestamp) < this.CACHE_TTL) {
     return { ...this.dashboardCache.data, dataSource: 'cache' };
   }
-  
+
   // Fetch fresh data...
   const stats = this.fetchDashboardStatsFromDb();
-  
+
   this.dashboardCache = {
     data: stats,
     timestamp: now
   };
-  
+
   return { ...stats, dataSource: 'database' };
 }
 ```
@@ -593,7 +605,7 @@ const breakpoints = {
   mobile: '640px',
   tablet: '768px',
   desktop: '1024px',
-  wide: '1280px'
+  wide: '1280px',
 };
 ```
 
@@ -657,23 +669,27 @@ const breakpoints = {
 ## Migration Strategy
 
 ### Phase 1: Backend Implementation
+
 1. Implementer nye DatabaseService-metoder
 2. Legg til IPC handlers
 3. Utvid preload bridge
 4. Test med eksisterende data
 
 ### Phase 2: Component Development
+
 1. Opprett nye komponenter (KPICard, Charts)
 2. Implementer med mock data
 3. Test isolert
 
 ### Phase 3: Integration
+
 1. Integrer komponenter i Dashboard.tsx
 2. Koble til backend
 3. Implementer filter-funksjonalitet
 4. Test full flyt
 
 ### Phase 4: Polish
+
 1. Legg til animasjoner
 2. Optimaliser ytelse
 3. Forbedre feilhåndtering

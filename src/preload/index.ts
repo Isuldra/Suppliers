@@ -1,6 +1,6 @@
-import { contextBridge, ipcRenderer } from "electron";
-import { ExcelData } from "../renderer/types/ExcelData";
-import { ExcelRow } from "../types/ExcelRow";
+import { contextBridge, ipcRenderer } from 'electron';
+import { ExcelData } from '../renderer/types/ExcelData';
+import { ExcelRow } from '../types/ExcelRow';
 
 // Define specific type for validateData return value
 type ValidateDataResult = {
@@ -14,10 +14,7 @@ type ValidateDataResult = {
 // Define types for the API
 interface ElectronAPI {
   send: (channel: string, data: unknown) => void;
-  receive: (
-    channel: string,
-    func: (...args: unknown[]) => void
-  ) => (() => void) | undefined;
+  receive: (channel: string, func: (...args: unknown[]) => void) => (() => void) | undefined;
   handleError: (error: Error) => void;
   parseExcel: (data: unknown) => void;
   onExcelValidation: (callback: (data: unknown) => void) => () => void;
@@ -85,14 +82,8 @@ interface ElectronAPI {
   getOrdersBySupplier: (supplier: string) => Promise<ExcelRow[]>;
   getAllOrders: () => Promise<ExcelRow[]>;
   getOrdersDueWithinDays: (days: number) => Promise<ExcelRow[]>;
-  markOrderAsConfirmed: (
-    supplier: string,
-    orderNumber: string | null
-  ) => Promise<boolean>;
-  deleteOrder: (
-    supplier: string,
-    orderNumber: string | null
-  ) => Promise<boolean>;
+  markOrderAsConfirmed: (supplier: string, orderNumber: string | null) => Promise<boolean>;
+  deleteOrder: (supplier: string, orderNumber: string | null) => Promise<boolean>;
 
   // Auto-updater methods
   checkForUpdates: () => Promise<void>;
@@ -116,9 +107,7 @@ interface ElectronAPI {
   installUpdate: () => Promise<void>;
 
   // New API methods
-  openExternalLink: (
-    url: string
-  ) => Promise<{ success: boolean; error?: string }>;
+  openExternalLink: (url: string) => Promise<{ success: boolean; error?: string }>;
 
   // Logging functions
   getLogs: () => Promise<{
@@ -147,22 +136,16 @@ interface ElectronAPI {
   // Settings methods
   getSettings: () => Promise<{
     success: boolean;
-    data?: import("../renderer/types/Settings").SettingsData;
+    data?: import('../renderer/types/Settings').SettingsData;
     error?: string;
   }>;
-  saveSettings: (
-    settings: import("../renderer/types/Settings").SettingsData
-  ) => Promise<{
+  saveSettings: (settings: import('../renderer/types/Settings').SettingsData) => Promise<{
     success: boolean;
     error?: string;
   }>;
 
   // Debug methods
-  saveDebugHtml: (payload: {
-    filename: string;
-    content: string;
-    description: string;
-  }) => Promise<{
+  saveDebugHtml: (payload: { filename: string; content: string; description: string }) => Promise<{
     success: boolean;
     filePath?: string;
     error?: string;
@@ -186,17 +169,17 @@ interface ElectronAPI {
   // Dashboard methods
   getDashboardStats: () => Promise<{
     success: boolean;
-    data?: import("../renderer/types/Dashboard").DashboardStats;
+    data?: import('../renderer/types/Dashboard').DashboardStats;
     error?: string;
   }>;
   getTopSuppliers: (limit?: number) => Promise<{
     success: boolean;
-    data?: import("../renderer/types/Dashboard").SupplierStat[];
+    data?: import('../renderer/types/Dashboard').SupplierStat[];
     error?: string;
   }>;
   getSupplierDetails: (supplierName: string) => Promise<{
     success: boolean;
-    data?: import("../renderer/types/Dashboard").SupplierStat;
+    data?: import('../renderer/types/Dashboard').SupplierStat;
     error?: string;
   }>;
   getOrdersByWeek: (
@@ -204,7 +187,7 @@ interface ElectronAPI {
     weeksBehind?: number
   ) => Promise<{
     success: boolean;
-    data?: import("../renderer/types/Dashboard").WeekStat[];
+    data?: import('../renderer/types/Dashboard').WeekStat[];
     error?: string;
   }>;
 
@@ -240,118 +223,112 @@ interface ElectronAPI {
 
 // Valid send channels for IPC communication
 const validSendChannels = [
-  "toMain",
-  "fromMain",
-  "error",
-  "excel:parse",
-  "excel:validate",
-  "excel:error",
-  "validateData",
-  "sendEmail",
-  "sendEmailAutomatically",
-  "sendEmailViaEmlAndCOM",
-  "sendBatchEmails",
-  "getSuppliers",
-  "saveOrdersToDatabase",
-  "getOutstandingOrders",
-  "recordEmailSent",
+  'toMain',
+  'fromMain',
+  'error',
+  'excel:parse',
+  'excel:validate',
+  'excel:error',
+  'validateData',
+  'sendEmail',
+  'sendEmailAutomatically',
+  'sendEmailViaEmlAndCOM',
+  'sendBatchEmails',
+  'getSuppliers',
+  'saveOrdersToDatabase',
+  'getOutstandingOrders',
+  'recordEmailSent',
   // New database API channels
-  "db:insertOrUpdateOrder",
-  "db:insertOrUpdateOrders",
-  "db:getOrdersBySupplier",
-  "db:getAllOrders",
-  "db:getOrdersDueWithinDays",
-  "db:markOrderAsConfirmed",
-  "db:deleteOrder",
+  'db:insertOrUpdateOrder',
+  'db:insertOrUpdateOrders',
+  'db:getOrdersBySupplier',
+  'db:getAllOrders',
+  'db:getOrdersDueWithinDays',
+  'db:markOrderAsConfirmed',
+  'db:deleteOrder',
   // Auto-updater channels
-  "update:check",
-  "update:available",
-  "update:downloaded",
-  "update:error",
-  "update:install",
+  'update:check',
+  'update:available',
+  'update:downloaded',
+  'update:error',
+  'update:install',
   // New API channels
-  "openExternalLink",
-  "check-for-updates",
-  "show-about-dialog",
-  "show-logs",
-  "read-log-tail",
-  "getSettings",
-  "saveSettings",
-  "saveDebugHtml",
-  "openDebugFolder",
-  "get-system-language",
-  "get-app-version",
+  'openExternalLink',
+  'check-for-updates',
+  'show-about-dialog',
+  'show-logs',
+  'read-log-tail',
+  'getSettings',
+  'saveSettings',
+  'saveDebugHtml',
+  'openDebugFolder',
+  'get-system-language',
+  'get-app-version',
   // Dashboard channels
-  "get-dashboard-stats",
-  "get-top-suppliers",
-  "get-orders-by-week",
+  'get-dashboard-stats',
+  'get-top-suppliers',
+  'get-orders-by-week',
 ] as const;
 
 // Valid receive channels for IPC communication
 const validReceiveChannels = [
-  "toMain",
-  "fromMain",
-  "error",
-  "excel:parse",
-  "excel:validate",
-  "excel:error",
-  "validateData",
-  "sendEmail",
-  "sendEmailAutomatically",
-  "sendEmailViaEmlAndCOM",
-  "sendBatchEmails",
-  "getSuppliers",
-  "saveOrdersToDatabase",
-  "getOutstandingOrders",
-  "recordEmailSent",
+  'toMain',
+  'fromMain',
+  'error',
+  'excel:parse',
+  'excel:validate',
+  'excel:error',
+  'validateData',
+  'sendEmail',
+  'sendEmailAutomatically',
+  'sendEmailViaEmlAndCOM',
+  'sendBatchEmails',
+  'getSuppliers',
+  'saveOrdersToDatabase',
+  'getOutstandingOrders',
+  'recordEmailSent',
   // New database API channels
-  "db:insertOrUpdateOrder",
-  "db:insertOrUpdateOrders",
-  "db:getOrdersBySupplier",
-  "db:getAllOrders",
-  "db:getOrdersDueWithinDays",
-  "db:markOrderAsConfirmed",
-  "db:deleteOrder",
+  'db:insertOrUpdateOrder',
+  'db:insertOrUpdateOrders',
+  'db:getOrdersBySupplier',
+  'db:getAllOrders',
+  'db:getOrdersDueWithinDays',
+  'db:markOrderAsConfirmed',
+  'db:deleteOrder',
   // Auto-updater channels
-  "update:check",
-  "update:available",
-  "update:downloaded",
-  "update:error",
-  "update:install",
+  'update:check',
+  'update:available',
+  'update:downloaded',
+  'update:error',
+  'update:install',
   // New API channels
-  "openExternalLink",
-  "check-for-updates",
-  "show-about-dialog",
-  "show-logs",
-  "read-log-tail",
-  "getSettings",
-  "saveSettings",
-  "saveDebugHtml",
-  "openDebugFolder",
-  "get-system-language",
-  "get-app-version",
+  'openExternalLink',
+  'check-for-updates',
+  'show-about-dialog',
+  'show-logs',
+  'read-log-tail',
+  'getSettings',
+  'saveSettings',
+  'saveDebugHtml',
+  'openDebugFolder',
+  'get-system-language',
+  'get-app-version',
   // Dashboard channels
-  "get-dashboard-stats",
-  "get-top-suppliers",
-  "get-orders-by-week",
+  'get-dashboard-stats',
+  'get-top-suppliers',
+  'get-orders-by-week',
 ] as const;
 
 // Expose the API to the renderer process
-contextBridge.exposeInMainWorld("electron", {
+contextBridge.exposeInMainWorld('electron', {
   send: (channel: (typeof validSendChannels)[number], data: unknown) => {
     if (validSendChannels.includes(channel)) {
       ipcRenderer.send(channel, data);
     }
   },
-  receive: (
-    channel: (typeof validReceiveChannels)[number],
-    func: (...args: unknown[]) => void
-  ) => {
+  receive: (channel: (typeof validReceiveChannels)[number], func: (...args: unknown[]) => void) => {
     if (validReceiveChannels.includes(channel)) {
-      const subscription = (
-        _event: Electron.IpcRendererEvent,
-        ...args: unknown[]
-      ) => func(...args);
+      const subscription = (_event: Electron.IpcRendererEvent, ...args: unknown[]) => func(...args);
       ipcRenderer.on(channel, subscription);
       return () => ipcRenderer.removeListener(channel, subscription);
     }
@@ -361,45 +338,36 @@ contextBridge.exposeInMainWorld("electron", {
   },
   // Add error handling
   handleError: (error: Error) => {
-    console.error("Preload error:", error);
-    ipcRenderer.send("error", error.message);
+    console.error('Preload error:', error);
+    ipcRenderer.send('error', error.message);
   },
   // Excel specific methods
   parseExcel: (data: unknown) => {
-    ipcRenderer.send("excel:parse", data);
+    ipcRenderer.send('excel:parse', data);
   },
   onExcelValidation: (callback: (data: unknown) => void) => {
-    const subscription = (_event: Electron.IpcRendererEvent, data: unknown) =>
-      callback(data);
-    ipcRenderer.on("excel:validate", subscription);
+    const subscription = (_event: Electron.IpcRendererEvent, data: unknown) => callback(data);
+    ipcRenderer.on('excel:validate', subscription);
 
     return () => {
-      ipcRenderer.removeListener("excel:validate", subscription);
+      ipcRenderer.removeListener('excel:validate', subscription);
     };
   },
   // Data validation
   validateData: async (data: ExcelData) => {
-    return await ipcRenderer.invoke("validateData", data);
+    return await ipcRenderer.invoke('validateData', data);
   },
   // Email sending
   sendEmail: async (payload: { to: string; subject: string; html: string }) => {
-    return await ipcRenderer.invoke("sendEmail", payload);
+    return await ipcRenderer.invoke('sendEmail', payload);
   },
   // Automatic email sending via Outlook COM
-  sendEmailAutomatically: async (payload: {
-    to: string;
-    subject: string;
-    html: string;
-  }) => {
-    return await ipcRenderer.invoke("sendEmailAutomatically", payload);
+  sendEmailAutomatically: async (payload: { to: string; subject: string; html: string }) => {
+    return await ipcRenderer.invoke('sendEmailAutomatically', payload);
   },
   // Automatic email sending via .eml + OpenSharedItem
-  sendEmailViaEmlAndCOM: async (payload: {
-    to: string;
-    subject: string;
-    html: string;
-  }) => {
-    return await ipcRenderer.invoke("sendEmailViaEmlAndCOM", payload);
+  sendEmailViaEmlAndCOM: async (payload: { to: string; subject: string; html: string }) => {
+    return await ipcRenderer.invoke('sendEmailViaEmlAndCOM', payload);
   },
   // Batch email sending via PowerShell - OPTIMIZED
   sendBatchEmails: async (
@@ -409,21 +377,21 @@ contextBridge.exposeInMainWorld("electron", {
       html: string;
     }>
   ) => {
-    return await ipcRenderer.invoke("sendBatchEmails", payload);
+    return await ipcRenderer.invoke('sendBatchEmails', payload);
   },
   // Get suppliers
   getSuppliers: async () => {
-    return await ipcRenderer.invoke("getSuppliers");
+    return await ipcRenderer.invoke('getSuppliers');
   },
   // Database methods
   saveOrdersToDatabase: async (payload: { fileBuffer: ArrayBuffer }) => {
-    return await ipcRenderer.invoke("saveOrdersToDatabase", payload);
+    return await ipcRenderer.invoke('saveOrdersToDatabase', payload);
   },
   getOutstandingOrders: async (supplier: string) => {
-    return await ipcRenderer.invoke("getOutstandingOrders", supplier);
+    return await ipcRenderer.invoke('getOutstandingOrders', supplier);
   },
   getSuppliersWithOutstandingOrders: async () => {
-    return await ipcRenderer.invoke("getSuppliersWithOutstandingOrders");
+    return await ipcRenderer.invoke('getSuppliersWithOutstandingOrders');
   },
   recordEmailSent: async (
     supplier: string,
@@ -431,68 +399,52 @@ contextBridge.exposeInMainWorld("electron", {
     subject: string,
     orderCount: number
   ) => {
-    return await ipcRenderer.invoke(
-      "recordEmailSent",
-      supplier,
-      recipient,
-      subject,
-      orderCount
-    );
+    return await ipcRenderer.invoke('recordEmailSent', supplier, recipient, subject, orderCount);
   },
 
   // New database API methods
   insertOrUpdateOrder: async (order: ExcelRow) => {
-    return await ipcRenderer.invoke("db:insertOrUpdateOrder", order);
+    return await ipcRenderer.invoke('db:insertOrUpdateOrder', order);
   },
   insertOrUpdateOrders: async (orders: ExcelRow[]) => {
-    return await ipcRenderer.invoke("db:insertOrUpdateOrders", orders);
+    return await ipcRenderer.invoke('db:insertOrUpdateOrders', orders);
   },
   getOrdersBySupplier: async (supplier: string) => {
-    return await ipcRenderer.invoke("db:getOrdersBySupplier", supplier);
+    return await ipcRenderer.invoke('db:getOrdersBySupplier', supplier);
   },
   getAllOrders: async () => {
-    return await ipcRenderer.invoke("db:getAllOrders");
+    return await ipcRenderer.invoke('db:getAllOrders');
   },
   getOrdersDueWithinDays: async (days: number) => {
-    return await ipcRenderer.invoke("db:getOrdersDueWithinDays", days);
+    return await ipcRenderer.invoke('db:getOrdersDueWithinDays', days);
   },
-  markOrderAsConfirmed: async (
-    supplier: string,
-    orderNumber: string | null
-  ) => {
-    return await ipcRenderer.invoke(
-      "db:markOrderAsConfirmed",
-      supplier,
-      orderNumber
-    );
+  markOrderAsConfirmed: async (supplier: string, orderNumber: string | null) => {
+    return await ipcRenderer.invoke('db:markOrderAsConfirmed', supplier, orderNumber);
   },
   deleteOrder: async (supplier: string, orderNumber: string | null) => {
-    return await ipcRenderer.invoke("db:deleteOrder", supplier, orderNumber);
+    return await ipcRenderer.invoke('db:deleteOrder', supplier, orderNumber);
   },
 
   // Auto-updater methods
   checkForUpdates: async () => {
-    return await ipcRenderer.invoke("update:check");
+    return await ipcRenderer.invoke('update:check');
   },
   checkForUpdatesWithResult: async () => {
-    return await ipcRenderer.invoke("check-for-updates");
+    return await ipcRenderer.invoke('check-for-updates');
   },
   onUpdateAvailable: (callback: (info: unknown) => void) => {
-    const subscription = (_event: Electron.IpcRendererEvent, info: unknown) =>
-      callback(info);
-    ipcRenderer.on("update:available", subscription);
+    const subscription = (_event: Electron.IpcRendererEvent, info: unknown) => callback(info);
+    ipcRenderer.on('update:available', subscription);
     return () => {
-      ipcRenderer.removeListener("update:available", subscription);
+      ipcRenderer.removeListener('update:available', subscription);
     };
   },
   onUpdateDownloaded: (callback: (info: { version: string }) => void) => {
-    const subscription = (
-      _event: Electron.IpcRendererEvent,
-      info: { version: string }
-    ) => callback(info);
-    ipcRenderer.on("update:downloaded", subscription);
+    const subscription = (_event: Electron.IpcRendererEvent, info: { version: string }) =>
+      callback(info);
+    ipcRenderer.on('update:downloaded', subscription);
     return () => {
-      ipcRenderer.removeListener("update:downloaded", subscription);
+      ipcRenderer.removeListener('update:downloaded', subscription);
     };
   },
   onUpdateDownloadProgress: (
@@ -512,142 +464,127 @@ contextBridge.exposeInMainWorld("electron", {
         transferred: number;
       }
     ) => callback(progress);
-    ipcRenderer.on("update-download-progress", subscription);
+    ipcRenderer.on('update-download-progress', subscription);
     return () => {
-      ipcRenderer.removeListener("update-download-progress", subscription);
+      ipcRenderer.removeListener('update-download-progress', subscription);
     };
   },
   onUpdateError: (callback: (error: Error) => void) => {
-    const subscription = (_event: Electron.IpcRendererEvent, error: Error) =>
-      callback(error);
-    ipcRenderer.on("update:error", subscription);
+    const subscription = (_event: Electron.IpcRendererEvent, error: Error) => callback(error);
+    ipcRenderer.on('update:error', subscription);
     return () => {
-      ipcRenderer.removeListener("update:error", subscription);
+      ipcRenderer.removeListener('update:error', subscription);
     };
   },
   installUpdate: async () => {
-    return await ipcRenderer.invoke("update:install");
+    return await ipcRenderer.invoke('update:install');
   },
 
   // New API methods
   openExternalLink: async (url: string) => {
-    return await ipcRenderer.invoke("openExternalLink", url);
+    return await ipcRenderer.invoke('openExternalLink', url);
   },
 
   // Logging functions
   getLogs: async () => {
     try {
-      return await ipcRenderer.invoke("get-logs");
+      return await ipcRenderer.invoke('get-logs');
     } catch (error) {
-      console.error("Error getting logs:", error);
+      console.error('Error getting logs:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : "Unknown error",
+        error: error instanceof Error ? error.message : 'Unknown error',
       };
     }
   },
 
   sendLogsToSupport: async () => {
     try {
-      return await ipcRenderer.invoke("send-logs-to-support");
+      return await ipcRenderer.invoke('send-logs-to-support');
     } catch (error) {
       return {
         success: false,
-        error: error instanceof Error ? error.message : "Unknown error",
+        error: error instanceof Error ? error.message : 'Unknown error',
       };
     }
   },
 
   // Expose the new log methods
   showLogs: async () => {
-    return await ipcRenderer.invoke("show-logs");
+    return await ipcRenderer.invoke('show-logs');
   },
   readLogTail: async (lineCount?: number) => {
     // Pass lineCount to main process, defaulting if undefined
-    return await ipcRenderer.invoke("read-log-tail", lineCount);
+    return await ipcRenderer.invoke('read-log-tail', lineCount);
   },
 
   getAllSupplierNames: async () => {
-    return await ipcRenderer.invoke("getAllSupplierNames");
+    return await ipcRenderer.invoke('getAllSupplierNames');
   },
 
   getSupplierEmail: async (supplierName: string) => {
-    return await ipcRenderer.invoke("getSupplierEmail", supplierName);
+    return await ipcRenderer.invoke('getSupplierEmail', supplierName);
   },
 
   // Supplier planning methods
   getSuppliersForWeekday: async (weekday: string, plannerName: string) => {
-    return await ipcRenderer.invoke(
-      "getSuppliersForWeekday",
-      weekday,
-      plannerName
-    );
+    return await ipcRenderer.invoke('getSuppliersForWeekday', weekday, plannerName);
   },
   getAllSupplierPlanning: async () => {
-    return await ipcRenderer.invoke("getAllSupplierPlanning");
+    return await ipcRenderer.invoke('getAllSupplierPlanning');
   },
 
   // Settings methods
   getSettings: async () => {
-    return await ipcRenderer.invoke("getSettings");
+    return await ipcRenderer.invoke('getSettings');
   },
-  saveSettings: async (
-    settings: import("../renderer/types/Settings").SettingsData
-  ) => {
-    return await ipcRenderer.invoke("saveSettings", settings);
+  saveSettings: async (settings: import('../renderer/types/Settings').SettingsData) => {
+    return await ipcRenderer.invoke('saveSettings', settings);
   },
 
   // Debug methods
-  saveDebugHtml: async (payload: {
-    filename: string;
-    content: string;
-    description: string;
-  }) => {
-    return await ipcRenderer.invoke("saveDebugHtml", payload);
+  saveDebugHtml: async (payload: { filename: string; content: string; description: string }) => {
+    return await ipcRenderer.invoke('saveDebugHtml', payload);
   },
   openDebugFolder: async () => {
-    return await ipcRenderer.invoke("openDebugFolder");
+    return await ipcRenderer.invoke('openDebugFolder');
   },
 
   // System language detection
   getSystemLanguage: async () => {
-    return await ipcRenderer.invoke("get-system-language");
+    return await ipcRenderer.invoke('get-system-language');
   },
 
   // App version
   getAppVersion: async () => {
-    return await ipcRenderer.invoke("get-app-version");
+    return await ipcRenderer.invoke('get-app-version');
   },
 
   // Dashboard methods
   getDashboardStats: async () => {
-    return await ipcRenderer.invoke("get-dashboard-stats");
+    return await ipcRenderer.invoke('get-dashboard-stats');
   },
   getTopSuppliers: async (limit?: number) => {
-    return await ipcRenderer.invoke("get-top-suppliers", limit);
+    return await ipcRenderer.invoke('get-top-suppliers', limit);
   },
   getSupplierDetails: async (supplierName: string) => {
-    return await ipcRenderer.invoke("get-supplier-details", supplierName);
+    return await ipcRenderer.invoke('get-supplier-details', supplierName);
   },
   getOrdersByWeek: async (weeksAhead?: number, weeksBehind?: number) => {
-    return await ipcRenderer.invoke(
-      "get-orders-by-week",
-      weeksAhead,
-      weeksBehind
-    );
+    return await ipcRenderer.invoke('get-orders-by-week', weeksAhead, weeksBehind);
   },
 
   // Product Catalog methods
   productCatalogSync: async () => {
-    return await ipcRenderer.invoke("product-catalog:sync");
+    return await ipcRenderer.invoke('product-catalog:sync');
   },
   productCatalogUpload: async (buffer: ArrayBuffer) => {
-    return await ipcRenderer.invoke("product-catalog:upload", buffer);
+    return await ipcRenderer.invoke('product-catalog:upload', buffer);
   },
   productCatalogGetStats: async () => {
-    return await ipcRenderer.invoke("product-catalog:get-stats");
+    return await ipcRenderer.invoke('product-catalog:get-stats');
   },
   getTopItems: async (limit?: number) => {
-    return await ipcRenderer.invoke("get-top-items", limit);
+    return await ipcRenderer.invoke('get-top-items', limit);
   },
 } as ElectronAPI);

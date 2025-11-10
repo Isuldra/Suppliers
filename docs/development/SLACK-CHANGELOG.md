@@ -142,13 +142,11 @@ git push origin main --follow-tags
 ## How It Works
 
 1. **Parser** (`scripts/parse-changelog.js`):
-
    - Parses `CHANGELOG.md` to extract version entries
    - Extracts title, description, completion date, and sections
    - Supports both latest version and specific version queries
 
 2. **Formatter** (`scripts/send-changelog-to-slack.js`):
-
    - Formats CHANGELOG entry into Slack Block Kit format
    - Includes metadata (version, date, release info)
    - Truncates long sections to avoid message limits
@@ -189,14 +187,12 @@ The script automatically fixes this, but make sure your URL is correct when sett
 ### Notifications not appearing in Slack
 
 1. **Check GitHub Actions logs:**
-
    - Go to your repository on GitHub
    - Click **Actions** tab
    - Find the latest workflow run
    - Check the "Send CHANGELOG to Slack" step for errors
 
 2. **Verify secret is set:**
-
    - Go to **Settings** → **Secrets and variables** → **Actions**
    - Make sure `SLACK_WEBHOOK_URL` exists and is correct
 

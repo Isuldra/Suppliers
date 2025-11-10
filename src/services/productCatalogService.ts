@@ -3,9 +3,9 @@
  * Handles syncing product data with Supabase and local caching
  */
 
-import { getSupabaseClient, ProductCatalogItem } from "./supabaseClient";
+import { getSupabaseClient, ProductCatalogItem } from './supabaseClient';
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const log = require("electron-log/main");
+const log = require('electron-log/main');
 
 export class ProductCatalogService {
   private static instance: ProductCatalogService;
@@ -34,20 +34,16 @@ export class ProductCatalogService {
       const supabase = getSupabaseClient();
 
       if (!supabase) {
-        log.warn(
-          "Supabase client not available. Product catalog sync skipped."
-        );
-        return { success: false, count: 0, error: "Supabase not configured" };
+        log.warn('Supabase client not available. Product catalog sync skipped.');
+        return { success: false, count: 0, error: 'Supabase not configured' };
       }
 
-      log.info("Syncing product catalog from Supabase...");
+      log.info('Syncing product catalog from Supabase...');
 
-      const { data, error } = await supabase
-        .from("product_catalog")
-        .select("item_no, item_name");
+      const { data, error } = await supabase.from('product_catalog').select('item_no, item_name');
 
       if (error) {
-        log.error("Error syncing from Supabase:", error);
+        log.error('Error syncing from Supabase:', error);
         return { success: false, count: 0, error: error.message };
       }
 
@@ -64,11 +60,11 @@ export class ProductCatalogService {
 
       return { success: true, count: this.cache.size };
     } catch (error) {
-      log.error("Exception during sync:", error);
+      log.error('Exception during sync:', error);
       return {
         success: false,
         count: 0,
-        error: error instanceof Error ? error.message : "Unknown error",
+        error: error instanceof Error ? error.message : 'Unknown error',
       };
     }
   }
@@ -83,22 +79,17 @@ export class ProductCatalogService {
       const supabase = getSupabaseClient();
 
       if (!supabase) {
-        log.warn(
-          "Supabase client not available. Product catalog upload skipped."
-        );
-        return { success: false, count: 0, error: "Supabase not configured" };
+        log.warn('Supabase client not available. Product catalog upload skipped.');
+        return { success: false, count: 0, error: 'Supabase not configured' };
       }
 
       log.info(`Uploading ${products.length} products to Supabase...`);
 
       // Delete existing products first (full replace)
-      const { error: deleteError } = await supabase
-        .from("product_catalog")
-        .delete()
-        .neq("id", 0); // Delete all rows
+      const { error: deleteError } = await supabase.from('product_catalog').delete().neq('id', 0); // Delete all rows
 
       if (deleteError) {
-        log.error("Error deleting old products:", deleteError);
+        log.error('Error deleting old products:', deleteError);
         return { success: false, count: 0, error: deleteError.message };
       }
 
@@ -109,15 +100,10 @@ export class ProductCatalogService {
       for (let i = 0; i < products.length; i += batchSize) {
         const batch = products.slice(i, i + batchSize);
 
-        const { error: insertError } = await supabase
-          .from("product_catalog")
-          .insert(batch);
+        const { error: insertError } = await supabase.from('product_catalog').insert(batch);
 
         if (insertError) {
-          log.error(
-            `Error inserting batch ${i}-${i + batch.length}:`,
-            insertError
-          );
+          log.error(`Error inserting batch ${i}-${i + batch.length}:`, insertError);
           return {
             success: false,
             count: totalInserted,
@@ -135,11 +121,11 @@ export class ProductCatalogService {
       log.info(`Product catalog upload complete: ${totalInserted} products`);
       return { success: true, count: totalInserted };
     } catch (error) {
-      log.error("Exception during upload:", error);
+      log.error('Exception during upload:', error);
       return {
         success: false,
         count: 0,
-        error: error instanceof Error ? error.message : "Unknown error",
+        error: error instanceof Error ? error.message : 'Unknown error',
       };
     }
   }

@@ -1,5 +1,5 @@
-import React from "react";
-import { WizardStep, ValidationError } from "../types/ExcelData";
+import React from 'react';
+import { WizardStep, ValidationError } from '../types/ExcelData';
 
 interface Step {
   id: WizardStep;
@@ -12,11 +12,7 @@ interface WizardStepsProps {
   validationErrors: ValidationError[];
 }
 
-const WizardSteps: React.FC<WizardStepsProps> = ({
-  steps,
-  currentStep,
-  validationErrors,
-}) => {
+const WizardSteps: React.FC<WizardStepsProps> = ({ steps, currentStep, validationErrors }) => {
   const getCurrentStepIndex = (): number => {
     return steps.findIndex((step) => step.id === currentStep);
   };
@@ -49,10 +45,10 @@ const WizardSteps: React.FC<WizardStepsProps> = ({
                 <div
                   className={`rounded-full w-8 h-8 flex items-center justify-center transition-default ${
                     isActive
-                      ? "bg-primary text-neutral-white"
+                      ? 'bg-primary text-neutral-white'
                       : isCompleted
-                      ? "bg-primary-light text-neutral-white"
-                      : "bg-neutral-light text-neutral-secondary"
+                        ? 'bg-primary-light text-neutral-white'
+                        : 'bg-neutral-light text-neutral-secondary'
                   }`}
                 >
                   {isCompleted ? (
@@ -75,10 +71,10 @@ const WizardSteps: React.FC<WizardStepsProps> = ({
                 <span
                   className={`text-xs mt-1 ${
                     isActive
-                      ? "text-primary font-medium"
+                      ? 'text-primary font-medium'
                       : isCompleted
-                      ? "text-primary-light"
-                      : "text-neutral-secondary"
+                        ? 'text-primary-light'
+                        : 'text-neutral-secondary'
                   }`}
                 >
                   {step.label}
@@ -89,10 +85,10 @@ const WizardSteps: React.FC<WizardStepsProps> = ({
                 <div
                   className={`h-1 w-full ${
                     index < currentIndex
-                      ? "bg-primary-light"
+                      ? 'bg-primary-light'
                       : index === currentIndex
-                      ? "bg-primary bg-opacity-30"
-                      : "bg-neutral-light"
+                        ? 'bg-primary bg-opacity-30'
+                        : 'bg-neutral-light'
                   }`}
                 ></div>
               )}

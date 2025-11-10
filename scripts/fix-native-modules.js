@@ -5,30 +5,19 @@
  * This should be run after electron-vite builds to fix any platform mismatches
  */
 
-import fs from "fs";
-import path from "path";
-import { fileURLToPath } from "url";
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const betterSqlite3Path = path.join(
-  __dirname,
-  "..",
-  "node_modules",
-  "better-sqlite3"
-);
+const betterSqlite3Path = path.join(__dirname, '..', 'node_modules', 'better-sqlite3');
 
-const distBetterSqlite3Path = path.join(
-  __dirname,
-  "..",
-  "dist",
-  "node_modules",
-  "better-sqlite3"
-);
+const distBetterSqlite3Path = path.join(__dirname, '..', 'dist', 'node_modules', 'better-sqlite3');
 
-const sourceReleasePath = path.join(betterSqlite3Path, "build", "Release");
-const destReleasePath = path.join(distBetterSqlite3Path, "build", "Release");
+const sourceReleasePath = path.join(betterSqlite3Path, 'build', 'Release');
+const destReleasePath = path.join(distBetterSqlite3Path, 'build', 'Release');
 
 if (fs.existsSync(distBetterSqlite3Path) && fs.existsSync(sourceReleasePath)) {
   if (fs.existsSync(destReleasePath)) {
@@ -36,5 +25,5 @@ if (fs.existsSync(distBetterSqlite3Path) && fs.existsSync(sourceReleasePath)) {
   }
   fs.mkdirSync(destReleasePath, { recursive: true });
   fs.cpSync(sourceReleasePath, destReleasePath, { recursive: true });
-  console.log("✅ Fixed native module in dist/node_modules");
+  console.log('✅ Fixed native module in dist/node_modules');
 }

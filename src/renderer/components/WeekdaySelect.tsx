@@ -1,6 +1,6 @@
-import React, { useState, useMemo, useEffect } from "react";
-import { useTranslation } from "react-i18next";
-import supplyPlannersData from "../data/supplyPlanners.json";
+import React, { useState, useMemo, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
+import supplyPlannersData from '../data/supplyPlanners.json';
 
 interface WeekdaySelectProps {
   onWeekdaySelected: (weekday: string) => void;
@@ -9,7 +9,7 @@ interface WeekdaySelectProps {
 }
 
 // Define the weekday type
-type Weekday = "Mandag" | "Tirsdag" | "Onsdag" | "Torsdag" | "Fredag";
+type Weekday = 'Mandag' | 'Tirsdag' | 'Onsdag' | 'Torsdag' | 'Fredag';
 
 // Planner type
 interface Planner {
@@ -25,9 +25,7 @@ const WeekdaySelect: React.FC<WeekdaySelectProps> = ({
   selectedPlanner,
 }) => {
   const { t } = useTranslation();
-  const [selectedWeekday, setSelectedWeekday] = useState<string>(
-    currentWeekday || ""
-  );
+  const [selectedWeekday, setSelectedWeekday] = useState<string>(currentWeekday || '');
   const [importedWeekdays, setImportedWeekdays] = useState<string[]>([]);
 
   // Auto-select when component mounts or currentWeekday changes
@@ -57,11 +55,11 @@ const WeekdaySelect: React.FC<WeekdaySelectProps> = ({
           });
           setImportedWeekdays(Array.from(weekdays));
         } else {
-          console.error("Failed to fetch imported weekdays:", response.error);
+          console.error('Failed to fetch imported weekdays:', response.error);
           setImportedWeekdays([]);
         }
       } catch (error) {
-        console.error("Error fetching imported weekdays:", error);
+        console.error('Error fetching imported weekdays:', error);
         setImportedWeekdays([]);
       }
     };
@@ -72,24 +70,18 @@ const WeekdaySelect: React.FC<WeekdaySelectProps> = ({
   // Function to translate weekday names
   const translateWeekday = (weekday: string): string => {
     const weekdayMap: { [key: string]: string } = {
-      Mandag: t("weekdays.monday"),
-      Tirsdag: t("weekdays.tuesday"),
-      Onsdag: t("weekdays.wednesday"),
-      Torsdag: t("weekdays.thursday"),
-      Fredag: t("weekdays.friday"),
+      Mandag: t('weekdays.monday'),
+      Tirsdag: t('weekdays.tuesday'),
+      Onsdag: t('weekdays.wednesday'),
+      Torsdag: t('weekdays.thursday'),
+      Fredag: t('weekdays.friday'),
     };
     return weekdayMap[weekday] || weekday;
   };
 
   // Get available weekdays for the selected planner
   const availableWeekdays = useMemo<Weekday[]>(() => {
-    const weekdayOrder: Weekday[] = [
-      "Mandag",
-      "Tirsdag",
-      "Onsdag",
-      "Torsdag",
-      "Fredag",
-    ];
+    const weekdayOrder: Weekday[] = ['Mandag', 'Tirsdag', 'Onsdag', 'Torsdag', 'Fredag'];
 
     // Use imported weekdays if available, otherwise fall back to hardcoded data
     if (importedWeekdays.length > 0) {
@@ -98,15 +90,13 @@ const WeekdaySelect: React.FC<WeekdaySelectProps> = ({
       ) as Weekday[];
 
       // Sort by the natural weekday order
-      return filteredWeekdays.sort(
-        (a, b) => weekdayOrder.indexOf(a) - weekdayOrder.indexOf(b)
-      );
+      return filteredWeekdays.sort((a, b) => weekdayOrder.indexOf(a) - weekdayOrder.indexOf(b));
     }
 
     // Fallback to hardcoded supplyPlanners.json data
-    const planner = supplyPlannersData.planners.find(
-      (p) => p.name === selectedPlanner
-    ) as Planner | undefined;
+    const planner = supplyPlannersData.planners.find((p) => p.name === selectedPlanner) as
+      | Planner
+      | undefined;
 
     if (!planner) return [];
 
@@ -117,9 +107,7 @@ const WeekdaySelect: React.FC<WeekdaySelectProps> = ({
     ) as Weekday[];
 
     // Sort by the natural weekday order
-    return weekdays.sort(
-      (a, b) => weekdayOrder.indexOf(a) - weekdayOrder.indexOf(b)
-    );
+    return weekdays.sort((a, b) => weekdayOrder.indexOf(a) - weekdayOrder.indexOf(b));
   }, [selectedPlanner, importedWeekdays]);
 
   const handleWeekdaySelect = (weekday: string) => {
@@ -129,7 +117,7 @@ const WeekdaySelect: React.FC<WeekdaySelectProps> = ({
 
   // Handle keyboard navigation for weekday selection
   const handleWeekdayKeyDown = (e: React.KeyboardEvent, weekday: string) => {
-    if (e.key === "Enter" || e.key === " ") {
+    if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
       handleWeekdaySelect(weekday);
     }
@@ -137,18 +125,14 @@ const WeekdaySelect: React.FC<WeekdaySelectProps> = ({
 
   return (
     <div className="w-full">
-      <p className="mb-4 text-neutral-secondary">
-        {t("weekdaySelect.description")}
-      </p>
+      <p className="mb-4 text-neutral-secondary">{t('weekdaySelect.description')}</p>
 
       <div className="mb-6">
         <div className="bg-neutral-light p-4 rounded-md shadow-sm">
           <p className="text-sm text-neutral-secondary mb-2" aria-live="polite">
             {availableWeekdays.length === 0
-              ? t("weekdaySelect.noWeekdays")
-              : `${availableWeekdays.length} ${t(
-                  "weekdaySelect.weekdaysAvailable"
-                )}`}
+              ? t('weekdaySelect.noWeekdays')
+              : `${availableWeekdays.length} ${t('weekdaySelect.weekdaysAvailable')}`}
           </p>
 
           <div
@@ -161,8 +145,8 @@ const WeekdaySelect: React.FC<WeekdaySelectProps> = ({
                 key={weekday}
                 className={`p-3 rounded-sm cursor-pointer transition-default ${
                   selectedWeekday === weekday
-                    ? "bg-primary-light text-neutral-white"
-                    : "bg-neutral-white hover:bg-neutral-light"
+                    ? 'bg-primary-light text-neutral-white'
+                    : 'bg-neutral-white hover:bg-neutral-light'
                 }`}
                 onClick={() => handleWeekdaySelect(weekday)}
                 onKeyDown={(e) => handleWeekdayKeyDown(e, weekday)}
@@ -173,18 +157,14 @@ const WeekdaySelect: React.FC<WeekdaySelectProps> = ({
                 <div className="flex items-center">
                   <div
                     className={`w-5 h-5 rounded-full border flex items-center justify-center mr-3 ${
-                      selectedWeekday === weekday
-                        ? "border-neutral-white"
-                        : "border-neutral"
+                      selectedWeekday === weekday ? 'border-neutral-white' : 'border-neutral'
                     }`}
                   >
                     {selectedWeekday === weekday && (
                       <div className="w-3 h-3 rounded-full bg-neutral-white"></div>
                     )}
                   </div>
-                  <span className="font-medium">
-                    {translateWeekday(weekday)}
-                  </span>
+                  <span className="font-medium">{translateWeekday(weekday)}</span>
                 </div>
               </div>
             ))}
@@ -192,7 +172,7 @@ const WeekdaySelect: React.FC<WeekdaySelectProps> = ({
 
           {availableWeekdays.length === 0 && (
             <p className="text-neutral-secondary italic mt-2">
-              {t("weekdaySelect.noSuppliersPlanned")}
+              {t('weekdaySelect.noSuppliersPlanned')}
             </p>
           )}
         </div>

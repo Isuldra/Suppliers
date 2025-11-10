@@ -1,14 +1,14 @@
-import Handlebars from "handlebars";
-import supplierData from "../data/supplierData.json";
-import juice from "juice";
-import { ExcelRow } from "../types/ExcelData";
+import Handlebars from 'handlebars';
+import supplierData from '../data/supplierData.json';
+import juice from 'juice';
+import { ExcelRow } from '../types/ExcelData';
 
 // Register Handlebars helpers
-Handlebars.registerHelper("gt", function (a, b) {
+Handlebars.registerHelper('gt', function (a, b) {
   return a > b;
 });
 
-Handlebars.registerHelper("eq", function (a, b) {
+Handlebars.registerHelper('eq', function (a, b) {
   return a === b;
 });
 
@@ -18,7 +18,7 @@ interface SupplierInfo {
   companyId: number;
   epost: string;
   språk: string;
-  språkKode: "NO" | "ENG";
+  språkKode: 'NO' | 'ENG';
   purredag: string;
 }
 
@@ -38,7 +38,7 @@ export interface EmailData {
     outstandingQty?: number;
     orderRowNumber?: string;
   }>;
-  language?: "no" | "en" | "se" | "da" | "fi"; // Add language option
+  language?: 'no' | 'en' | 'se' | 'da' | 'fi'; // Add language option
   subject: string; // Make required
 }
 
@@ -459,9 +459,7 @@ export class EmailService {
   // Get supplier info from the new structured data
   getSupplierInfo(supplierName: string): SupplierInfo | null {
     // First try exact match
-    let supplier = supplierData.leverandører.find(
-      (s) => s.leverandør === supplierName
-    );
+    let supplier = supplierData.leverandører.find((s) => s.leverandør === supplierName);
 
     // If no exact match, try case-insensitive match
     if (!supplier) {
@@ -482,7 +480,7 @@ export class EmailService {
     return supplier
       ? {
           ...supplier,
-          språkKode: supplier.språkKode as "NO" | "ENG",
+          språkKode: supplier.språkKode as 'NO' | 'ENG',
         }
       : null;
   }
@@ -496,32 +494,29 @@ export class EmailService {
       }
       return null;
     } catch (error) {
-      console.error("Error getting supplier email from database:", error);
+      console.error('Error getting supplier email from database:', error);
       return null;
     }
   }
 
   // Get the preferred language for a supplier (legacy method - now uses app language)
-  getSupplierLanguage(supplierName: string): "no" | "en" {
+  getSupplierLanguage(supplierName: string): 'no' | 'en' {
     const supplierInfo = this.getSupplierInfo(supplierName);
-    return supplierInfo?.språkKode === "ENG" ? "en" : "no";
+    return supplierInfo?.språkKode === 'ENG' ? 'en' : 'no';
   }
 
   // Get the current app language from localStorage
-  getAppLanguage(): "no" | "en" | "se" | "da" | "fi" {
-    const storedLanguage = localStorage.getItem("i18nextLng");
-    if (
-      storedLanguage &&
-      ["no", "en", "se", "da", "fi"].includes(storedLanguage)
-    ) {
-      return storedLanguage as "no" | "en" | "se" | "da" | "fi";
+  getAppLanguage(): 'no' | 'en' | 'se' | 'da' | 'fi' {
+    const storedLanguage = localStorage.getItem('i18nextLng');
+    if (storedLanguage && ['no', 'en', 'se', 'da', 'fi'].includes(storedLanguage)) {
+      return storedLanguage as 'no' | 'en' | 'se' | 'da' | 'fi';
     }
-    return "no"; // Default to Norwegian
+    return 'no'; // Default to Norwegian
   }
 
   // New method to generate email preview HTML
   generatePreview(data: EmailData): string {
-    const language = data.language || "no"; // Default to Norwegian
+    const language = data.language || 'no'; // Default to Norwegian
     const template = this.templates[language];
     const compiledTemplate = Handlebars.compile(template);
     const rawHtml = compiledTemplate(data);
@@ -538,47 +533,34 @@ export class EmailService {
     });
   }
 
-  async sendReminder(
-    data: EmailData
-  ): Promise<{ success: boolean; error?: string }> {
+  async sendReminder(data: EmailData): Promise<{ success: boolean; error?: string }> {
     try {
       // Use manually overridden email if provided, otherwise get from supplier data
       let supplierEmail: string | null = data.recipientEmail || null;
-      const language: "no" | "en" | "se" | "da" | "fi" = this.getAppLanguage(); // Use app language
+      const language: 'no' | 'en' | 'se' | 'da' | 'fi' = this.getAppLanguage(); // Use app language
 
-      console.log("EmailService: sendReminder called with data:", {
+      console.log('EmailService: sendReminder called with data:', {
         supplier: data.supplier,
         recipientEmail: data.recipientEmail,
         language: data.language,
       });
 
       if (!supplierEmail) {
-        console.log(
-          "EmailService: No recipientEmail provided, looking up supplier email"
-        );
+        console.log('EmailService: No recipientEmail provided, looking up supplier email');
         // Get supplier info from the new structured data (PRIORITY: JSON first)
         const supplierInfo = this.getSupplierInfo(data.supplier);
 
         if (supplierInfo) {
           supplierEmail = supplierInfo.epost;
           // Language is now determined by app settings, not supplier preference
-          console.log(
-            "EmailService: Found supplier info in JSON:",
-            supplierInfo
-          );
+          console.log('EmailService: Found supplier info in JSON:', supplierInfo);
         } else {
           // Fallback to database lookup (only if not found in JSON)
           supplierEmail = await this.getSupplierEmail(data.supplier);
-          console.log(
-            "EmailService: Fallback to database lookup, result:",
-            supplierEmail
-          );
+          console.log('EmailService: Fallback to database lookup, result:', supplierEmail);
         }
       } else {
-        console.log(
-          "EmailService: Using provided recipientEmail:",
-          supplierEmail
-        );
+        console.log('EmailService: Using provided recipientEmail:', supplierEmail);
       }
 
       if (!supplierEmail) {
@@ -595,18 +577,18 @@ export class EmailService {
       const rawHtml = compiledTemplate(data);
 
       // 🔍 DEBUG: Log raw HTML before juice processing
-      console.log("=== RAW HTML BEFORE JUICE ===");
-      console.log(rawHtml.substring(0, 500) + "...");
+      console.log('=== RAW HTML BEFORE JUICE ===');
+      console.log(rawHtml.substring(0, 500) + '...');
 
       // Save raw HTML to file for debugging
       try {
         await window.electron.saveDebugHtml({
           filename: `raw-html-${Date.now()}.html`,
           content: rawHtml,
-          description: "Raw HTML before juice processing",
+          description: 'Raw HTML before juice processing',
         });
       } catch (debugError) {
-        console.warn("Could not save debug HTML:", debugError);
+        console.warn('Could not save debug HTML:', debugError);
       }
 
       // Inline CSS styles for better email client compatibility
@@ -621,19 +603,18 @@ export class EmailService {
       });
 
       // 🔍 DEBUG: Log processed HTML after juice
-      console.log("=== PROCESSED HTML AFTER JUICE ===");
-      console.log(html.substring(0, 500) + "...");
+      console.log('=== PROCESSED HTML AFTER JUICE ===');
+      console.log(html.substring(0, 500) + '...');
 
       // Save processed HTML to file for debugging
       try {
         await window.electron.saveDebugHtml({
           filename: `juiced-html-${Date.now()}.html`,
           content: html,
-          description:
-            "HTML after juice processing (what gets sent to PowerShell)",
+          description: 'HTML after juice processing (what gets sent to PowerShell)',
         });
       } catch (debugError) {
-        console.warn("Could not save debug HTML:", debugError);
+        console.warn('Could not save debug HTML:', debugError);
       }
 
       // Set the subject based on language with proper UTF-8 encoding
@@ -648,7 +629,7 @@ export class EmailService {
 
       // ATTEMPT 1: sendEmailViaEmlAndCOM (Preferred Method - .eml + COM)
       try {
-        console.log("ATTEMPT 1: Trying sendEmailViaEmlAndCOM (.eml + COM)...");
+        console.log('ATTEMPT 1: Trying sendEmailViaEmlAndCOM (.eml + COM)...');
         const result = await window.electron.sendEmailViaEmlAndCOM({
           to: supplierEmail,
           subject,
@@ -656,28 +637,24 @@ export class EmailService {
         });
 
         if (result.success) {
-          console.log(
-            "SUCCESS: Email sent via sendEmailViaEmlAndCOM (.eml + COM)"
-          );
+          console.log('SUCCESS: Email sent via sendEmailViaEmlAndCOM (.eml + COM)');
           return result;
         } else {
           console.warn(
-            "ATTEMPT 1 FAILED: sendEmailViaEmlAndCOM failed, falling back to sendEmailAutomatically:",
+            'ATTEMPT 1 FAILED: sendEmailViaEmlAndCOM failed, falling back to sendEmailAutomatically:',
             result.error
           );
         }
       } catch (error) {
         console.warn(
-          "ATTEMPT 1 FAILED: sendEmailViaEmlAndCOM threw error, falling back to sendEmailAutomatically:",
+          'ATTEMPT 1 FAILED: sendEmailViaEmlAndCOM threw error, falling back to sendEmailAutomatically:',
           error
         );
       }
 
       // ATTEMPT 2: sendEmailAutomatically (Robust HTML+COM via temp file)
       try {
-        console.log(
-          "ATTEMPT 2: Trying sendEmailAutomatically (Robust HTML+COM via temp file)..."
-        );
+        console.log('ATTEMPT 2: Trying sendEmailAutomatically (Robust HTML+COM via temp file)...');
         const result = await window.electron.sendEmailAutomatically({
           to: supplierEmail,
           subject,
@@ -685,25 +662,23 @@ export class EmailService {
         });
 
         if (result.success) {
-          console.log(
-            "SUCCESS: Email sent via sendEmailAutomatically (Robust HTML+COM)"
-          );
+          console.log('SUCCESS: Email sent via sendEmailAutomatically (Robust HTML+COM)');
           return result;
         } else {
           console.warn(
-            "ATTEMPT 2 FAILED: sendEmailAutomatically failed, falling back to sendEmail:",
+            'ATTEMPT 2 FAILED: sendEmailAutomatically failed, falling back to sendEmail:',
             result.error
           );
         }
       } catch (error) {
         console.warn(
-          "ATTEMPT 2 FAILED: sendEmailAutomatically threw error, falling back to sendEmail:",
+          'ATTEMPT 2 FAILED: sendEmailAutomatically threw error, falling back to sendEmail:',
           error
         );
       }
 
       // ATTEMPT 3: sendEmail (Final Fallback - .eml file-open method)
-      console.log("ATTEMPT 3: Trying sendEmail (.eml file-open method)...");
+      console.log('ATTEMPT 3: Trying sendEmail (.eml file-open method)...');
       const result = await window.electron.sendEmail({
         to: supplierEmail,
         subject,
@@ -711,16 +686,15 @@ export class EmailService {
       });
 
       if (result.success) {
-        console.log("SUCCESS: Email sent via sendEmail (.eml file-open)");
+        console.log('SUCCESS: Email sent via sendEmail (.eml file-open)');
       } else {
-        console.error("ALL ATTEMPTS FAILED: Email sending failed completely");
+        console.error('ALL ATTEMPTS FAILED: Email sending failed completely');
       }
 
       return result;
     } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : "Unknown error occurred";
-      console.error("Email sending failed:", errorMessage);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      console.error('Email sending failed:', errorMessage);
       return { success: false, error: errorMessage };
     }
   }
@@ -743,14 +717,10 @@ export class EmailService {
     }> = [];
 
     try {
-      console.log(
-        `EmailService: Starting bulk send to ${suppliers.length} suppliers`
-      );
+      console.log(`EmailService: Starting bulk send to ${suppliers.length} suppliers`);
 
       for (const supplierData of suppliers) {
-        console.log(
-          `EmailService: Processing supplier ${supplierData.supplier}`
-        );
+        console.log(`EmailService: Processing supplier ${supplierData.supplier}`);
 
         try {
           const emailData: EmailData = {
@@ -759,18 +729,18 @@ export class EmailService {
             orders: supplierData.orders.map((order) => ({
               key: order.key,
               poNumber: order.poNumber,
-              itemNo: order.itemNo || "",
-              description: order.supplierArticleNo || order.description || "",
-              specification: order.specification || "",
+              itemNo: order.itemNo || '',
+              description: order.supplierArticleNo || order.description || '',
+              specification: order.specification || '',
               orderQty: order.orderQty,
               receivedQty: order.receivedQty,
               estReceiptDate: order.dueDate
-                ? new Date(order.dueDate).toLocaleDateString("nb-NO")
-                : "Ikke spesifisert",
+                ? new Date(order.dueDate).toLocaleDateString('nb-NO')
+                : 'Ikke spesifisert',
               outstandingQty: order.outstandingQty,
               orderRowNumber: order.orderRowNumber,
             })),
-            subject: "", // Will be set by sendReminder based on language
+            subject: '', // Will be set by sendReminder based on language
           };
 
           const result = await this.sendReminder(emailData);
@@ -781,17 +751,10 @@ export class EmailService {
             error: result.error,
           });
 
-          console.log(
-            `EmailService: Result for ${supplierData.supplier}:`,
-            result
-          );
+          console.log(`EmailService: Result for ${supplierData.supplier}:`, result);
         } catch (error) {
-          const errorMessage =
-            error instanceof Error ? error.message : String(error);
-          console.error(
-            `EmailService: Error sending to ${supplierData.supplier}:`,
-            errorMessage
-          );
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          console.error(`EmailService: Error sending to ${supplierData.supplier}:`, errorMessage);
 
           results.push({
             supplier: supplierData.supplier,
@@ -813,9 +776,8 @@ export class EmailService {
         results,
       };
     } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : String(error);
-      console.error("EmailService: Bulk send failed:", errorMessage);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error('EmailService: Bulk send failed:', errorMessage);
 
       return {
         success: false,
@@ -825,9 +787,7 @@ export class EmailService {
   }
 
   // 🧪 DEBUG: Test method to send simple HTML with basic inline styles
-  async sendTestEmail(
-    recipientEmail: string
-  ): Promise<{ success: boolean; error?: string }> {
+  async sendTestEmail(recipientEmail: string): Promise<{ success: boolean; error?: string }> {
     try {
       // Create a very simple HTML email with basic inline styles
       const testHtml = `<!DOCTYPE html>
@@ -863,42 +823,39 @@ export class EmailService {
 </body>
 </html>`;
 
-      console.log("🧪 Sending test email with basic inline styles");
+      console.log('🧪 Sending test email with basic inline styles');
 
       // Save test HTML for debugging
       try {
         await window.electron.saveDebugHtml({
           filename: `test-email-${Date.now()}.html`,
           content: testHtml,
-          description: "Simple test email with basic inline styles",
+          description: 'Simple test email with basic inline styles',
         });
       } catch (debugError) {
-        console.warn("Could not save test HTML:", debugError);
+        console.warn('Could not save test HTML:', debugError);
       }
 
       // TEST ATTEMPT 1: sendEmailAutomatically (Primary Method - Robust HTML+COM via temp file)
       console.log(
-        "🧪 TEST ATTEMPT 1: Trying sendEmailAutomatically (Robust HTML+COM via temp file)..."
+        '🧪 TEST ATTEMPT 1: Trying sendEmailAutomatically (Robust HTML+COM via temp file)...'
       );
       const result = await window.electron.sendEmailAutomatically({
         to: recipientEmail,
-        subject: "🧪 CSS Styling Test (Robust HTML+COM) - Pulse",
+        subject: '🧪 CSS Styling Test (Robust HTML+COM) - Pulse',
         html: testHtml,
       });
 
       if (result.success) {
-        console.log(
-          "🧪 TEST SUCCESS: Email sent via sendEmailAutomatically (Robust HTML+COM)"
-        );
+        console.log('🧪 TEST SUCCESS: Email sent via sendEmailAutomatically (Robust HTML+COM)');
       } else {
-        console.error("🧪 TEST FAILED: sendEmailAutomatically failed");
+        console.error('🧪 TEST FAILED: sendEmailAutomatically failed');
       }
 
       return result;
     } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : "Unknown error occurred";
-      console.error("Test email sending failed:", errorMessage);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      console.error('Test email sending failed:', errorMessage);
       return { success: false, error: errorMessage };
     }
   }

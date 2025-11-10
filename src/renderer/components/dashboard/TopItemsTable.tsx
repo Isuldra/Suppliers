@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState } from 'react';
 
 interface TopItem {
   itemNo: string;
@@ -14,15 +14,10 @@ interface TopItemsTableProps {
   loading?: boolean;
 }
 
-export const TopItemsTable: React.FC<TopItemsTableProps> = ({
-  data,
-  loading = false,
-}) => {
-  const [searchTerm, setSearchTerm] = useState("");
-  const [sortField, setSortField] = useState<keyof TopItem>(
-    "totalOutstandingQty"
-  );
-  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
+export const TopItemsTable: React.FC<TopItemsTableProps> = ({ data, loading = false }) => {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [sortField, setSortField] = useState<keyof TopItem>('totalOutstandingQty');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
   if (loading) {
     return (
@@ -38,9 +33,7 @@ export const TopItemsTable: React.FC<TopItemsTableProps> = ({
   if (!data || data.length === 0) {
     return (
       <div className="bg-white/60 backdrop-blur-2xl rounded-xl border border-white/50 shadow-xl p-6">
-        <h3 className="text-lg font-bold text-neutral mb-4">
-          Varenummer i rest
-        </h3>
+        <h3 className="text-lg font-bold text-neutral mb-4">Varenummer i rest</h3>
         <p className="text-neutral-secondary">
           Ingen varenummer funnet. Last inn BP-arket for å se data.
         </p>
@@ -61,14 +54,12 @@ export const TopItemsTable: React.FC<TopItemsTableProps> = ({
     const aValue = a[sortField];
     const bValue = b[sortField];
 
-    if (typeof aValue === "string" && typeof bValue === "string") {
-      return sortDirection === "asc"
-        ? aValue.localeCompare(bValue)
-        : bValue.localeCompare(aValue);
+    if (typeof aValue === 'string' && typeof bValue === 'string') {
+      return sortDirection === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
     }
 
-    if (typeof aValue === "number" && typeof bValue === "number") {
-      return sortDirection === "asc" ? aValue - bValue : bValue - aValue;
+    if (typeof aValue === 'number' && typeof bValue === 'number') {
+      return sortDirection === 'asc' ? aValue - bValue : bValue - aValue;
     }
 
     return 0;
@@ -76,10 +67,10 @@ export const TopItemsTable: React.FC<TopItemsTableProps> = ({
 
   const handleSort = (field: keyof TopItem) => {
     if (sortField === field) {
-      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
     } else {
       setSortField(field);
-      setSortDirection("desc");
+      setSortDirection('desc');
     }
   };
 
@@ -107,43 +98,35 @@ export const TopItemsTable: React.FC<TopItemsTableProps> = ({
             <tr className="border-b border-neutral-light">
               <th
                 className="text-left py-3 px-2 cursor-pointer hover:bg-gray-100"
-                onClick={() => handleSort("itemNo")}
+                onClick={() => handleSort('itemNo')}
               >
-                Artikkel Nr.{" "}
-                {sortField === "itemNo" &&
-                  (sortDirection === "asc" ? "↑" : "↓")}
+                Artikkel Nr. {sortField === 'itemNo' && (sortDirection === 'asc' ? '↑' : '↓')}
               </th>
               <th
                 className="text-left py-3 px-2 cursor-pointer hover:bg-gray-100"
-                onClick={() => handleSort("productName")}
+                onClick={() => handleSort('productName')}
               >
-                Produktnavn{" "}
-                {sortField === "productName" &&
-                  (sortDirection === "asc" ? "↑" : "↓")}
+                Produktnavn {sortField === 'productName' && (sortDirection === 'asc' ? '↑' : '↓')}
               </th>
               <th
                 className="text-right py-3 px-2 cursor-pointer hover:bg-gray-100"
-                onClick={() => handleSort("totalOutstandingQty")}
+                onClick={() => handleSort('totalOutstandingQty')}
               >
-                Totalt i rest{" "}
-                {sortField === "totalOutstandingQty" &&
-                  (sortDirection === "asc" ? "↑" : "↓")}
+                Totalt i rest{' '}
+                {sortField === 'totalOutstandingQty' && (sortDirection === 'asc' ? '↑' : '↓')}
               </th>
               <th
                 className="text-right py-3 px-2 cursor-pointer hover:bg-gray-100"
-                onClick={() => handleSort("orderCount")}
+                onClick={() => handleSort('orderCount')}
               >
-                Antall linjer{" "}
-                {sortField === "orderCount" &&
-                  (sortDirection === "asc" ? "↑" : "↓")}
+                Antall linjer {sortField === 'orderCount' && (sortDirection === 'asc' ? '↑' : '↓')}
               </th>
               <th
                 className="text-right py-3 px-2 cursor-pointer hover:bg-gray-100"
-                onClick={() => handleSort("supplierCount")}
+                onClick={() => handleSort('supplierCount')}
               >
-                Leverandører{" "}
-                {sortField === "supplierCount" &&
-                  (sortDirection === "asc" ? "↑" : "↓")}
+                Leverandører{' '}
+                {sortField === 'supplierCount' && (sortDirection === 'asc' ? '↑' : '↓')}
               </th>
             </tr>
           </thead>
@@ -152,24 +135,20 @@ export const TopItemsTable: React.FC<TopItemsTableProps> = ({
               <tr
                 key={item.itemNo}
                 className={`border-b border-neutral-light/50 hover:bg-blue-50 transition-colors ${
-                  index % 2 === 0 ? "bg-white/30" : "bg-white/10"
+                  index % 2 === 0 ? 'bg-white/30' : 'bg-white/10'
                 }`}
               >
                 <td className="py-3 px-2 font-mono text-xs">{item.itemNo}</td>
                 <td className="py-3 px-2">
                   <div className="font-medium">{item.productName}</div>
                   {item.productName !== item.description && (
-                    <div className="text-xs text-neutral-secondary mt-0.5">
-                      {item.description}
-                    </div>
+                    <div className="text-xs text-neutral-secondary mt-0.5">{item.description}</div>
                   )}
                 </td>
                 <td className="py-3 px-2 text-right font-semibold">
-                  {item.totalOutstandingQty.toLocaleString("nb-NO")}
+                  {item.totalOutstandingQty.toLocaleString('nb-NO')}
                 </td>
-                <td className="py-3 px-2 text-right">
-                  {item.orderCount.toLocaleString("nb-NO")}
-                </td>
+                <td className="py-3 px-2 text-right">{item.orderCount.toLocaleString('nb-NO')}</td>
                 <td className="py-3 px-2 text-right">{item.supplierCount}</td>
               </tr>
             ))}
@@ -182,21 +161,17 @@ export const TopItemsTable: React.FC<TopItemsTableProps> = ({
           <span>
             {searchTerm ? (
               <>
-                Viser{" "}
-                <strong className="text-neutral">{sortedData.length}</strong> av{" "}
+                Viser <strong className="text-neutral">{sortedData.length}</strong> av{' '}
                 <strong className="text-neutral">{data.length}</strong> artikler
               </>
             ) : (
               <>
-                Viser <strong className="text-neutral">{data.length}</strong>{" "}
-                artikler
+                Viser <strong className="text-neutral">{data.length}</strong> artikler
               </>
             )}
           </span>
           {searchTerm && sortedData.length === 0 && (
-            <span className="text-orange-600">
-              Ingen treff for &quot;{searchTerm}&quot;
-            </span>
+            <span className="text-orange-600">Ingen treff for &quot;{searchTerm}&quot;</span>
           )}
         </div>
       </div>

@@ -1,28 +1,24 @@
-import React, { useState, useEffect } from "react";
-import { Toaster } from "react-hot-toast";
-import { useTranslation } from "react-i18next";
-import FileUpload from "./components/FileUpload";
-import DataReview from "./components/DataReview";
-import EmailButton from "./components/EmailButton";
-import SupplierSelect from "./components/SupplierSelect";
-import WeekdaySelect from "./components/WeekdaySelect";
-import LogViewer from "./components/LogViewer";
-import Dashboard from "./components/Dashboard";
-import BulkSupplierSelect from "./components/BulkSupplierSelect";
-import BulkDataReview from "./components/BulkDataReview";
-import BulkEmailPreview from "./components/BulkEmailPreview";
-import SettingsModal from "./components/SettingsModal";
+import React, { useState, useEffect } from 'react';
+import { Toaster } from 'react-hot-toast';
+import { useTranslation } from 'react-i18next';
+import FileUpload from './components/FileUpload';
+import DataReview from './components/DataReview';
+import EmailButton from './components/EmailButton';
+import SupplierSelect from './components/SupplierSelect';
+import WeekdaySelect from './components/WeekdaySelect';
+import LogViewer from './components/LogViewer';
+import Dashboard from './components/Dashboard';
+import BulkSupplierSelect from './components/BulkSupplierSelect';
+import BulkDataReview from './components/BulkDataReview';
+import BulkEmailPreview from './components/BulkEmailPreview';
+import SettingsModal from './components/SettingsModal';
 // WelcomeScreen removed - language is now detected automatically
-import LanguageSelector from "./components/LanguageSelector";
-import { ExcelData, ValidationError } from "./types/ExcelData";
-import { HashRouter as Router, Routes, Route, Link } from "react-router-dom";
-import supplyPlannersData from "./data/supplyPlanners.json";
-import { SlackService } from "./services/slackService";
-import {
-  Cog6ToothIcon,
-  ChartBarIcon,
-  CommandLineIcon,
-} from "@heroicons/react/24/outline";
+import LanguageSelector from './components/LanguageSelector';
+import { ExcelData, ValidationError } from './types/ExcelData';
+import { HashRouter as Router, Routes, Route, Link } from 'react-router-dom';
+import supplyPlannersData from './data/supplyPlanners.json';
+import { SlackService } from './services/slackService';
+import { Cog6ToothIcon, ChartBarIcon, CommandLineIcon } from '@heroicons/react/24/outline';
 
 // i18n is now initialized asynchronously in index.tsx
 
@@ -50,35 +46,34 @@ const ProgressIndicator: React.FC<{ appState: AppState }> = ({ appState }) => {
 
   const steps = [
     {
-      id: "upload",
-      label: t("progress.uploadFile"),
+      id: 'upload',
+      label: t('progress.uploadFile'),
       completed: !!appState.excelData,
     },
     {
-      id: "weekday",
-      label: t("progress.selectWeekday"),
+      id: 'weekday',
+      label: t('progress.selectWeekday'),
       completed: !!appState.selectedWeekday,
     },
     {
-      id: "supplier",
-      label: t("progress.selectSupplier"),
+      id: 'supplier',
+      label: t('progress.selectSupplier'),
       completed: !!appState.selectedSupplier,
     },
     {
-      id: "review",
-      label: t("progress.reviewData"),
+      id: 'review',
+      label: t('progress.reviewData'),
       completed: appState.showDataReview,
     },
     {
-      id: "email",
-      label: t("progress.sendEmail"),
+      id: 'email',
+      label: t('progress.sendEmail'),
       completed: appState.showEmailButton,
     },
   ];
 
   const currentStepIndex = steps.findIndex((step) => !step.completed);
-  const activeStep =
-    currentStepIndex === -1 ? steps.length - 1 : currentStepIndex;
+  const activeStep = currentStepIndex === -1 ? steps.length - 1 : currentStepIndex;
 
   return (
     <div className="mb-6">
@@ -88,31 +83,27 @@ const ProgressIndicator: React.FC<{ appState: AppState }> = ({ appState }) => {
             <div
               className={`flex items-center justify-center w-8 h-8 rounded-full border-2 text-sm font-medium ${
                 step.completed
-                  ? "bg-primary border-primary text-neutral-white"
+                  ? 'bg-primary border-primary text-neutral-white'
                   : index === activeStep
-                  ? "border-primary text-primary"
-                  : "border-gray-300 text-neutral-secondary"
+                    ? 'border-primary text-primary'
+                    : 'border-gray-300 text-neutral-secondary'
               }`}
             >
-              {step.completed ? "✓" : index + 1}
+              {step.completed ? '✓' : index + 1}
             </div>
             <span
               className={`ml-2 text-sm font-medium ${
                 step.completed
-                  ? "text-primary"
+                  ? 'text-primary'
                   : index === activeStep
-                  ? "text-neutral"
-                  : "text-neutral-secondary"
+                    ? 'text-neutral'
+                    : 'text-neutral-secondary'
               }`}
             >
               {step.label}
             </span>
             {index < steps.length - 1 && (
-              <div
-                className={`w-12 h-0.5 mx-4 ${
-                  step.completed ? "bg-primary" : "bg-gray-300"
-                }`}
-              />
+              <div className={`w-12 h-0.5 mx-4 ${step.completed ? 'bg-primary' : 'bg-gray-300'}`} />
             )}
           </div>
         ))}
@@ -131,23 +122,18 @@ const KeyboardShortcutsModal: React.FC<{
   if (!isOpen) return null;
 
   const shortcuts = [
-    { key: "Ctrl/Cmd + R", description: t("keyboardShortcuts.reset") },
-    { key: "Escape", description: t("keyboardShortcuts.goBack") },
-    { key: "Enter", description: t("keyboardShortcuts.confirm") },
-    { key: "Tab", description: t("keyboardShortcuts.navigate") },
+    { key: 'Ctrl/Cmd + R', description: t('keyboardShortcuts.reset') },
+    { key: 'Escape', description: t('keyboardShortcuts.goBack') },
+    { key: 'Enter', description: t('keyboardShortcuts.confirm') },
+    { key: 'Tab', description: t('keyboardShortcuts.navigate') },
   ];
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
       <div className="bg-white/60 backdrop-blur-2xl rounded-3xl border border-white/50 shadow-2xl p-6 max-w-md w-full mx-4">
         <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-bold text-neutral">
-            {t("keyboardShortcuts.title")}
-          </h3>
-          <button
-            onClick={onClose}
-            className="text-neutral-secondary hover:text-neutral"
-          >
+          <h3 className="text-lg font-bold text-neutral">{t('keyboardShortcuts.title')}</h3>
+          <button onClick={onClose} className="text-neutral-secondary hover:text-neutral">
             ✕
           </button>
         </div>
@@ -157,15 +143,13 @@ const KeyboardShortcutsModal: React.FC<{
               <kbd className="px-2 py-1 bg-neutral-light rounded text-sm font-mono">
                 {shortcut.key}
               </kbd>
-              <span className="text-sm text-neutral-secondary">
-                {shortcut.description}
-              </span>
+              <span className="text-sm text-neutral-secondary">{shortcut.description}</span>
             </div>
           ))}
         </div>
         <div className="mt-6 text-center">
           <button onClick={onClose} className="btn btn-primary px-4 py-2">
-            {t("buttons.close")}
+            {t('buttons.close')}
           </button>
         </div>
       </div>
@@ -179,8 +163,8 @@ const App: React.FC = () => {
   const [appState, setAppState] = useState<AppState>({
     excelData: undefined,
     selectedPlanner: supplyPlannersData.planners[0].name,
-    selectedWeekday: "",
-    selectedSupplier: "",
+    selectedWeekday: '',
+    selectedSupplier: '',
     validationErrors: [],
     isLoading: false,
     showDataReview: false,
@@ -194,7 +178,7 @@ const App: React.FC = () => {
   });
 
   const handleDataParsed = (data: ExcelData) => {
-    console.log("Excel data parsed in App:", data);
+    console.log('Excel data parsed in App:', data);
     setAppState((prev) => ({
       ...prev,
       excelData: data,
@@ -212,7 +196,7 @@ const App: React.FC = () => {
     setAppState((prev) => ({
       ...prev,
       selectedWeekday: weekday,
-      selectedSupplier: "", // Reset supplier when weekday changes
+      selectedSupplier: '', // Reset supplier when weekday changes
     }));
   };
 
@@ -237,8 +221,8 @@ const App: React.FC = () => {
     setAppState({
       excelData: undefined,
       selectedPlanner: supplyPlannersData.planners[0].name,
-      selectedWeekday: "",
-      selectedSupplier: "",
+      selectedWeekday: '',
+      selectedSupplier: '',
       validationErrors: [],
       isLoading: false,
       showDataReview: false,
@@ -258,36 +242,26 @@ const App: React.FC = () => {
       ...prev,
       isBulkMode: !prev.isBulkMode,
       // Reset single supplier state when switching to bulk mode
-      selectedSupplier: prev.isBulkMode ? prev.selectedSupplier : "",
+      selectedSupplier: prev.isBulkMode ? prev.selectedSupplier : '',
       showDataReview: prev.isBulkMode ? prev.showDataReview : false,
       showEmailButton: prev.isBulkMode ? prev.showEmailButton : false,
       // Reset bulk state when switching to single mode
       selectedSuppliers: !prev.isBulkMode ? [] : prev.selectedSuppliers,
       bulkEmailData: !prev.isBulkMode ? new Map() : prev.bulkEmailData,
-      bulkSelectedOrders: !prev.isBulkMode
-        ? new Map()
-        : prev.bulkSelectedOrders,
-      bulkSupplierEmails: !prev.isBulkMode
-        ? new Map()
-        : prev.bulkSupplierEmails,
+      bulkSelectedOrders: !prev.isBulkMode ? new Map() : prev.bulkSelectedOrders,
+      bulkSupplierEmails: !prev.isBulkMode ? new Map() : prev.bulkSupplierEmails,
     }));
   };
 
   const handleSuppliersSelected = (suppliers: string[]) => {
-    console.log("🟢 App.tsx: handleSuppliersSelected called with:", suppliers);
-    console.log("🟢 suppliers type:", typeof suppliers);
-    console.log("🟢 suppliers is array:", Array.isArray(suppliers));
-    console.log("🟢 suppliers length:", suppliers.length);
+    console.log('🟢 App.tsx: handleSuppliersSelected called with:', suppliers);
+    console.log('🟢 suppliers type:', typeof suppliers);
+    console.log('🟢 suppliers is array:', Array.isArray(suppliers));
+    console.log('🟢 suppliers length:', suppliers.length);
+    console.log('🟢 Current appState.selectedSuppliers:', appState.selectedSuppliers);
+    console.log('🟢 Current appState.selectedSuppliers type:', typeof appState.selectedSuppliers);
     console.log(
-      "🟢 Current appState.selectedSuppliers:",
-      appState.selectedSuppliers
-    );
-    console.log(
-      "🟢 Current appState.selectedSuppliers type:",
-      typeof appState.selectedSuppliers
-    );
-    console.log(
-      "🟢 Current appState.selectedSuppliers is array:",
+      '🟢 Current appState.selectedSuppliers is array:',
       Array.isArray(appState.selectedSuppliers)
     );
 
@@ -299,17 +273,14 @@ const App: React.FC = () => {
         ...prev,
         selectedSuppliers: uniqueSuppliers,
       };
-      console.log("🟢 New appState will be:", newState);
-      console.log(
-        "🟢 New appState.selectedSuppliers:",
-        newState.selectedSuppliers
-      );
+      console.log('🟢 New appState will be:', newState);
+      console.log('🟢 New appState.selectedSuppliers:', newState.selectedSuppliers);
       return newState;
     });
 
     // Also log after state update
     setTimeout(() => {
-      console.log("🟢 App state after update:", appState.selectedSuppliers);
+      console.log('🟢 App state after update:', appState.selectedSuppliers);
     }, 100);
   };
 
@@ -325,11 +296,7 @@ const App: React.FC = () => {
   };
 
   const handleBulkSupplierEmailChange = (supplier: string, email: string) => {
-    console.log(
-      "🟢 App.tsx: handleBulkSupplierEmailChange called:",
-      supplier,
-      email
-    );
+    console.log('🟢 App.tsx: handleBulkSupplierEmailChange called:', supplier, email);
     setAppState((prev) => {
       const newBulkSupplierEmails = new Map(prev.bulkSupplierEmails);
       newBulkSupplierEmails.set(supplier, email);
@@ -351,13 +318,8 @@ const App: React.FC = () => {
     }));
   };
 
-  const handleBulkDataReviewNext = (
-    selectedOrders: Map<string, Set<string>>
-  ) => {
-    console.log(
-      "🟢 App.tsx: handleBulkDataReviewNext called with selectedOrders:",
-      selectedOrders
-    );
+  const handleBulkDataReviewNext = (selectedOrders: Map<string, Set<string>>) => {
+    console.log('🟢 App.tsx: handleBulkDataReviewNext called with selectedOrders:', selectedOrders);
     setAppState((prev) => ({
       ...prev,
       bulkSelectedOrders: selectedOrders,
@@ -466,11 +428,11 @@ const MainApp: React.FC<MainAppProps> = ({
   const { t } = useTranslation();
   const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
-  const [appVersion, setAppVersion] = useState<string>("");
+  const [appVersion, setAppVersion] = useState<string>('');
   // Welcome screen removed - language is now detected automatically
 
   useEffect(() => {
-    console.log("🟢 App.tsx mounted!");
+    console.log('🟢 App.tsx mounted!');
 
     // Fetch app version
     const fetchVersion = async () => {
@@ -478,33 +440,31 @@ const MainApp: React.FC<MainAppProps> = ({
         const version = await window.electron.getAppVersion();
         setAppVersion(version);
       } catch (error) {
-        console.error("Failed to fetch app version:", error);
+        console.error('Failed to fetch app version:', error);
       }
     };
 
     fetchVersion();
 
     // Listen for update available events and send Slack notification
-    const unsubscribeUpdate = window.electron.onUpdateAvailable(
-      (info: unknown) => {
-        console.log("Update available:", info);
+    const unsubscribeUpdate = window.electron.onUpdateAvailable((info: unknown) => {
+      console.log('Update available:', info);
 
-        // Type guard for update info
-        const updateInfo = info as { version?: string };
-        if (!updateInfo.version) return;
+      // Type guard for update info
+      const updateInfo = info as { version?: string };
+      if (!updateInfo.version) return;
 
-        // Send Slack notification (non-blocking)
-        SlackService.sendDeploymentNotification({
-          version: updateInfo.version as string,
-          timestamp: new Date().toLocaleString("no-NO", {
-            dateStyle: "short",
-            timeStyle: "short",
-          }),
-        }).catch((error: Error) => {
-          console.error("Failed to send Slack deployment notification:", error);
-        });
-      }
-    );
+      // Send Slack notification (non-blocking)
+      SlackService.sendDeploymentNotification({
+        version: updateInfo.version as string,
+        timestamp: new Date().toLocaleString('no-NO', {
+          dateStyle: 'short',
+          timeStyle: 'short',
+        }),
+      }).catch((error: Error) => {
+        console.error('Failed to send Slack deployment notification:', error);
+      });
+    });
 
     return () => {
       unsubscribeUpdate();
@@ -515,19 +475,19 @@ const MainApp: React.FC<MainAppProps> = ({
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       // Ctrl/Cmd + R to reset app
-      if ((event.ctrlKey || event.metaKey) && event.key === "r") {
+      if ((event.ctrlKey || event.metaKey) && event.key === 'r') {
         event.preventDefault();
         onResetApp();
       }
 
       // Ctrl/Cmd + ? to show keyboard shortcuts
-      if ((event.ctrlKey || event.metaKey) && event.key === "?") {
+      if ((event.ctrlKey || event.metaKey) && event.key === '?') {
         event.preventDefault();
         setShowKeyboardShortcuts(true);
       }
 
       // Escape to go back one step or close modal
-      if (event.key === "Escape") {
+      if (event.key === 'Escape') {
         if (showKeyboardShortcuts) {
           setShowKeyboardShortcuts(false);
         } else if (appState.showEmailButton) {
@@ -535,19 +495,19 @@ const MainApp: React.FC<MainAppProps> = ({
           onReviewComplete();
         } else if (appState.showDataReview) {
           // Go back to supplier selection
-          onSupplierSelected("");
+          onSupplierSelected('');
         } else if (appState.selectedSupplier) {
           // Clear supplier selection
-          onSupplierSelected("");
+          onSupplierSelected('');
         } else if (appState.selectedWeekday) {
           // Clear weekday selection
-          onWeekdaySelected("");
+          onWeekdaySelected('');
         }
       }
     };
 
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, [
     appState,
     onResetApp,
@@ -586,20 +546,20 @@ const MainApp: React.FC<MainAppProps> = ({
                 className="h-11 px-5 bg-gradient-to-br from-white/20 to-white/10 backdrop-blur-xl rounded-xl border border-white/30 text-white text-sm font-semibold flex items-center gap-2.5 hover:from-white/30 hover:to-white/20 hover:scale-105 active:scale-95 transition-all duration-200 shadow-lg hover:shadow-xl"
               >
                 <ChartBarIcon className="w-5 h-5" />
-                {t("navigation.dashboard")}
+                {t('navigation.dashboard')}
               </Link>
               <LanguageSelector mode="compact" />
               <button
                 onClick={() => setShowSettings(true)}
                 className="h-11 w-11 bg-gradient-to-br from-white/20 to-white/10 backdrop-blur-xl rounded-xl border border-white/30 flex items-center justify-center hover:from-white/30 hover:to-white/20 hover:scale-105 active:scale-95 transition-all duration-200 shadow-lg hover:shadow-xl group"
-                title={t("navigation.settings")}
+                title={t('navigation.settings')}
               >
                 <Cog6ToothIcon className="w-5 h-5 text-white/90 group-hover:text-white" />
               </button>
               <button
                 onClick={() => setShowKeyboardShortcuts(true)}
                 className="h-11 w-11 bg-gradient-to-br from-white/20 to-white/10 backdrop-blur-xl rounded-xl border border-white/30 flex items-center justify-center hover:from-white/30 hover:to-white/20 hover:scale-105 active:scale-95 transition-all duration-200 shadow-lg hover:shadow-xl group"
-                title={`${t("navigation.keyboardShortcuts")} (Ctrl/Cmd + ?)`}
+                title={`${t('navigation.keyboardShortcuts')} (Ctrl/Cmd + ?)`}
               >
                 <CommandLineIcon className="w-5 h-5 text-white/90 group-hover:text-white" />
               </button>
@@ -607,10 +567,8 @@ const MainApp: React.FC<MainAppProps> = ({
           </div>
           {/* Title row */}
           <div className="text-center">
-            <h1 className="text-3xl font-bold mb-1">{t("app.title")}</h1>
-            <p className="text-sm text-neutral-white/80">
-              {t("app.welcome.description")}
-            </p>
+            <h1 className="text-3xl font-bold mb-1">{t('app.title')}</h1>
+            <p className="text-sm text-neutral-white/80">{t('app.welcome.description')}</p>
           </div>
         </div>
       </div>
@@ -619,8 +577,8 @@ const MainApp: React.FC<MainAppProps> = ({
         <div
           className={`mx-auto w-full bg-white/20 backdrop-blur-xl rounded-3xl border border-white/30 shadow-2xl ${
             appState.isBulkMode
-              ? "max-w-7xl lg:max-w-6xl md:max-w-4xl px-4 sm:px-6 lg:px-8 p-4 sm:p-6 lg:p-8"
-              : "max-w-4xl p-6 sm:p-8"
+              ? 'max-w-7xl lg:max-w-6xl md:max-w-4xl px-4 sm:px-6 lg:px-8 p-4 sm:p-6 lg:p-8'
+              : 'max-w-4xl p-6 sm:p-8'
           }`}
         >
           {/* Progress Indicator - Show when file is uploaded */}
@@ -635,27 +593,20 @@ const MainApp: React.FC<MainAppProps> = ({
             {!appState.excelData ? (
               // Show full upload interface when no file is loaded
               <>
-                <h2 className="text-xl font-bold mb-4 text-slate-900">
-                  {t("fileUpload.title")}
-                </h2>
-                <FileUpload
-                  onDataParsed={onDataParsed}
-                  onValidationErrors={onValidationErrors}
-                />
+                <h2 className="text-xl font-bold mb-4 text-slate-900">{t('fileUpload.title')}</h2>
+                <FileUpload onDataParsed={onDataParsed} onValidationErrors={onValidationErrors} />
               </>
             ) : (
               // Show file status when file is loaded
               <div className="flex justify-between items-center">
                 <div>
-                  <h2 className="text-xl font-bold text-slate-900">
-                    {t("fileUpload.fileLoaded")}
-                  </h2>
+                  <h2 className="text-xl font-bold text-slate-900">{t('fileUpload.fileLoaded')}</h2>
                   <p className="text-sm text-slate-700 mt-1">
-                    {appState.excelData.bp.length} {t("fileUpload.rowsReady")}
+                    {appState.excelData.bp.length} {t('fileUpload.rowsReady')}
                   </p>
                 </div>
                 <button onClick={onResetApp} className="btn btn-secondary">
-                  {t("fileUpload.uploadNewFile")}
+                  {t('fileUpload.uploadNewFile')}
                 </button>
               </div>
             )}
@@ -664,9 +615,7 @@ const MainApp: React.FC<MainAppProps> = ({
           {/* Show validation errors if any */}
           {appState.validationErrors.length > 0 && (
             <div className="mb-6 p-4 bg-accent bg-opacity-10 border border-accent rounded-md w-full">
-              <h3 className="text-accent font-medium mb-2">
-                {t("validation.errors")}
-              </h3>
+              <h3 className="text-accent font-medium mb-2">{t('validation.errors')}</h3>
               <ul className="list-disc pl-5 text-sm text-neutral">
                 {appState.validationErrors.map((error, index) => (
                   <li key={index}>{error.message}</li>
@@ -678,14 +627,12 @@ const MainApp: React.FC<MainAppProps> = ({
           {/* Configuration Section - Only show if file is uploaded */}
           {appState.excelData && (
             <div className="bg-white/50 backdrop-blur-2xl rounded-xl border border-white/40 shadow-xl p-6 mb-6 w-full transition-all duration-300 hover:bg-white/60 hover:shadow-2xl">
-              <h2 className="text-xl font-bold mb-4 text-slate-900">
-                {t("configuration.title")}
-              </h2>
+              <h2 className="text-xl font-bold mb-4 text-slate-900">{t('configuration.title')}</h2>
 
               {/* Weekday Selection - Show directly since there's only one planner */}
               <div className="mb-6">
                 <h3 className="text-lg font-medium mb-3 text-neutral">
-                  {t("configuration.weekday")}
+                  {t('configuration.weekday')}
                 </h3>
                 <WeekdaySelect
                   onWeekdaySelected={onWeekdaySelected}
@@ -700,46 +647,38 @@ const MainApp: React.FC<MainAppProps> = ({
                   <div className="flex items-center justify-between">
                     <div>
                       <h3 className="text-lg font-medium text-slate-900 mb-1">
-                        {t("configuration.sendingMode")}
+                        {t('configuration.sendingMode')}
                       </h3>
                       <p className="text-sm text-slate-700">
-                        {t("configuration.sendingModeDescription")}
+                        {t('configuration.sendingModeDescription')}
                       </p>
                     </div>
                     <div className="flex items-center space-x-3">
                       <span
                         className={`text-sm font-medium ${
-                          !appState.isBulkMode
-                            ? "text-primary"
-                            : "text-neutral-secondary"
+                          !appState.isBulkMode ? 'text-primary' : 'text-neutral-secondary'
                         }`}
                       >
-                        {t("configuration.singleSupplier")}
+                        {t('configuration.singleSupplier')}
                       </span>
                       <button
                         onClick={onToggleBulkMode}
                         className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 ${
-                          appState.isBulkMode
-                            ? "bg-primary"
-                            : "bg-neutral-light"
+                          appState.isBulkMode ? 'bg-primary' : 'bg-neutral-light'
                         }`}
                       >
                         <span
                           className={`inline-block h-4 w-4 transform rounded-full bg-neutral-white transition-transform ${
-                            appState.isBulkMode
-                              ? "translate-x-6"
-                              : "translate-x-1"
+                            appState.isBulkMode ? 'translate-x-6' : 'translate-x-1'
                           }`}
                         />
                       </button>
                       <span
                         className={`text-sm font-medium ${
-                          appState.isBulkMode
-                            ? "text-primary"
-                            : "text-neutral-secondary"
+                          appState.isBulkMode ? 'text-primary' : 'text-neutral-secondary'
                         }`}
                       >
-                        {t("configuration.multipleSuppliers")}
+                        {t('configuration.multipleSuppliers')}
                       </span>
                     </div>
                   </div>
@@ -751,8 +690,8 @@ const MainApp: React.FC<MainAppProps> = ({
                 <div className="mb-6">
                   <h3 className="text-lg font-medium mb-3 text-slate-900">
                     {appState.isBulkMode
-                      ? t("configuration.suppliers")
-                      : t("configuration.supplier")}
+                      ? t('configuration.suppliers')
+                      : t('configuration.supplier')}
                   </h3>
                   {appState.isBulkMode ? (
                     <BulkSupplierSelect
@@ -784,9 +723,7 @@ const MainApp: React.FC<MainAppProps> = ({
             appState.selectedSupplier &&
             appState.excelData && (
               <div className="bg-white/50 backdrop-blur-2xl rounded-xl border border-white/40 shadow-xl p-6 mb-6 w-full transition-all duration-300 hover:bg-white/60 hover:shadow-2xl">
-                <h2 className="text-xl font-bold mb-4 text-slate-900">
-                  {t("dataReview.title")}
-                </h2>
+                <h2 className="text-xl font-bold mb-4 text-slate-900">{t('dataReview.title')}</h2>
                 <DataReview
                   excelData={appState.excelData}
                   selectedWeekday={appState.selectedWeekday}
@@ -802,9 +739,7 @@ const MainApp: React.FC<MainAppProps> = ({
             appState.selectedSupplier &&
             appState.excelData && (
               <div className="bg-white/50 backdrop-blur-2xl rounded-xl border border-white/40 shadow-xl p-6 mb-6 w-full transition-all duration-300 hover:bg-white/60 hover:shadow-2xl">
-                <h2 className="text-xl font-bold mb-4 text-slate-900">
-                  {t("email.title")}
-                </h2>
+                <h2 className="text-xl font-bold mb-4 text-slate-900">{t('email.title')}</h2>
                 <EmailButton
                   excelData={appState.excelData}
                   selectedSupplier={appState.selectedSupplier}
@@ -818,7 +753,7 @@ const MainApp: React.FC<MainAppProps> = ({
             !appState.showDataReview && (
               <div className="bg-white/50 backdrop-blur-2xl rounded-xl border border-white/40 shadow-xl p-6 mb-6 w-full transition-all duration-300 hover:bg-white/60 hover:shadow-2xl">
                 <h2 className="text-xl font-bold mb-4 text-slate-900">
-                  {t("dataReview.reviewOrderLines")}
+                  {t('dataReview.reviewOrderLines')}
                 </h2>
                 <BulkDataReview
                   selectedSuppliers={appState.selectedSuppliers}
@@ -835,7 +770,7 @@ const MainApp: React.FC<MainAppProps> = ({
             appState.selectedSuppliers.length > 0 && (
               <div className="bg-white/50 backdrop-blur-2xl rounded-xl border border-white/40 shadow-xl p-6 mb-6 w-full transition-all duration-300 hover:bg-white/60 hover:shadow-2xl">
                 <h2 className="text-xl font-bold mb-4 text-slate-900">
-                  {t("email.previewAndSend")}
+                  {t('email.previewAndSend')}
                 </h2>
                 <BulkEmailPreview
                   selectedSuppliers={appState.selectedSuppliers}
@@ -852,10 +787,7 @@ const MainApp: React.FC<MainAppProps> = ({
       {/* Welcome Screen removed - language is now detected automatically */}
 
       {/* Settings Modal */}
-      <SettingsModal
-        isOpen={showSettings}
-        onClose={() => setShowSettings(false)}
-      />
+      <SettingsModal isOpen={showSettings} onClose={() => setShowSettings(false)} />
 
       {/* Keyboard Shortcuts Modal */}
       <KeyboardShortcutsModal

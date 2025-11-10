@@ -1,4 +1,3 @@
-
 const sqlite3 = require('sqlite3');
 const BetterSqlite3 = require('better-sqlite3');
 

@@ -12,10 +12,10 @@ export interface SettingsData {
 
 export const DEFAULT_SETTINGS: SettingsData = {
   user: {
-    senderEmail: "andreas.elvethun@onemed.com",
-    senderName: "OneMed Norge AS",
-    displayName: "",
-    slackWebhookUrl: "",
+    senderEmail: 'andreas.elvethun@onemed.com',
+    senderName: 'OneMed Norge AS',
+    displayName: '',
+    slackWebhookUrl: '',
     slackNotificationsEnabled: false,
   },
 };

@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useMemo } from "react";
-import { useTranslation } from "react-i18next";
-import { ChevronDownIcon, ChevronRightIcon } from "@heroicons/react/24/outline";
-import { ExcelRow } from "../types/ExcelData";
-import supplierData from "../data/supplierData.json";
-import SelectToggleButton from "./SelectToggleButton";
+import React, { useState, useEffect, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
+import { ChevronDownIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
+import { ExcelRow } from '../types/ExcelData';
+import supplierData from '../data/supplierData.json';
+import SelectToggleButton from './SelectToggleButton';
 
 interface BulkDataReviewProps {
   selectedSuppliers: string[];
@@ -17,7 +17,7 @@ interface SupplierInfo {
   companyId: number;
   epost: string;
   språk: string;
-  språkKode: "NO" | "ENG";
+  språkKode: 'NO' | 'ENG';
   purredag: string;
 }
 
@@ -27,7 +27,7 @@ interface SupplierOrders {
   selectedOrders: Set<string>; // Track which orders are selected for this supplier
   isExpanded: boolean;
   language: string;
-  languageCode: "NO" | "ENG";
+  languageCode: 'NO' | 'ENG';
   email: string;
 }
 
@@ -40,19 +40,15 @@ const BulkDataReview: React.FC<BulkDataReviewProps> = ({
   const { t } = useTranslation();
   const [supplierOrders, setSupplierOrders] = useState<SupplierOrders[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [expandedSuppliers, setExpandedSuppliers] = useState<Set<string>>(
-    new Set()
-  );
+  const [expandedSuppliers, setExpandedSuppliers] = useState<Set<string>>(new Set());
 
   // Get supplier info from supplierData.json
   const getSupplierInfo = (supplierName: string): SupplierInfo | null => {
-    const supplier = supplierData.leverandører.find(
-      (s) => s.leverandør === supplierName
-    );
+    const supplier = supplierData.leverandører.find((s) => s.leverandør === supplierName);
     return supplier
       ? {
           ...supplier,
-          språkKode: supplier.språkKode as "NO" | "ENG",
+          språkKode: supplier.språkKode as 'NO' | 'ENG',
         }
       : null;
   };
@@ -67,24 +63,22 @@ const BulkDataReview: React.FC<BulkDataReviewProps> = ({
 
         for (const supplierName of selectedSuppliers) {
           const supplierInfo = getSupplierInfo(supplierName);
-          const orders = allOrders.filter(
-            (order) => order.supplier === supplierName
-          );
+          const orders = allOrders.filter((order) => order.supplier === supplierName);
 
           suppliersData.push({
             supplier: supplierName,
             orders: orders as unknown as ExcelRow[],
             selectedOrders: new Set(orders.map((order) => order.key)), // Select all by default
             isExpanded: false,
-            language: supplierInfo?.språk || "Norsk",
-            languageCode: supplierInfo?.språkKode || "NO",
-            email: supplierInfo?.epost || "",
+            language: supplierInfo?.språk || 'Norsk',
+            languageCode: supplierInfo?.språkKode || 'NO',
+            email: supplierInfo?.epost || '',
           });
         }
 
         setSupplierOrders(suppliersData);
       } catch (error) {
-        console.error("Error fetching orders for suppliers:", error);
+        console.error('Error fetching orders for suppliers:', error);
         setSupplierOrders([]);
       } finally {
         setIsLoading(false);
@@ -114,9 +108,7 @@ const BulkDataReview: React.FC<BulkDataReviewProps> = ({
         if (s.supplier === supplier) {
           const allOrderKeys = s.orders.map((order) => order.key);
           const newSelectedOrders =
-            s.selectedOrders.size === s.orders.length
-              ? new Set<string>()
-              : new Set(allOrderKeys);
+            s.selectedOrders.size === s.orders.length ? new Set<string>() : new Set(allOrderKeys);
           return { ...s, selectedOrders: newSelectedOrders };
         }
         return s;
@@ -145,14 +137,8 @@ const BulkDataReview: React.FC<BulkDataReviewProps> = ({
   // Calculate totals
   const totals = useMemo(() => {
     const totalSuppliers = supplierOrders.length;
-    const totalOrders = supplierOrders.reduce(
-      (sum, s) => sum + s.orders.length,
-      0
-    );
-    const selectedOrders = supplierOrders.reduce(
-      (sum, s) => sum + s.selectedOrders.size,
-      0
-    );
+    const totalOrders = supplierOrders.reduce((sum, s) => sum + s.orders.length, 0);
+    const selectedOrders = supplierOrders.reduce((sum, s) => sum + s.selectedOrders.size, 0);
 
     return { totalSuppliers, totalOrders, selectedOrders };
   }, [supplierOrders]);
@@ -165,18 +151,14 @@ const BulkDataReview: React.FC<BulkDataReviewProps> = ({
   }, [supplierOrders]);
 
   // Check if all suppliers have at least one selected order
-  const allSuppliersHaveOrders = supplierOrders.every(
-    (s) => s.selectedOrders.size > 0
-  );
+  const allSuppliersHaveOrders = supplierOrders.every((s) => s.selectedOrders.size > 0);
 
   if (isLoading) {
     return (
       <div className="w-full">
         <div className="flex items-center justify-center p-8">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-          <span className="ml-2 text-neutral-secondary">
-            Laster ordredata...
-          </span>
+          <span className="ml-2 text-neutral-secondary">Laster ordredata...</span>
         </div>
       </div>
     );
@@ -186,32 +168,26 @@ const BulkDataReview: React.FC<BulkDataReviewProps> = ({
     <div className="w-full">
       {/* Header with summary */}
       <div className="mb-6 p-4 bg-primary-light bg-opacity-10 border border-primary-light rounded-md">
-        <h2 className="text-lg font-medium text-primary mb-2">
-          {t("bulkDataReview.title")}
-        </h2>
+        <h2 className="text-lg font-medium text-primary mb-2">{t('bulkDataReview.title')}</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
           <div>
-            <span className="font-medium text-neutral">
-              {t("bulkDataReview.suppliers")}
-            </span>{" "}
+            <span className="font-medium text-neutral">{t('bulkDataReview.suppliers')}</span>{' '}
             {totals.totalSuppliers}
           </div>
           <div>
-            <span className="font-medium text-neutral">
-              {t("bulkDataReview.totalOrderLines")}
-            </span>{" "}
+            <span className="font-medium text-neutral">{t('bulkDataReview.totalOrderLines')}</span>{' '}
             {totals.totalOrders}
           </div>
           <div>
             <span className="font-medium text-primary">
-              {t("bulkDataReview.selectedOrderLines")}
-            </span>{" "}
+              {t('bulkDataReview.selectedOrderLines')}
+            </span>{' '}
             {totals.selectedOrders}
           </div>
         </div>
         {hasMixedLanguages && (
           <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-sm text-yellow-800">
-            {t("bulkDataReview.mixedLanguageWarning")}
+            {t('bulkDataReview.mixedLanguageWarning')}
           </div>
         )}
       </div>
@@ -236,16 +212,14 @@ const BulkDataReview: React.FC<BulkDataReviewProps> = ({
                     ) : (
                       <ChevronRightIcon className="h-5 w-5 mr-2" />
                     )}
-                    <span className="font-medium text-neutral">
-                      {supplierData.supplier}
-                    </span>
+                    <span className="font-medium text-neutral">{supplierData.supplier}</span>
                   </button>
 
                   <span
                     className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                      supplierData.languageCode === "NO"
-                        ? "bg-blue-100 text-blue-800"
-                        : "bg-green-100 text-green-800"
+                      supplierData.languageCode === 'NO'
+                        ? 'bg-blue-100 text-blue-800'
+                        : 'bg-green-100 text-green-800'
                     }`}
                   >
                     {supplierData.language}
@@ -254,19 +228,13 @@ const BulkDataReview: React.FC<BulkDataReviewProps> = ({
 
                 <div className="flex items-center space-x-4">
                   <span className="text-sm text-neutral-secondary">
-                    {supplierData.selectedOrders.size}{" "}
-                    {t("bulkDataReview.outOf")} {supplierData.orders.length}{" "}
-                    {t("bulkDataReview.selected")}
+                    {supplierData.selectedOrders.size} {t('bulkDataReview.outOf')}{' '}
+                    {supplierData.orders.length} {t('bulkDataReview.selected')}
                   </span>
 
                   <SelectToggleButton
-                    isSelected={
-                      supplierData.selectedOrders.size ===
-                      supplierData.orders.length
-                    }
-                    onToggle={() =>
-                      handleSelectAllOrdersForSupplier(supplierData.supplier)
-                    }
+                    isSelected={supplierData.selectedOrders.size === supplierData.orders.length}
+                    onToggle={() => handleSelectAllOrdersForSupplier(supplierData.supplier)}
                     selectLabelKey="bulkDataReview.selectAll"
                     removeLabelKey="bulkDataReview.removeAll"
                     size="sm"
@@ -286,40 +254,35 @@ const BulkDataReview: React.FC<BulkDataReviewProps> = ({
                           <input
                             type="checkbox"
                             checked={
-                              supplierData.selectedOrders.size ===
-                              supplierData.orders.length
+                              supplierData.selectedOrders.size === supplierData.orders.length
                             }
-                            onChange={() =>
-                              handleSelectAllOrdersForSupplier(
-                                supplierData.supplier
-                              )
-                            }
+                            onChange={() => handleSelectAllOrdersForSupplier(supplierData.supplier)}
                             className="h-4 w-4 text-primary focus:ring-primary border-neutral-light rounded"
                           />
                         </th>
                         <th className="text-left py-2 px-2">
-                          {t("bulkDataReview.tableHeaders.poNumber")}
+                          {t('bulkDataReview.tableHeaders.poNumber')}
                         </th>
                         <th className="text-left py-2 px-2">
-                          {t("bulkDataReview.tableHeaders.oneMedNumber")}
+                          {t('bulkDataReview.tableHeaders.oneMedNumber')}
                         </th>
                         <th className="text-left py-2 px-2">
-                          {t("bulkDataReview.tableHeaders.description")}
+                          {t('bulkDataReview.tableHeaders.description')}
                         </th>
                         <th className="text-left py-2 px-2">
-                          {t("bulkDataReview.tableHeaders.specification")}
+                          {t('bulkDataReview.tableHeaders.specification')}
                         </th>
                         <th className="text-center py-2 px-2">
-                          {t("bulkDataReview.tableHeaders.ordered")}
+                          {t('bulkDataReview.tableHeaders.ordered')}
                         </th>
                         <th className="text-center py-2 px-2">
-                          {t("bulkDataReview.tableHeaders.received")}
+                          {t('bulkDataReview.tableHeaders.received')}
                         </th>
                         <th className="text-center py-2 px-2">
-                          {t("bulkDataReview.tableHeaders.outstanding")}
+                          {t('bulkDataReview.tableHeaders.outstanding')}
                         </th>
                         <th className="text-left py-2 px-2">
-                          {t("bulkDataReview.tableHeaders.eta")}
+                          {t('bulkDataReview.tableHeaders.eta')}
                         </th>
                       </tr>
                     </thead>
@@ -332,40 +295,24 @@ const BulkDataReview: React.FC<BulkDataReviewProps> = ({
                           <td className="py-2 px-2">
                             <input
                               type="checkbox"
-                              checked={supplierData.selectedOrders.has(
-                                order.key
-                              )}
-                              onChange={() =>
-                                handleSelectOrder(
-                                  supplierData.supplier,
-                                  order.key
-                                )
-                              }
+                              checked={supplierData.selectedOrders.has(order.key)}
+                              onChange={() => handleSelectOrder(supplierData.supplier, order.key)}
                               className="h-4 w-4 text-primary focus:ring-primary border-neutral-light rounded"
                             />
                           </td>
-                          <td className="py-2 px-2 font-medium">
-                            {order.poNumber}
-                          </td>
+                          <td className="py-2 px-2 font-medium">{order.poNumber}</td>
                           <td className="py-2 px-2">{order.itemNo}</td>
                           <td className="py-2 px-2">{order.description}</td>
                           <td className="py-2 px-2">{order.specification}</td>
-                          <td className="py-2 px-2 text-center">
-                            {order.orderQty}
-                          </td>
-                          <td className="py-2 px-2 text-center">
-                            {order.receivedQty}
-                          </td>
+                          <td className="py-2 px-2 text-center">{order.orderQty}</td>
+                          <td className="py-2 px-2 text-center">{order.receivedQty}</td>
                           <td className="py-2 px-2 text-center font-medium text-primary">
-                            {order.outstandingQty ||
-                              order.orderQty - order.receivedQty}
+                            {order.outstandingQty || order.orderQty - order.receivedQty}
                           </td>
                           <td className="py-2 px-2">
                             {order.dueDate
-                              ? new Date(order.dueDate).toLocaleDateString(
-                                  "nb-NO"
-                                )
-                              : "Ikke spesifisert"}
+                              ? new Date(order.dueDate).toLocaleDateString('nb-NO')
+                              : 'Ikke spesifisert'}
                           </td>
                         </tr>
                       ))}
@@ -381,7 +328,7 @@ const BulkDataReview: React.FC<BulkDataReviewProps> = ({
       {/* Action buttons */}
       <div className="mt-6 flex justify-between">
         <button onClick={onBack} className="btn btn-secondary">
-          ← {t("bulkDataReview.backToSupplierSelection")}
+          ← {t('bulkDataReview.backToSupplierSelection')}
         </button>
 
         <button
@@ -389,13 +336,10 @@ const BulkDataReview: React.FC<BulkDataReviewProps> = ({
             // Create a Map of selected orders for each supplier
             const selectedOrdersMap = new Map<string, Set<string>>();
             supplierOrders.forEach((supplier) => {
-              selectedOrdersMap.set(
-                supplier.supplier,
-                new Set(supplier.selectedOrders)
-              );
+              selectedOrdersMap.set(supplier.supplier, new Set(supplier.selectedOrders));
             });
             console.log(
-              "🔵 BulkDataReview: Passing selectedOrdersMap to onNext:",
+              '🔵 BulkDataReview: Passing selectedOrdersMap to onNext:',
               selectedOrdersMap
             );
             onNext(selectedOrdersMap);
@@ -403,16 +347,14 @@ const BulkDataReview: React.FC<BulkDataReviewProps> = ({
           className="btn btn-primary"
           disabled={!allSuppliersHaveOrders || totals.selectedOrders === 0}
         >
-          {t("bulkDataReview.goToEmailPreview")}
+          {t('bulkDataReview.goToEmailPreview')}
         </button>
       </div>
 
       {/* Status message */}
       {!allSuppliersHaveOrders && (
         <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-md">
-          <p className="text-sm text-red-800">
-            {t("bulkDataReview.validationNote")}
-          </p>
+          <p className="text-sm text-red-800">{t('bulkDataReview.validationNote')}</p>
         </div>
       )}
     </div>

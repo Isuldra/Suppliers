@@ -175,20 +175,20 @@ The `DatabaseService` is a singleton instance imported and used throughout the a
 
 ```typescript
 // Example of database service usage
-import { databaseService } from "../services/databaseService";
+import { databaseService } from '../services/databaseService';
 
 // Retrieve orders for a specific supplier
-const supplierOrders = databaseService.getOrdersBySupplier("Example Supplier");
+const supplierOrders = databaseService.getOrdersBySupplier('Example Supplier');
 
 // Insert or update an order
 const orderId = databaseService.insertOrUpdateOrder({
-  supplier: "Example Corp",
-  orderNumber: "ORD-123",
+  supplier: 'Example Corp',
+  orderNumber: 'ORD-123',
   // ... other order properties
 });
 
 // Close database connection when application exits (handled in main process)
-app.on("will-quit", () => {
+app.on('will-quit', () => {
   databaseService.close();
 });
 ```

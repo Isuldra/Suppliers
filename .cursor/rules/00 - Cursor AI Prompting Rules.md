@@ -5,6 +5,7 @@ This repository provides a structured set of prompting rules to optimize interac
 ## Files and Their Roles
 
 ### **`core.md`**
+
 - **Purpose**: Establishes foundational rules for consistent AI behavior across all tasks.
 - **Usage**: Place this file in your project’s `.cursor/rules/` folder to apply it persistently:
   - Save `core.md` under `.cursor/rules/` in the workspace root.
@@ -12,6 +13,7 @@ This repository provides a structured set of prompting rules to optimize interac
 - **When to Use**: Always include as the base configuration for reliable, codebase-aware assistance.
 
 ### **`refresh.md`**
+
 - **Purpose**: Directs the AI to diagnose and fix persistent issues, such as bugs or errors.
 - **Usage**: Use as a situational prompt:
   - Copy the contents of `refresh.md`.
@@ -20,6 +22,7 @@ This repository provides a structured set of prompting rules to optimize interac
 - **When to Use**: Apply when debugging or resolving recurring problems—e.g., “It’s still broken after the last fix.”
 
 ### **`request.md`**
+
 - **Purpose**: Guides the AI to implement new features or modify existing code.
 - **Usage**: Use as a situational prompt:
   - Copy the contents of `request.md`.

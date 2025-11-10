@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from "react";
+import React, { useMemo, useState, useEffect } from 'react';
 import {
   createColumnHelper,
   flexRender,
@@ -9,11 +9,11 @@ import {
   useReactTable,
   ColumnDef,
   getFilteredRowModel,
-} from "@tanstack/react-table";
-import { useTranslation } from "react-i18next";
-import { ExcelData, ExcelRow } from "../types/ExcelData";
+} from '@tanstack/react-table';
+import { useTranslation } from 'react-i18next';
+import { ExcelData, ExcelRow } from '../types/ExcelData';
 // import knownSuppliersData from "../data/suppliers.json"; // Unused for now
-import { DateFilterSettings } from "./DateFilter";
+import { DateFilterSettings } from './DateFilter';
 
 interface DataReviewProps {
   excelData?: ExcelData;
@@ -35,9 +35,9 @@ const DataReview: React.FC<DataReviewProps> = ({
   const { t } = useTranslation();
   // Enhanced sorting state to support multiple columns
   const [sorting, setSorting] = React.useState<SortingState>([
-    { id: "status", desc: true }, // Primary sort by status
-    { id: "dueDate", desc: false }, // Secondary sort by due date
-    { id: "outstandingQty", desc: true }, // Tertiary sort by quantity
+    { id: 'status', desc: true }, // Primary sort by status
+    { id: 'dueDate', desc: false }, // Secondary sort by due date
+    { id: 'outstandingQty', desc: true }, // Tertiary sort by quantity
   ]);
 
   // Create a set of known suppliers for faster lookup
@@ -51,8 +51,9 @@ const DataReview: React.FC<DataReviewProps> = ({
   // const [pageSize, setPageSize] = useState(10);
 
   // State for filtering
-  const [_dateFilterSettings /* _setDateFilterSettings */] =
-    useState<DateFilterSettings | null>(null);
+  const [_dateFilterSettings /* _setDateFilterSettings */] = useState<DateFilterSettings | null>(
+    null
+  );
 
   // Helper to check if a string looks like an article number
   // const isArticleNumber = useMemo(
@@ -118,7 +119,7 @@ const DataReview: React.FC<DataReviewProps> = ({
   // };
 
   // Add status computation
-  const getOrderStatus = (row: ExcelRow): "critical" | "overdue" | "normal" => {
+  const getOrderStatus = (row: ExcelRow): 'critical' | 'overdue' | 'normal' => {
     // Directly use the pre-parsed dueDate from databaseService
     const dueDate = row.dueDate; // Should be Date | undefined
 
@@ -126,7 +127,7 @@ const DataReview: React.FC<DataReviewProps> = ({
     if (!dueDate || !(dueDate instanceof Date) || isNaN(dueDate.getTime())) {
       // Decide how to handle missing/invalid dates - maybe 'normal' or a specific status?
       // Returning 'normal' might be safest default to avoid incorrect 'overdue'
-      return "normal"; // Or potentially a new status like 'unknown'
+      return 'normal'; // Or potentially a new status like 'unknown'
     }
 
     const today = new Date();
@@ -139,9 +140,9 @@ const DataReview: React.FC<DataReviewProps> = ({
       (dueDateStartOfDay.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
     );
 
-    if (daysDiff < 0) return "overdue"; // Due date was before today
-    if (daysDiff < 7) return "critical"; // Due date is today or within the next 6 days
-    return "normal"; // Due date is 7 or more days away
+    if (daysDiff < 0) return 'overdue'; // Due date was before today
+    if (daysDiff < 7) return 'critical'; // Due date is today or within the next 6 days
+    return 'normal'; // Due date is 7 or more days away
   };
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -149,14 +150,14 @@ const DataReview: React.FC<DataReviewProps> = ({
     () => [
       // Selection checkbox column
       columnHelper.display({
-        id: "select",
+        id: 'select',
         header: ({ table }) => (
           <input
             type="checkbox"
             checked={table.getIsAllRowsSelected()}
             onChange={table.getToggleAllRowsSelectedHandler()}
             className="rounded border-gray-300 text-primary focus:ring-primary"
-            aria-label={t("table.selectAllRows")}
+            aria-label={t('table.selectAllRows')}
           />
         ),
         cell: ({ row }) => (
@@ -165,7 +166,7 @@ const DataReview: React.FC<DataReviewProps> = ({
             checked={row.getIsSelected()}
             onChange={row.getToggleSelectedHandler()}
             className="rounded border-gray-300 text-primary focus:ring-primary"
-            aria-label={t("table.selectRow", {
+            aria-label={t('table.selectRow', {
               poNumber: row.original.poNumber,
             })}
           />
@@ -175,82 +176,82 @@ const DataReview: React.FC<DataReviewProps> = ({
 
       // Status column (new)
       columnHelper.accessor((row) => getOrderStatus(row), {
-        id: "status",
-        header: t("table.status"),
+        id: 'status',
+        header: t('table.status'),
         size: 100,
         cell: (info) => (
           <div
             className={`px-2 py-1 rounded text-center ${
-              info.getValue() === "critical"
-                ? "bg-red-100 text-red-800"
-                : info.getValue() === "overdue"
-                ? "bg-orange-100 text-orange-800"
-                : "bg-green-100 text-green-800"
+              info.getValue() === 'critical'
+                ? 'bg-red-100 text-red-800'
+                : info.getValue() === 'overdue'
+                  ? 'bg-orange-100 text-orange-800'
+                  : 'bg-green-100 text-green-800'
             }`}
           >
-            {info.getValue() === "critical"
-              ? t("table.critical")
-              : info.getValue() === "overdue"
-              ? t("table.overdue")
-              : t("table.normal")}
+            {info.getValue() === 'critical'
+              ? t('table.critical')
+              : info.getValue() === 'overdue'
+                ? t('table.overdue')
+                : t('table.normal')}
           </div>
         ),
       }),
 
       // Due Date column (enhanced)
       columnHelper.accessor((row) => row.dueDate, {
-        id: "dueDate",
-        header: t("table.dueDate"),
+        id: 'dueDate',
+        header: t('table.dueDate'),
         size: 120,
         cell: (info) => {
           const date = info.getValue();
           return date instanceof Date && !isNaN(date.getTime())
-            ? date.toLocaleDateString("no-NO")
-            : "-";
+            ? date.toLocaleDateString('no-NO')
+            : '-';
         },
       }),
 
-      columnHelper.accessor("poNumber", {
-        header: t("table.poNumber"),
+      columnHelper.accessor('poNumber', {
+        header: t('table.poNumber'),
         size: 100,
-        cell: (info) => info.getValue() || "-",
+        cell: (info) => info.getValue() || '-',
       }),
-      columnHelper.accessor("itemNo", {
-        header: t("table.itemNumber"),
-        cell: (info) => info.getValue() || "-",
+      columnHelper.accessor('itemNo', {
+        header: t('table.itemNumber'),
+        cell: (info) => info.getValue() || '-',
         size: 120,
       }),
-      columnHelper.accessor("description", {
-        header: t("table.supplierArticleNumber"),
-        cell: (info) => info.getValue() || "-",
+      columnHelper.accessor('description', {
+        header: t('table.supplierArticleNumber'),
+        cell: (info) => info.getValue() || '-',
         size: 150,
       }),
-      columnHelper.accessor("specification", {
-        header: t("table.comment"),
-        cell: (info) => info.getValue() || "-",
+      columnHelper.accessor('specification', {
+        header: t('table.comment'),
+        cell: (info) => info.getValue() || '-',
         size: 150,
       }),
-      columnHelper.accessor("orderRowNumber", {
-        header: t("table.orderRow"),
-        cell: (info) => info.getValue() || "-",
+      columnHelper.accessor('orderRowNumber', {
+        header: t('table.orderRow'),
+        cell: (info) => info.getValue() || '-',
         size: 100,
       }),
       columnHelper.accessor((row) => row.orderQty - row.receivedQty, {
-        id: "outstandingQty",
-        header: t("table.outstanding"),
+        id: 'outstandingQty',
+        header: t('table.outstanding'),
         size: 100,
         cell: (info) => (
           <div
             className={`text-right font-medium ${
-              Number(info.getValue()) > 0 ? "text-accent font-bold" : ""
+              Number(info.getValue()) > 0 ? 'text-accent font-bold' : ''
             }`}
           >
-            {info.getValue() ? info.getValue().toLocaleString() : "0"}
+            {info.getValue() ? info.getValue().toLocaleString() : '0'}
           </div>
         ),
       }),
-      columnHelper.accessor("key", {
-        header: t("table.key"),
+      columnHelper.accessor('key', {
+        header: t('table.key'),
         size: 150,
         cell: (info) => (
           <div className="truncate max-w-[150px]" title={info.getValue()}>
@@ -266,7 +267,7 @@ const DataReview: React.FC<DataReviewProps> = ({
   const [rowsToRender, setRowsToRender] = useState<ExcelRow[]>([]);
   // const [isLoading, setIsLoading] = useState(true); // Currently unused
   const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({});
-  const [globalFilter, setGlobalFilter] = useState("");
+  const [globalFilter, setGlobalFilter] = useState('');
   const [pagination, setPagination] = useState({
     pageIndex: 0,
     pageSize: 25,
@@ -287,20 +288,18 @@ const DataReview: React.FC<DataReviewProps> = ({
     void (async () => {
       try {
         // IPC returns an object { success: boolean, data?: ExcelRow[], error?: string }
-        const response = await window.electron.getOutstandingOrders(
-          selectedSupplier || ""
-        );
+        const response = await window.electron.getOutstandingOrders(selectedSupplier || '');
         if (response.success && response.data) {
           setRowsToRender(response.data as ExcelRow[]);
         } else {
           console.error(
-            "Failed to fetch outstanding orders or no data returned:",
-            response.error || "No data"
+            'Failed to fetch outstanding orders or no data returned:',
+            response.error || 'No data'
           );
           setRowsToRender([]);
         }
       } catch (error) {
-        console.error("Failed to fetch outstanding orders:", error);
+        console.error('Failed to fetch outstanding orders:', error);
         setRowsToRender([]);
       }
     })();
@@ -328,19 +327,17 @@ const DataReview: React.FC<DataReviewProps> = ({
   });
 
   const totalItems = rowsToRender.length;
-  const outstandingCount = rowsToRender.filter(
-    (row) => row.orderQty - row.receivedQty > 0
-  ).length;
+  const outstandingCount = rowsToRender.filter((row) => row.orderQty - row.receivedQty > 0).length;
 
   if (!excelData || !selectedSupplier) {
     return (
       <div className="p-6 bg-neutral-light border border-accent rounded-md shadow-sm">
-        <p className="text-neutral">{t("dataReview.noDataAvailable")}</p>
+        <p className="text-neutral">{t('dataReview.noDataAvailable')}</p>
         <button
           onClick={onPrevious}
           className="btn btn-secondary px-4 py-2 mt-4 rounded-sm font-medium ease-in-out bg-neutral-white text-primary border border-primary hover:bg-primary-light hover:text-neutral-white"
         >
-          {t("dataReview.back")}
+          {t('dataReview.back')}
         </button>
       </div>
     );
@@ -348,40 +345,31 @@ const DataReview: React.FC<DataReviewProps> = ({
 
   return (
     <div className="w-full">
-      <h2
-        className="text-xl font-bold mb-4 text-neutral"
-        id="data-review-heading"
-      >
-        {t("dataReview.reviewForSupplier", { supplier: selectedSupplier })}
+      <h2 className="text-xl font-bold mb-4 text-neutral" id="data-review-heading">
+        {t('dataReview.reviewForSupplier', { supplier: selectedSupplier })}
       </h2>
 
       <div className="bg-neutral-white p-4 rounded-md shadow-sm mb-6 border border-neutral-light w-full">
         <div className="flex flex-wrap justify-between items-center mb-4">
           <div>
             <p className="text-neutral">
-              <span className="font-medium">{t("dataReview.supplier")}</span>{" "}
-              {selectedSupplier}
+              <span className="font-medium">{t('dataReview.supplier')}</span> {selectedSupplier}
             </p>
             <p className="text-neutral mt-1">
-              <span className="font-medium">{t("dataReview.weekday")}</span>{" "}
-              {selectedWeekday}
+              <span className="font-medium">{t('dataReview.weekday')}</span> {selectedWeekday}
             </p>
           </div>
           <div className="mt-2 sm:mt-0">
             <p className="text-neutral">
-              <span className="font-medium">{t("dataReview.totalCount")}</span>{" "}
+              <span className="font-medium">{t('dataReview.totalCount')}</span>{' '}
               <span className="font-bold">{totalItems}</span>
             </p>
             <p className="text-neutral mt-1">
-              <span className="font-medium">
-                {t("dataReview.outstandingOrders")}
-              </span>{" "}
+              <span className="font-medium">{t('dataReview.outstandingOrders')}</span>{' '}
               <span className="font-bold text-accent">{outstandingCount}</span>
             </p>
             <p className="text-neutral mt-1">
-              <span className="font-medium">
-                {t("dataReview.selectedForEmail")}
-              </span>{" "}
+              <span className="font-medium">{t('dataReview.selectedForEmail')}</span>{' '}
               <span className="font-bold text-primary">
                 {Object.values(rowSelection).filter(Boolean).length}
               </span>
@@ -395,27 +383,26 @@ const DataReview: React.FC<DataReviewProps> = ({
             onClick={() => table.toggleAllRowsSelected(true)}
             className="btn btn-sm btn-secondary px-4 py-2 rounded-sm font-medium ease-in-out bg-neutral-white text-primary border border-primary hover:bg-primary-light hover:text-neutral-white"
           >
-            {t("dataReview.selectAll")}
+            {t('dataReview.selectAll')}
           </button>
           <button
             onClick={() => table.toggleAllRowsSelected(false)}
             className="btn btn-sm btn-secondary px-4 py-2 rounded-sm font-medium ease-in-out bg-neutral-white text-primary border border-primary hover:bg-primary-light hover:text-neutral-white"
           >
-            {t("dataReview.selectNone")}
+            {t('dataReview.selectNone')}
           </button>
           <button
             onClick={() => {
               // Select only rows with outstanding quantity > 0
               const newSelection: Record<string, boolean> = {};
               rowsToRender.forEach((row, index) => {
-                newSelection[index.toString()] =
-                  row.orderQty - row.receivedQty > 0;
+                newSelection[index.toString()] = row.orderQty - row.receivedQty > 0;
               });
               setRowSelection(newSelection);
             }}
             className="btn btn-sm btn-secondary px-4 py-2 rounded-sm font-medium ease-in-out bg-neutral-white text-primary border border-primary hover:bg-primary-light hover:text-neutral-white"
           >
-            {t("dataReview.selectOutstandingOnly")}
+            {t('dataReview.selectOutstandingOnly')}
           </button>
         </div>
       </div>
@@ -442,46 +429,37 @@ const DataReview: React.FC<DataReviewProps> = ({
                         <div
                           {...{
                             className: header.column.getCanSort()
-                              ? "cursor-pointer select-none flex items-center"
-                              : "",
+                              ? 'cursor-pointer select-none flex items-center'
+                              : '',
                             onClick: header.column.getToggleSortingHandler(),
-                            role: header.column.getCanSort()
-                              ? "button"
-                              : undefined,
-                            "aria-label": header.column.getCanSort()
+                            role: header.column.getCanSort() ? 'button' : undefined,
+                            'aria-label': header.column.getCanSort()
                               ? `Sort by ${header.column.columnDef.header}${
                                   header.column.getIsSorted()
-                                    ? header.column.getIsSorted() === "asc"
-                                      ? ", currently sorted ascending"
-                                      : ", currently sorted descending"
-                                    : ""
+                                    ? header.column.getIsSorted() === 'asc'
+                                      ? ', currently sorted ascending'
+                                      : ', currently sorted descending'
+                                    : ''
                                 }`
                               : undefined,
-                            tabIndex: header.column.getCanSort()
-                              ? 0
-                              : undefined,
+                            tabIndex: header.column.getCanSort() ? 0 : undefined,
                             onKeyDown: header.column.getCanSort()
                               ? (e) => {
-                                  if (e.key === "Enter" || e.key === " ") {
+                                  if (e.key === 'Enter' || e.key === ' ') {
                                     e.preventDefault();
-                                    header.column.getToggleSortingHandler()?.(
-                                      e
-                                    );
+                                    header.column.getToggleSortingHandler()?.(e);
                                   }
                                 }
                               : undefined,
                           }}
                         >
-                          {flexRender(
-                            header.column.columnDef.header,
-                            header.getContext()
-                          )}
+                          {flexRender(header.column.columnDef.header, header.getContext())}
                           {header.column.getCanSort() && (
                             <span className="ml-1">
                               {{
-                                asc: " 🔼",
-                                desc: " 🔽",
-                              }[header.column.getIsSorted() as string] ?? " ⬍"}
+                                asc: ' 🔼',
+                                desc: ' 🔽',
+                              }[header.column.getIsSorted() as string] ?? ' ⬍'}
                             </span>
                           )}
                         </div>
@@ -498,26 +476,19 @@ const DataReview: React.FC<DataReviewProps> = ({
                     colSpan={table.getAllColumns().length}
                     className="px-3 py-4 text-center text-neutral"
                   >
-                    {t("dataReview.noDataAvailable")}
+                    {t('dataReview.noDataAvailable')}
                   </td>
                 </tr>
               ) : (
                 table.getRowModel().rows.map((row) => (
-                  <tr
-                    key={row.id}
-                    className="hover:bg-neutral-light transition-colors"
-                    role="row"
-                  >
+                  <tr key={row.id} className="hover:bg-neutral-light transition-colors" role="row">
                     {row.getVisibleCells().map((cell) => (
                       <td
                         key={cell.id}
                         className="px-3 py-2 whitespace-nowrap text-neutral"
                         role="gridcell"
                       >
-                        {flexRender(
-                          cell.column.columnDef.cell,
-                          cell.getContext()
-                        )}
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
                       </td>
                     ))}
                   </tr>
@@ -531,16 +502,14 @@ const DataReview: React.FC<DataReviewProps> = ({
       {/* Pagination controls */}
       <div className="flex items-center justify-between p-4 border border-neutral-light rounded-md bg-neutral-light">
         <div className="flex items-center space-x-2">
-          <span className="text-sm text-neutral">
-            {t("dataReview.rowsPerPage")}
-          </span>
+          <span className="text-sm text-neutral">{t('dataReview.rowsPerPage')}</span>
           <select
             value={table.getState().pagination.pageSize}
             onChange={(e) => {
               table.setPageSize(Number(e.target.value));
             }}
             className="form-control py-1 px-2 text-sm"
-            aria-label={t("dataReview.rowsPerPage")}
+            aria-label={t('dataReview.rowsPerPage')}
           >
             {[10, 25, 50, 100].map((pageSize) => (
               <option key={pageSize} value={pageSize}>
@@ -548,53 +517,48 @@ const DataReview: React.FC<DataReviewProps> = ({
               </option>
             ))}
           </select>
-          <span className="text-sm text-neutral">
-            {t("dataReview.perPage")}
-          </span>
+          <span className="text-sm text-neutral">{t('dataReview.perPage')}</span>
         </div>
         <div className="flex items-center space-x-2">
           <button
             onClick={() => table.setPageIndex(0)}
             disabled={!table.getCanPreviousPage()}
             className="px-2 py-1 border border-neutral rounded-sm disabled:opacity-50 disabled:cursor-not-allowed text-neutral font-medium ease-in-out"
-            aria-label={t("dataReview.goToFirst")}
+            aria-label={t('dataReview.goToFirst')}
             aria-disabled={!table.getCanPreviousPage()}
           >
-            {"<<"}
+            {'<<'}
           </button>
           <button
             onClick={() => table.previousPage()}
             disabled={!table.getCanPreviousPage()}
             className="px-2 py-1 border border-neutral rounded-sm disabled:opacity-50 disabled:cursor-not-allowed text-neutral font-medium ease-in-out"
-            aria-label={t("dataReview.goToPrevious")}
+            aria-label={t('dataReview.goToPrevious')}
             aria-disabled={!table.getCanPreviousPage()}
           >
-            {"<"}
+            {'<'}
           </button>
           <span className="text-sm text-neutral">
-            <span className="font-medium">
-              {table.getState().pagination.pageIndex + 1}
-            </span>{" "}
-            {t("dataReview.pageOf")}{" "}
-            <span className="font-medium">{table.getPageCount()}</span>
+            <span className="font-medium">{table.getState().pagination.pageIndex + 1}</span>{' '}
+            {t('dataReview.pageOf')} <span className="font-medium">{table.getPageCount()}</span>
           </span>
           <button
             onClick={() => table.nextPage()}
             disabled={!table.getCanNextPage()}
             className="px-2 py-1 border border-neutral rounded-sm disabled:opacity-50 disabled:cursor-not-allowed text-neutral font-medium ease-in-out"
-            aria-label={t("dataReview.goToNext")}
+            aria-label={t('dataReview.goToNext')}
             aria-disabled={!table.getCanNextPage()}
           >
-            {">"}
+            {'>'}
           </button>
           <button
             onClick={() => table.setPageIndex(table.getPageCount() - 1)}
             disabled={!table.getCanNextPage()}
             className="px-2 py-1 border border-neutral rounded-sm disabled:opacity-50 disabled:cursor-not-allowed text-neutral font-medium ease-in-out"
-            aria-label={t("dataReview.goToLast")}
+            aria-label={t('dataReview.goToLast')}
             aria-disabled={!table.getCanNextPage()}
           >
-            {">>"}
+            {'>>'}
           </button>
         </div>
       </div>
@@ -603,9 +567,7 @@ const DataReview: React.FC<DataReviewProps> = ({
         <button
           onClick={() => {
             // Get selected rows and pass them to the next step
-            const selectedRows = rowsToRender.filter(
-              (_, index) => rowSelection[index.toString()]
-            );
+            const selectedRows = rowsToRender.filter((_, index) => rowSelection[index.toString()]);
 
             // Store selected rows in the excelData for the email step
             if (excelData) {
@@ -615,10 +577,10 @@ const DataReview: React.FC<DataReviewProps> = ({
             onNext();
           }}
           className="btn btn-primary px-4 py-2 bg-primary text-neutral-white rounded-sm font-medium ease-in-out hover:bg-primary-dark"
-          aria-label={t("dataReview.sendEmail")}
+          aria-label={t('dataReview.sendEmail')}
           disabled={Object.values(rowSelection).filter(Boolean).length === 0}
         >
-          {t("dataReview.sendEmailSelected", {
+          {t('dataReview.sendEmailSelected', {
             count: Object.values(rowSelection).filter(Boolean).length,
           })}
         </button>

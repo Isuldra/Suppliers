@@ -1,4 +1,4 @@
-import React from "react";
+import React from 'react';
 import {
   LineChart,
   Line,
@@ -8,8 +8,8 @@ import {
   ResponsiveContainer,
   ReferenceLine,
   Legend,
-} from "recharts";
-import { WeekStat } from "../../types/Dashboard";
+} from 'recharts';
+import { WeekStat } from '../../types/Dashboard';
 
 interface OrderTimelineChartProps {
   data: WeekStat[];
@@ -41,8 +41,7 @@ const OrderTimelineChartComponent: React.FC<OrderTimelineChartProps> = ({
   }
 
   const currentWeekIndex = data.findIndex((week) => week.isCurrentWeek);
-  const currentWeek =
-    currentWeekIndex >= 0 ? data[currentWeekIndex] : undefined;
+  const currentWeek = currentWeekIndex >= 0 ? data[currentWeekIndex] : undefined;
 
   interface TooltipProps {
     active?: boolean;
@@ -58,12 +57,8 @@ const OrderTimelineChartComponent: React.FC<OrderTimelineChartProps> = ({
         <div className="bg-white p-3 rounded-lg shadow-lg border border-gray-200">
           <p className="font-bold text-neutral">{data.weekLabel}</p>
           <p className="text-sm text-neutral-secondary">{data.dateRange}</p>
-          <p className="text-sm text-blue-600">
-            Totale ordre: {data.orderCount}
-          </p>
-          <p className="text-sm text-red-600">
-            Forfalte ordre: {data.overdueCount}
-          </p>
+          <p className="text-sm text-blue-600">Totale ordre: {data.orderCount}</p>
+          <p className="text-sm text-red-600">Forfalte ordre: {data.overdueCount}</p>
         </div>
       );
     }
@@ -72,14 +67,9 @@ const OrderTimelineChartComponent: React.FC<OrderTimelineChartProps> = ({
 
   return (
     <div className="bg-white/60 backdrop-blur-2xl rounded-xl border border-white/50 shadow-xl p-6 transition-all duration-300 hover:bg-white/70 hover:shadow-2xl">
-      <h3 className="text-lg font-bold text-neutral mb-4">
-        Ordre tidslinje (per uke)
-      </h3>
+      <h3 className="text-lg font-bold text-neutral mb-4">Ordre tidslinje (per uke)</h3>
       <ResponsiveContainer width="100%" height={300}>
-        <LineChart
-          data={data}
-          margin={{ top: 5, right: 30, left: 20, bottom: 60 }}
-        >
+        <LineChart data={data} margin={{ top: 5, right: 30, left: 20, bottom: 60 }}>
           <XAxis
             dataKey="weekLabel"
             tick={{ fontSize: 12 }}
@@ -122,6 +112,6 @@ const OrderTimelineChartComponent: React.FC<OrderTimelineChartProps> = ({
   );
 };
 
-OrderTimelineChartComponent.displayName = "OrderTimelineChart";
+OrderTimelineChartComponent.displayName = 'OrderTimelineChart';
 
 export const OrderTimelineChart = React.memo(OrderTimelineChartComponent);

@@ -56,9 +56,7 @@ The core logic resides in `src/renderer/services/emailService.ts`.
         {{/each}}
       </tbody>
     </table>
-    <p>
-      Vennligst bekreft mottak av denne meldingen og oppdater leveringsstatus.
-    </p>
+    <p>Vennligst bekreft mottak av denne meldingen og oppdater leveringsstatus.</p>
     <p>Med vennlig hilsen,<br />OneMed Norge AS</p>
   </body>
 </html>
@@ -100,10 +98,7 @@ The core logic resides in `src/renderer/services/emailService.ts`.
         {{/each}}
       </tbody>
     </table>
-    <p>
-      Please confirm receipt of this message and provide updated delivery
-      status.
-    </p>
+    <p>Please confirm receipt of this message and provide updated delivery status.</p>
     <p>Kind regards,<br />OneMed Norge AS</p>
   </body>
 </html>

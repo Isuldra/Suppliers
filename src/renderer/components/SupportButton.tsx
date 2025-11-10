@@ -1,20 +1,20 @@
-import React, { useState } from "react";
+import React, { useState } from 'react';
 
 interface SupportButtonProps {
   className?: string;
 }
 
-const SupportButton: React.FC<SupportButtonProps> = ({ className = "" }) => {
+const SupportButton: React.FC<SupportButtonProps> = ({ className = '' }) => {
   const [showTooltip, setShowTooltip] = useState(false);
 
   const handleSupportClick = () => {
-    const email = "andreas.elvethun@onemed.com";
-    const subject = "Supplier Reminder Pro Support";
+    const email = 'andreas.elvethun@onemed.com';
+    const subject = 'Supplier Reminder Pro Support';
 
     // Use the electron API to open the email client
     if (window.electron) {
       window.electron.send(
-        "openExternalLink",
+        'openExternalLink',
         `mailto:${email}?subject=${encodeURIComponent(subject)}`
       );
     } else {

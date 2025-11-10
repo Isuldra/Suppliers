@@ -168,19 +168,16 @@ npm run release:github
 All releases contain:
 
 1. **NSIS Installer** (`OneMed SupplyChain-{version}-setup.exe`)
-
    - Full installer for Windows
    - Supports silent installation
    - Provides update capabilities
 
 2. **Portable Executable** (`OneMed SupplyChain-Portable.exe`)
-
    - Single-file executable
    - No installation required
    - Simple distribution
 
 3. **Update Metadata** (`latest.yml`, `app-update.yml`)
-
    - Used by `electron-updater`
    - Contains version, hash, size
    - Served from Cloudflare Pages

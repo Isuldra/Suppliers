@@ -1,11 +1,11 @@
-import fs from "fs";
-import path from "path";
-import { execSync } from "child_process";
-import crypto from "crypto";
+import fs from 'fs';
+import path from 'path';
+import { execSync } from 'child_process';
+import crypto from 'crypto';
 
 const __dirname = path.dirname(new URL(import.meta.url).pathname);
-const releaseDir = path.join(__dirname, "..", "release");
-const pagesDir = path.join(__dirname, "..", "docs", "updates");
+const releaseDir = path.join(__dirname, '..', 'release');
+const pagesDir = path.join(__dirname, '..', 'docs', 'updates');
 
 // Create updates directory
 if (!fs.existsSync(pagesDir)) {
@@ -13,9 +13,7 @@ if (!fs.existsSync(pagesDir)) {
 }
 
 // Get version from package.json
-const packageJson = JSON.parse(
-  fs.readFileSync(path.join(__dirname, "..", "package.json"), "utf8")
-);
+const packageJson = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'package.json'), 'utf8'));
 const version = packageJson.version;
 
 console.log(`Deploying version ${version} to GitHub Pages...`);
@@ -23,7 +21,7 @@ console.log(`Deploying version ${version} to GitHub Pages...`);
 // Copy release files to pages directory
 const files = fs.readdirSync(releaseDir);
 const releaseFiles = files.filter(
-  (f) => f.endsWith(".exe") || f.endsWith(".zip") || f.endsWith(".yml")
+  (f) => f.endsWith('.exe') || f.endsWith('.zip') || f.endsWith('.yml')
 );
 
 console.log(`Found ${releaseFiles.length} release files:`);
@@ -35,18 +33,13 @@ releaseFiles.forEach((file) => {
 });
 
 // Generate latest.json for auto-updater
-const portableFile = releaseFiles.find((f) => f.includes("Portable"));
-const nsisFile = releaseFiles.find(
-  (f) => f.endsWith(".exe") && !f.includes("Portable")
-);
+const portableFile = releaseFiles.find((f) => f.includes('Portable'));
+const nsisFile = releaseFiles.find((f) => f.endsWith('.exe') && !f.includes('Portable'));
 
 if (portableFile) {
   const filePath = path.join(pagesDir, portableFile);
   const fileBuffer = fs.readFileSync(filePath);
-  const sha512 = crypto
-    .createHash("sha512")
-    .update(fileBuffer)
-    .digest("base64");
+  const sha512 = crypto.createHash('sha512').update(fileBuffer).digest('base64');
   const size = fileBuffer.length;
 
   const latestJson = {
@@ -63,20 +56,14 @@ if (portableFile) {
     releaseDate: new Date().toISOString(),
   };
 
-  fs.writeFileSync(
-    path.join(pagesDir, "latest.json"),
-    JSON.stringify(latestJson, null, 2)
-  );
-  console.log("Success: Generated latest.json for portable updates");
+  fs.writeFileSync(path.join(pagesDir, 'latest.json'), JSON.stringify(latestJson, null, 2));
+  console.log('Success: Generated latest.json for portable updates');
 }
 
 if (nsisFile) {
   const filePath = path.join(pagesDir, nsisFile);
   const fileBuffer = fs.readFileSync(filePath);
-  const sha512 = crypto
-    .createHash("sha512")
-    .update(fileBuffer)
-    .digest("base64");
+  const sha512 = crypto.createHash('sha512').update(fileBuffer).digest('base64');
   const size = fileBuffer.length;
 
   const appUpdateJson = {
@@ -93,11 +80,8 @@ if (nsisFile) {
     releaseDate: new Date().toISOString(),
   };
 
-  fs.writeFileSync(
-    path.join(pagesDir, "app-update.json"),
-    JSON.stringify(appUpdateJson, null, 2)
-  );
-  console.log("Success: Generated app-update.json for NSIS updates");
+  fs.writeFileSync(path.join(pagesDir, 'app-update.json'), JSON.stringify(appUpdateJson, null, 2));
+  console.log('Success: Generated app-update.json for NSIS updates');
 }
 
 // Create index.html for manual downloads
@@ -131,9 +115,7 @@ const indexHtml = `<!DOCTYPE html>
     <div class="download">
         <h3>ZIP Archive</h3>
         <p>Arkiv med alle filer</p>
-        <a href="${releaseFiles.find((f) =>
-          f.endsWith(".zip")
-        )}">Last ned ZIP</a>
+        <a href="${releaseFiles.find((f) => f.endsWith('.zip'))}">Last ned ZIP</a>
     </div>
     
     <hr>
@@ -141,13 +123,11 @@ const indexHtml = `<!DOCTYPE html>
 </body>
 </html>`;
 
-fs.writeFileSync(path.join(pagesDir, "index.html"), indexHtml);
-console.log("Success: Generated index.html for manual downloads");
+fs.writeFileSync(path.join(pagesDir, 'index.html'), indexHtml);
+console.log('Success: Generated index.html for manual downloads');
 
-console.log("\nGitHub Pages deployment ready!");
-console.log("Next steps:");
-console.log("1. Commit and push the docs/updates/ directory");
-console.log("2. Enable GitHub Pages in repository settings");
-console.log(
-  "3. Update auto-updater to use: https://isuldra.github.io/Suppliers/"
-);
+console.log('\nGitHub Pages deployment ready!');
+console.log('Next steps:');
+console.log('1. Commit and push the docs/updates/ directory');
+console.log('2. Enable GitHub Pages in repository settings');
+console.log('3. Update auto-updater to use: https://isuldra.github.io/Suppliers/');

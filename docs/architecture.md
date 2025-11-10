@@ -197,27 +197,24 @@ interface ExcelData {
 
 ```typescript
 // Database operations
-ipcMain.handle("saveOrdersToDatabase", handleSaveOrders);
-ipcMain.handle("getSuppliers", handleGetSuppliers);
-ipcMain.handle("getOutstandingOrders", handleGetOutstandingOrders);
-ipcMain.handle(
-  "getSuppliersWithOutstandingOrders",
-  handleGetSuppliersWithOutstandingOrders
-);
+ipcMain.handle('saveOrdersToDatabase', handleSaveOrders);
+ipcMain.handle('getSuppliers', handleGetSuppliers);
+ipcMain.handle('getOutstandingOrders', handleGetOutstandingOrders);
+ipcMain.handle('getSuppliersWithOutstandingOrders', handleGetSuppliersWithOutstandingOrders);
 
 // Email operations
-ipcMain.handle("sendEmail", handleSendEmail);
-ipcMain.handle("recordEmailSent", handleRecordEmailSent);
+ipcMain.handle('sendEmail', handleSendEmail);
+ipcMain.handle('recordEmailSent', handleRecordEmailSent);
 
 // File operations
-ipcMain.handle("selectFile", handleSelectFile);
+ipcMain.handle('selectFile', handleSelectFile);
 ```
 
 ### Preload API
 
 ```typescript
 // Exposed to renderer process
-contextBridge.exposeInMainWorld("electron", {
+contextBridge.exposeInMainWorld('electron', {
   saveOrdersToDatabase: (fileBuffer: ArrayBuffer) => Promise<boolean>,
   getSuppliers: () => Promise<string[]>,
   getOutstandingOrders: (supplier: string) => Promise<Order[]>,

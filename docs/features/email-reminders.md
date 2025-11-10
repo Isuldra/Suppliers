@@ -89,13 +89,13 @@ const handleSendTrigger = async (emailData) => {
         emailPayload.subject,
         emailData.orders.map((o) => o.id) // Assuming order IDs are needed
       );
-      toast.success("Email draft opened in your client");
+      toast.success('Email draft opened in your client');
     } else {
       toast.error(`Failed to open email client: ${result.error}`);
     }
   } catch (error) {
-    console.error("Error triggering email:", error);
-    toast.error("Could not open email client");
+    console.error('Error triggering email:', error);
+    toast.error('Could not open email client');
   }
 };
 ```

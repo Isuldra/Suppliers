@@ -3,19 +3,19 @@
 // This script tests if SQLite dependencies are working correctly
 // without rebuilding, by attempting to create a test database
 
-import { exec } from "child_process";
-import fs from "fs";
-import path from "path";
-import { fileURLToPath } from "url";
+import { exec } from 'child_process';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const rootDir = path.join(__dirname, "..");
+const rootDir = path.join(__dirname, '..');
 
-console.log("Testing SQLite dependencies...");
+console.log('Testing SQLite dependencies...');
 
 // Write a test script
-const testScriptPath = path.join(rootDir, "scripts", "sqlite-test.js");
+const testScriptPath = path.join(rootDir, 'scripts', 'sqlite-test.js');
 fs.writeFileSync(
   testScriptPath,
   `
@@ -58,22 +58,18 @@ try {
 );
 
 // Execute the test script
-exec(
-  "node scripts/sqlite-test.js",
-  { cwd: rootDir },
-  (error, stdout, stderr) => {
-    if (error) {
-      console.error(`Error: ${error.message}`);
-      console.error(stderr);
-      console.log("\nSQLite dependencies test FAILED!");
-      console.log(
-        "You may need to modify the build configuration or try using `npm rebuild` with the correct tools installed."
-      );
-      process.exit(1);
-    }
-
-    console.log(stdout);
-    console.log("\nSQLite dependencies test PASSED!");
-    console.log("You can proceed with building for your work PC.");
+exec('node scripts/sqlite-test.js', { cwd: rootDir }, (error, stdout, stderr) => {
+  if (error) {
+    console.error(`Error: ${error.message}`);
+    console.error(stderr);
+    console.log('\nSQLite dependencies test FAILED!');
+    console.log(
+      'You may need to modify the build configuration or try using `npm rebuild` with the correct tools installed.'
+    );
+    process.exit(1);
   }
-);
+
+  console.log(stdout);
+  console.log('\nSQLite dependencies test PASSED!');
+  console.log('You can proceed with building for your work PC.');
+});

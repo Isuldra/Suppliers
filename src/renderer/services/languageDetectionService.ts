@@ -4,31 +4,31 @@
 const mapSystemLanguageToAppLanguage = (systemLang: string): string => {
   const languageMap: Record<string, string> = {
     // Norwegian variants
-    nb: "no",
-    nn: "no",
-    no: "no",
-    "nb-NO": "no",
-    "nn-NO": "no",
-    "no-NO": "no",
+    nb: 'no',
+    nn: 'no',
+    no: 'no',
+    'nb-NO': 'no',
+    'nn-NO': 'no',
+    'no-NO': 'no',
 
     // Swedish
-    sv: "se",
-    "sv-SE": "se",
+    sv: 'se',
+    'sv-SE': 'se',
 
     // Danish
-    da: "da",
-    "da-DK": "da",
+    da: 'da',
+    'da-DK': 'da',
 
     // Finnish
-    fi: "fi",
-    "fi-FI": "fi",
+    fi: 'fi',
+    'fi-FI': 'fi',
 
     // English
-    en: "en",
-    "en-US": "en",
-    "en-GB": "en",
-    "en-CA": "en",
-    "en-AU": "en",
+    en: 'en',
+    'en-US': 'en',
+    'en-GB': 'en',
+    'en-CA': 'en',
+    'en-AU': 'en',
   };
 
   // Try full match first (e.g., 'nb-NO')
@@ -37,8 +37,8 @@ const mapSystemLanguageToAppLanguage = (systemLang: string): string => {
   }
 
   // Try base language (e.g., 'nb' from 'nb-NO')
-  const baseLang = systemLang.split("-")[0];
-  return languageMap[baseLang] || "en"; // Default to English
+  const baseLang = systemLang.split('-')[0];
+  return languageMap[baseLang] || 'en'; // Default to English
 };
 
 /**
@@ -49,8 +49,8 @@ const mapSystemLanguageToAppLanguage = (systemLang: string): string => {
  * Resets language selection to follow system language
  */
 export const resetLanguageToSystem = async (): Promise<string> => {
-  localStorage.removeItem("userSelectedLanguage");
-  localStorage.removeItem("i18nextLng");
+  localStorage.removeItem('userSelectedLanguage');
+  localStorage.removeItem('i18nextLng');
   return await detectAppLanguage();
 };
 
@@ -61,43 +61,37 @@ export const resetLanguageToSystem = async (): Promise<string> => {
 export const detectAppLanguage = async (): Promise<string> => {
   try {
     // Check if user has manually selected a language (not auto-detected)
-    const savedLanguage = localStorage.getItem("i18nextLng");
-    const hasUserSelectedLanguage = localStorage.getItem(
-      "userSelectedLanguage"
-    );
+    const savedLanguage = localStorage.getItem('i18nextLng');
+    const hasUserSelectedLanguage = localStorage.getItem('userSelectedLanguage');
 
     if (
       savedLanguage &&
-      hasUserSelectedLanguage === "true" &&
-      ["no", "se", "da", "fi", "en"].includes(savedLanguage)
+      hasUserSelectedLanguage === 'true' &&
+      ['no', 'se', 'da', 'fi', 'en'].includes(savedLanguage)
     ) {
-      console.log("Using user-selected language preference:", savedLanguage);
+      console.log('Using user-selected language preference:', savedLanguage);
       return savedLanguage;
     }
 
     // Get system language from Electron
     const systemInfo = await window.electron.getSystemLanguage();
-    console.log("System language info:", systemInfo);
+    console.log('System language info:', systemInfo);
 
     // Try to match with preferred languages first
     for (const lang of systemInfo.preferredLanguages) {
       const mappedLang = mapSystemLanguageToAppLanguage(lang);
-      if (["no", "se", "da", "fi", "en"].includes(mappedLang)) {
-        console.log(
-          `Detected app language from system: ${mappedLang} (from ${lang})`
-        );
+      if (['no', 'se', 'da', 'fi', 'en'].includes(mappedLang)) {
+        console.log(`Detected app language from system: ${mappedLang} (from ${lang})`);
         return mappedLang;
       }
     }
 
     // Fallback to system locale
     const mappedLang = mapSystemLanguageToAppLanguage(systemInfo.systemLocale);
-    console.log(
-      `Using system locale: ${mappedLang} (from ${systemInfo.systemLocale})`
-    );
+    console.log(`Using system locale: ${mappedLang} (from ${systemInfo.systemLocale})`);
     return mappedLang;
   } catch (error) {
-    console.error("Error detecting system language:", error);
-    return "no"; // Default to Norwegian for Norwegian users
+    console.error('Error detecting system language:', error);
+    return 'no'; // Default to Norwegian for Norwegian users
   }
 };

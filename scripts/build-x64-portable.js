@@ -3,14 +3,14 @@
 // This script builds a Windows x64 portable version specifically for work PCs
 // without admin rights
 
-import { exec } from "child_process";
-import fs from "fs";
-import path from "path";
-import { fileURLToPath } from "url";
+import { exec } from 'child_process';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const rootDir = path.join(__dirname, "..");
+const rootDir = path.join(__dirname, '..');
 
 // Helper to run commands
 const runCommand = (command) => {
@@ -31,17 +31,17 @@ const runCommand = (command) => {
 
 async function main() {
   try {
-    console.log("Starting Windows x64 portable build...");
+    console.log('Starting Windows x64 portable build...');
 
     // 1. Clean environment
-    await runCommand("rm -rf node_modules dist release");
+    await runCommand('rm -rf node_modules dist release');
 
     // 2. Install dependencies
-    await runCommand("npm install");
+    await runCommand('npm install');
 
     // 3. Modify package.json to ensure correct build settings
-    const packageJsonPath = path.join(rootDir, "package.json");
-    const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, "utf8"));
+    const packageJsonPath = path.join(rootDir, 'package.json');
+    const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
 
     // Ensure we don't rebuild native modules
     if (packageJson.build) {
@@ -49,42 +49,42 @@ async function main() {
 
       // Ensure portable settings are correct
       if (packageJson.build.portable) {
-        packageJson.build.portable.requestExecutionLevel = "user";
+        packageJson.build.portable.requestExecutionLevel = 'user';
       }
 
       // Force x64 architecture for all Windows targets
       if (packageJson.build.win) {
         packageJson.build.win.target = [
           {
-            target: "portable",
-            arch: ["x64"],
+            target: 'portable',
+            arch: ['x64'],
           },
         ];
       }
 
       // Add all node_modules to included files
-      packageJson.build.files = ["dist/**/*", "node_modules/**/*"];
+      packageJson.build.files = ['dist/**/*', 'node_modules/**/*'];
 
       // Set asar to false to avoid packaging issues with native modules
       packageJson.build.asar = false;
 
       // Update main entry point
-      packageJson.main = "dist/main/main-entry.js";
+      packageJson.main = 'dist/main/main-entry.js';
     }
 
     // Write the updated package.json
     fs.writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2));
-    console.log("Updated package.json for x64 portable build");
+    console.log('Updated package.json for x64 portable build');
 
     // 4. Create database adapter
-    console.log("Creating database adapter module");
+    console.log('Creating database adapter module');
 
-    const mainDir = path.join(rootDir, "src", "main");
-    const servicesDir = path.join(rootDir, "src", "services");
+    const mainDir = path.join(rootDir, 'src', 'main');
+    const servicesDir = path.join(rootDir, 'src', 'services');
     fs.mkdirSync(mainDir, { recursive: true });
     fs.mkdirSync(servicesDir, { recursive: true });
 
-    const dbAdapterPath = path.join(mainDir, "databaseAdapter.js");
+    const dbAdapterPath = path.join(mainDir, 'databaseAdapter.js');
     fs.writeFileSync(
       dbAdapterPath,
       `
@@ -154,10 +154,7 @@ export function getSqliteDatabase() {
     );
 
     // 5. Create database service adapter
-    const dbServiceAdapterPath = path.join(
-      servicesDir,
-      "databaseServiceAdapter.js"
-    );
+    const dbServiceAdapterPath = path.join(servicesDir, 'databaseServiceAdapter.js');
     fs.writeFileSync(
       dbServiceAdapterPath,
       `
@@ -342,7 +339,7 @@ export { databaseService };
     );
 
     // 6. Create database IPC module
-    const dbModulePath = path.join(mainDir, "database.js");
+    const dbModulePath = path.join(mainDir, 'database.js');
     fs.writeFileSync(
       dbModulePath,
       `
@@ -433,7 +430,7 @@ export function closeDatabaseConnection() {
     );
 
     // 7. Create main entry file
-    const mainEntryPath = path.join(mainDir, "main-entry.js");
+    const mainEntryPath = path.join(mainDir, 'main-entry.js');
     fs.writeFileSync(
       mainEntryPath,
       `
@@ -548,41 +545,33 @@ ipcMain.handle(
     );
 
     // 8. Build the application
-    console.log("Building the application...");
-    await runCommand("npm run build");
+    console.log('Building the application...');
+    await runCommand('npm run build');
 
     // 9. Copy our custom files to the dist directory
-    const distMainDir = path.join(rootDir, "dist", "main");
-    const distServicesDir = path.join(rootDir, "dist", "services");
+    const distMainDir = path.join(rootDir, 'dist', 'main');
+    const distServicesDir = path.join(rootDir, 'dist', 'services');
     fs.mkdirSync(distMainDir, { recursive: true });
     fs.mkdirSync(distServicesDir, { recursive: true });
 
     // Copy our files to the dist directory
-    fs.copyFileSync(
-      dbAdapterPath,
-      path.join(distMainDir, "databaseAdapter.js")
-    );
-    fs.copyFileSync(
-      dbServiceAdapterPath,
-      path.join(distServicesDir, "databaseServiceAdapter.js")
-    );
-    fs.copyFileSync(dbModulePath, path.join(distMainDir, "database.js"));
-    fs.copyFileSync(mainEntryPath, path.join(distMainDir, "main-entry.js"));
+    fs.copyFileSync(dbAdapterPath, path.join(distMainDir, 'databaseAdapter.js'));
+    fs.copyFileSync(dbServiceAdapterPath, path.join(distServicesDir, 'databaseServiceAdapter.js'));
+    fs.copyFileSync(dbModulePath, path.join(distMainDir, 'database.js'));
+    fs.copyFileSync(mainEntryPath, path.join(distMainDir, 'main-entry.js'));
 
     // 10. Create the portable build
-    await runCommand("npx electron-builder --win portable --x64");
+    await runCommand('npx electron-builder --win portable --x64');
 
-    console.log("\n===============================");
-    console.log("WINDOWS X64 PORTABLE BUILD COMPLETED!");
-    console.log("===============================");
-    console.log("Your portable application is ready in the release/ folder.");
-    console.log("IMPORTANT: You need to copy the ENTIRE win-unpacked folder,");
-    console.log("not just the EXE file, to your work PC.");
-    console.log(
-      "---------------------------------------------------------------"
-    );
+    console.log('\n===============================');
+    console.log('WINDOWS X64 PORTABLE BUILD COMPLETED!');
+    console.log('===============================');
+    console.log('Your portable application is ready in the release/ folder.');
+    console.log('IMPORTANT: You need to copy the ENTIRE win-unpacked folder,');
+    console.log('not just the EXE file, to your work PC.');
+    console.log('---------------------------------------------------------------');
   } catch (error) {
-    console.error("Failed to build Windows x64 portable version:", error);
+    console.error('Failed to build Windows x64 portable version:', error);
     process.exit(1);
   }
 }

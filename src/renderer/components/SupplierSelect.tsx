@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useMemo } from "react";
-import { useTranslation } from "react-i18next";
-import { ExcelData } from "../types/ExcelData";
+import React, { useState, useEffect, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
+import { ExcelData } from '../types/ExcelData';
 
 interface SupplierSelectProps {
   onSupplierSelected: (supplier: string) => void;
@@ -18,10 +18,8 @@ const SupplierSelect: React.FC<SupplierSelectProps> = ({
   selectedPlanner,
 }) => {
   const { t } = useTranslation();
-  const [searchTerm, setSearchTerm] = useState("");
-  const [selectedSupplier, setSelectedSupplier] = useState(
-    currentSupplier || ""
-  );
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedSupplier, setSelectedSupplier] = useState(currentSupplier || '');
 
   // Get suppliers based on selected planner and weekday, filtered to only show those with outstanding orders
   const [suppliers, setSuppliers] = useState<string[]>([]);
@@ -57,18 +55,16 @@ const SupplierSelect: React.FC<SupplierSelectProps> = ({
         const outstandingOrders = await window.electron.getAllOrders();
 
         // Filter to only include suppliers that have outstanding orders (same logic as BulkSupplierSelect)
-        const suppliersWithOutstandingOrders = weekdaySuppliers.filter(
-          (supplier: string) => {
-            const outstandingCount = outstandingOrders.filter(
-              (order) => order.supplier === supplier
-            ).length;
-            return outstandingCount > 0;
-          }
-        );
+        const suppliersWithOutstandingOrders = weekdaySuppliers.filter((supplier: string) => {
+          const outstandingCount = outstandingOrders.filter(
+            (order) => order.supplier === supplier
+          ).length;
+          return outstandingCount > 0;
+        });
 
         setSuppliers(suppliersWithOutstandingOrders);
       } catch (error) {
-        console.error("Error fetching suppliers:", error);
+        console.error('Error fetching suppliers:', error);
         setSuppliers([]);
       } finally {
         setIsLoadingSuppliers(false);
@@ -85,9 +81,7 @@ const SupplierSelect: React.FC<SupplierSelectProps> = ({
     }
 
     const searchLower = searchTerm.toLowerCase();
-    return suppliers.filter((supplier: string) =>
-      supplier.toLowerCase().includes(searchLower)
-    );
+    return suppliers.filter((supplier: string) => supplier.toLowerCase().includes(searchLower));
   }, [suppliers, searchTerm]);
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -102,10 +96,7 @@ const SupplierSelect: React.FC<SupplierSelectProps> = ({
 
   // Auto-select if there's only one supplier after filtering
   useEffect(() => {
-    if (
-      filteredSuppliers.length === 1 &&
-      filteredSuppliers[0] !== selectedSupplier
-    ) {
+    if (filteredSuppliers.length === 1 && filteredSuppliers[0] !== selectedSupplier) {
       setSelectedSupplier(filteredSuppliers[0]);
       onSupplierSelected(filteredSuppliers[0]);
     }
@@ -113,37 +104,31 @@ const SupplierSelect: React.FC<SupplierSelectProps> = ({
 
   return (
     <div className="w-full">
-      <h2
-        className="text-xl font-bold mb-4 text-neutral"
-        id="supplier-select-heading"
-      >
-        {t("supplierSelect.title")}
+      <h2 className="text-xl font-bold mb-4 text-neutral" id="supplier-select-heading">
+        {t('supplierSelect.title')}
       </h2>
 
       <div
         className="mb-4 p-4 bg-primary-light bg-opacity-10 border border-primary-light rounded-md"
         aria-label={
-          t("supplierSelect.planner") +
-          " " +
+          t('supplierSelect.planner') +
+          ' ' +
           selectedPlanner +
-          " " +
-          t("supplierSelect.selectedWeekday") +
-          " " +
+          ' ' +
+          t('supplierSelect.selectedWeekday') +
+          ' ' +
           selectedWeekday
         }
       >
         <p className="text-primary">
-          <span className="font-medium">{t("supplierSelect.planner")}</span>{" "}
-          {selectedPlanner}
+          <span className="font-medium">{t('supplierSelect.planner')}</span> {selectedPlanner}
         </p>
         <p className="text-primary mt-1">
-          <span className="font-medium">
-            {t("supplierSelect.selectedWeekday")}
-          </span>{" "}
+          <span className="font-medium">{t('supplierSelect.selectedWeekday')}</span>{' '}
           {selectedWeekday}
         </p>
         <p className="text-sm text-neutral-secondary mt-1">
-          {t("supplierSelect.description", {
+          {t('supplierSelect.description', {
             weekday: selectedWeekday?.toLowerCase(),
           })}
         </p>
@@ -152,44 +137,38 @@ const SupplierSelect: React.FC<SupplierSelectProps> = ({
       <div className="mb-6 w-full">
         <div className="flex mb-2 w-full">
           <label htmlFor="supplier-search" className="sr-only">
-            {t("supplierSelect.searchPlaceholder")}
+            {t('supplierSelect.searchPlaceholder')}
           </label>
           <input
             type="text"
             id="supplier-search"
-            placeholder={t("supplierSelect.searchPlaceholder")}
+            placeholder={t('supplierSelect.searchPlaceholder')}
             className="form-control w-full"
             value={searchTerm}
             onChange={handleSearch}
-            aria-label={t("supplierSelect.searchPlaceholder")}
+            aria-label={t('supplierSelect.searchPlaceholder')}
             aria-controls="supplier-list"
           />
         </div>
 
         <div className="bg-neutral-light p-4 rounded-md shadow-sm w-full">
           {isLoadingSuppliers ? (
-            <p
-              className="text-sm text-neutral-secondary mb-2"
-              aria-live="polite"
-            >
-              {t("supplierSelect.loadingSuppliers")}
+            <p className="text-sm text-neutral-secondary mb-2" aria-live="polite">
+              {t('supplierSelect.loadingSuppliers')}
             </p>
           ) : (
-            <p
-              className="text-sm text-neutral-secondary mb-2"
-              aria-live="polite"
-            >
-              {filteredSuppliers.length} {t("supplierSelect.suppliersFound")}
+            <p className="text-sm text-neutral-secondary mb-2" aria-live="polite">
+              {filteredSuppliers.length} {t('supplierSelect.suppliersFound')}
             </p>
           )}
 
           {isLoadingSuppliers ? (
             <p className="text-neutral-secondary italic" aria-live="polite">
-              {t("supplierSelect.loading")}
+              {t('supplierSelect.loading')}
             </p>
           ) : filteredSuppliers.length === 0 ? (
             <p className="text-neutral-secondary italic" aria-live="polite">
-              {t("supplierSelect.noSuppliersFound")}
+              {t('supplierSelect.noSuppliersFound')}
             </p>
           ) : (
             <div
@@ -202,9 +181,7 @@ const SupplierSelect: React.FC<SupplierSelectProps> = ({
                 <button
                   key={supplier}
                   className={`w-full text-left p-3 border-b border-neutral-light hover:bg-neutral-light transition-default ${
-                    selectedSupplier === supplier
-                      ? "bg-primary-light bg-opacity-20"
-                      : ""
+                    selectedSupplier === supplier ? 'bg-primary-light bg-opacity-20' : ''
                   }`}
                   onClick={() => handleSupplierSelect(supplier)}
                   role="option"
