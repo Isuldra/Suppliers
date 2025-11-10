@@ -6,6 +6,7 @@ decisions:
   - "Strukturpolicy: src/ (kildekode), scripts/ (build/deploy), docs/ (dokumentasjon), resources/ (statiske assets), .github/ (CI/CD)"
   - "Root-file policy: kun README.md, LICENSE, CONTRIBUTING.md, CODEOWNERS, .editorconfig, .gitignore, .gitattributes, SECURITY.md, package.json, package-lock.json, og nødvendige config-filer (tsconfig.json, vite.config.ts, etc.)"
   - "Kvalitetsporter: ESLint (TS+React), tsc --noEmit, Vitest (test framework), Prettier (hvis/når implementert)"
+  - "tests/ policy: alle testfiler og test-setup under tests/ (1:1 speil av src/)"
   - "Build output locations: dist/ (Vite output), release/ (electron-builder output) - begge gitignored"
   - "Assets konsolideres: ikoner kun i resources/, logos kun i src/renderer/assets/"
 
@@ -40,6 +41,11 @@ completed:
   - "2025-11-10: P4.2 - Dokumentert og organisert scripts-mappen. Opprettet scripts/README.md med beskrivelse av alle 27 scripts. Identifisert 7 deprecated scripts (dokumentert, ikke slettet). Flyttet troubleshoot-native-modules.md til docs/development/. Commit: bafc291"
   - "2025-11-10: P4.3 - Opprettet .cursorignore for AI context optimalisering. Ekskluderer build outputs, dependencies, store binaries, coverage reports, cache-filer og temporary files. Commit: 770f097"
   - "2025-11-10: P4.4 - Rename application fra 'OneMed SupplyChain' til 'Pulse'. Oppdatert package.json (productName, description, shortcutName), alle kildefiler (main, renderer, locales), build scripts, installer.nsh, og HTML-filer. Artifact names endret til 'Pulse'. Commits: ce89919, 9c5dbe0"
+  - "2025-11-10: License set to ISC; LICENSE updated with copyright Andreas Elvethun. Commit: 08e5993"
+  - "2025-11-10: Test setup moved to tests/; vitest.config.ts updated to point to tests/setup.ts. Commit: 08e5993"
+  - "2025-11-10: CODEOWNERS added with @AndreasElvethun. Commit: 517ab19"
+  - "2025-11-10: Root config files added: .editorconfig, .gitattributes. SECURITY.md moved from docs/ to root. Commits: 3a020a5"
+  - "2025-11-10: Removed emojis from all scripts (15+ files), documentation (CHANGELOG.md, backlog.md), package.json, locale files, and HTML templates. Commits: f46430c, 525aaf9"
 
 in_progress: []
 
