@@ -37,6 +37,7 @@ completed:
   - "2025-11-10: P2.1 - Slettet 7 duplikate temp-icon-filer fra resources/. Commit: 9dfb334"
   - "2025-11-10: P2.2 - Konsolidert app icons til resources/. Fjernet supplychain.png og supplychain.ico fra root. Oppdatert src/main/index.ts. Commit: 58c11b1"
   - "2025-11-10: P4.1 - Konsolidert email templates til src/services/. Slettet duplikat fra src/renderer/services/emailTemplates/. Build script bruker allerede korrekt path. Email template build testet og fungerer."
+  - "2025-11-10: P4.2 - Dokumentert og organisert scripts-mappen. Opprettet scripts/README.md med beskrivelse av alle 27 scripts. Identifisert 7 deprecated scripts (dokumentert, ikke slettet). Flyttet troubleshoot-native-modules.md til docs/development/. Commit: bafc291"
 
 in_progress: []
 
