@@ -882,7 +882,7 @@ export class EmailService {
       );
       const result = await window.electron.sendEmailAutomatically({
         to: recipientEmail,
-        subject: "🧪 CSS Styling Test (Robust HTML+COM) - OneMed SupplyChain",
+        subject: "🧪 CSS Styling Test (Robust HTML+COM) - Pulse",
         html: testHtml,
       });
 

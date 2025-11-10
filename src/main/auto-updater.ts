@@ -174,7 +174,7 @@ function setupPortableUpdater() {
       .showMessageBox({
         type: "info",
         title: "Oppdatering tilgjengelig",
-        message: `En ny versjon (${info.version}) av OneMed SupplyChain er tilgjengelig`,
+        message: `En ny versjon (${info.version}) av Pulse er tilgjengelig`,
         detail:
           "Oppdateringen lastes ned automatisk. Du kan installere den manuelt når nedlastingen er ferdig.",
         buttons: ["OK", "Åpne nedlastingsside"],
@@ -292,7 +292,7 @@ function getPortableUpdatePath(): string {
     updateLogger.warn("Could not create updates directory:", error);
   }
 
-  return path.join(updatesDir, "OneMed SupplyChain-Portable.exe");
+  return path.join(updatesDir, "Pulse-Portable.exe");
 }
 
 /**
@@ -434,7 +434,7 @@ function setupStandardUpdater() {
     dialog.showMessageBox({
       type: "info",
       title: "Oppdatering tilgjengelig",
-      message: `En ny versjon (${info.version}) av OneMed SupplyChain er tilgjengelig`,
+      message: `En ny versjon (${info.version}) av Pulse er tilgjengelig`,
       detail: "Oppdateringen lastes ned og installeres automatisk...",
       buttons: ["OK"],
     });

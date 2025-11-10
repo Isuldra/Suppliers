@@ -53,16 +53,16 @@ async function createRelease() {
         owner,
         repo,
         tag_name: tagName,
-        name: `OneMed SupplyChain v${version}`,
-        body: `## OneMed SupplyChain v${version}
+        name: `Pulse v${version}`,
+        body: `## Pulse v${version}
 
 ### Changes
 - Auto-update system improvements
 - Bug fixes and performance enhancements
 
 ### Downloads
-- **Windows Installer**: OneMed SupplyChain-${version}-setup.exe
-- **Portable Version**: OneMed SupplyChain-Portable.exe
+- **Windows Installer**: Pulse-${version}-setup.exe
+- **Portable Version**: Pulse-Portable.exe
 
 ### Installation
 1. Download the appropriate file for your system
@@ -81,21 +81,18 @@ async function createRelease() {
     // Upload assets
     const assetsToUpload = [
       {
-        name: `OneMed.SupplyChain-${version}-setup.exe`,
-        path: path.join(releaseDir, `OneMed SupplyChain-${version}-setup.exe`),
+        name: `Pulse-${version}-setup.exe`,
+        path: path.join(releaseDir, `Pulse-${version}-setup.exe`),
         contentType: "application/octet-stream",
       },
       {
-        name: `OneMed.SupplyChain-${version}-setup.exe.blockmap`,
-        path: path.join(
-          releaseDir,
-          `OneMed SupplyChain-${version}-setup.exe.blockmap`
-        ),
+        name: `Pulse-${version}-setup.exe.blockmap`,
+        path: path.join(releaseDir, `Pulse-${version}-setup.exe.blockmap`),
         contentType: "application/octet-stream",
       },
       {
-        name: "OneMed.SupplyChain-Portable.exe",
-        path: path.join(releaseDir, "OneMed SupplyChain-Portable.exe"),
+        name: "Pulse-Portable.exe",
+        path: path.join(releaseDir, "Pulse-Portable.exe"),
         contentType: "application/octet-stream",
       },
       {
