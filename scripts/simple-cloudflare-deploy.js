@@ -17,7 +17,7 @@ const packageJson = JSON.parse(
 );
 const version = packageJson.version;
 
-console.log(`🚀 Setting up Cloudflare Pages for version ${version}...`);
+console.log(`Setting up Cloudflare Pages for version ${version}...`);
 
 // Create a simple index.html for testing
 const indexHtml = `<!DOCTYPE html>
@@ -123,7 +123,7 @@ const indexHtml = `<!DOCTYPE html>
         
         <div class="content">
             <div class="status">
-                <h3>✅ Cloudflare Pages er konfigurert!</h3>
+                <h3>Cloudflare Pages er konfigurert!</h3>
                 <p>Automatiske oppdateringer er nå tilgjengelige via Cloudflare Pages.</p>
             </div>
             
@@ -141,7 +141,7 @@ const indexHtml = `<!DOCTYPE html>
 </html>`;
 
 fs.writeFileSync(path.join(cloudflareDir, "index.html"), indexHtml);
-console.log("✅ Generated index.html");
+console.log("Success: Generated index.html");
 
 // Create _redirects file for Cloudflare Pages
 const redirectsContent = `# Cloudflare Pages redirects
@@ -154,12 +154,12 @@ const redirectsContent = `# Cloudflare Pages redirects
 `;
 
 fs.writeFileSync(path.join(cloudflareDir, "_redirects"), redirectsContent);
-console.log("✅ Generated _redirects for Cloudflare Pages");
+console.log("Success: Generated _redirects for Cloudflare Pages");
 
-console.log("\n🎉 Cloudflare Pages setup complete!");
+console.log("\nCloudflare Pages setup complete!");
 console.log(
-  "📝 Your site should now be available at: https://suppliers-anx.pages.dev/"
+  "Your site should now be available at: https://suppliers-anx.pages.dev/"
 );
 console.log(
-  "📝 Update files will be generated automatically when you create releases."
+  "Update files will be generated automatically when you create releases."
 );

@@ -18,7 +18,7 @@ const packageJson = JSON.parse(
 );
 const version = packageJson.version;
 
-console.log(`🚀 Deploying version ${version} to GitHub Pages...`);
+console.log(`Deploying version ${version} to GitHub Pages...`);
 
 // Copy release files to pages directory
 const files = fs.readdirSync(releaseDir);
@@ -26,12 +26,12 @@ const releaseFiles = files.filter(
   (f) => f.endsWith(".exe") || f.endsWith(".zip") || f.endsWith(".yml")
 );
 
-console.log(`📁 Found ${releaseFiles.length} release files:`);
+console.log(`Found ${releaseFiles.length} release files:`);
 releaseFiles.forEach((file) => {
   const src = path.join(releaseDir, file);
   const dest = path.join(pagesDir, file);
   fs.copyFileSync(src, dest);
-  console.log(`  ✅ Copied ${file}`);
+  console.log(`  Success: Copied ${file}`);
 });
 
 // Generate latest.json for auto-updater
@@ -67,7 +67,7 @@ if (portableFile) {
     path.join(pagesDir, "latest.json"),
     JSON.stringify(latestJson, null, 2)
   );
-  console.log("✅ Generated latest.json for portable updates");
+  console.log("Success: Generated latest.json for portable updates");
 }
 
 if (nsisFile) {
@@ -97,7 +97,7 @@ if (nsisFile) {
     path.join(pagesDir, "app-update.json"),
     JSON.stringify(appUpdateJson, null, 2)
   );
-  console.log("✅ Generated app-update.json for NSIS updates");
+  console.log("Success: Generated app-update.json for NSIS updates");
 }
 
 // Create index.html for manual downloads
@@ -117,19 +117,19 @@ const indexHtml = `<!DOCTYPE html>
     <p>Velg nedlastingsformat:</p>
     
     <div class="download">
-        <h3>📦 Portable Version</h3>
+        <h3>Portable Version</h3>
         <p>Kjør direkte uten installasjon - anbefalt for testing</p>
         <a href="${portableFile}">Last ned Portable (.exe)</a>
     </div>
     
     <div class="download">
-        <h3>🔧 NSIS Installer</h3>
+        <h3>NSIS Installer</h3>
         <p>Full installasjon med automatiske oppdateringer</p>
         <a href="${nsisFile}">Last ned Installer (.exe)</a>
     </div>
     
     <div class="download">
-        <h3>📁 ZIP Archive</h3>
+        <h3>ZIP Archive</h3>
         <p>Arkiv med alle filer</p>
         <a href="${releaseFiles.find((f) =>
           f.endsWith(".zip")
@@ -142,10 +142,10 @@ const indexHtml = `<!DOCTYPE html>
 </html>`;
 
 fs.writeFileSync(path.join(pagesDir, "index.html"), indexHtml);
-console.log("✅ Generated index.html for manual downloads");
+console.log("Success: Generated index.html for manual downloads");
 
-console.log("\n🎉 GitHub Pages deployment ready!");
-console.log("📝 Next steps:");
+console.log("\nGitHub Pages deployment ready!");
+console.log("Next steps:");
 console.log("1. Commit and push the docs/updates/ directory");
 console.log("2. Enable GitHub Pages in repository settings");
 console.log(
