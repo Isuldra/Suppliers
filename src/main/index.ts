@@ -632,7 +632,7 @@ ipcMain.handle(
         `MIME-Version: 1.0`,
         `Content-Type: text/html; charset=UTF-8`,
         `Content-Transfer-Encoding: 8bit`,
-        `X-Mailer: OneMed SupplyChain`,
+        `X-Mailer: Pulse`,
         ``,
       ].join(EOL);
 
@@ -1554,8 +1554,8 @@ ipcMain.handle("openExternalLink", async (_, url: string) => {
 ipcMain.on("show-about-dialog", () => {
   dialog.showMessageBox({
     type: "info",
-    title: "Om OneMed SupplyChain",
-    message: "OneMed SupplyChain",
+    title: "Om Pulse",
+    message: "Pulse",
     detail: `Versjon: ${app.getVersion()}\nElectron: ${
       process.versions.electron
     }\nNode: ${process.versions.node}\nChrome: ${
@@ -1891,7 +1891,7 @@ ipcMain.handle(
         `MIME-Version: 1.0`,
         `Content-Type: text/html; charset=UTF-8`,
         `Content-Transfer-Encoding: 8bit`,
-        `X-Mailer: OneMed SupplyChain`,
+        `X-Mailer: Pulse`,
         ``,
       ].join(EOL);
 
