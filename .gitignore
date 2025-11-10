@@ -93,9 +93,8 @@ dist/
 out/
 release/
 
-# Large files that shouldn't be in git (except docs/updates/ which uses Git LFS)
+# Large files that shouldn't be in git (distributed via GitHub Releases)
 *.exe
-!docs/updates/*.exe
 *.dmg
 *.pkg
 *.deb
