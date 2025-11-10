@@ -86,17 +86,6 @@ export default defineConfig({
         'electron-updater',
       ],
     },
-    // DO NOT alias 'better-sqlite3' in main process; only alias in preload/renderer
-    resolve: {
-      alias: {
-        'mock-aws-s3': path.resolve(__dirname, 'src/main/shims/mock-aws-s3.js'),
-        'aws-sdk': path.resolve(__dirname, 'src/main/shims/aws-sdk.js'),
-        nock: path.resolve(__dirname, 'src/main/shims/nock.js'),
-        // Do NOT alias 'better-sqlite3' here
-        odbc: path.resolve(__dirname, 'src/main/shims/odbc-shim.js'),
-        sqlite3: path.resolve(__dirname, 'src/main/shims/sqlite3-shim.js'),
-      },
-    },
   },
   preload: {
     build: {
@@ -118,16 +107,6 @@ export default defineConfig({
         },
       },
     },
-    resolve: {
-      alias: {
-        'mock-aws-s3': path.resolve(__dirname, 'src/main/shims/mock-aws-s3.js'),
-        'aws-sdk': path.resolve(__dirname, 'src/main/shims/aws-sdk.js'),
-        nock: path.resolve(__dirname, 'src/main/shims/nock.js'),
-        odbc: path.resolve(__dirname, 'src/main/shims/odbc-shim.js'),
-        sqlite3: path.resolve(__dirname, 'src/main/shims/sqlite3-shim.js'),
-        'better-sqlite3': path.resolve(__dirname, 'src/main/shims/better-sqlite3-shim.js'),
-      },
-    },
   },
   renderer: {
     root: path.resolve(__dirname, 'src/renderer'),
@@ -144,12 +123,6 @@ export default defineConfig({
       alias: {
         '@': path.resolve(__dirname, 'src/renderer'),
         '@services': path.resolve(__dirname, 'src/services'),
-        'mock-aws-s3': path.resolve(__dirname, 'src/main/shims/mock-aws-s3.js'),
-        'aws-sdk': path.resolve(__dirname, 'src/main/shims/aws-sdk.js'),
-        nock: path.resolve(__dirname, 'src/main/shims/nock.js'),
-        odbc: path.resolve(__dirname, 'src/main/shims/odbc-shim.js'),
-        sqlite3: path.resolve(__dirname, 'src/main/shims/sqlite3-shim.js'),
-        'better-sqlite3': path.resolve(__dirname, 'src/main/shims/better-sqlite3-shim.js'),
       },
     },
     plugins: [react()],
