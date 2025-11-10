@@ -30,7 +30,7 @@ Pulse is a desktop application for managing supplier workflows and data. It's bu
 | [CI/CD Pipeline](docs/development/ci-cd-pipeline.md)             | GitHub Actions build setup                                |
 | [Manual Update Process](docs/development/publishing-updates.md)  | How to publish app updates manually                       |
 | [Feature Documentation](docs/features/README.md)                 | Overview of app functionality (email, Excel import, etc.) |
-| [Security Notes](docs/features/security-features.md)             | Technical security measures                               |
+| [Security Policy](SECURITY.md)                                   | Security policy and vulnerability reporting               |
 
 ---
 
