@@ -109,7 +109,7 @@
 - [x] **P4.4.1** Beslut om app skal hete "one-med-supplychain-app" eller "Pulse" _(Besluttet: "Pulse")_
 - [x] **P4.4.2** Oppdater `package.json` "name" og/eller "productName" for konsistens _(productName satt til "Pulse", alle referanser oppdatert)_
 - [x] **P4.4.3** Sjekk om endring påvirker build/release scripts _(Scripts oppdatert til å bruke "Pulse" i filnavn)_
-- [ ] **P4.4.4** Commit: "Align package.json naming"
+- [x] **P4.4.4** Commit: "Align package.json naming"
 
 ---
 
