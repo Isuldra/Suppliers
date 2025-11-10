@@ -1,5 +1,84 @@
 # Documentation Changelog
 
+## Versjon 1.3.9: Repository Cleanup & Applikasjonsnavnendring
+
+_Fullført November 2025_
+
+Denne versjonen fokuserer på repository cleanup, kodeorganisering og applikasjonsnavnendring fra "OneMed SupplyChain" til "Pulse".
+
+### 🧹 Repository Cleanup
+
+#### Git Repository Størrelsesreduksjon
+
+- **Fjernet Store Binærfiler**: Slettet 260+ MB med `.exe`-filer fra `docs/updates/` mappen
+- **Backup Opprettet**: Alle fjernede filer sikkerhetskopiert til `backup/exe-files/` mappen
+- **Git Strategi**: Bekreftet GitHub Releases som distribusjonsmetode (ingen Git LFS nødvendig)
+- **Verifisering**: Bekreftet at `dist/` og `release/` mapper er korrekt gitignored
+
+#### Duplikatfiler Fjernet
+
+- **Ikonfiler**: Fjernet 7 duplikate `temp-*.png` ikonfiler fra `resources/` mappen
+- **App Ikoner**: Konsolidert app ikoner (`supplychain.png`, `supplychain.ico`) til `resources/` mappen
+- **Kodeoppdateringer**: Oppdatert `src/main/index.ts` til å referere til konsoliderte ikonstier
+
+#### Kodeorganisering
+
+- **E-postmaler**: Konsolidert e-postmaler til `src/services/emailTemplates/`
+  - Fjernet duplikat mal fra `src/renderer/services/emailTemplates/`
+  - Build script bruker allerede korrekt sti, ingen kodeendringer nødvendig
+- **Scripts Dokumentasjon**: Opprettet omfattende `scripts/README.md` som dokumenterer alle 27 scripts
+  - Kategorisert scripts: Build, Version, Release, Testing, Deployment, Utilities
+  - Identifisert 7 deprecated scripts (dokumentert, ikke slettet)
+  - Flyttet `troubleshoot-native-modules.md` til `docs/development/`
+- **AI Kontekst Optimalisering**: Lagt til `.cursorignore` fil for å ekskludere build artifacts fra AI kontekst
+  - Ekskluderer: `dist/`, `release/`, `node_modules/`, `*.exe`, `*.dll`, `*.pak`, `coverage/`
+
+### 🏷️ Applikasjonsnavnendring
+
+#### Omdøping til "Pulse"
+
+- **Package Konfigurasjon**: Oppdatert `package.json`:
+  - `productName`: Endret fra "OneMed SupplyChain" til "Pulse"
+  - `description`: Oppdatert til "Pulse - Desktop application..."
+  - `shortcutName`: Oppdatert Windows snarveier til "Pulse"
+- **Kildekode Oppdateringer**: Oppdatert alle referanser gjennom hele kodebasen:
+  - Main process filer (`src/main/index.ts`, `src/main/main.ts`, `src/main/auto-updater.ts`)
+  - Renderer komponenter og locales (5 språk: no, en, se, da, fi)
+  - E-postservice headers og meldinger
+- **Build Scripts**: Oppdatert artifact navn:
+  - Installer: `Pulse-{version}-setup.exe` (var `OneMed SupplyChain-{version}-setup.exe`)
+  - Portable: `Pulse-Portable.exe` (var `OneMed SupplyChain-Portable.exe`)
+  - Oppdatert `prepare-cloudflare-release.js`, `create-github-release.js`, `generate-latest-json.js`
+- **Installer Konfigurasjon**: Oppdatert `resources/installer.nsh`:
+  - Registry nøkler endret til å bruke "Pulse"
+  - Skrivebordssnarveier oppdatert
+  - Avinstallerings registry oppføringer oppdatert
+- **HTML Filer**: Oppdatert `docs/updates/index.html` og `docs/updates/404.html`
+
+### 📦 Påvirkning
+
+- **Repository Størrelse**: Redusert med 260+ MB (fjernet store binærfiler)
+- **Kodeorganisering**: Forbedret struktur med konsoliderte maler og dokumenterte scripts
+- **Utvikleropplevelse**: Raskere AI kontekst prosessering med `.cursorignore`
+- **Konsistens**: Enhetlig applikasjonsnavngiving gjennom hele kodebasen
+- **Vedlikeholdbarhet**: Bedre dokumentasjon og organisering
+
+### 🔄 Breaking Changes
+
+- **Artifact Navn**: Build artifacts bruker nå "Pulse" navngiving i stedet for "OneMed SupplyChain"
+  - Eksisterende auto-update URLs må oppdateres
+  - Manuelle installasjoner vil bruke ny navngivingskonvensjon
+- **Windows Registry**: Registry nøkler endret fra "OneMed SupplyChain" til "Pulse"
+  - Kan kreve reinstallasjon for korrekt registry opprydding
+
+### 📝 Tekniske Notater
+
+- Alle cleanup oppgaver sporet i `docs/cleanup/backlog.md` og `docs/cleanup/state.yaml`
+- Commits følger atomisk mønster for enkel rollback hvis nødvendig
+- Ingen funksjonelle endringer - kun organisatoriske og navngivingsoppdateringer
+
+---
+
 ## Version 1.4.0: Dashboard Enhancement & Product Catalog Integration
 
 _Completed November 2025_
