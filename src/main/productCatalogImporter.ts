@@ -26,7 +26,8 @@ export async function parseProductCatalog(buffer: ArrayBuffer): Promise<ImportRe
     log.info('Parsing product catalog Excel file...');
 
     const workbook = new ExcelJS.Workbook();
-    await workbook.xlsx.load(Buffer.from(buffer));
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await workbook.xlsx.load(Buffer.from(new Uint8Array(buffer)) as any);
 
     // Get the first worksheet
     const worksheet = workbook.worksheets[0];
@@ -109,7 +110,8 @@ export async function parseProductCatalogForUpload(buffer: ArrayBuffer): Promise
     log.info('Parsing product catalog for upload...');
 
     const workbook = new ExcelJS.Workbook();
-    await workbook.xlsx.load(Buffer.from(buffer));
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await workbook.xlsx.load(Buffer.from(new Uint8Array(buffer)) as any);
 
     const worksheet = workbook.worksheets[0];
     if (!worksheet) {
