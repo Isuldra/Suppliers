@@ -439,6 +439,8 @@ const MainApp: React.FC<MainAppProps> = ({
       try {
         const version = await window.electron.getAppVersion();
         setAppVersion(version);
+        // Update document title with version
+        document.title = `Pulse v${version}`;
       } catch (error) {
         console.error('Failed to fetch app version:', error);
       }
