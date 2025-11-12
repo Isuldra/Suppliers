@@ -104,6 +104,8 @@ const BulkEmailPreview: React.FC<BulkEmailPreviewProps> = ({
       setIsLoading(true);
       try {
         const allOrders = await window.electron.getAllOrders();
+        console.log('🔍 DEBUG: First order from getAllOrders:', allOrders[0]);
+        console.log('🔍 DEBUG: Does first order have specification?', allOrders[0]?.specification);
         const emailData: EmailPreviewData[] = [];
 
         for (const supplierName of selectedSuppliers) {
@@ -114,6 +116,7 @@ const BulkEmailPreview: React.FC<BulkEmailPreviewProps> = ({
             (order) => order.supplier === supplierName && supplierOrderKeys.has(order.key)
           );
           console.log(`🔵 Filtered orders for ${supplierName}:`, orders.length);
+          console.log('🔍 DEBUG: First filtered order specification:', orders[0]?.specification);
 
           if (orders.length > 0) {
             const language = supplierInfo?.språkKode === 'ENG' ? 'en' : 'no';
