@@ -56,6 +56,7 @@ const BulkSupplierSelect: React.FC<BulkSupplierSelectProps> = ({
   const [excludedOrderLines, setExcludedOrderLines] = useState<Set<string>>(new Set());
   const [userHasManuallySelected, setUserHasManuallySelected] = useState(false);
   const [supplierOrders, setSupplierOrders] = useState<Map<string, ExcelRow[]>>(new Map());
+  const [allDaysMode, setAllDaysMode] = useState(false); // Toggle for all days mode
 
   // Get supplier info from supplierData.json
   const getSupplierInfo = (supplierName: string): SupplierInfo | null => {
@@ -68,33 +69,44 @@ const BulkSupplierSelect: React.FC<BulkSupplierSelectProps> = ({
       : null;
   };
 
-  // Fetch suppliers with outstanding orders for the selected weekday
+  // Fetch suppliers with outstanding orders for the selected weekday or all days
   useEffect(() => {
     const fetchSuppliers = async () => {
       console.log('🟠 BulkSupplierSelect: fetchSuppliers called with:', {
         selectedWeekday,
         selectedPlanner,
+        allDaysMode,
       });
       setIsLoading(true);
       try {
-        // Get imported suppliers from database (Excel data is source of truth)
-        const suppliersResponse = await window.electron.getSuppliersForWeekday(
-          selectedWeekday,
-          selectedPlanner
-        );
-
-        console.log('🟠 Suppliers response:', suppliersResponse);
-
         let weekdaySuppliers: string[] = [];
-        if (
-          suppliersResponse.success &&
-          suppliersResponse.data &&
-          suppliersResponse.data.length > 0
-        ) {
-          // Use imported suppliers from Excel as primary source
-          weekdaySuppliers = suppliersResponse.data;
+
+        if (allDaysMode) {
+          // In "All Days" mode, get ALL suppliers with outstanding orders
+          const allSuppliersResponse = await window.electron.getAllSupplierNames();
+          console.log('🟠 All suppliers response (all days mode):', allSuppliersResponse);
+
+          if (allSuppliersResponse.success && allSuppliersResponse.data) {
+            weekdaySuppliers = allSuppliersResponse.data;
+          }
+        } else {
+          // Get imported suppliers from database for specific weekday (Excel data is source of truth)
+          const suppliersResponse = await window.electron.getSuppliersForWeekday(
+            selectedWeekday,
+            selectedPlanner
+          );
+
+          console.log('🟠 Suppliers response:', suppliersResponse);
+
+          if (
+            suppliersResponse.success &&
+            suppliersResponse.data &&
+            suppliersResponse.data.length > 0
+          ) {
+            // Use imported suppliers from Excel as primary source
+            weekdaySuppliers = suppliersResponse.data;
+          }
         }
-        // No fallback to hardcoded data - Excel is the only source of truth
 
         console.log('🟠 Final weekday suppliers:', weekdaySuppliers);
 
@@ -132,10 +144,10 @@ const BulkSupplierSelect: React.FC<BulkSupplierSelectProps> = ({
       }
     };
 
-    if (selectedWeekday && selectedPlanner) {
+    if ((selectedWeekday && selectedPlanner) || allDaysMode) {
       fetchSuppliers();
     }
-  }, [selectedWeekday, selectedPlanner]);
+  }, [selectedWeekday, selectedPlanner, allDaysMode]);
 
   // Debug effect to track selectedSuppliers prop changes
   useEffect(() => {
@@ -298,9 +310,54 @@ const BulkSupplierSelect: React.FC<BulkSupplierSelectProps> = ({
         </p>
         <p className="text-primary mt-1">
           <span className="font-medium">{t('bulkSupplierSelect.selectedWeekday')}</span>{' '}
-          {selectedWeekday}
+          {allDaysMode ? t('bulkSupplierSelect.allDays') : selectedWeekday}
         </p>
         <p className="text-sm text-neutral-secondary mt-1">{t('bulkSupplierSelect.description')}</p>
+      </div>
+
+      {/* All Days Mode Toggle */}
+      <div className="mb-4 p-4 bg-white/40 backdrop-blur-md rounded-lg border border-white/40">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-lg font-medium text-slate-900 mb-1">
+              {t('bulkSupplierSelect.allDaysMode')}
+            </h3>
+            <p className="text-sm text-slate-700">
+              {t('bulkSupplierSelect.allDaysModeDescription')}
+            </p>
+          </div>
+          <div className="flex items-center space-x-3">
+            <span
+              className={`text-sm font-medium ${
+                !allDaysMode ? 'text-primary' : 'text-neutral-secondary'
+              }`}
+            >
+              {t('bulkSupplierSelect.selectedDay')}
+            </span>
+            <button
+              onClick={() => {
+                setAllDaysMode(!allDaysMode);
+                setUserHasManuallySelected(false); // Reset manual selection when toggling
+              }}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 ${
+                allDaysMode ? 'bg-primary' : 'bg-neutral-light'
+              }`}
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-neutral-white transition-transform ${
+                  allDaysMode ? 'translate-x-6' : 'translate-x-1'
+                }`}
+              />
+            </button>
+            <span
+              className={`text-sm font-medium ${
+                allDaysMode ? 'text-primary' : 'text-neutral-secondary'
+              }`}
+            >
+              {t('bulkSupplierSelect.allDays')}
+            </span>
+          </div>
+        </div>
       </div>
 
       {/* Language warning */}
