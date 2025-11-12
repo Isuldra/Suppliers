@@ -159,23 +159,50 @@ const KeyboardShortcutsModal: React.FC<{
 
 // Move state to top-level App component
 const App: React.FC = () => {
+  // Try to restore state from sessionStorage on initial mount
+  const getInitialState = (): AppState => {
+    try {
+      const savedState = sessionStorage.getItem('appState');
+      if (savedState) {
+        const parsed = JSON.parse(savedState);
+        // Restore Maps from plain objects
+        return {
+          ...parsed,
+          bulkEmailData: new Map(Object.entries(parsed.bulkEmailData || {})),
+          bulkSelectedOrders: new Map(
+            Object.entries(parsed.bulkSelectedOrders || {}).map(([key, value]) => [
+              key,
+              new Set(value as string[]),
+            ])
+          ),
+          bulkSupplierEmails: new Map(Object.entries(parsed.bulkSupplierEmails || {})),
+        };
+      }
+    } catch (error) {
+      console.error('Failed to restore session state:', error);
+    }
+
+    // Return default state if no saved state or error
+    return {
+      excelData: undefined,
+      selectedPlanner: supplyPlannersData.planners[0].name,
+      selectedWeekday: '',
+      selectedSupplier: '',
+      validationErrors: [],
+      isLoading: false,
+      showDataReview: false,
+      showEmailButton: false,
+      // Bulk mode state
+      isBulkMode: false,
+      selectedSuppliers: [],
+      bulkEmailData: new Map(),
+      bulkSelectedOrders: new Map(),
+      bulkSupplierEmails: new Map(),
+    };
+  };
+
   // Global app state that persists across route changes
-  const [appState, setAppState] = useState<AppState>({
-    excelData: undefined,
-    selectedPlanner: supplyPlannersData.planners[0].name,
-    selectedWeekday: '',
-    selectedSupplier: '',
-    validationErrors: [],
-    isLoading: false,
-    showDataReview: false,
-    showEmailButton: false,
-    // Bulk mode state
-    isBulkMode: false,
-    selectedSuppliers: [],
-    bulkEmailData: new Map(),
-    bulkSelectedOrders: new Map(),
-    bulkSupplierEmails: new Map(),
-  });
+  const [appState, setAppState] = useState<AppState>(getInitialState());
 
   const handleDataParsed = (data: ExcelData) => {
     console.log('Excel data parsed in App:', data);
@@ -218,6 +245,13 @@ const App: React.FC = () => {
   };
 
   const resetApp = () => {
+    // Clear session storage when resetting
+    try {
+      sessionStorage.removeItem('appState');
+    } catch (error) {
+      console.error('Failed to clear session state:', error);
+    }
+
     setAppState({
       excelData: undefined,
       selectedPlanner: supplyPlannersData.planners[0].name,
@@ -269,12 +303,15 @@ const App: React.FC = () => {
     const uniqueSuppliers = [...new Set(suppliers)];
 
     setAppState((prev) => {
+      // DON'T remove bulkSelectedOrders entries - keep them so they're remembered when supplier is re-selected
       const newState = {
         ...prev,
         selectedSuppliers: uniqueSuppliers,
+        // Keep bulkSelectedOrders as-is to remember previous selections
       };
       console.log('🟢 New appState will be:', newState);
       console.log('🟢 New appState.selectedSuppliers:', newState.selectedSuppliers);
+      console.log('🟢 Keeping bulkSelectedOrders entries for deselected suppliers');
       return newState;
     });
 
@@ -327,6 +364,15 @@ const App: React.FC = () => {
     }));
   };
 
+  const handleBulkOrdersChanged = (selectedOrders: Map<string, Set<string>>) => {
+    console.log('🟢 App.tsx: handleBulkOrdersChanged called with selectedOrders:', selectedOrders);
+    setAppState((prev) => ({
+      ...prev,
+      bulkSelectedOrders: selectedOrders,
+      // DON'T set showDataReview - just update the state
+    }));
+  };
+
   const handleBulkDataReviewBack = () => {
     setAppState((prev) => ({ ...prev, selectedSuppliers: [] }));
   };
@@ -334,6 +380,27 @@ const App: React.FC = () => {
   const handleBulkEmailPreviewBack = () => {
     setAppState((prev) => ({ ...prev, showDataReview: false }));
   };
+
+  // Persist state to sessionStorage whenever it changes
+  React.useEffect(() => {
+    try {
+      // Convert Maps to plain objects for JSON serialization
+      const stateToSave = {
+        ...appState,
+        bulkEmailData: Object.fromEntries(appState.bulkEmailData),
+        bulkSelectedOrders: Object.fromEntries(
+          Array.from(appState.bulkSelectedOrders.entries()).map(([key, value]) => [
+            key,
+            Array.from(value),
+          ])
+        ),
+        bulkSupplierEmails: Object.fromEntries(appState.bulkSupplierEmails),
+      };
+      sessionStorage.setItem('appState', JSON.stringify(stateToSave));
+    } catch (error) {
+      console.error('Failed to save session state:', error);
+    }
+  }, [appState]);
 
   return (
     <Router>
@@ -355,6 +422,7 @@ const App: React.FC = () => {
               onBulkSupplierEmailChange={handleBulkSupplierEmailChange}
               onBulkComplete={handleBulkComplete}
               onBulkDataReviewNext={handleBulkDataReviewNext}
+              onBulkOrdersChanged={handleBulkOrdersChanged}
               onBulkDataReviewBack={handleBulkDataReviewBack}
               onBulkEmailPreviewBack={handleBulkEmailPreviewBack}
             />
@@ -404,6 +472,7 @@ interface MainAppProps {
   onBulkSupplierEmailChange: (supplier: string, email: string) => void;
   onBulkComplete: () => void;
   onBulkDataReviewNext: (selectedOrders: Map<string, Set<string>>) => void;
+  onBulkOrdersChanged: (selectedOrders: Map<string, Set<string>>) => void;
   onBulkDataReviewBack: () => void;
   onBulkEmailPreviewBack: () => void;
 }
@@ -422,6 +491,7 @@ const MainApp: React.FC<MainAppProps> = ({
   onBulkSupplierEmailChange,
   onBulkComplete,
   onBulkDataReviewNext,
+  onBulkOrdersChanged,
   onBulkDataReviewBack,
   onBulkEmailPreviewBack,
 }) => {
@@ -704,6 +774,7 @@ const MainApp: React.FC<MainAppProps> = ({
                       selectedPlanner={appState.selectedPlanner}
                       selectedSuppliers={appState.selectedSuppliers}
                       bulkSupplierEmails={appState.bulkSupplierEmails}
+                      bulkSelectedOrders={appState.bulkSelectedOrders}
                     />
                   ) : (
                     <SupplierSelect
@@ -762,6 +833,8 @@ const MainApp: React.FC<MainAppProps> = ({
                   selectedWeekday={appState.selectedWeekday}
                   onNext={onBulkDataReviewNext}
                   onBack={onBulkDataReviewBack}
+                  bulkSelectedOrders={appState.bulkSelectedOrders}
+                  onOrdersChanged={onBulkOrdersChanged}
                 />
               </div>
             )}
