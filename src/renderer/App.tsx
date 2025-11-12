@@ -181,7 +181,7 @@ const App: React.FC = () => {
     } catch (error) {
       console.error('Failed to restore session state:', error);
     }
-    
+
     // Return default state if no saved state or error
     return {
       excelData: undefined,
@@ -303,12 +303,15 @@ const App: React.FC = () => {
     const uniqueSuppliers = [...new Set(suppliers)];
 
     setAppState((prev) => {
+      // DON'T remove bulkSelectedOrders entries - keep them so they're remembered when supplier is re-selected
       const newState = {
         ...prev,
         selectedSuppliers: uniqueSuppliers,
+        // Keep bulkSelectedOrders as-is to remember previous selections
       };
       console.log('🟢 New appState will be:', newState);
       console.log('🟢 New appState.selectedSuppliers:', newState.selectedSuppliers);
+      console.log('🟢 Keeping bulkSelectedOrders entries for deselected suppliers');
       return newState;
     });
 
@@ -361,6 +364,15 @@ const App: React.FC = () => {
     }));
   };
 
+  const handleBulkOrdersChanged = (selectedOrders: Map<string, Set<string>>) => {
+    console.log('🟢 App.tsx: handleBulkOrdersChanged called with selectedOrders:', selectedOrders);
+    setAppState((prev) => ({
+      ...prev,
+      bulkSelectedOrders: selectedOrders,
+      // DON'T set showDataReview - just update the state
+    }));
+  };
+
   const handleBulkDataReviewBack = () => {
     setAppState((prev) => ({ ...prev, selectedSuppliers: [] }));
   };
@@ -410,6 +422,7 @@ const App: React.FC = () => {
               onBulkSupplierEmailChange={handleBulkSupplierEmailChange}
               onBulkComplete={handleBulkComplete}
               onBulkDataReviewNext={handleBulkDataReviewNext}
+              onBulkOrdersChanged={handleBulkOrdersChanged}
               onBulkDataReviewBack={handleBulkDataReviewBack}
               onBulkEmailPreviewBack={handleBulkEmailPreviewBack}
             />
@@ -459,6 +472,7 @@ interface MainAppProps {
   onBulkSupplierEmailChange: (supplier: string, email: string) => void;
   onBulkComplete: () => void;
   onBulkDataReviewNext: (selectedOrders: Map<string, Set<string>>) => void;
+  onBulkOrdersChanged: (selectedOrders: Map<string, Set<string>>) => void;
   onBulkDataReviewBack: () => void;
   onBulkEmailPreviewBack: () => void;
 }
@@ -477,6 +491,7 @@ const MainApp: React.FC<MainAppProps> = ({
   onBulkSupplierEmailChange,
   onBulkComplete,
   onBulkDataReviewNext,
+  onBulkOrdersChanged,
   onBulkDataReviewBack,
   onBulkEmailPreviewBack,
 }) => {
@@ -759,6 +774,7 @@ const MainApp: React.FC<MainAppProps> = ({
                       selectedPlanner={appState.selectedPlanner}
                       selectedSuppliers={appState.selectedSuppliers}
                       bulkSupplierEmails={appState.bulkSupplierEmails}
+                      bulkSelectedOrders={appState.bulkSelectedOrders}
                     />
                   ) : (
                     <SupplierSelect
@@ -817,6 +833,8 @@ const MainApp: React.FC<MainAppProps> = ({
                   selectedWeekday={appState.selectedWeekday}
                   onNext={onBulkDataReviewNext}
                   onBack={onBulkDataReviewBack}
+                  bulkSelectedOrders={appState.bulkSelectedOrders}
+                  onOrdersChanged={onBulkOrdersChanged}
                 />
               </div>
             )}
