@@ -485,7 +485,7 @@ function setupStandardUpdater() {
 export function checkForUpdatesManually() {
   if (process.env.NODE_ENV === 'development') {
     updateLogger.info('Kjører i utviklingsmodus - manuelle oppdateringer er deaktivert');
-    return Promise.resolve({ updateAvailable: false });
+    return Promise.resolve({ updateAvailable: false, version: undefined });
   }
 
   updateLogger.info('Manuell sjekk for oppdateringer startet...');
@@ -495,7 +495,10 @@ export function checkForUpdatesManually() {
     .checkForUpdates()
     .then((result) => {
       updateLogger.info('Manual update check result:', result);
-      return result;
+      return {
+        updateAvailable: result?.updateInfo ? true : false,
+        version: result?.updateInfo?.version,
+      };
     })
     .catch((error) => {
       updateLogger.error('Manual update check failed:', error);
