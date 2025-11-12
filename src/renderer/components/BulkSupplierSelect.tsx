@@ -13,6 +13,7 @@ interface BulkSupplierSelectProps {
   selectedPlanner: string;
   selectedSuppliers: string[];
   bulkSupplierEmails?: Map<string, string>;
+  bulkSelectedOrders?: Map<string, Set<string>>; // Parent state for selected orders
 }
 
 interface SupplierInfo {
@@ -41,6 +42,7 @@ const BulkSupplierSelect: React.FC<BulkSupplierSelectProps> = ({
   selectedPlanner,
   selectedSuppliers,
   bulkSupplierEmails,
+  bulkSelectedOrders,
 }) => {
   const { t } = useTranslation();
   console.log('🟡 BulkSupplierSelect: Component rendered with props:', {
@@ -175,20 +177,70 @@ const BulkSupplierSelect: React.FC<BulkSupplierSelectProps> = ({
     }
   }, [suppliers, selectedSuppliers, onSuppliersSelected, userHasManuallySelected]);
 
+  // Serialize bulkSelectedOrders to avoid infinite loops from Map reference changes
+  const bulkSelectedOrdersSerialized = useMemo(() => {
+    if (!bulkSelectedOrders || bulkSelectedOrders.size === 0) return '';
+    const serialized = Array.from(bulkSelectedOrders.entries())
+      .map(([supplier, orders]) => `${supplier}:${Array.from(orders).sort().join(',')}`)
+      .sort()
+      .join('|');
+    return serialized;
+  }, [bulkSelectedOrders]);
+
+  // Sync excludedOrderLines with bulkSelectedOrders from parent
+  // This ensures that when we come back to this component, excluded orders are remembered
+  useEffect(() => {
+    if (bulkSelectedOrders && selectedSuppliers.length > 0 && supplierOrders.size > 0) {
+      const newExcludedOrderLines = new Set<string>();
+
+      // For each selected supplier, find orders that are NOT in bulkSelectedOrders
+      selectedSuppliers.forEach((supplier) => {
+        const orders = supplierOrders.get(supplier) || [];
+        const selectedOrderKeys = bulkSelectedOrders.get(supplier) || new Set<string>();
+
+        orders.forEach((order) => {
+          const orderKey = order.key || '';
+          // If order is not in selectedOrderKeys, it means it was excluded
+          if (orderKey && !selectedOrderKeys.has(orderKey)) {
+            newExcludedOrderLines.add(orderKey);
+          }
+        });
+      });
+
+      // Only update if there are differences to avoid infinite loops
+      const currentExcludedKeys = Array.from(excludedOrderLines).sort().join(',');
+      const newExcludedKeys = Array.from(newExcludedOrderLines).sort().join(',');
+
+      if (currentExcludedKeys !== newExcludedKeys) {
+        console.log('🔄 Syncing excludedOrderLines with bulkSelectedOrders:', {
+          current: currentExcludedKeys,
+          new: newExcludedKeys,
+        });
+        setExcludedOrderLines(newExcludedOrderLines);
+      }
+    }
+  }, [bulkSelectedOrdersSerialized, selectedSuppliers, supplierOrders]);
+
   // Send filtered order lines to parent component
   useEffect(() => {
     if (onOrderLinesSelected && selectedSuppliers.length > 0) {
       selectedSuppliers.forEach((supplier) => {
-        const orders = supplierOrders.get(supplier) || [];
-        const filteredOrderKeys = new Set(
-          orders
-            .filter((order) => !excludedOrderLines.has(order.key || ''))
-            .map((order) => order.key || '')
-        );
-        onOrderLinesSelected(supplier, filteredOrderKeys);
+        const orders = supplierOrders.get(supplier);
+        // Only send if we have actually loaded orders for this supplier
+        if (orders && orders.length > 0) {
+          const filteredOrderKeys = new Set(
+            orders
+              .filter((order) => !excludedOrderLines.has(order.key || ''))
+              .map((order) => order.key || '')
+          );
+          onOrderLinesSelected(supplier, filteredOrderKeys);
+          console.log(
+            `📤 BulkSupplierSelect: Sending ${filteredOrderKeys.size} orders for ${supplier}`
+          );
+        }
       });
     }
-  }, [selectedSuppliers, excludedOrderLines, supplierOrders]);
+  }, [selectedSuppliers, excludedOrderLines, supplierOrders, onOrderLinesSelected]);
 
   // Handle individual supplier selection
   const handleSupplierSelect = (supplier: string) => {
