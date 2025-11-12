@@ -574,6 +574,7 @@ export class DatabaseService {
             itemNo: row.itemNo || '',
             supplier: row.supplier,
             description: row.description || '',
+            specification: row.specification || '', // Column L (orpradtext) - FIXED: Now mapping specification field
             orderQty: row.orderQty || 0,
             receivedQty: row.receivedQty || 0,
             outstandingQty: row.outstandingQty || 0,

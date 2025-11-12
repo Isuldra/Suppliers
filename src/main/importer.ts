@@ -182,7 +182,23 @@ export async function importAlleArk(
       const supplierArticleNo = getCellStringValue(row.getCell(9)); // Column I = Supplier article number
       const etaDate1 = row.getCell(10).value; // Column J = Expected ETA 1
       const etaDate2 = row.getCell(11).value; // Column K = Expected ETA 2
-      const erpComment = getCellStringValue(row.getCell(12)); // Column L = ERP comment
+
+      // Column L = orpradtext (ERP comment) - DEBUG LOGGING
+      const columnLCell = row.getCell(12);
+      const erpComment = getCellStringValue(columnLCell);
+
+      // Log column L data for first 10 rows to debug orpradtext import
+      if (processedCount < 10) {
+        log.info(`🔍 Row ${r} Column L Debug:`, {
+          rawValue: columnLCell.value,
+          cellText: columnLCell.text,
+          valueType: typeof columnLCell.value,
+          isObject: typeof columnLCell.value === 'object',
+          extractedValue: erpComment,
+          hasData: erpComment.length > 0,
+        });
+      }
+
       const orderedQty = parseFloat(getCellStringValue(row.getCell(13))) || 0; // Column M = Ordered quantity
       const deliveredQty = parseFloat(getCellStringValue(row.getCell(14))) || 0; // Column N = Delivered quantity
       const outstandingQty = parseFloat(getCellStringValue(row.getCell(15))) || 0; // Column O = Outstanding quantity
@@ -249,7 +265,7 @@ export async function importAlleArk(
         ftgnavn: supplierName, // Primary supplier name field
         status: 'Active',
         producer_item: supplierArticleNo,
-        specification: erpComment, // Column L (ERP Comment) stored in specification field for email templates
+        specification: erpComment, // Column L (orpradtext/ERP Comment) stored in specification field for email templates
         comment: erpComment,
         note: erpComment,
         inventory_balance: 0,
@@ -263,6 +279,13 @@ export async function importAlleArk(
         outstanding_qty: outstandingQty,
         order_row_number: orderRowNumber,
       });
+
+      // Log what was written to specification field for first 10 rows
+      if (processedCount < 10) {
+        log.info(
+          `💾 Row ${r} Specification field written to DB: "${erpComment}" (length: ${erpComment.length})`
+        );
+      }
 
       processedCount++;
 
