@@ -85,7 +85,7 @@
         "portable",
         "nsis"
       ],
-      "icon": "resources/icon.ico",
+      "icon": "resources/pulse.ico",
       "artifactName": "${productName}-${version}-setup.${ext}"
     },
     "portable": {
@@ -107,9 +107,9 @@
       "perMachine": false,
       "allowToChangeInstallationDirectory": true,
       "allowElevation": false,
-      "installerIcon": "resources/supplychain.ico",
-      "uninstallerIcon": "resources/supplychain.ico",
-      "installerHeaderIcon": "resources/supplychain.ico",
+      "installerIcon": "resources/pulse.ico",
+      "uninstallerIcon": "resources/pulse.ico",
+      "installerHeaderIcon": "resources/pulse.ico",
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "Pulse",

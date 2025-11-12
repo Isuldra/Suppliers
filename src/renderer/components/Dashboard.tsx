@@ -86,6 +86,8 @@ const Dashboard: React.FC<DashboardProps> = ({ appState: _appState }) => {
       try {
         const version = await window.electron.getAppVersion();
         setAppVersion(version);
+        // Update document title with version for dashboard
+        document.title = `Pulse v${version} - Dashboard`;
       } catch (error) {
         console.error('Failed to fetch app version:', error);
       }
