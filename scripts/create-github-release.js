@@ -102,6 +102,32 @@ async function createRelease() {
       },
     ];
 
+    // Get existing assets and delete them to allow re-upload
+    console.log('\nChecking for existing assets...');
+    try {
+      const existingAssets = await octokit.rest.repos.listReleaseAssets({
+        owner,
+        repo,
+        release_id: release.id,
+      });
+
+      for (const existingAsset of existingAssets.data) {
+        console.log(`   Deleting existing asset: ${existingAsset.name}...`);
+        try {
+          await octokit.rest.repos.deleteReleaseAsset({
+            owner,
+            repo,
+            asset_id: existingAsset.id,
+          });
+          console.log(`   ✓ Deleted: ${existingAsset.name}`);
+        } catch (deleteError) {
+          console.log(`   Warning: Could not delete ${existingAsset.name}:`, deleteError.message);
+        }
+      }
+    } catch (error) {
+      console.log('   Note: Could not list existing assets:', error.message);
+    }
+
     console.log('\nUploading assets...');
 
     for (const asset of assetsToUpload) {
@@ -127,9 +153,9 @@ async function createRelease() {
             'content-length': fileSize,
           },
         });
-        console.log(`   Success: ${asset.name} uploaded successfully`);
+        console.log(`   ✓ Success: ${asset.name} uploaded successfully`);
       } catch (error) {
-        console.log(`   Error: Failed to upload ${asset.name}:`, error.message);
+        console.log(`   ✗ Error: Failed to upload ${asset.name}:`, error.message);
       }
     }
 
