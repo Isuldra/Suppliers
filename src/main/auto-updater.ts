@@ -249,6 +249,16 @@ function setupPortableUpdater() {
   // Handle errors
   autoUpdater.on('error', ((error: Error) => {
     updateLogger.error('Feil ved oppdatering (portable):', error);
+    updateLogger.error('Error stack:', error.stack);
+
+    // Log detailed error information for 404 errors
+    const errorMessage = error.message || error.toString();
+    if (errorMessage.includes('404') || errorMessage.includes('Not Found')) {
+      updateLogger.error('⚠️  404 ERROR DETECTED (Portable) - Release file not found on GitHub');
+      updateLogger.error(`   Current version: ${app.getVersion()}`);
+      updateLogger.error(`   Feed URL: ${autoUpdater.getFeedURL()}`);
+    }
+
     showPortableUpdateError(error);
   }) as (...args: unknown[]) => void);
 }
@@ -276,13 +286,18 @@ function getPortableUpdatePath(): string {
  * Show error dialog for portable update issues
  */
 function showPortableUpdateError(error: Error) {
-  const isNetworkError = error.message.includes('net::') || error.message.includes('ENOTFOUND');
-  const isFileError = error.message.includes('ENOENT') || error.message.includes('app-update.yml');
+  const errorMessage = error.message || error.toString();
+  const is404Error = errorMessage.includes('404') || errorMessage.includes('Not Found');
+  const isNetworkError = errorMessage.includes('net::') || errorMessage.includes('ENOTFOUND');
+  const isFileError = errorMessage.includes('ENOENT') || errorMessage.includes('app-update.yml');
 
   let message = 'Det oppstod en feil under oppdatering';
-  let detail = `Detaljer: ${error.message}`;
+  let detail = `Detaljer: ${errorMessage}`;
 
-  if (isNetworkError) {
+  if (is404Error) {
+    message = 'Oppdateringsfil ikke funnet (404) - Portable';
+    detail = `Den forespurte oppdateringsfilen finnes ikke på serveren.\n\nDette kan bety at:\n- Release v${app.getVersion()} er ikke publisert ennå\n- Filnavnet i latest.json er feil\n- GitHub Release mangler den portable filen\n\nLast ned den nyeste portable versjonen manuelt fra GitHub.\n\nTeknisk info: ${errorMessage}`;
+  } else if (isNetworkError) {
     message = 'Nettverksfeil ved oppdatering';
     detail = 'Sjekk internettforbindelsen og prøv igjen senere.';
   } else if (isFileError) {
@@ -293,7 +308,7 @@ function showPortableUpdateError(error: Error) {
   dialog
     .showMessageBox({
       type: 'error',
-      title: 'Oppdateringsfeil',
+      title: 'Oppdateringsfeil (Portable)',
       message,
       detail,
       buttons: ['OK', 'Åpne nedlastingsside'],
@@ -470,14 +485,52 @@ function setupStandardUpdater() {
   // Håndtere feil
   autoUpdater.on('error', ((error: Error) => {
     updateLogger.error('Feil ved oppdatering:', error);
+    updateLogger.error('Error stack:', error.stack);
 
-    dialog.showMessageBox({
-      type: 'error',
-      title: 'Oppdateringsfeil',
-      message: 'Det oppstod en feil under oppdatering',
-      detail: `Detaljer: ${error ? error.toString() : 'Ukjent feil'}`,
-      buttons: ['OK'],
-    });
+    // Detect specific error types
+    const errorMessage = error.message || error.toString();
+    const is404Error = errorMessage.includes('404') || errorMessage.includes('Not Found');
+    const isNetworkError =
+      errorMessage.includes('net::') ||
+      errorMessage.includes('ENOTFOUND') ||
+      errorMessage.includes('ETIMEDOUT');
+    const isFileError = errorMessage.includes('ENOENT') || errorMessage.includes('Cannot find');
+
+    let userMessage = 'Det oppstod en feil under oppdatering';
+    let userDetail = `Detaljer: ${errorMessage}`;
+
+    if (is404Error) {
+      userMessage = 'Oppdateringsfil ikke funnet (404)';
+      userDetail = `Den forespurte oppdateringsfilen finnes ikke på serveren.\n\nDette kan bety at:\n- Release v${app.getVersion()} er ikke publisert ennå\n- Filnavnet i latest.yml er feil\n- GitHub Release mangler filen\n\nKontakt administrator eller prøv igjen senere.\n\nTeknisk info: ${errorMessage}`;
+      updateLogger.error('⚠️  404 ERROR DETECTED - Release file not found on GitHub');
+      updateLogger.error(`   Current version: ${app.getVersion()}`);
+      updateLogger.error(`   Feed URL: ${autoUpdater.getFeedURL()}`);
+    } else if (isNetworkError) {
+      userMessage = 'Nettverksfeil ved oppdatering';
+      userDetail =
+        'Kunne ikke koble til oppdateringsserveren.\n\nSjekk internettforbindelsen og prøv igjen senere.';
+    } else if (isFileError) {
+      userMessage = 'Oppdateringsfiler ikke tilgjengelige';
+      userDetail = 'Nødvendige oppdateringsfiler ble ikke funnet.\n\nPrøv igjen senere.';
+    }
+
+    dialog
+      .showMessageBox({
+        type: 'error',
+        title: 'Oppdateringsfeil',
+        message: userMessage,
+        detail: userDetail,
+        buttons: ['OK', 'Vis GitHub Releases'],
+      })
+      .then((result) => {
+        if (result.response === 1) {
+          shell
+            .openExternal('https://github.com/Isuldra/Suppliers/releases/latest')
+            .catch((err) => {
+              updateLogger.error('Could not open releases page:', err);
+            });
+        }
+      });
   }) as (...args: unknown[]) => void);
 }
 
@@ -485,7 +538,7 @@ function setupStandardUpdater() {
 export function checkForUpdatesManually() {
   if (process.env.NODE_ENV === 'development') {
     updateLogger.info('Kjører i utviklingsmodus - manuelle oppdateringer er deaktivert');
-    return Promise.resolve({ updateAvailable: false });
+    return Promise.resolve({ updateAvailable: false, version: undefined });
   }
 
   updateLogger.info('Manuell sjekk for oppdateringer startet...');
@@ -495,7 +548,10 @@ export function checkForUpdatesManually() {
     .checkForUpdates()
     .then((result) => {
       updateLogger.info('Manual update check result:', result);
-      return result;
+      return {
+        updateAvailable: result?.updateInfo ? true : false,
+        version: result?.updateInfo?.version,
+      };
     })
     .catch((error) => {
       updateLogger.error('Manual update check failed:', error);

@@ -33,8 +33,17 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run quality checks
-        run: npm run quality
+      - name: Check formatting (Prettier)
+        run: npm run format:check
+
+      - name: Lint (ESLint)
+        run: npm run lint
+
+      - name: Type check (TypeScript)
+        run: npm run typecheck
+
+      - name: Run tests (Vitest)
+        run: npm run test -- --run --passWithNoTests
 
       - name: Summary
         if: success()
