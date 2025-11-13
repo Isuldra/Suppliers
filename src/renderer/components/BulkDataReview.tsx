@@ -10,6 +10,8 @@ interface BulkDataReviewProps {
   selectedWeekday: string;
   onNext: (selectedOrders: Map<string, Set<string>>) => void;
   onBack: () => void;
+  bulkSelectedOrders?: Map<string, Set<string>>; // Parent state for selected orders
+  onOrdersChanged?: (selectedOrders: Map<string, Set<string>>) => void; // Update parent state without navigating
 }
 
 interface SupplierInfo {
@@ -36,6 +38,8 @@ const BulkDataReview: React.FC<BulkDataReviewProps> = ({
   selectedWeekday: _selectedWeekday,
   onNext,
   onBack,
+  bulkSelectedOrders,
+  onOrdersChanged,
 }) => {
   const { t } = useTranslation();
   const [supplierOrders, setSupplierOrders] = useState<SupplierOrders[]>([]);
@@ -53,6 +57,16 @@ const BulkDataReview: React.FC<BulkDataReviewProps> = ({
       : null;
   };
 
+  // Serialize bulkSelectedOrders to avoid infinite loops from Map reference changes
+  const bulkSelectedOrdersSerialized = useMemo(() => {
+    if (!bulkSelectedOrders || bulkSelectedOrders.size === 0) return '';
+    const serialized = Array.from(bulkSelectedOrders.entries())
+      .map(([supplier, orders]) => `${supplier}:${Array.from(orders).sort().join(',')}`)
+      .sort()
+      .join('|');
+    return serialized;
+  }, [bulkSelectedOrders]);
+
   // Fetch orders for all selected suppliers
   useEffect(() => {
     const fetchOrdersForSuppliers = async () => {
@@ -65,10 +79,22 @@ const BulkDataReview: React.FC<BulkDataReviewProps> = ({
           const supplierInfo = getSupplierInfo(supplierName);
           const orders = allOrders.filter((order) => order.supplier === supplierName);
 
+          // Use bulkSelectedOrders if available, otherwise select all by default
+          const savedSelectedOrders = bulkSelectedOrders?.get(supplierName);
+          const selectedOrdersSet = savedSelectedOrders
+            ? new Set(savedSelectedOrders)
+            : new Set(orders.map((order) => order.key));
+
+          console.log(`🔄 BulkDataReview: Loading orders for ${supplierName}:`, {
+            totalOrders: orders.length,
+            savedSelectedOrders: savedSelectedOrders?.size || 0,
+            selectedOrdersSet: selectedOrdersSet.size,
+          });
+
           suppliersData.push({
             supplier: supplierName,
             orders: orders as unknown as ExcelRow[],
-            selectedOrders: new Set(orders.map((order) => order.key)), // Select all by default
+            selectedOrders: selectedOrdersSet,
             isExpanded: false,
             language: supplierInfo?.språk || 'Norsk',
             languageCode: supplierInfo?.språkKode || 'NO',
@@ -88,7 +114,7 @@ const BulkDataReview: React.FC<BulkDataReviewProps> = ({
     if (selectedSuppliers.length > 0) {
       fetchOrdersForSuppliers();
     }
-  }, [selectedSuppliers]);
+  }, [selectedSuppliers, bulkSelectedOrdersSerialized]);
 
   // Handle expanding supplier details
   const handleExpandSupplier = (supplier: string) => {
@@ -103,8 +129,8 @@ const BulkDataReview: React.FC<BulkDataReviewProps> = ({
 
   // Handle selecting/deselecting all orders for a supplier
   const handleSelectAllOrdersForSupplier = (supplier: string) => {
-    setSupplierOrders((prev) =>
-      prev.map((s) => {
+    setSupplierOrders((prev) => {
+      const updated = prev.map((s) => {
         if (s.supplier === supplier) {
           const allOrderKeys = s.orders.map((order) => order.key);
           const newSelectedOrders =
@@ -112,14 +138,27 @@ const BulkDataReview: React.FC<BulkDataReviewProps> = ({
           return { ...s, selectedOrders: newSelectedOrders };
         }
         return s;
-      })
-    );
+      });
+
+      // Notify parent about the change using the UPDATED state, not stale prev
+      if (onOrdersChanged) {
+        setTimeout(() => {
+          const updatedMap = new Map<string, Set<string>>();
+          updated.forEach((sup) => {
+            updatedMap.set(sup.supplier, sup.selectedOrders);
+          });
+          onOrdersChanged(updatedMap);
+        }, 0);
+      }
+
+      return updated;
+    });
   };
 
   // Handle selecting/deselecting individual order
   const handleSelectOrder = (supplier: string, orderKey: string) => {
-    setSupplierOrders((prev) =>
-      prev.map((s) => {
+    setSupplierOrders((prev) => {
+      const updated = prev.map((s) => {
         if (s.supplier === supplier) {
           const newSelectedOrders = new Set(s.selectedOrders);
           if (newSelectedOrders.has(orderKey)) {
@@ -130,8 +169,21 @@ const BulkDataReview: React.FC<BulkDataReviewProps> = ({
           return { ...s, selectedOrders: newSelectedOrders };
         }
         return s;
-      })
-    );
+      });
+
+      // Notify parent about the change using the UPDATED state, not stale prev
+      if (onOrdersChanged) {
+        setTimeout(() => {
+          const updatedMap = new Map<string, Set<string>>();
+          updated.forEach((sup) => {
+            updatedMap.set(sup.supplier, sup.selectedOrders);
+          });
+          onOrdersChanged(updatedMap);
+        }, 0);
+      }
+
+      return updated;
+    });
   };
 
   // Calculate totals
