@@ -14,7 +14,7 @@ Denne versjonen løser to kritiske problemer med Windows-installasjon og -kjøri
 
 - **Appen startet ikke etter installasjon på Windows**
 - Ikonet ble erstattet med placeholder-ikon
-- Windows rapporterte "Finner ikke filen" 
+- Windows rapporterte "Finner ikke filen"
 - Årsak: Applikasjonen ble bygget for ARM64-arkitektur (Apple Silicon) i stedet for X64 (standard Windows-PCer)
 - ARM64-binærer kan ikke kjøres på standard Windows x64-maskiner
 
@@ -68,6 +68,7 @@ Denne versjonen løser to kritiske problemer med Windows-installasjon og -kjøri
 **Før disse fixene:**
 
 **Arkitektur-problem:**
+
 - Appen kunne IKKE kjøres på standard Windows-PCer (x64)
 - Placeholder-ikon i Start-meny og på skrivebordet
 - "Finner ikke filen" feilmeldinger
@@ -75,6 +76,7 @@ Denne versjonen løser to kritiske problemer med Windows-installasjon og -kjøri
 - Totalt ubrukelig på vanlige Windows-maskiner
 
 **Registry/Snarvei-problem:**
+
 - Registry-oppføringer feilet å bli opprettet (krever admin-rettigheter)
 - Start-meny-snarveier kunne feile
 - Programmet ble installert, men Windows kunne ikke finne det
