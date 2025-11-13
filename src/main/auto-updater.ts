@@ -378,26 +378,26 @@ export function setupAutoUpdater() {
 async function checkForPendingUpdate() {
   try {
     updateLogger.info('Checking for pending updates at startup...');
-    
+
     // Listen for update-downloaded event which indicates a pending update
     let hasPendingUpdate = false;
-    
+
     const pendingUpdateHandler = () => {
       hasPendingUpdate = true;
     };
-    
+
     autoUpdater.once('update-downloaded', pendingUpdateHandler);
-    
+
     // Try to check for updates - if an update is already downloaded,
     // it will trigger the update-downloaded event immediately
     await autoUpdater.checkForUpdates();
-    
+
     // Small delay to allow event to fire
     await new Promise((resolve) => setTimeout(resolve, 500));
-    
+
     if (hasPendingUpdate) {
       updateLogger.info('Found pending update, prompting user for installation...');
-      
+
       const result = await dialog.showMessageBox({
         type: 'question',
         title: 'Uinstallert oppdatering funnet',
@@ -406,7 +406,7 @@ async function checkForPendingUpdate() {
         buttons: ['Installer nå', 'Senere'],
         defaultId: 0,
       });
-      
+
       if (result.response === 0) {
         updateLogger.info('User chose to install pending update...');
         autoUpdater.quitAndInstall(false, true);
