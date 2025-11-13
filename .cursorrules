@@ -1,0 +1,124 @@
+---
+description: Gitflow workflow rules to follow whenever performing git operations in this project.
+globs:
+  - "**/*"
+---
+
+# Gitflow Workflow Rules
+
+## Main Branches
+
+### `main` (eller `master`)
+
+- Inneholder produksjonsklar kode.
+- **Aldri** commit direkte til `main`.
+- Tillatte merges:
+  - `hotfix/*`
+  - `release/*`
+- Tagges med versjonsnummer etter hver merge.
+
+### `develop`
+
+- Hovedgren for utvikling.
+- Inneholder siste leverte utviklingsendringer.
+- Kilde for feature-brancher.
+- **Aldri** commit direkte til `develop`.
+
+## Supporting Branches
+
+### `feature/*`
+
+- Brancher fra: `develop`
+- Merger tilbake til: `develop`
+- Navn: `feature/[issue-id]-descriptive-name`
+  - Eksempel: `feature/123-user-authentication`
+- Må være oppdatert med `develop` før PR.
+- Slett etter merge.
+
+### `release/*`
+
+- Brancher fra: `develop`
+- Merger tilbake til:
+  - `main`
+  - `develop`
+- Navn: `release/vX.Y.Z`
+  - Eksempel: `release/v1.2.0`
+- Kun bugfikser, dokumentasjon og release-oppgaver. Ingen nye features.
+- Slett etter merge.
+
+### `hotfix/*`
+
+- Brancher fra: `main`
+- Merger tilbake til:
+  - `main`
+  - `develop`
+- Navn: `hotfix/vX.Y.Z`
+  - Eksempel: `hotfix/v1.2.1`
+- Kun for akutte produksjonsfikser.
+- Slett etter merge.
+
+## Commit-meldinger
+
+- Format: `type(scope): description`
+- Typer:
+  - `feat`: Nye features
+  - `fix`: Bugfix
+  - `docs`: Dokumentasjon
+  - `style`: Kodeformattering, semikolon, osv.
+  - `refactor`: Refaktorering
+  - `test`: Tester
+  - `chore`: Vedlikeholdsoppgaver
+
+## Versjonering
+
+- Følg **Semantic Versioning**:
+  - MAJOR: Inkompatible endringer
+  - MINOR: Bakoverkompatible features
+  - PATCH: Bakoverkompatible bugfikser
+
+## Pull Request-regler
+
+1. Alle endringer går gjennom Pull Requests.
+2. Minimum én godkjenning kreves.
+3. CI-sjekker må være grønne.
+4. Ingen direkte commits til beskyttede brancher (`main`, `develop`).
+5. Branchen må være oppdatert før merge.
+6. Slett branchen etter merge.
+
+## Branch-beskyttelse
+
+### `main` og `develop`
+
+- Krever PR-reviews.
+- Krever at status-sjekker er grønne.
+- Krever at branch er oppdatert.
+- Administrators er inkludert i restriksjoner.
+- Ingen force pushes.
+- Ingen sletting av branch.
+
+## Release-prosess
+
+1. Lag `release/*`-branch fra `develop`.
+2. Bump versjonsnummer.
+3. Fiks release-spesifikke issues.
+4. Opprett PR til `main`.
+5. Etter merge til `main`:
+   - Tag release.
+   - Merge tilbake til `develop`.
+   - Slett `release/*`-branch.
+
+## Hotfix-prosess
+
+1. Lag `hotfix/*`-branch fra `main`.
+2. Fiks feilen.
+3. Bump patch-versjon.
+4. Opprett PR til `main`.
+5. Etter merge til `main`:
+   - Tag release.
+   - Merge tilbake til `develop`.
+   - Slett `hotfix/*`-branch.
+
+---
+
+**Kort oppsummert:** Følg Gitflow til punkt og prikke – ingen direkte commits på `main`/`develop`, alle endringer via PR, bruk feature/release/hotfix-brancher med korrekt navngivning, og tagg hver produksjonsrelease.
+
