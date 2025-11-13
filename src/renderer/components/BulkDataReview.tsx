@@ -135,23 +135,22 @@ const BulkDataReview: React.FC<BulkDataReviewProps> = ({
           const allOrderKeys = s.orders.map((order) => order.key);
           const newSelectedOrders =
             s.selectedOrders.size === s.orders.length ? new Set<string>() : new Set(allOrderKeys);
-          // Immediately notify parent about the change WITHOUT navigating
-          if (onOrdersChanged) {
-            setTimeout(() => {
-              const updatedMap = new Map<string, Set<string>>();
-              prev.forEach((sup) => {
-                updatedMap.set(
-                  sup.supplier,
-                  sup.supplier === supplier ? newSelectedOrders : sup.selectedOrders
-                );
-              });
-              onOrdersChanged(updatedMap);
-            }, 0);
-          }
           return { ...s, selectedOrders: newSelectedOrders };
         }
         return s;
       });
+
+      // Notify parent about the change using the UPDATED state, not stale prev
+      if (onOrdersChanged) {
+        setTimeout(() => {
+          const updatedMap = new Map<string, Set<string>>();
+          updated.forEach((sup) => {
+            updatedMap.set(sup.supplier, sup.selectedOrders);
+          });
+          onOrdersChanged(updatedMap);
+        }, 0);
+      }
+
       return updated;
     });
   };
@@ -167,23 +166,22 @@ const BulkDataReview: React.FC<BulkDataReviewProps> = ({
           } else {
             newSelectedOrders.add(orderKey);
           }
-          // Immediately notify parent about the change WITHOUT navigating
-          if (onOrdersChanged) {
-            setTimeout(() => {
-              const updatedMap = new Map<string, Set<string>>();
-              prev.forEach((sup) => {
-                updatedMap.set(
-                  sup.supplier,
-                  sup.supplier === supplier ? newSelectedOrders : sup.selectedOrders
-                );
-              });
-              onOrdersChanged(updatedMap);
-            }, 0);
-          }
           return { ...s, selectedOrders: newSelectedOrders };
         }
         return s;
       });
+
+      // Notify parent about the change using the UPDATED state, not stale prev
+      if (onOrdersChanged) {
+        setTimeout(() => {
+          const updatedMap = new Map<string, Set<string>>();
+          updated.forEach((sup) => {
+            updatedMap.set(sup.supplier, sup.selectedOrders);
+          });
+          onOrdersChanged(updatedMap);
+        }, 0);
+      }
+
       return updated;
     });
   };
