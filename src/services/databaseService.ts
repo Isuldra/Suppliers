@@ -560,7 +560,26 @@ export class DatabaseService {
         ORDER BY date(eta_supplier) ASC, ordreNr ASC, itemNo ASC
       `);
 
-      const rows = stmt.all() as DbOrder[];
+      const rows = stmt.all() as Array<{
+        key: string;
+        poNumber: string;
+        status: string;
+        itemNo: string;
+        dueDate: string | null;
+        supplierETA: string | null;
+        producerItemNo: string | null;
+        supplier: string;
+        description: string | null;
+        specification: string | null; // Column L (orpradtext) - explicitly typed
+        note: string | null;
+        inventoryBalance: number;
+        orderQty: number;
+        receivedQty: number;
+        outstandingQty: number;
+        purchaser: string | null;
+        warehouse: string | null;
+        orderRowNumber: string | null;
+      }>;
 
       this.queryCounter++;
       log.debug(`[Query #${this.queryCounter}] Fetched all ${rows.length} orders`);
@@ -574,6 +593,8 @@ export class DatabaseService {
             itemNo: row.itemNo || '',
             supplier: row.supplier,
             description: row.description || '',
+            supplierArticleNo: row.description || row.producerItemNo || '', // Map from beskrivelse or producer_item
+            specification: row.specification || '', // Column L (orpradtext) - FIXED: Now mapping specification field explicitly
             orderQty: row.orderQty || 0,
             receivedQty: row.receivedQty || 0,
             outstandingQty: row.outstandingQty || 0,
@@ -584,6 +605,7 @@ export class DatabaseService {
             value: row.orderQty || 0, // Use orderQty as value
             currency: '', // Not available in purchase_order table
             confirmed: false, // Not available in purchase_order table
+            orderRowNumber: row.orderRowNumber || undefined,
           }) as ExcelRow
       );
     } catch (error) {
