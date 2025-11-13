@@ -1,5 +1,68 @@
 # Documentation Changelog
 
+## Versjon 1.4.1: Kritisk Windows Installasjonsfix
+
+_November 2025_
+
+Denne versjonen løser et kritisk problem med Windows-installasjon hvor programmet ikke kunne finnes etter installasjon.
+
+### Kritiske Bugfixes
+
+#### Windows Installasjonsproblem Løst
+
+**Problem:**
+
+- Brukere rapporterte at Pulse installerte vellykket, men programmet kunne ikke finnes i Start-menyen eller på skrivebordet
+- Årsak: Installer-scriptet prøvde å skrive til `HKEY_LOCAL_MACHINE` (system registry) uten administratorrettigheter
+- Dette førte til at registry-oppføringer og Start-meny-snarveier ikke ble opprettet
+
+**Løsning:**
+
+- **Registry-nøkler endret**: Endret alle `HKLM` (HKEY_LOCAL_MACHINE) til `HKCU` (HKEY_CURRENT_USER) i `resources/installer.nsh`
+- **Eksplisitt snarvei-opprettelse**: Lagt til eksplisitt opprettelse av Start-meny-snarveier for å sikre at de alltid blir laget
+- **Konsistent med konfigurasjonen**: Nå samsvarer installer-scriptet med `perMachine: false` innstillingen i `package.json`
+
+**Endrede filer:**
+
+- `resources/installer.nsh`:
+  - Linje 67-84: Endret registry-nøkler fra HKLM til HKCU
+  - Linje 62-65: Lagt til eksplisitt opprettelse av Start-meny-snarveier
+  - Linje 96-97: Endret uninstall registry cleanup fra HKLM til HKCU
+  - Linje 109-112: Lagt til cleanup av Start-meny-snarveier ved avinstallasjon
+
+**Dokumentasjon:**
+
+- Opprettet `docs/distribution/WINDOWS-TROUBLESHOOTING.md` med omfattende feilsøkingsguide
+- Dokumenterer problemet, løsningen, og hvordan brukere kan fikse eksisterende installasjoner
+- Inkluderer manuelle løsninger for å finne og kjøre programmet hvis det allerede er installert
+
+### Påvirkning
+
+**Før denne fixen:**
+
+- Registry-oppføringer feilet å bli opprettet (krever admin-rettigheter)
+- Start-meny-snarveier kunne feile
+- Programmet ble installert, men Windows kunne ikke finne det
+- Brukere måtte manuelt navigere til `%LOCALAPPDATA%\Programs\Pulse\` for å finne programmet
+
+**Etter denne fixen:**
+
+- Registry-oppføringer opprettes korrekt for gjeldende bruker
+- Start-meny-snarveier opprettes alltid
+- Programmet vises i Start-menyen som forventet
+- Normal Windows-installasjonsopplevelse
+
+### Anbefaling
+
+Alle brukere som har installert versjon 1.4.0 eller tidligere bør:
+
+1. Avinstallere eksisterende versjon
+2. Installere versjon 1.4.1 eller nyere
+
+For eksisterende installasjoner som ikke vises i Start-menyen, se `docs/distribution/WINDOWS-TROUBLESHOOTING.md` for manuelle løsninger.
+
+---
+
 ## Versjon 1.3.9: Repository Cleanup & Applikasjonsnavnendring
 
 _Fullført November 2025_
