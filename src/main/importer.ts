@@ -137,7 +137,7 @@ export async function importAlleArk(
       incoming_date, eta_supplier, supplier_name, warehouse, outstanding_qty, order_row_number
     ) VALUES (
       @nøkkel, @ordreNr, @itemNo, @beskrivelse, @dato, @ftgnavn,
-      @status, @producer_item, @comment, @note, @inventory_balance, @order_qty, @received_qty, @purchaser,
+      @status, @producer_item, @specification, @note, @inventory_balance, @order_qty, @received_qty, @purchaser,
       @incoming_date, @eta_supplier, @supplier_name, @warehouse, @outstanding_qty, @order_row_number
     )`
   );
@@ -266,7 +266,6 @@ export async function importAlleArk(
         status: 'Active',
         producer_item: supplierArticleNo,
         specification: erpComment, // Column L (orpradtext/ERP Comment) stored in specification field for email templates
-        comment: erpComment,
         note: erpComment,
         inventory_balance: 0,
         order_qty: orderedQty,

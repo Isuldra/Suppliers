@@ -20,6 +20,29 @@ const version = packageJson.version;
 
 console.log(`Preparing Cloudflare release for version ${version}...`);
 
+// VALIDATION: Check that version is valid semver
+const versionRegex = /^\d+\.\d+\.\d+$/;
+if (!versionRegex.test(version)) {
+  console.error(`[ERROR] ERROR: Invalid version format: ${version}`);
+  console.error('   Version must be in format: X.Y.Z (e.g., 1.4.1)');
+  process.exit(1);
+}
+
+// VALIDATION: Check that existing latest.yml (if it exists) will be updated
+const existingLatestYml = path.join(updatesDir, 'latest.yml');
+if (fs.existsSync(existingLatestYml)) {
+  const existingContent = fs.readFileSync(existingLatestYml, 'utf8');
+  const existingVersionMatch = existingContent.match(/^version:\s*(\S+)/m);
+  if (existingVersionMatch) {
+    const existingVersion = existingVersionMatch[1];
+    if (existingVersion === version) {
+      console.warn(`[WARNING]  WARNING: latest.yml already points to version ${version}`);
+      console.warn('   Make sure this is a rebuild and not a version bump issue');
+    }
+    console.log(`   Updating from version ${existingVersion} → ${version}`);
+  }
+}
+
 // Ensure updates directory exists
 if (!fs.existsSync(updatesDir)) {
   fs.mkdirSync(updatesDir, { recursive: true });
@@ -108,6 +131,14 @@ if (filesToInclude.length > 0) {
   console.log('\nGenerating latest.yml...');
 
   const mainFile = filesToInclude[0]; // Use the first file (NSIS installer) as main
+
+  // VALIDATION: Verify file actually exists
+  if (!fs.existsSync(mainFile.path)) {
+    console.error(`[ERROR] ERROR: File not found: ${mainFile.path}`);
+    console.error('   Cannot generate latest.yml without the installer file');
+    process.exit(1);
+  }
+
   const fileHash = calculateSHA512(mainFile.path);
   const fileSize = getFileSize(mainFile.path);
   const releaseDate = new Date().toISOString();
@@ -130,17 +161,39 @@ releaseDate: '${releaseDate}'`;
 
   const latestYmlPath = path.join(updatesDir, 'latest.yml');
   fs.writeFileSync(latestYmlPath, latestYml);
-  console.log(`Success: Generated: latest.yml`);
+  console.log(`[OK] Success: Generated: latest.yml`);
+  console.log(`   Version: ${version}`);
   console.log(`   Filename: ${mainFile.name}`);
   console.log(`   URL: ${githubReleaseUrl}`);
+  console.log(`   SHA512: ${fileHash.substring(0, 20)}...`);
+  console.log(`   Size: ${Math.round(fileSize / 1024 / 1024)} MB`);
+
+  // VALIDATION: Verify the generated latest.yml is valid
+  const generatedContent = fs.readFileSync(latestYmlPath, 'utf8');
+  if (!generatedContent.includes(`version: ${version}`)) {
+    console.error(`[ERROR] ERROR: Generated latest.yml does not contain correct version`);
+    process.exit(1);
+  }
+  if (generatedContent.includes('PLACEHOLDER')) {
+    console.error(`[ERROR] ERROR: Generated latest.yml contains PLACEHOLDER values`);
+    process.exit(1);
+  }
 
   // Also copy to release/ directory for GitHub Release upload
   const releaseLatestYmlPath = path.join(releaseDir, 'latest.yml');
   fs.writeFileSync(releaseLatestYmlPath, latestYml);
-  console.log(`Success: Copied latest.yml to release/ directory for GitHub Release`);
+  console.log(`[OK] Success: Copied latest.yml to release/ directory for GitHub Release`);
+
+  // IMPORTANT REMINDER
+  console.log('\n[WARNING]  IMPORTANT: Make sure to:');
+  console.log(`   1. Create GitHub Release v${version} FIRST`);
+  console.log(`   2. Upload ${githubFilename} to the release`);
+  console.log(`   3. Then deploy docs/updates/ to Cloudflare Pages`);
+  console.log(`   4. Verify the URL is accessible: ${githubReleaseUrl}`);
 } else {
-  console.log('\nWarning: No NSIS installer found for latest.yml generation');
-  console.log("   Run 'npm run dist' to build the NSIS installer first");
+  console.error('\n[ERROR] ERROR: No NSIS installer found for latest.yml generation');
+  console.error("   Run 'npm run dist' to build the NSIS installer first");
+  process.exit(1);
 }
 
 // Generate latest.json for portable version
