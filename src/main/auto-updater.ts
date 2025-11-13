@@ -345,6 +345,14 @@ export function setupAutoUpdater() {
     setupStandardUpdater();
   }
 
+  // Check for pending updates at startup (for installed versions only)
+  // This handles cases where user forced quit the app before installation completed
+  if (!isPortable) {
+    setTimeout(() => {
+      checkForPendingUpdate();
+    }, 3000);
+  }
+
   // Start checking for updates after a delay
   setTimeout(() => {
     autoUpdater
@@ -361,6 +369,55 @@ export function setupAutoUpdater() {
         updateLogger.error('Feil ved periodisk sjekk for oppdateringer:', err)
       );
   }, SIX_HOURS);
+}
+
+/**
+ * Check for pending updates that were downloaded but not installed
+ * This is useful when the app was force-quit before installation completed
+ */
+async function checkForPendingUpdate() {
+  try {
+    updateLogger.info('Checking for pending updates at startup...');
+    
+    // Listen for update-downloaded event which indicates a pending update
+    let hasPendingUpdate = false;
+    
+    const pendingUpdateHandler = () => {
+      hasPendingUpdate = true;
+    };
+    
+    autoUpdater.once('update-downloaded', pendingUpdateHandler);
+    
+    // Try to check for updates - if an update is already downloaded,
+    // it will trigger the update-downloaded event immediately
+    await autoUpdater.checkForUpdates();
+    
+    // Small delay to allow event to fire
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    
+    if (hasPendingUpdate) {
+      updateLogger.info('Found pending update, prompting user for installation...');
+      
+      const result = await dialog.showMessageBox({
+        type: 'question',
+        title: 'Uinstallert oppdatering funnet',
+        message: 'Det finnes en oppdatering som ble lastet ned men ikke installert.',
+        detail: 'Vil du installere oppdateringen nå? Applikasjonen vil starte på nytt.',
+        buttons: ['Installer nå', 'Senere'],
+        defaultId: 0,
+      });
+      
+      if (result.response === 0) {
+        updateLogger.info('User chose to install pending update...');
+        autoUpdater.quitAndInstall(false, true);
+      }
+    } else {
+      updateLogger.info('No pending updates found at startup');
+    }
+  } catch (error) {
+    // This is expected if no pending update exists
+    updateLogger.info('No pending update or error checking:', error);
+  }
 }
 
 /**
