@@ -175,7 +175,7 @@ const BulkSupplierSelect: React.FC<BulkSupplierSelectProps> = ({
         onSuppliersSelected(allSupplierNames);
       }
     }
-  }, [suppliers, selectedSuppliers, onSuppliersSelected, userHasManuallySelected]);
+  }, [suppliers, userHasManuallySelected]); // Intentionally excluding selectedSuppliers and onSuppliersSelected to prevent infinite loop
 
   // Serialize bulkSelectedOrders to avoid infinite loops from Map reference changes
   const bulkSelectedOrdersSerialized = useMemo(() => {
@@ -240,7 +240,7 @@ const BulkSupplierSelect: React.FC<BulkSupplierSelectProps> = ({
         }
       });
     }
-  }, [selectedSuppliers, excludedOrderLines, supplierOrders, onOrderLinesSelected]);
+  }, [selectedSuppliers, excludedOrderLines, supplierOrders]); // Intentionally excluding onOrderLinesSelected to prevent re-renders
 
   // Handle individual supplier selection
   const handleSupplierSelect = (supplier: string) => {
@@ -269,10 +269,8 @@ const BulkSupplierSelect: React.FC<BulkSupplierSelectProps> = ({
     // Mark that user has manually selected
     setUserHasManuallySelected(true);
 
-    // Force a small delay to see if it's a timing issue
-    setTimeout(() => {
-      onSuppliersSelected(uniqueSelection);
-    }, 0);
+    // Update selection immediately
+    onSuppliersSelected(uniqueSelection);
   };
 
   // Handle expanding supplier details
