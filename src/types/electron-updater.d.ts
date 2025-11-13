@@ -1,7 +1,5 @@
 // Type definitions for electron-updater
 declare module 'electron-updater' {
-  import { EventEmitter } from 'events';
-
   // Define a basic Logger interface
   interface BasicLogger {
     info(message?: unknown, ...optionalParams: unknown[]): void;
