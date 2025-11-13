@@ -12,7 +12,11 @@ interface EmailButtonProps {
 
 const emailService = new EmailService();
 
-const EmailButton: React.FC<EmailButtonProps> = ({ excelData, selectedSupplier, onPrevious }) => {
+const EmailButton: React.FC<EmailButtonProps> = ({
+  excelData,
+  selectedSupplier,
+  onPrevious: _onPrevious,
+}) => {
   const [isSending, setIsSending] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
   const [showPreview, setShowPreview] = useState(false);
