@@ -1,6 +1,72 @@
 # Documentation Changelog
 
-## Versjon 1.4.1: Kritisk Windows Installasjonsfix og Arkitektur-fix
+## Version 1.4.2: UI Bugfix - Checkbox Flimring
+
+_November 2025_
+
+Denne versjonen fikser et irriterende UI-problem med checkbox-flimring.
+
+### Bugfixes
+
+#### Checkbox Flimring ved "Velg Alle" Leverandører
+
+**Problem:**
+
+- Når man valgte "ALLE leverandører" flimret/flashet "inkluder"-boksen kontinuerlig
+- Dette gjorde UI-en nesten ubrukelig når man skulle sende til mange leverandører
+- Årsak: Infinite re-render loop i React state management
+
+**Løsning:**
+
+- **Fjernet state-loop**: Fjernet `selectedSuppliers` og `onSuppliersSelected` fra auto-select useEffect dependencies
+- **Optimalisert callbacks**: Fjernet `onOrderLinesSelected` fra order-sync useEffect dependencies
+- **Fjernet setTimeout**: Oppdaterer selection umiddelbart i stedet for med delay
+- **Forbedret performance**: Komponenten re-rendrer nå bare når nødvendig
+
+**Endrede filer:**
+
+- `src/renderer/components/BulkSupplierSelect.tsx`:
+  - Linje 178: Optimalisert auto-select useEffect
+  - Linje 243: Optimalisert order-sync useEffect
+  - Linje 275: Fjernet unødvendig setTimeout
+
+**Teknisk info:**
+
+- Problem: useEffect med `selectedSuppliers` i dependency array → oppdaterer `selectedSuppliers` → trigger useEffect igjen → infinite loop
+- Løsning: Eksplisitt ekskludere callback-funksjoner og state som forårsaker loops
+- Resultat: Smooth, flimrerfri UI ✨
+
+#### GitHub Release Script Forbedring
+
+**Forbedring:**
+
+- GitHub release script sletter nå automatisk eksisterende assets før re-upload
+- Forhindrer "already_exists" feil ved rebuilds
+- Nyttig for bugfix-releases som v1.4.1 → v1.4.2
+
+**Endrede filer:**
+
+- `scripts/create-github-release.js`:
+  - Lagt til automatisk asset-sletting før upload
+
+### Påvirkning
+
+**Før denne fixen:**
+
+- ❌ Checkbox flimret når man valgte alle leverandører
+- ❌ UI var vanskelig å bruke for bulk-operasjoner
+- ❌ Performance-problemer ved mange leverandører
+
+**Etter denne fixen:**
+
+- ✅ Smooth checkbox-operasjoner
+- ✅ Ingen flimring eller flashing
+- ✅ Bedre performance
+- ✅ Brukervennlig bulk-valg
+
+---
+
+## Version 1.4.1: Kritisk Windows Installasjonsfix og Arkitektur-fix
 
 _November 2025_
 
