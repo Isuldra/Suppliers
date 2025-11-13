@@ -1,14 +1,41 @@
 # Documentation Changelog
 
-## Versjon 1.4.1: Kritisk Windows Installasjonsfix
+## Versjon 1.4.1: Kritisk Windows Installasjonsfix og Arkitektur-fix
 
 _November 2025_
 
-Denne versjonen løser et kritisk problem med Windows-installasjon hvor programmet ikke kunne finnes etter installasjon.
+Denne versjonen løser to kritiske problemer med Windows-installasjon og -kjøring av Pulse.
 
 ### Kritiske Bugfixes
 
-#### Windows Installasjonsproblem Løst
+#### 1. Feil Prosessor-arkitektur (ARM64 vs X64) - KRITISK
+
+**Problem:**
+
+- **Appen startet ikke etter installasjon på Windows**
+- Ikonet ble erstattet med placeholder-ikon
+- Windows rapporterte "Finner ikke filen"
+- Årsak: Applikasjonen ble bygget for ARM64-arkitektur (Apple Silicon) i stedet for X64 (standard Windows-PCer)
+- ARM64-binærer kan ikke kjøres på standard Windows x64-maskiner
+
+**Løsning:**
+
+- **Eksplisitt x64-arkitektur**: Endret `package.json` for å eksplisitt spesifisere x64-arkitektur for alle Windows-targets
+- **Riktig electron-binær**: Nå lastes ned og brukes riktig electron-binary for Windows x64
+- **Native moduler**: better-sqlite3 og odbc bygges nå for x64 i stedet for ARM64
+
+**Endrede filer:**
+
+- `package.json`:
+  - Linje 84-99: Endret `win.target` til å eksplisitt spesifisere `arch: ["x64"]` for zip, portable og nsis
+
+**Teknisk info:**
+
+- Tidligere: `arch=arm64` (fungerer bare på ARM-baserte Windows-maskiner, ekstremt sjeldent)
+- Nå: `arch=x64` (fungerer på alle standard Windows-PCer)
+- Installer-størrelse: ~87 MB (ned fra 89 MB for ARM64)
+
+#### 2. Windows Installasjonsproblem Løst
 
 **Problem:**
 
@@ -38,19 +65,31 @@ Denne versjonen løser et kritisk problem med Windows-installasjon hvor programm
 
 ### Påvirkning
 
-**Før denne fixen:**
+**Før disse fixene:**
+
+**Arkitektur-problem:**
+
+- Appen kunne IKKE kjøres på standard Windows-PCer (x64)
+- Placeholder-ikon i Start-meny og på skrivebordet
+- "Finner ikke filen" feilmeldinger
+- Ingen feilmelding under installasjon - så ut til å fungere
+- Totalt ubrukelig på vanlige Windows-maskiner
+
+**Registry/Snarvei-problem:**
 
 - Registry-oppføringer feilet å bli opprettet (krever admin-rettigheter)
 - Start-meny-snarveier kunne feile
 - Programmet ble installert, men Windows kunne ikke finne det
-- Brukere måtte manuelt navigere til `%LOCALAPPDATA%\Programs\Pulse\` for å finne programmet
+- Brukere måtte manuelt navigere til `%LOCALAPPDATA%\Programs\Pulse\`
 
-**Etter denne fixen:**
+**Etter disse fixene:**
 
-- Registry-oppføringer opprettes korrekt for gjeldende bruker
-- Start-meny-snarveier opprettes alltid
-- Programmet vises i Start-menyen som forventet
-- Normal Windows-installasjonsopplevelse
+- ✅ Applikasjonen kjører nå på alle standard Windows x64-maskiner
+- ✅ Korrekt ikon vises i Start-meny og på skrivebordet
+- ✅ Registry-oppføringer opprettes korrekt for gjeldende bruker
+- ✅ Start-meny-snarveier opprettes alltid
+- ✅ Programmet vises og starter som forventet
+- ✅ Normal Windows-installasjons- og kjøringsopplevelse
 
 ### Anbefaling
 
