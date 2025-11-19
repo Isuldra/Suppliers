@@ -116,7 +116,7 @@ const indexHtml = `<!DOCTYPE html>
     <div class="container">
         <div class="header">
             <h1>Pulse</h1>
-            <p>Supplier Reminder Pro <span class="version-badge">v${version}</span></p>
+            <p>Pulse <span class="version-badge">v${version}</span></p>
         </div>
         
         <div class="content">

@@ -12,7 +12,7 @@
 
 ## Introduksjon
 
-Dette dokumentet gir en enkel oversikt over «Supplier Reminder Pro»-applikasjonen, et spesialutviklet skrivebordsprogram designet for å støtte og effektivisere OneMeds prosesser for oppfølging av leverandører knyttet til innkjøpsordrer.
+Dette dokumentet gir en enkel oversikt over «Pulse»-applikasjonen, et spesialutviklet skrivebordsprogram designet for å støtte og effektivisere OneMeds prosesser for oppfølging av leverandører knyttet til innkjøpsordrer.
 
 ## Hva Applikasjonen Gjør i Dag
 
