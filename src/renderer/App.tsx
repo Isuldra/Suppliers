@@ -322,15 +322,18 @@ const App: React.FC = () => {
     }, 100);
   }, []);
 
+  // Memoize the order selection handler to prevent loops
   const handleBulkOrdersSelected = React.useCallback((supplier: string, orders: Set<string>) => {
     setAppState((prev) => {
       const currentOrders = prev.bulkSelectedOrders.get(supplier);
-      // Check if actually changed
+      // Check if actually changed using Set equality check
       if (currentOrders) {
-        const currentArr = Array.from(currentOrders).sort();
-        const newArr = Array.from(orders).sort();
-        if (JSON.stringify(currentArr) === JSON.stringify(newArr)) {
-          return prev;
+        if (currentOrders.size === orders.size) {
+            const currentArr = Array.from(currentOrders).sort();
+            const newArr = Array.from(orders).sort();
+            if (JSON.stringify(currentArr) === JSON.stringify(newArr)) {
+                 return prev;
+            }
         }
       }
 
