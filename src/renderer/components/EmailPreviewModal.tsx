@@ -77,30 +77,52 @@ const EmailPreviewModal: React.FC<EmailPreviewModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white/60 backdrop-blur-2xl rounded-3xl border border-white/50 shadow-2xl w-full max-w-7xl max-h-[90vh] flex flex-col">
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 overflow-y-auto">
+      <div className="bg-white/60 backdrop-blur-2xl rounded-3xl border border-white/50 shadow-2xl w-full max-w-7xl max-h-[90vh] flex flex-col my-auto">
         <div className="p-6 border-b flex justify-between items-center">
           <h2 className="text-xl font-bold text-neutral">Forhåndsvisning av e-post</h2>
-          <div className="flex space-x-2">
+          <div className="flex items-center space-x-4">
+            <div className="flex space-x-2">
+              <button
+                className={`px-3 py-1 rounded-sm transition-default ${
+                  emailData.language === 'no'
+                    ? 'bg-primary text-neutral-white'
+                    : 'bg-neutral-light text-neutral'
+                }`}
+                onClick={() => onChangeLanguage('no')}
+              >
+                Norsk
+              </button>
+              <button
+                className={`px-3 py-1 rounded-sm transition-default ${
+                  emailData.language === 'en'
+                    ? 'bg-primary text-neutral-white'
+                    : 'bg-neutral-light text-neutral'
+                }`}
+                onClick={() => onChangeLanguage('en')}
+              >
+                English
+              </button>
+            </div>
             <button
-              className={`px-3 py-1 rounded-sm transition-default ${
-                emailData.language === 'no'
-                  ? 'bg-primary text-neutral-white'
-                  : 'bg-neutral-light text-neutral'
-              }`}
-              onClick={() => onChangeLanguage('no')}
+              onClick={onCancel}
+              className="text-neutral-secondary hover:text-neutral transition-colors p-2 hover:bg-neutral-light rounded-full"
+              aria-label="Lukk vindu"
             >
-              Norsk
-            </button>
-            <button
-              className={`px-3 py-1 rounded-sm transition-default ${
-                emailData.language === 'en'
-                  ? 'bg-primary text-neutral-white'
-                  : 'bg-neutral-light text-neutral'
-              }`}
-              onClick={() => onChangeLanguage('en')}
-            >
-              English
+              <svg
+                className="w-6 h-6"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
             </button>
           </div>
         </div>
