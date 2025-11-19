@@ -1,4 +1,5 @@
-// Script to create all distribution formats of Supplier Reminder Pro
+// Script to create all distribution formats of Pulse
+
 import fs from 'fs';
 import path from 'path';
 import { execSync } from 'child_process';
@@ -26,7 +27,7 @@ if (!fs.existsSync(distributionsDir)) {
 // Build all distribution formats
 async function createAllDistributions() {
   try {
-    console.log('Creating all distribution formats for Supplier Reminder Pro...');
+    console.log('Creating all distribution formats for Pulse...');
 
     // Create a timestamped directory for this build
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-').split('T')[0];

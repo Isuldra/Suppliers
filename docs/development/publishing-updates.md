@@ -40,7 +40,7 @@ Update the `version` field in `package.json`:
 {
   "name": "one-med-supplychain-app",
   "version": "1.1.8",
-  "description": "OneMed SupplyChain - Supplier Reminder Pro"
+  "description": "OneMed SupplyChain - Pulse"
 }
 ```
 
