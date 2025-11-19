@@ -224,10 +224,19 @@ const BulkSupplierSelect: React.FC<BulkSupplierSelectProps> = ({
     }
   }, [bulkSelectedOrdersSerialized, selectedSuppliers, supplierOrders]);
 
+  // Automatically load orders for all selected suppliers
+  useEffect(() => {
+    selectedSuppliers.forEach((supplier) => {
+      if (!supplierOrders.has(supplier)) {
+        console.log(`🔄 Auto-loading orders for selected supplier: ${supplier}`);
+        fetchSupplierOrders(supplier);
+      }
+    });
+  }, [selectedSuppliers]);
+
   // Send filtered order lines to parent component
   useEffect(() => {
     if (onOrderLinesSelected && selectedSuppliers.length > 0) {
-      const updatedOrders = new Map<string, Set<string>>();
       let hasUpdates = false;
 
       selectedSuppliers.forEach((supplier) => {
