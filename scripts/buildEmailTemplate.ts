@@ -30,9 +30,7 @@ async function main() {
 Handlebars.registerHelper('eq', (a: unknown, b: unknown): boolean => a === b);
 Handlebars.registerHelper('gt', (a: number, b: number): boolean => a > b);
 
-/* eslint-disable max-len */
 const rawTemplate = ${JSON.stringify(minified)};
-/* eslint-enable max-len */
 
 const compiledEmail = Handlebars.compile(rawTemplate);
 

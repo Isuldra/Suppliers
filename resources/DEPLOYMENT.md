@@ -1,6 +1,6 @@
-# Supplier Reminder Pro - Deployment Guide
+# Pulse - Deployment Guide
 
-This document provides instructions for deploying Supplier Reminder Pro silently via PowerShell or batch scripts, which is especially useful for enterprise environments.
+This document provides instructions for deploying Pulse silently via PowerShell or batch scripts, which is especially useful for enterprise environments.
 
 ## Building the Windows Installer
 
@@ -27,12 +27,12 @@ You can deploy silently directly from the command line:
 
 ```powershell
 # PowerShell
-Start-Process -Wait -FilePath "Supplier-Reminder-Pro-1.0.0-setup.exe" -ArgumentList "/S /D=C:\Program Files\Supplier Reminder Pro"
+Start-Process -Wait -FilePath "Pulse-1.0.0-setup.exe" -ArgumentList "/S /D=C:\Program Files\Pulse"
 ```
 
 ```batch
 REM Command Prompt/Batch
-"Supplier-Reminder-Pro-1.0.0-setup.exe" /S /D="C:\Program Files\Supplier Reminder Pro"
+"Pulse-1.0.0-setup.exe" /S /D="C:\Program Files\Pulse"
 ```
 
 ### Method 2: Using the Provided PowerShell Script
@@ -83,7 +83,7 @@ Example GPO script:
 
 ```powershell
 # Check if already installed
-if (-not (Test-Path "C:\Program Files\Supplier Reminder Pro\Supplier Reminder Pro.exe")) {
+if (-not (Test-Path "C:\Program Files\Pulse\Pulse.exe")) {
     # Install silently
     Start-Process -Wait -FilePath "\\server\share\Supplier-Reminder-Pro-1.0.0-setup.exe" -ArgumentList "/S"
 }
@@ -95,7 +95,7 @@ To verify installation status via PowerShell:
 
 ```powershell
 Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* |
-    Where-Object { $_.DisplayName -eq "Supplier Reminder Pro" } |
+    Where-Object { $_.DisplayName -eq "Pulse" } |
     Select-Object DisplayName, DisplayVersion, InstallLocation
 ```
 
@@ -106,7 +106,7 @@ Silent uninstallation can be performed with:
 ```powershell
 # Find uninstaller
 $uninstaller = (Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* |
-    Where-Object { $_.DisplayName -eq "Supplier Reminder Pro" }).UninstallString
+    Where-Object { $_.DisplayName -eq "Pulse" }).UninstallString
 
 # Run uninstaller silently
 if ($uninstaller) {
@@ -119,7 +119,7 @@ if ($uninstaller) {
 
 If you encounter issues with silent installation:
 
-1. Check installation logs in `%TEMP%\Supplier Reminder Pro-Install-Log.txt`
+1. Check installation logs in `%TEMP%\Pulse-Install-Log.txt`
 2. Verify the system meets the minimum requirements
 3. Ensure the user has administrator privileges
 4. Check if antivirus is blocking the installation
