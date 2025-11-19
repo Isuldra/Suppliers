@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { EmailData, EmailService } from '../services/emailService';
 
 interface EmailPreviewModalProps {
@@ -76,10 +77,25 @@ const EmailPreviewModal: React.FC<EmailPreviewModalProps> = ({
     setIsEditingEmail(false);
   };
 
-  return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 overflow-y-auto">
-      <div className="bg-white/60 backdrop-blur-2xl rounded-3xl border border-white/50 shadow-2xl w-full max-w-7xl max-h-[90vh] flex flex-col my-auto">
-        <div className="p-6 border-b flex justify-between items-center">
+  const modalContent = (
+    <div
+      className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
+      style={{
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        backdropFilter: 'blur(4px)',
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+      }}
+      onClick={onCancel}
+    >
+      <div
+        className="bg-white/60 backdrop-blur-2xl rounded-3xl border border-white/50 shadow-2xl w-full max-w-7xl max-h-[90vh] flex flex-col"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="p-6 border-b flex justify-between items-center flex-shrink-0">
           <h2 className="text-xl font-bold text-neutral">Forhåndsvisning av e-post</h2>
           <div className="flex items-center space-x-4">
             <div className="flex space-x-2">
@@ -127,7 +143,7 @@ const EmailPreviewModal: React.FC<EmailPreviewModalProps> = ({
           </div>
         </div>
 
-        <div className="p-6 border-b">
+        <div className="p-6 border-b flex-shrink-0">
           <div className="mb-4">
             <div className="flex items-center justify-between mb-2">
               <span className="font-medium">Til:</span>
@@ -200,7 +216,7 @@ const EmailPreviewModal: React.FC<EmailPreviewModalProps> = ({
           />
         </div>
 
-        <div className="p-6 border-t flex justify-end space-x-4">
+        <div className="p-6 border-t flex justify-end space-x-4 flex-shrink-0">
           <button
             className="btn btn-secondary px-4 py-2 font-medium ease-in-out bg-neutral-white text-primary border border-primary hover:bg-primary-light hover:text-neutral-white"
             onClick={onCancel}
@@ -222,6 +238,8 @@ const EmailPreviewModal: React.FC<EmailPreviewModalProps> = ({
       </div>
     </div>
   );
+
+  return createPortal(modalContent, document.body);
 };
 
 export default EmailPreviewModal;

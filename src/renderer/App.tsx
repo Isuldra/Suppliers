@@ -329,11 +329,11 @@ const App: React.FC = () => {
       // Check if actually changed using Set equality check
       if (currentOrders) {
         if (currentOrders.size === orders.size) {
-            const currentArr = Array.from(currentOrders).sort();
-            const newArr = Array.from(orders).sort();
-            if (JSON.stringify(currentArr) === JSON.stringify(newArr)) {
-                 return prev;
-            }
+          const currentArr = Array.from(currentOrders).sort();
+          const newArr = Array.from(orders).sort();
+          if (JSON.stringify(currentArr) === JSON.stringify(newArr)) {
+            return prev;
+          }
         }
       }
 
