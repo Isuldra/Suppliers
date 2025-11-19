@@ -37,7 +37,7 @@
     "prepare-deps": "electron-builder install-app-deps",
     "rebuild-sharp": "npm rebuild sharp --runtime=electron --target=36.5.0 --dist-url=https://electronjs.org/headers",
     "prebuild": "npm run build:email-template",
-    "build:email-template": "node --loader ts-node/esm scripts/buildEmailTemplate.ts",
+    "build:email-template": "node --loader ts-node/esm scripts/buildEmailTemplate.ts && npx prettier --write src/generated/emailTemplateCompiled.ts",
     "deploy:cloudflare": "node scripts/simple-cloudflare-deploy.js",
     "version:sync": "node scripts/sync-version.js sync",
     "version:bump": "node scripts/sync-version.js bump",
