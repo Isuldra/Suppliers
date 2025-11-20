@@ -1543,7 +1543,7 @@ ipcMain.handle('send-logs-to-support', async () => {
 
     const logFile = log.transports.file.getFile();
     const supportEmail = 'andreas.elvethun@onemed.com';
-    const subject = 'Supplier Reminder Pro Support Logs';
+    const subject = 'Pulse Support Logs';
     const logFilePath = logFile ? String(logFile) : undefined;
     if (logFilePath && fs.existsSync(logFilePath)) {
       if (process.platform === 'win32') {

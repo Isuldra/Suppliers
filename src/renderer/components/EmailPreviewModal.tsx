@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { EmailData, EmailService } from '../services/emailService';
 
 interface EmailPreviewModalProps {
@@ -76,36 +77,73 @@ const EmailPreviewModal: React.FC<EmailPreviewModalProps> = ({
     setIsEditingEmail(false);
   };
 
-  return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white/60 backdrop-blur-2xl rounded-3xl border border-white/50 shadow-2xl w-full max-w-7xl max-h-[90vh] flex flex-col">
-        <div className="p-6 border-b flex justify-between items-center">
+  const modalContent = (
+    <div
+      className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
+      style={{
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        backdropFilter: 'blur(4px)',
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+      }}
+      onClick={onCancel}
+    >
+      <div
+        className="bg-white/60 backdrop-blur-2xl rounded-3xl border border-white/50 shadow-2xl w-full max-w-7xl max-h-[90vh] flex flex-col"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="p-6 border-b flex justify-between items-center flex-shrink-0">
           <h2 className="text-xl font-bold text-neutral">Forhåndsvisning av e-post</h2>
-          <div className="flex space-x-2">
+          <div className="flex items-center space-x-4">
+            <div className="flex space-x-2">
+              <button
+                className={`px-3 py-1 rounded-sm transition-default ${
+                  emailData.language === 'no'
+                    ? 'bg-primary text-neutral-white'
+                    : 'bg-neutral-light text-neutral'
+                }`}
+                onClick={() => onChangeLanguage('no')}
+              >
+                Norsk
+              </button>
+              <button
+                className={`px-3 py-1 rounded-sm transition-default ${
+                  emailData.language === 'en'
+                    ? 'bg-primary text-neutral-white'
+                    : 'bg-neutral-light text-neutral'
+                }`}
+                onClick={() => onChangeLanguage('en')}
+              >
+                English
+              </button>
+            </div>
             <button
-              className={`px-3 py-1 rounded-sm transition-default ${
-                emailData.language === 'no'
-                  ? 'bg-primary text-neutral-white'
-                  : 'bg-neutral-light text-neutral'
-              }`}
-              onClick={() => onChangeLanguage('no')}
+              onClick={onCancel}
+              className="text-neutral-secondary hover:text-neutral transition-colors p-2 hover:bg-neutral-light rounded-full"
+              aria-label="Lukk vindu"
             >
-              Norsk
-            </button>
-            <button
-              className={`px-3 py-1 rounded-sm transition-default ${
-                emailData.language === 'en'
-                  ? 'bg-primary text-neutral-white'
-                  : 'bg-neutral-light text-neutral'
-              }`}
-              onClick={() => onChangeLanguage('en')}
-            >
-              English
+              <svg
+                className="w-6 h-6"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
             </button>
           </div>
         </div>
 
-        <div className="p-6 border-b">
+        <div className="p-6 border-b flex-shrink-0">
           <div className="mb-4">
             <div className="flex items-center justify-between mb-2">
               <span className="font-medium">Til:</span>
@@ -178,7 +216,7 @@ const EmailPreviewModal: React.FC<EmailPreviewModalProps> = ({
           />
         </div>
 
-        <div className="p-6 border-t flex justify-end space-x-4">
+        <div className="p-6 border-t flex justify-end space-x-4 flex-shrink-0">
           <button
             className="btn btn-secondary px-4 py-2 font-medium ease-in-out bg-neutral-white text-primary border border-primary hover:bg-primary-light hover:text-neutral-white"
             onClick={onCancel}
@@ -200,6 +238,8 @@ const EmailPreviewModal: React.FC<EmailPreviewModalProps> = ({
       </div>
     </div>
   );
+
+  return createPortal(modalContent, document.body);
 };
 
 export default EmailPreviewModal;
