@@ -1,11 +1,11 @@
 {
-  "version": "1.4.1",
+  "version": "1.4.2",
   "files": [
     {
-      "url": "https://github.com/Isuldra/Suppliers/releases/download/v1.4.1/Pulse-Portable.exe",
-      "sha512": "nL7YKlu34fzZXMxE9AfIjIJ2oG6eWpvfGSkUnmobN+kttAk6C84g9yJ+9xe1iOMhxJOx/EmAFMBa9bzAaSJImg==",
-      "size": 93023862
+      "url": "https://github.com/Isuldra/Suppliers/releases/download/v1.4.2/Pulse-Portable.exe",
+      "sha512": "RekUg/lq6pH262QnK8Nt5jPeLc4yDJBpUdIuSZ/SbrLiKJO69LrqJtlYUAZJHzXJUSuP39UlNHfL8DVcwP1dnw==",
+      "size": 91313505
     }
   ],
-  "releaseDate": "2025-11-13T09:07:23.180Z"
+  "releaseDate": "2025-11-13T10:03:15.349Z"
 }

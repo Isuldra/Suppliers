@@ -1,6 +1,6 @@
 {
   "name": "one-med-supplychain-app",
-  "version": "1.4.1",
+  "version": "1.4.2",
   "description": "Pulse - Desktop application for managing supplier workflows and data",
   "main": "dist/main/main.cjs",
   "private": true,
@@ -37,7 +37,7 @@
     "prepare-deps": "electron-builder install-app-deps",
     "rebuild-sharp": "npm rebuild sharp --runtime=electron --target=36.5.0 --dist-url=https://electronjs.org/headers",
     "prebuild": "npm run build:email-template",
-    "build:email-template": "node --loader ts-node/esm scripts/buildEmailTemplate.ts",
+    "build:email-template": "node --loader ts-node/esm scripts/buildEmailTemplate.ts && npx prettier --write src/generated/emailTemplateCompiled.ts",
     "deploy:cloudflare": "node scripts/simple-cloudflare-deploy.js",
     "version:sync": "node scripts/sync-version.js sync",
     "version:bump": "node scripts/sync-version.js bump",
@@ -82,9 +82,24 @@
     },
     "win": {
       "target": [
-        "zip",
-        "portable",
-        "nsis"
+        {
+          "target": "zip",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
       ],
       "icon": "resources/pulse.ico",
       "artifactName": "${productName}-${version}-setup.${ext}"
