@@ -1,14 +1,107 @@
 # Documentation Changelog
 
-## Versjon 1.4.1: Kritisk Windows Installasjonsfix
+## Version 1.4.2: UI Bugfix - Checkbox Flimring
 
 _November 2025_
 
-Denne versjonen løser et kritisk problem med Windows-installasjon hvor programmet ikke kunne finnes etter installasjon.
+Denne versjonen fikser et irriterende UI-problem med checkbox-flimring.
+
+### Bugfixes
+
+#### Checkbox Flimring ved "Velg Alle" Leverandører
+
+**Problem:**
+
+- Når man valgte "ALLE leverandører" flimret/flashet "inkluder"-boksen kontinuerlig
+- Dette gjorde UI-en nesten ubrukelig når man skulle sende til mange leverandører
+- Årsak: Infinite re-render loop i React state management
+
+**Løsning:**
+
+- **Fjernet state-loop**: Fjernet `selectedSuppliers` og `onSuppliersSelected` fra auto-select useEffect dependencies
+- **Optimalisert callbacks**: Fjernet `onOrderLinesSelected` fra order-sync useEffect dependencies
+- **Fjernet setTimeout**: Oppdaterer selection umiddelbart i stedet for med delay
+- **Forbedret performance**: Komponenten re-rendrer nå bare når nødvendig
+
+**Endrede filer:**
+
+- `src/renderer/components/BulkSupplierSelect.tsx`:
+  - Linje 178: Optimalisert auto-select useEffect
+  - Linje 243: Optimalisert order-sync useEffect
+  - Linje 275: Fjernet unødvendig setTimeout
+
+**Teknisk info:**
+
+- Problem: useEffect med `selectedSuppliers` i dependency array → oppdaterer `selectedSuppliers` → trigger useEffect igjen → infinite loop
+- Løsning: Eksplisitt ekskludere callback-funksjoner og state som forårsaker loops
+- Resultat: Smooth, flimrerfri UI ✨
+
+#### GitHub Release Script Forbedring
+
+**Forbedring:**
+
+- GitHub release script sletter nå automatisk eksisterende assets før re-upload
+- Forhindrer "already_exists" feil ved rebuilds
+- Nyttig for bugfix-releases som v1.4.1 → v1.4.2
+
+**Endrede filer:**
+
+- `scripts/create-github-release.js`:
+  - Lagt til automatisk asset-sletting før upload
+
+### Påvirkning
+
+**Før denne fixen:**
+
+- ❌ Checkbox flimret når man valgte alle leverandører
+- ❌ UI var vanskelig å bruke for bulk-operasjoner
+- ❌ Performance-problemer ved mange leverandører
+
+**Etter denne fixen:**
+
+- ✅ Smooth checkbox-operasjoner
+- ✅ Ingen flimring eller flashing
+- ✅ Bedre performance
+- ✅ Brukervennlig bulk-valg
+
+---
+
+## Version 1.4.1: Kritisk Windows Installasjonsfix og Arkitektur-fix
+
+_November 2025_
+
+Denne versjonen løser to kritiske problemer med Windows-installasjon og -kjøring av Pulse.
 
 ### Kritiske Bugfixes
 
-#### Windows Installasjonsproblem Løst
+#### 1. Feil Prosessor-arkitektur (ARM64 vs X64) - KRITISK
+
+**Problem:**
+
+- **Appen startet ikke etter installasjon på Windows**
+- Ikonet ble erstattet med placeholder-ikon
+- Windows rapporterte "Finner ikke filen"
+- Årsak: Applikasjonen ble bygget for ARM64-arkitektur (Apple Silicon) i stedet for X64 (standard Windows-PCer)
+- ARM64-binærer kan ikke kjøres på standard Windows x64-maskiner
+
+**Løsning:**
+
+- **Eksplisitt x64-arkitektur**: Endret `package.json` for å eksplisitt spesifisere x64-arkitektur for alle Windows-targets
+- **Riktig electron-binær**: Nå lastes ned og brukes riktig electron-binary for Windows x64
+- **Native moduler**: better-sqlite3 og odbc bygges nå for x64 i stedet for ARM64
+
+**Endrede filer:**
+
+- `package.json`:
+  - Linje 84-99: Endret `win.target` til å eksplisitt spesifisere `arch: ["x64"]` for zip, portable og nsis
+
+**Teknisk info:**
+
+- Tidligere: `arch=arm64` (fungerer bare på ARM-baserte Windows-maskiner, ekstremt sjeldent)
+- Nå: `arch=x64` (fungerer på alle standard Windows-PCer)
+- Installer-størrelse: ~87 MB (ned fra 89 MB for ARM64)
+
+#### 2. Windows Installasjonsproblem Løst
 
 **Problem:**
 
@@ -38,19 +131,31 @@ Denne versjonen løser et kritisk problem med Windows-installasjon hvor programm
 
 ### Påvirkning
 
-**Før denne fixen:**
+**Før disse fixene:**
+
+**Arkitektur-problem:**
+
+- Appen kunne IKKE kjøres på standard Windows-PCer (x64)
+- Placeholder-ikon i Start-meny og på skrivebordet
+- "Finner ikke filen" feilmeldinger
+- Ingen feilmelding under installasjon - så ut til å fungere
+- Totalt ubrukelig på vanlige Windows-maskiner
+
+**Registry/Snarvei-problem:**
 
 - Registry-oppføringer feilet å bli opprettet (krever admin-rettigheter)
 - Start-meny-snarveier kunne feile
 - Programmet ble installert, men Windows kunne ikke finne det
-- Brukere måtte manuelt navigere til `%LOCALAPPDATA%\Programs\Pulse\` for å finne programmet
+- Brukere måtte manuelt navigere til `%LOCALAPPDATA%\Programs\Pulse\`
 
-**Etter denne fixen:**
+**Etter disse fixene:**
 
-- Registry-oppføringer opprettes korrekt for gjeldende bruker
-- Start-meny-snarveier opprettes alltid
-- Programmet vises i Start-menyen som forventet
-- Normal Windows-installasjonsopplevelse
+- ✅ Applikasjonen kjører nå på alle standard Windows x64-maskiner
+- ✅ Korrekt ikon vises i Start-meny og på skrivebordet
+- ✅ Registry-oppføringer opprettes korrekt for gjeldende bruker
+- ✅ Start-meny-snarveier opprettes alltid
+- ✅ Programmet vises og starter som forventet
+- ✅ Normal Windows-installasjons- og kjøringsopplevelse
 
 ### Anbefaling
 

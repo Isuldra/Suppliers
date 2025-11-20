@@ -1,9 +1,9 @@
-# Silent Installation Script for Supplier Reminder Pro
+# Silent Installation Script for Pulse
 # This PowerShell script demonstrates how to silently install the application
 
 param (
-    [string]$InstallerPath = ".\Supplier-Reminder-Pro-1.0.0-setup.exe",
-    [string]$InstallDir = "C:\Program Files\Supplier Reminder Pro",
+    [string]$InstallerPath = ".\Pulse-1.4.2-setup.exe",
+    [string]$InstallDir = "C:\Program Files\Pulse",
     [switch]$Force = $false,
     [switch]$NoWait = $false,
     [switch]$Uninstall = $false
@@ -12,15 +12,15 @@ param (
 # Function to check if app is already installed
 function Test-AppInstalled {
     $installed = Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | 
-        Where-Object { $_.DisplayName -eq "Supplier Reminder Pro" }
+        Where-Object { $_.DisplayName -eq "Pulse" }
     return $null -ne $installed
 }
 
 # Function to uninstall existing app
 function Uninstall-App {
-    Write-Host "Uninstalling existing Supplier Reminder Pro..."
+    Write-Host "Uninstalling existing Pulse..."
     $uninstallString = (Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | 
-        Where-Object { $_.DisplayName -eq "Supplier Reminder Pro" }).QuietUninstallString
+        Where-Object { $_.DisplayName -eq "Pulse" }).QuietUninstallString
     
     if ($null -ne $uninstallString) {
         Start-Process -Wait -FilePath "cmd.exe" -ArgumentList "/c $uninstallString"
@@ -35,7 +35,7 @@ if ($Uninstall) {
     if (Test-AppInstalled) {
         Uninstall-App
     } else {
-        Write-Host "Supplier Reminder Pro is not installed. Nothing to uninstall."
+        Write-Host "Pulse is not installed. Nothing to uninstall."
     }
     exit 0
 }
@@ -64,7 +64,7 @@ if (-not (Test-Path $installDirParent)) {
 }
 
 # Install silently
-Write-Host "Installing Supplier Reminder Pro silently to $InstallDir..."
+Write-Host "Installing Pulse silently to $InstallDir..."
 $arguments = "/S /D=$InstallDir"
 
 if ($NoWait) {
@@ -86,5 +86,5 @@ if ($NoWait) {
 }
 
 # Example usage:
-# .\silent-install.ps1 -InstallerPath "C:\Downloads\Supplier-Reminder-Pro-1.0.0-setup.exe" -InstallDir "D:\Apps\SupplierReminder" -Force
+# .\silent-install.ps1 -InstallerPath "C:\Downloads\Pulse-1.4.2-setup.exe" -InstallDir "D:\Apps\Pulse" -Force
 # .\silent-install.ps1 -Uninstall 
