@@ -76,9 +76,31 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          Add-MpPreference -ExclusionPath "${{ github.workspace }}\\dist"
-          Add-MpPreference -ExclusionPath "${{ github.workspace }}\\node_modules"
-          Add-MpPreference -ExclusionPath "${{ github.workspace }}\\release"
+          Write-Host "Attempting to add Windows Defender exclusions (safe guard)..."
+
+          # Check if the Defender cmdlet exists
+          $defenderCmd = Get-Command Add-MpPreference -ErrorAction SilentlyContinue
+          if (-not $defenderCmd) {
+            Write-Host "Add-MpPreference cmdlet not available. Skipping Defender exclusions."
+            exit 0
+          }
+
+          # Check Defender service state
+          $winDefend = Get-Service -Name WinDefend -ErrorAction SilentlyContinue
+          if (-not $winDefend -or $winDefend.Status -ne 'Running') {
+            Write-Host "Windows Defender service not running or not present. Skipping Defender exclusions."
+            exit 0
+          }
+
+          # Add exclusions, but do not fail the job if they error
+          try {
+            Add-MpPreference -ExclusionPath "${{ github.workspace }}\dist" -ErrorAction Stop
+            Add-MpPreference -ExclusionPath "${{ github.workspace }}\node_modules" -ErrorAction Stop
+            Add-MpPreference -ExclusionPath "${{ github.workspace }}\release" -ErrorAction Stop
+            Write-Host "Windows Defender exclusions added."
+          } catch {
+            Write-Warning "Failed to add Windows Defender exclusions: $_. Exception will be ignored and build will continue."
+          }
 
       - name: Generate latest.yml for Portable Auto-Updates
         if: startsWith(github.ref, 'refs/tags/')

@@ -75,9 +75,15 @@ jobs:
 
       - name: Commit and push Cloudflare metadata
         shell: pwsh
+        continue-on-error: true
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
+
+          # Checkout main branch first (we're currently in detached HEAD from tag)
+          git fetch origin main
+          git checkout main
+          git pull origin main
 
           # Add the metadata files
           git add docs/updates/latest.yml
@@ -103,8 +109,9 @@ jobs:
 
       # Note: SLACK_WEBHOOK_URL is an optional secret. If not set, this step will be skipped.
       # The linter warning about "Context access might be invalid" is expected and can be ignored.
+      # Changed to always() so Slack notification is sent even if git push fails (we often push manually)
       - name: Send CHANGELOG to Slack
-        if: success()
+        if: always() && steps.version.outputs.version
         shell: bash
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL || '' }}

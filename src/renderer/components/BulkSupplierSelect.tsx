@@ -171,11 +171,14 @@ const BulkSupplierSelect: React.FC<BulkSupplierSelectProps> = ({
     if (suppliers.length > 0 && !userHasManuallySelected) {
       const allSupplierNames = suppliers.map((s) => s.supplier);
       // Only auto-select if the current selection is different
-      if (JSON.stringify(selectedSuppliers.sort()) !== JSON.stringify(allSupplierNames.sort())) {
-        onSuppliersSelected(allSupplierNames);
+      // And only if we're NOT in "All Days" mode to avoid auto-selecting huge lists
+      if (!allDaysMode) {
+        if (JSON.stringify(selectedSuppliers.sort()) !== JSON.stringify(allSupplierNames.sort())) {
+          onSuppliersSelected(allSupplierNames);
+        }
       }
     }
-  }, [suppliers, selectedSuppliers, onSuppliersSelected, userHasManuallySelected]);
+  }, [suppliers, userHasManuallySelected, allDaysMode]); // Added allDaysMode to dependency
 
   // Serialize bulkSelectedOrders to avoid infinite loops from Map reference changes
   const bulkSelectedOrdersSerialized = useMemo(() => {
@@ -221,26 +224,45 @@ const BulkSupplierSelect: React.FC<BulkSupplierSelectProps> = ({
     }
   }, [bulkSelectedOrdersSerialized, selectedSuppliers, supplierOrders]);
 
+  // Automatically load orders for all selected suppliers
+  useEffect(() => {
+    selectedSuppliers.forEach((supplier) => {
+      if (!supplierOrders.has(supplier)) {
+        console.log(`🔄 Auto-loading orders for selected supplier: ${supplier}`);
+        fetchSupplierOrders(supplier);
+      }
+    });
+  }, [selectedSuppliers]);
+
   // Send filtered order lines to parent component
   useEffect(() => {
     if (onOrderLinesSelected && selectedSuppliers.length > 0) {
+      let hasUpdates = false;
+
       selectedSuppliers.forEach((supplier) => {
         const orders = supplierOrders.get(supplier);
-        // Only send if we have actually loaded orders for this supplier
         if (orders && orders.length > 0) {
           const filteredOrderKeys = new Set(
             orders
               .filter((order) => !excludedOrderLines.has(order.key || ''))
               .map((order) => order.key || '')
           );
-          onOrderLinesSelected(supplier, filteredOrderKeys);
-          console.log(
-            `📤 BulkSupplierSelect: Sending ${filteredOrderKeys.size} orders for ${supplier}`
-          );
+
+          // Only update if different from what parent might have
+          // We can't easily check parent state here without passing it down fully,
+          // but we can prevent firing if nothing is selected
+          if (filteredOrderKeys.size > 0) {
+            onOrderLinesSelected(supplier, filteredOrderKeys);
+            hasUpdates = true;
+          }
         }
       });
+
+      if (hasUpdates) {
+        console.log('📤 BulkSupplierSelect: Updated order lines sent to parent');
+      }
     }
-  }, [selectedSuppliers, excludedOrderLines, supplierOrders, onOrderLinesSelected]);
+  }, [selectedSuppliers, excludedOrderLines, supplierOrders]); // Intentionally excluding onOrderLinesSelected to prevent re-renders
 
   // Handle individual supplier selection
   const handleSupplierSelect = (supplier: string) => {
@@ -269,10 +291,8 @@ const BulkSupplierSelect: React.FC<BulkSupplierSelectProps> = ({
     // Mark that user has manually selected
     setUserHasManuallySelected(true);
 
-    // Force a small delay to see if it's a timing issue
-    setTimeout(() => {
-      onSuppliersSelected(uniqueSelection);
-    }, 0);
+    // Update selection immediately
+    onSuppliersSelected(uniqueSelection);
   };
 
   // Handle expanding supplier details
@@ -549,9 +569,10 @@ const BulkSupplierSelect: React.FC<BulkSupplierSelectProps> = ({
                         <td colSpan={6} className="px-4 py-4">
                           <div className="bg-neutral-white rounded-md border border-neutral-light p-4">
                             <h4 className="text-sm font-medium text-neutral mb-3">
-                              {t('bulkSupplierSelect.outstandingOrdersFor', {
-                                supplier: supplier.supplier,
-                              })}
+                              {t('bulkSupplierSelect.outstandingOrdersFor').replace(
+                                '{supplier}',
+                                supplier.supplier
+                              )}
                             </h4>
                             {supplierOrders.get(supplier.supplier) ? (
                               <div className="overflow-x-auto">
