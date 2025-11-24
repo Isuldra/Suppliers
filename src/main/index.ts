@@ -465,42 +465,48 @@ async function createOrLoadDatabase(): Promise<Database.Database> {
 }
 
 // --- IPC Handler for Excel Import ---
-ipcMain.handle('saveOrdersToDatabase', async (_event, payload: { fileBuffer: ArrayBuffer }) => {
-  log.info(`Received 'saveOrdersToDatabase' request with file buffer.`);
-  if (!payload || !payload.fileBuffer) {
-    log.error("IPC 'saveOrdersToDatabase' call missing fileBuffer.");
-    return { success: false, error: 'No file data received.' };
-  }
-  try {
-    const db = databaseService.getDbInstance();
-    if (!db) {
-      log.error('Database service not connected or DB connection unavailable.');
-      throw new Error('Database connection is not available.');
+ipcMain.handle(
+  'saveOrdersToDatabase',
+  async (_event, payload: { fileBuffer: ArrayBuffer; fileName?: string }) => {
+    log.info(`Received 'saveOrdersToDatabase' request with file buffer.`);
+    if (!payload || !payload.fileBuffer) {
+      log.error("IPC 'saveOrdersToDatabase' call missing fileBuffer.");
+      return { success: false, error: 'No file data received.' };
     }
+    try {
+      const db = databaseService.getDbInstance();
+      if (!db) {
+        log.error('Database service not connected or DB connection unavailable.');
+        throw new Error('Database connection is not available.');
+      }
 
-    log.info('Calling importAlleArk with buffer...');
-    // Pass buffer directly to importer (it needs adaptation)
-    const success = await importAlleArk(payload.fileBuffer, db);
-    log.info(`importAlleArk finished with success: ${success}`);
+      const fileName = payload.fileName || 'unknown.xlsx';
+      log.info(`Mottok fil: ${fileName}`); // Explicit debug log requested by user
+      log.info(`Calling importAlleArk with buffer and fileName: ${fileName}...`);
 
-    if (success) {
-      // Invalidate dashboard cache after successful import
-      databaseService.invalidateDashboardCache();
-      return { success: true, message: 'Import completed successfully.' };
-    } else {
-      // Check if importAlleArk provides more specific error info
-      throw new Error('Import process failed. Check logs for details.');
+      // Pass buffer and fileName to importer
+      const success = await importAlleArk(payload.fileBuffer, db, fileName);
+      log.info(`importAlleArk finished with success: ${success}`);
+
+      if (success) {
+        // Invalidate dashboard cache after successful import
+        databaseService.invalidateDashboardCache();
+        return { success: true, message: 'Import completed successfully.' };
+      } else {
+        // Check if importAlleArk provides more specific error info
+        throw new Error('Import process failed. Check logs for details.');
+      }
+    } catch (err: unknown) {
+      log.error('Error during saveOrdersToDatabase handling:', err);
+      // Send the actual message & stack back to renderer
+      return {
+        success: false,
+        error: err instanceof Error ? err.message : String(err),
+        stack: err instanceof Error ? err.stack : '<no stacktrace>',
+      };
     }
-  } catch (err: unknown) {
-    log.error('Error during saveOrdersToDatabase handling:', err);
-    // Send the actual message & stack back to renderer
-    return {
-      success: false,
-      error: err instanceof Error ? err.message : String(err),
-      stack: err instanceof Error ? err.stack : '<no stacktrace>',
-    };
   }
-});
+);
 
 /**
  * Validate that the parsed Excel data has all required fields before saving.
