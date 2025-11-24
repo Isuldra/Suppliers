@@ -213,7 +213,7 @@ For teknisk support eller spørsmål:
 
 ---
 
-**Sist oppdatert**: Januar 2025  
+**Sist oppdatert**: November 2025  
 **Versjon**: 1.3.0
 
 ---
@@ -431,7 +431,7 @@ För teknisk support eller frågor:
 
 ---
 
-**Senast uppdaterad**: Januari 2025  
+**Senast uppdaterad**: November 2025  
 **Version**: 1.3.0
 
 ---
@@ -649,7 +649,7 @@ For teknisk support eller spørgsmål:
 
 ---
 
-**Sidst opdateret**: Januar 2025  
+**Sidst opdateret**: November 2025  
 **Version**: 1.3.0
 
 ---
@@ -867,7 +867,7 @@ Teknisestä tuesta tai kysymyksistä:
 
 ---
 
-**Viimeksi päivitetty**: Tammikuu 2025  
+**Viimeksi päivitetty**: Marraskuu 2025  
 **Versio**: 1.3.0
 
 ---
@@ -1085,5 +1085,5 @@ For technical support or questions:
 
 ---
 
-**Last updated**: January 2025  
+**Last updated**: November 2025  
 **Version**: 1.3.0

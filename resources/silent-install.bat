@@ -1,5 +1,5 @@
 @echo off
-:: Silent Installation Batch Wrapper for Supplier Reminder Pro
+:: Silent Installation Batch Wrapper for Pulse
 :: This batch file can be used to invoke the PowerShell script with elevated privileges
 
 setlocal enabledelayedexpansion
@@ -22,8 +22,8 @@ exit /b
 
 :ADMIN
 :: Parse command line arguments
-set INSTALLER_PATH=.\Supplier-Reminder-Pro-1.0.0-setup.exe
-set INSTALL_DIR=C:\Program Files\Supplier Reminder Pro
+set INSTALLER_PATH=.\Pulse-1.4.2-setup.exe
+set INSTALL_DIR=C:\Program Files\Pulse
 set FORCE=
 set NOWAIT=
 set UNINSTALL=
