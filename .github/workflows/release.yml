@@ -78,6 +78,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Create Cloudflare metadata branch
+        id: cloudflare_metadata
         shell: pwsh
         continue-on-error: true
         run: |
@@ -116,6 +117,30 @@ jobs:
             git push origin $branchName
             Write-Host "Successfully pushed Cloudflare metadata updates to $branchName"
             Write-Host "Open a PR: https://github.com/Isuldra/Suppliers/compare/$branchName?expand=1"
+            Add-Content -Path $env:GITHUB_OUTPUT -Value "branchName=$branchName"
+          }
+
+      - name: Open PR for Cloudflare metadata
+        if: steps.cloudflare_metadata.outputs.branchName
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $branch = "${{ steps.cloudflare_metadata.outputs.branchName }}"
+          $title = "chore(release): Cloudflare metadata for v${{ steps.version.outputs.version }}"
+          $bodyLine1 = "Automatisk oppdatering av Cloudflare-filer for v${{ steps.version.outputs.version }}."
+          $bodyLine2 = "- docs/updates/latest.yml / latest.json"
+          $bodyLine3 = "- docs/updates/index.html"
+          $bodyLine4 = "Denne PR-en ble åpnet av release-workflowen."
+          $body = "$bodyLine1`n$bodyLine2`n$bodyLine3`n$bodyLine4"
+          try {
+            gh pr create --base develop --head $branch --title "$title" --body "$body"
+            Write-Host "Pull request created for $branch"
+          } catch {
+            $errorMsg = $_.Exception.Message
+            Write-Host "Could not create PR automatically: $errorMsg"
+            $compareUrl = "https://github.com/Isuldra/Suppliers/compare/$branch"
+            Write-Host "Manually open: $compareUrl"
           }
 
       - name: Verify Cloudflare deployment
