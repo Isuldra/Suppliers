@@ -17,6 +17,11 @@ const updatesDir = path.join(projectRoot, 'docs', 'updates');
 const packageJsonPath = path.join(projectRoot, 'package.json');
 const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
 const version = packageJson.version;
+const releaseTimestamp = new Date();
+const humanReadableDate = releaseTimestamp.toLocaleDateString('no-NO');
+const isoReleaseDate = releaseTimestamp.toISOString();
+let githubReleaseUrl = '';
+let portableReleaseUrl = '';
 
 console.log(`Preparing Cloudflare release for version ${version}...`);
 
@@ -141,14 +146,13 @@ if (filesToInclude.length > 0) {
 
   const fileHash = calculateSHA512(mainFile.path);
   const fileSize = getFileSize(mainFile.path);
-  const releaseDate = new Date().toISOString();
 
   // Use filename with dots instead of spaces for GitHub Releases URL
   const githubFilename = mainFile.name.replace(/ /g, '.');
 
   // Use full GitHub Releases URL since we're serving from Cloudflare Pages
   // but the files are hosted on GitHub Releases
-  const githubReleaseUrl = `https://github.com/Isuldra/Suppliers/releases/download/v${version}/${githubFilename}`;
+  githubReleaseUrl = `https://github.com/Isuldra/Suppliers/releases/download/v${version}/${githubFilename}`;
 
   const latestYml = `version: ${version}
 files:
@@ -157,7 +161,7 @@ files:
     size: ${fileSize}
 path: ${githubFilename}
 sha512: ${fileHash}
-releaseDate: '${releaseDate}'`;
+releaseDate: '${isoReleaseDate}'`;
 
   const latestYmlPath = path.join(updatesDir, 'latest.yml');
   fs.writeFileSync(latestYmlPath, latestYml);
@@ -202,14 +206,12 @@ if (fs.existsSync(portableExePath)) {
 
   const portableHash = calculateSHA512(portableExePath);
   const portableSize = getFileSize(portableExePath);
-  const releaseDate = new Date().toISOString();
-
   // Use filename with dots instead of spaces for GitHub Releases URL
   const portableFilename = portableExe.replace(/ /g, '.');
 
   // Use full GitHub Releases URL since we're serving from Cloudflare Pages
   // but the files are hosted on GitHub Releases
-  const portableReleaseUrl = `https://github.com/Isuldra/Suppliers/releases/download/v${version}/${portableFilename}`;
+  portableReleaseUrl = `https://github.com/Isuldra/Suppliers/releases/download/v${version}/${portableFilename}`;
 
   const latestJson = {
     version: version,
@@ -220,7 +222,7 @@ if (fs.existsSync(portableExePath)) {
         size: portableSize,
       },
     ],
-    releaseDate: releaseDate,
+    releaseDate: isoReleaseDate,
   };
 
   const latestJsonPath = path.join(updatesDir, 'latest.json');
@@ -235,29 +237,35 @@ console.log('\nUpdating index.html...');
 const indexPath = path.join(updatesDir, 'index.html');
 let indexContent = fs.readFileSync(indexPath, 'utf8');
 
-// Update version in the HTML
+// Remove legacy cache-busting comments when rebuilding
+indexContent = indexContent.replace(/\s*# Force Cloudflare Pages update\s*$/m, '');
+
+// Update every release version badge
 indexContent = indexContent.replace(
-  /<span class="version-badge">v[\d.]+<\/span>/,
-  `<span class="version-badge">v${version}</span>`
+  /class="release-version">v[\d.]+</g,
+  `class="release-version">v${version}<`
 );
 
-// Update status message and replace all version entries
+// Update every release date placeholder
 indexContent = indexContent.replace(
-  /<h3>Cloudflare Pages er konfigurert!<\/h3>/,
-  `<h3>Release v${version} er klar!</h3>`
+  /class="release-date">[^<]+</g,
+  `class="release-date">${humanReadableDate}<`
 );
 
-// Replace the entire status section to avoid duplicates
-const statusSectionRegex = /<div class="status">[\s\S]*?<\/div>/;
-const newStatusSection = `<div class="status">
-                <h3>Release v${version} er klar!</h3>
-                <p>Automatiske oppdateringer er nå tilgjengelige via Cloudflare Pages.</p>
-                <p><strong>Ny versjon:</strong> v${version} - ${new Date().toLocaleDateString(
-                  'no-NO'
-                )}</p>
-            </div>`;
+// Update status text (e.g., "Release v1.4.2 er klar")
+indexContent = indexContent.replace(/Release v[\d.]+ er klar/g, `Release v${version} er klar`);
 
-indexContent = indexContent.replace(statusSectionRegex, newStatusSection);
+// Update installer download link
+const downloadInstallerRegex = /(id="download-installer"[^>]*href=")[^"]+(")/;
+if (githubReleaseUrl) {
+  indexContent = indexContent.replace(downloadInstallerRegex, `$1${githubReleaseUrl}$2`);
+}
+
+// Update portable download link
+const downloadPortableRegex = /(id="download-portable"[^>]*href=")[^"]+(")/;
+if (portableReleaseUrl) {
+  indexContent = indexContent.replace(downloadPortableRegex, `$1${portableReleaseUrl}$2`);
+}
 
 fs.writeFileSync(indexPath, indexContent);
 console.log(`Success: Updated: index.html with version ${version}`);
