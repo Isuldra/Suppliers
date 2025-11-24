@@ -204,47 +204,47 @@ const App: React.FC = () => {
   // Global app state that persists across route changes
   const [appState, setAppState] = useState<AppState>(getInitialState());
 
-  const handleDataParsed = (data: ExcelData) => {
+  const handleDataParsed = React.useCallback((data: ExcelData) => {
     console.log('Excel data parsed in App:', data);
     setAppState((prev) => ({
       ...prev,
       excelData: data,
     }));
-  };
+  }, []);
 
-  const handleValidationErrors = (errors: ValidationError[]) => {
+  const handleValidationErrors = React.useCallback((errors: ValidationError[]) => {
     setAppState((prev) => ({
       ...prev,
       validationErrors: errors,
     }));
-  };
+  }, []);
 
-  const handleWeekdaySelected = (weekday: string) => {
+  const handleWeekdaySelected = React.useCallback((weekday: string) => {
     setAppState((prev) => ({
       ...prev,
       selectedWeekday: weekday,
       selectedSupplier: '', // Reset supplier when weekday changes
     }));
-  };
+  }, []);
 
-  const handleSupplierSelected = (supplier: string) => {
+  const handleSupplierSelected = React.useCallback((supplier: string) => {
     setAppState((prev) => ({
       ...prev,
       selectedSupplier: supplier,
       showDataReview: true, // Automatically show data review when supplier is selected
       showEmailButton: false, // Reset email button state
     }));
-  };
+  }, []);
 
-  const handleReviewComplete = () => {
+  const handleReviewComplete = React.useCallback(() => {
     setAppState((prev) => ({
       ...prev,
       showDataReview: false,
       showEmailButton: true,
     }));
-  };
+  }, []);
 
-  const resetApp = () => {
+  const resetApp = React.useCallback(() => {
     // Clear session storage when resetting
     try {
       sessionStorage.removeItem('appState');
@@ -268,10 +268,10 @@ const App: React.FC = () => {
       bulkSelectedOrders: new Map(),
       bulkSupplierEmails: new Map(),
     });
-  };
+  }, []);
 
   // Bulk mode handlers
-  const handleToggleBulkMode = () => {
+  const handleToggleBulkMode = React.useCallback(() => {
     setAppState((prev) => ({
       ...prev,
       isBulkMode: !prev.isBulkMode,
@@ -285,24 +285,25 @@ const App: React.FC = () => {
       bulkSelectedOrders: !prev.isBulkMode ? new Map() : prev.bulkSelectedOrders,
       bulkSupplierEmails: !prev.isBulkMode ? new Map() : prev.bulkSupplierEmails,
     }));
-  };
+  }, []);
 
-  const handleSuppliersSelected = (suppliers: string[]) => {
+  const handleSuppliersSelected = React.useCallback((suppliers: string[]) => {
     console.log('🟢 App.tsx: handleSuppliersSelected called with:', suppliers);
     console.log('🟢 suppliers type:', typeof suppliers);
     console.log('🟢 suppliers is array:', Array.isArray(suppliers));
     console.log('🟢 suppliers length:', suppliers.length);
-    console.log('🟢 Current appState.selectedSuppliers:', appState.selectedSuppliers);
-    console.log('🟢 Current appState.selectedSuppliers type:', typeof appState.selectedSuppliers);
-    console.log(
-      '🟢 Current appState.selectedSuppliers is array:',
-      Array.isArray(appState.selectedSuppliers)
-    );
 
     // Remove duplicates to prevent counting issues
     const uniqueSuppliers = [...new Set(suppliers)];
 
     setAppState((prev) => {
+      // Only update if actually changed to prevent loops
+      const currentSorted = [...prev.selectedSuppliers].sort();
+      const newSorted = [...uniqueSuppliers].sort();
+      if (JSON.stringify(currentSorted) === JSON.stringify(newSorted)) {
+        return prev;
+      }
+
       // DON'T remove bulkSelectedOrders entries - keep them so they're remembered when supplier is re-selected
       const newState = {
         ...prev,
@@ -317,12 +318,25 @@ const App: React.FC = () => {
 
     // Also log after state update
     setTimeout(() => {
-      console.log('🟢 App state after update:', appState.selectedSuppliers);
+      console.log('🟢 App state updated (deferred log)');
     }, 100);
-  };
+  }, []);
 
-  const handleBulkOrdersSelected = (supplier: string, orders: Set<string>) => {
+  // Memoize the order selection handler to prevent loops
+  const handleBulkOrdersSelected = React.useCallback((supplier: string, orders: Set<string>) => {
     setAppState((prev) => {
+      const currentOrders = prev.bulkSelectedOrders.get(supplier);
+      // Check if actually changed using Set equality check
+      if (currentOrders) {
+        if (currentOrders.size === orders.size) {
+          const currentArr = Array.from(currentOrders).sort();
+          const newArr = Array.from(orders).sort();
+          if (JSON.stringify(currentArr) === JSON.stringify(newArr)) {
+            return prev;
+          }
+        }
+      }
+
       const newBulkSelectedOrders = new Map(prev.bulkSelectedOrders);
       newBulkSelectedOrders.set(supplier, orders);
       return {
@@ -330,11 +344,13 @@ const App: React.FC = () => {
         bulkSelectedOrders: newBulkSelectedOrders,
       };
     });
-  };
+  }, []);
 
-  const handleBulkSupplierEmailChange = (supplier: string, email: string) => {
+  const handleBulkSupplierEmailChange = React.useCallback((supplier: string, email: string) => {
     console.log('🟢 App.tsx: handleBulkSupplierEmailChange called:', supplier, email);
     setAppState((prev) => {
+      if (prev.bulkSupplierEmails.get(supplier) === email) return prev;
+
       const newBulkSupplierEmails = new Map(prev.bulkSupplierEmails);
       newBulkSupplierEmails.set(supplier, email);
       return {
@@ -342,9 +358,9 @@ const App: React.FC = () => {
         bulkSupplierEmails: newBulkSupplierEmails,
       };
     });
-  };
+  }, []);
 
-  const handleBulkComplete = () => {
+  const handleBulkComplete = React.useCallback(() => {
     setAppState((prev) => ({
       ...prev,
       selectedSuppliers: [],
@@ -353,33 +369,33 @@ const App: React.FC = () => {
       bulkSupplierEmails: new Map(),
       showDataReview: false,
     }));
-  };
+  }, []);
 
-  const handleBulkDataReviewNext = (selectedOrders: Map<string, Set<string>>) => {
+  const handleBulkDataReviewNext = React.useCallback((selectedOrders: Map<string, Set<string>>) => {
     console.log('🟢 App.tsx: handleBulkDataReviewNext called with selectedOrders:', selectedOrders);
     setAppState((prev) => ({
       ...prev,
       bulkSelectedOrders: selectedOrders,
       showDataReview: true, // This will show BulkEmailPreview in bulk mode
     }));
-  };
+  }, []);
 
-  const handleBulkOrdersChanged = (selectedOrders: Map<string, Set<string>>) => {
+  const handleBulkOrdersChanged = React.useCallback((selectedOrders: Map<string, Set<string>>) => {
     console.log('🟢 App.tsx: handleBulkOrdersChanged called with selectedOrders:', selectedOrders);
     setAppState((prev) => ({
       ...prev,
       bulkSelectedOrders: selectedOrders,
       // DON'T set showDataReview - just update the state
     }));
-  };
+  }, []);
 
-  const handleBulkDataReviewBack = () => {
+  const handleBulkDataReviewBack = React.useCallback(() => {
     setAppState((prev) => ({ ...prev, selectedSuppliers: [] }));
-  };
+  }, []);
 
-  const handleBulkEmailPreviewBack = () => {
+  const handleBulkEmailPreviewBack = React.useCallback(() => {
     setAppState((prev) => ({ ...prev, showDataReview: false }));
-  };
+  }, []);
 
   // Persist state to sessionStorage whenever it changes
   React.useEffect(() => {
