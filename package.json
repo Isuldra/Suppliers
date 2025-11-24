@@ -1,6 +1,6 @@
 {
   "name": "one-med-supplychain-app",
-  "version": "1.4.2",
+  "version": "1.4.5",
   "description": "Pulse - Desktop application for managing supplier workflows and data",
   "main": "dist/main/main.cjs",
   "private": true,
