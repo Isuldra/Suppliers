@@ -3,130 +3,335 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Pulse - Downloads</title>
+    <title>Pulse - Nedlastinger</title>
     <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #315868;
+        --bg-accent: #3d6a7b;
+        --card: #ffffff;
+        --card-muted: #f5f7fa;
+        --text: #1f2a37;
+        --text-muted: #5f6b7a;
+        --success: #0f9d58;
+        --button-primary: #0f9d58;
+        --button-secondary: #1e293b;
+      }
+      * {
+        box-sizing: border-box;
+      }
       body {
-        font-family: "Roboto", -apple-system, BlinkMacSystemFont, "Segoe UI",
-          sans-serif;
+        font-family: "Inter", "Roboto", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
         margin: 0;
-        padding: 40px;
-        background: linear-gradient(135deg, #497886 0%, #366573 100%);
+        padding: 40px 16px;
+        background: radial-gradient(circle at top, var(--bg-accent), var(--bg));
         min-height: 100vh;
+        color: var(--text);
+        display: flex;
+        justify-content: center;
       }
-      .container {
-        max-width: 800px;
-        margin: 0 auto;
-        background: #ffffff;
-        border-radius: 12px;
-        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
-        overflow: hidden;
+      .page {
+        width: 100%;
+        max-width: 960px;
       }
-      .header {
-        background: linear-gradient(135deg, #497886 0%, #366573 100%);
+      .hero {
+        background: linear-gradient(135deg, #4e92a5, #366573);
         color: #ffffff;
-        padding: 40px;
-        text-align: center;
-      }
-      .header h1 {
-        margin: 0;
-        font-size: 2.5em;
-        font-weight: 600;
-        color: #ffffff;
-      }
-      .header p {
-        margin: 10px 0 0 0;
-        opacity: 0.9;
-        font-size: 1.2em;
-        color: #ffffff;
-      }
-      .version-badge {
-        background: rgba(255, 255, 255, 0.2);
-        padding: 4px 12px;
         border-radius: 20px;
-        font-size: 0.9em;
-        display: inline-block;
-        margin-left: 10px;
+        padding: 48px;
+        box-shadow: 0 25px 60px rgba(16, 38, 64, 0.35);
       }
-      .content {
-        padding: 40px;
+      .hero h1 {
+        margin: 0;
+        font-size: 2.75rem;
       }
-      .status {
-        background: #e8f5e8;
-        border: 1px solid #4caf50;
-        border-radius: 8px;
-        padding: 20px;
-        margin: 20px 0;
-        text-align: center;
+      .hero-lead {
+        margin: 14px 0 0;
+        font-size: 1.15rem;
+        opacity: 0.9;
       }
-      .status h3 {
-        color: #2e7d32;
-        margin: 0 0 10px 0;
+      .hero-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 16px;
+        margin-top: 32px;
+      }
+      .meta-pill {
+        background: rgba(255, 255, 255, 0.12);
+        border: 1px solid rgba(255, 255, 255, 0.22);
+        border-radius: 9999px;
+        padding: 8px 18px;
+        font-size: 0.95rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .meta-pill strong {
         font-weight: 600;
       }
-      .info-text {
-        text-align: center;
-        color: #666666;
-        font-size: 1em;
-        line-height: 1.5;
+      .content-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 24px;
+        margin-top: 24px;
+      }
+      .card {
+        background: var(--card);
+        border-radius: 20px;
+        padding: 32px;
+        box-shadow: 0 20px 40px rgba(15, 23, 42, 0.08);
+      }
+      .card h2 {
+        margin: 0 0 12px;
+        font-size: 1.3rem;
+      }
+      .card p {
+        margin: 0 0 16px;
+        color: var(--text-muted);
+        line-height: 1.6;
+      }
+      .download-buttons {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        margin: 24px 0;
+      }
+      .download-btn {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: var(--card-muted);
+        border-radius: 14px;
+        padding: 16px 20px;
+        text-decoration: none;
+        color: var(--button-secondary);
+        font-weight: 600;
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+        border: 1px solid transparent;
+      }
+      .download-btn strong {
+        display: block;
+        font-size: 1.05rem;
+      }
+      .download-btn small {
+        font-weight: 500;
+        color: var(--text-muted);
+      }
+      .download-btn.primary {
+        background: var(--button-primary);
+        color: #ffffff;
+        border-color: rgba(255, 255, 255, 0.1);
+        box-shadow: 0 15px 30px rgba(15, 157, 88, 0.25);
+      }
+      .download-btn.secondary {
+        background: #ffffff;
+        border-color: rgba(15, 23, 42, 0.08);
+      }
+      .download-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 18px 35px rgba(15, 23, 42, 0.15);
+      }
+      .download-meta {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        color: var(--text-muted);
+        font-size: 0.95rem;
+      }
+      .release-note {
+        background: rgba(15, 157, 88, 0.08);
+        border: 1px solid rgba(15, 157, 88, 0.2);
+        border-radius: 12px;
+        padding: 16px;
+        margin-top: 24px;
+        color: #0f5132;
+      }
+      .release-note strong {
+        display: block;
+        margin-bottom: 6px;
+      }
+      .status-alert {
+        background: #e8f5e9;
+        border: 1px solid rgba(15, 157, 88, 0.4);
+        border-radius: 12px;
+        padding: 18px;
+        color: #1b5e20;
+        margin: 24px 0;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .release-details {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        display: grid;
+        gap: 12px;
+      }
+      .release-details li {
+        display: flex;
+        justify-content: space-between;
+        border-bottom: 1px dashed rgba(15, 23, 42, 0.12);
+        padding-bottom: 8px;
+        font-size: 0.95rem;
+      }
+      .release-details span {
+        color: var(--text-muted);
       }
       .footer {
-        background: #f5f5f5;
-        padding: 20px 40px;
         text-align: center;
-        color: #666666;
-        border-top: 1px solid #e1e5e9;
+        color: rgba(255, 255, 255, 0.8);
+        font-size: 0.95rem;
+        margin-top: 32px;
       }
-      .footer strong {
-        color: #333333;
-      }
-      .footer small {
-        color: #666666;
-      }
-      .update-url {
-        color: #497886;
-        text-decoration: none;
-        font-weight: 500;
-      }
-      .update-url:hover {
-        color: #366573;
+      .footer a {
+        color: #ffffff;
         text-decoration: underline;
+      }
+      @media (max-width: 640px) {
+        .hero {
+          padding: 32px;
+        }
+        .card {
+          padding: 24px;
+        }
+        .download-btn {
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 8px;
+        }
       }
     </style>
   </head>
   <body>
-    <div class="container">
-      <div class="header">
+    <main class="page">
+      <section class="hero">
         <h1>Pulse</h1>
+        <p class="hero-lead">
+          Sentralisert distribusjon av Pulse-oppdateringer via Cloudflare Pages.
+        </p>
+        <div class="hero-meta">
+          <div class="meta-pill">
+            <strong>Versjon</strong>
+            <span class="release-version">v1.4.5</span>
+          </div>
+          <div class="meta-pill">
+            <strong>Sist oppdatert</strong>
+            <span class="release-date">24.11.2025</span>
+          </div>
+          <div class="meta-pill">
+            <strong>Status</strong>
+            <span>Release v1.4.5 er klar</span>
+          </div>
+        </div>
+      </section>
         <p>Pulse <span class="version-badge">v1.4.2</span></p>
       </div>
 
-      <div class="content">
-        <div class="status">
-                <h3>Release v1.4.2 er klar!</h3>
-                <p>Automatiske oppdateringer er nå tilgjengelige via Cloudflare Pages.</p>
-                <p><strong>Ny versjon:</strong> v1.4.2 - 13.11.2025</p>
-            </div>
+      <section class="content-grid">
+        <article class="card">
+          <h2>Last ned Pulse</h2>
+          <p>Velg installasjonstype. Vi anbefaler standard installasjon for de fleste brukere.</p>
 
-        <p class="info-text">
-          Oppdateringsfiler vil bli generert automatisk når du lager en ny
-          release.
-        </p>
-      </div>
+          <div class="download-buttons">
+            <a
+              id="download-installer"
+              class="download-btn primary"
+              href="https://github.com/Isuldra/Suppliers/releases/download/v1.4.5/Pulse-1.4.5-setup.exe"
+            >
+              <div>
+                <strong>Installer (NSIS)</strong>
+                <small>Inkluderer automatisk oppdatering</small>
+              </div>
+              <span>Windows x64</span>
+            </a>
 
-      <div class="footer">
+            <a
+              id="download-portable"
+              class="download-btn secondary"
+              href="https://github.com/Isuldra/Suppliers/releases/download/v1.4.5/Pulse-Portable.exe"
+            >
+              <div>
+                <strong>Portable</strong>
+                <small>Krever ingen installasjon</small>
+              </div>
+              <span>Windows x64</span>
+            </a>
+          </div>
+
+          <div class="download-meta">
+            <span>Automatisk oppdatering starter når appen kjører.</span>
+            <span>Installer-versjonen krever administratorrettigheter.</span>
+          </div>
+
+          <div class="release-note">
+            <strong>Release-note</strong>
+            <span>Fikser UI-flimring for leverandørvalg og raffinert Slack-varsling.</span>
+          </div>
+        </article>
+
+        <article class="card">
+          <h2>Oppdateringsstatus</h2>
+          <div class="status-alert">
+            <strong>Automatiske oppdateringer er aktive.</strong>
+            <span>Appen sjekker denne adressen hver 6. time.</span>
+          </div>
+
+          <ul class="release-details">
+            <li>
+              <span>Versjon</span>
+              <strong class="release-version">v1.4.5</strong>
+            </li>
+            <li>
+              <span>Utgivelsesdato</span>
+              <strong class="release-date">24.11.2025</strong>
+            </li>
+            <li>
+              <span>Distribusjon</span>
+              <strong>Cloudflare Pages</strong>
+            </li>
+            <li>
+              <span>Oppdaterings-URL</span>
+              <strong><a href="https://suppliers-anx.pages.dev/">suppliers-anx.pages.dev</a></strong>
+            </li>
+          </ul>
+        </article>
+      </section>
+
+      <section class="card" style="margin-top: 24px">
+        <h2>Manual installasjon</h2>
         <p>
-          <strong>Update URL:</strong>
-          <a href="https://suppliers-anx.pages.dev/" class="update-url"
-            >https://suppliers-anx.pages.dev/</a
-          >
+          1) Last ned ønsket fil. 2) Avslutt eksisterende Pulse-instans. 3) Kjør installasjonsfilen
+          eller erstatt Portable-EXE-filen. 4) Start Pulse på nytt.
         </p>
         <p>
-          <small
-            >Levert av Cloudflare Pages • Rask og pålitelig distribusjon</small
-          >
+          Oppdateringsfilene genereres automatisk når du bygger en ny release via GitHub Actions.
         </p>
-      </div>
-    </div>
+      </section>
+
+      <footer class="footer">
+        Levert av Cloudflare Pages • Rask og pålitelig distribusjon •
+        <a href="https://suppliers-anx.pages.dev/">suppliers-anx.pages.dev</a>
+      </footer>
+    </main>
+
+    <script>
+      (function () {
+        const ua = navigator.userAgent || '';
+        const isWindows = ua.includes('Windows');
+        const buttons = document.querySelectorAll('.download-btn');
+        if (!isWindows) {
+          buttons.forEach((btn) => {
+            btn.classList.remove('primary');
+            btn.classList.add('secondary');
+          });
+          const hero = document.querySelector('.hero-lead');
+          if (hero) {
+            hero.textContent =
+              'Nedlastinger er kun tilgjengelig for Windows. Åpne denne siden fra en Windows-maskin for å installere Pulse.';
+          }
+        }
+      })();
+    </script>
   </body>
 </html>
-# Force Cloudflare Pages update

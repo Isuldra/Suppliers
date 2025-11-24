@@ -59,9 +59,13 @@ jobs:
             Write-Host "Package.json already at version $targetVersion, skipping update"
           }
 
-      - name: Build application
+      - name: Build renderer
         shell: pwsh
-        run: npm run dist:clean
+        run: npm run build
+
+      - name: Package application
+        shell: pwsh
+        run: npm run dist:clean -- --skip-vite-build
 
       - name: Prepare Cloudflare metadata
         shell: pwsh
@@ -73,17 +77,30 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Commit and push Cloudflare metadata
+      - name: Create Cloudflare metadata branch
         shell: pwsh
         continue-on-error: true
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
 
-          # Checkout main branch first (we're currently in detached HEAD from tag)
-          git fetch origin main
-          git checkout main
-          git pull origin main
+          # Checkout main branch (we're in detached HEAD from the tag)
+          git fetch origin develop
+          git checkout develop
+          git pull origin develop
+
+          $version="${{ steps.version.outputs.version }}"
+          $baseBranch="develop"
+          $branchName="release/cloudflare-v$version"
+
+          # Ensure branch name is unique (append timestamp if branch already exists)
+          if (git ls-remote --exit-code origin $branchName) {
+            $timestamp = Get-Date -Format "yyyyMMddHHmmss"
+            $branchName = "$branchName-$timestamp"
+            Write-Host "Branch already exists. Using $branchName instead."
+          }
+
+          git checkout -b $branchName origin/$baseBranch
 
           # Add the metadata files
           git add docs/updates/latest.yml
@@ -96,8 +113,9 @@ jobs:
             Write-Host "No changes in Cloudflare metadata to commit."
           } else {
             git commit -m "chore(release): Update Cloudflare metadata for v${{ steps.version.outputs.version }}"
-            git push origin main
-            Write-Host "Successfully pushed Cloudflare metadata updates"
+            git push origin $branchName
+            Write-Host "Successfully pushed Cloudflare metadata updates to $branchName"
+            Write-Host "Open a PR: https://github.com/Isuldra/Suppliers/compare/$branchName?expand=1"
           }
 
       - name: Verify Cloudflare deployment
