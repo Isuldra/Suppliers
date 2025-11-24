@@ -1,5 +1,29 @@
 # Documentation Changelog
 
+## Version 1.4.5: Cloudflare Portal & Release Automation
+
+_November 2025_
+
+Denne releasen gjør auto-oppdateringene stabile igjen og gir en reell nedlastingsside for sluttbrukere. I tillegg er GitHub/Cloudflare-pipelinen oppdatert slik at den følger branch-reglene og alltid finner riktig changelog-entry til Slack.
+
+### Viktigste endringer
+
+- Ny `docs/updates/index.html` med tydelige nedlastingsknapper (installer + portable), statuskort og automatisk OS-deteksjon
+- Metadata (`latest.yml`/`latest.json`) peker nå på GitHub Releases v1.4.5 med oppdaterte hash-verdier og datoer
+- `scripts/prepare-cloudflare-release.js` håndterer datoformat, laster inn download-URLer én gang og rydder bort gamle cache-kommentarer
+
+### Automatisering og DevOps
+
+- `scripts/build-with-version.js` støtter `--skip-vite-build` slik at CI kan bygge renderer én gang og gjenbruke dist/, med eksplisitt validering hvis mappen mangler
+- Release workflow kjører først `npm run build`, pakker med `npm run dist:clean -- --skip-vite-build` og pusher Cloudflare-filer til en midlertidig `release/cloudflare-v*`-branch i stedet for å bryte hovedgrenregler
+- Slack-varslingen får nå innhold fordi changelog har v1.4.5-seksjon
+
+### Bugfixes
+
+- Forhindrer at GitHub Actions feiler med «Application directory dist doesn't exist» ved å validere byggmappen før electron-builder
+- Pusher ikke lenger direkte til beskyttede `main`, men instruerer om PR fra auto-branch
+- Slack-script finner versjonen fordi changelog oppdateres før workflowen kjører
+
 ## Version 1.4.2: UI Bugfix - Checkbox Flimring
 
 _November 2025_
