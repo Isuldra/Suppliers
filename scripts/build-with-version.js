@@ -8,8 +8,13 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// CLI options
+const args = process.argv.slice(2);
+const skipViteBuild = args.includes('--skip-vite-build');
+
 // Get project root directory
 const projectRoot = path.resolve(__dirname, '..');
+const distPath = path.join(projectRoot, 'dist');
 
 console.log('🔨 Building with proper version handling...');
 
@@ -47,19 +52,36 @@ const electronBuilderConfig = {
 const tempConfigPath = path.join(projectRoot, 'electron-builder.temp.json');
 fs.writeFileSync(tempConfigPath, JSON.stringify(electronBuilderConfig, null, 2));
 
+function assertDistExists() {
+  if (!fs.existsSync(distPath)) {
+    console.error(
+      '❌ Application directory "dist" does not exist. Run `npm run build` before packaging.'
+    );
+    process.exit(1);
+  }
+}
+
 try {
-  // First build the application
-  console.log('🏗️  Building application with vite...');
-  execSync('npm run build', {
-    cwd: projectRoot,
-    stdio: 'inherit',
-  });
+  // First build the application unless already built (CI can opt-out)
+  if (skipViteBuild) {
+    console.log('⚙️  Skipping Vite build (dist already generated)...');
+  } else {
+    console.log('🏗️  Building application with vite...');
+    execSync('npm run build', {
+      cwd: projectRoot,
+      stdio: 'inherit',
+    });
+  }
+
+  assertDistExists();
 
   console.log('📦 Creating minimal manifest...');
   execSync('npm run create-minimal-manifest', {
     cwd: projectRoot,
     stdio: 'inherit',
   });
+
+  assertDistExists();
 
   // Then build with electron-builder
   console.log('🏗️  Building with electron-builder...');
