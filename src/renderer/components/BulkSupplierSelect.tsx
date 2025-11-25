@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ChevronDownIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
 import { ExcelRow } from '../types/ExcelData';
@@ -59,6 +59,7 @@ const BulkSupplierSelect: React.FC<BulkSupplierSelectProps> = ({
   const [userHasManuallySelected, setUserHasManuallySelected] = useState(false);
   const [supplierOrders, setSupplierOrders] = useState<Map<string, ExcelRow[]>>(new Map());
   const [allDaysMode, setAllDaysMode] = useState(false); // Toggle for all days mode
+  const initialSyncDone = useRef(false); // Guard to prevent repeated syncs from parent
 
   // Get supplier info from supplierData.json
   const getSupplierInfo = (supplierName: string): SupplierInfo | null => {
@@ -165,20 +166,24 @@ const BulkSupplierSelect: React.FC<BulkSupplierSelectProps> = ({
     onSuppliersSelected(newSelection);
   };
 
+  // Reset manual-selection guard whenever weekday or planner changes
+  useEffect(() => {
+    setUserHasManuallySelected(false);
+  }, [selectedWeekday, selectedPlanner]);
+
   // Auto-select all suppliers when suppliers change (new weekday selected)
   // But only if user hasn't manually selected anything yet
   useEffect(() => {
-    if (suppliers.length > 0 && !userHasManuallySelected) {
+    if (suppliers.length > 0 && !userHasManuallySelected && !allDaysMode) {
       const allSupplierNames = suppliers.map((s) => s.supplier);
-      // Only auto-select if the current selection is different
-      // And only if we're NOT in "All Days" mode to avoid auto-selecting huge lists
-      if (!allDaysMode) {
-        if (JSON.stringify(selectedSuppliers.sort()) !== JSON.stringify(allSupplierNames.sort())) {
-          onSuppliersSelected(allSupplierNames);
-        }
+      const currentSelectionSorted = [...selectedSuppliers].sort((a, b) => a.localeCompare(b));
+      const availableSorted = [...allSupplierNames].sort((a, b) => a.localeCompare(b));
+
+      if (JSON.stringify(currentSelectionSorted) !== JSON.stringify(availableSorted)) {
+        onSuppliersSelected(allSupplierNames);
       }
     }
-  }, [suppliers, userHasManuallySelected, allDaysMode]); // Added allDaysMode to dependency
+  }, [suppliers, userHasManuallySelected, allDaysMode]); // Intentionally excluding selectedSuppliers/onSuppliersSelected to prevent loops
 
   // Serialize bulkSelectedOrders to avoid infinite loops from Map reference changes
   const bulkSelectedOrdersSerialized = useMemo(() => {
@@ -190,10 +195,18 @@ const BulkSupplierSelect: React.FC<BulkSupplierSelectProps> = ({
     return serialized;
   }, [bulkSelectedOrders]);
 
-  // Sync excludedOrderLines with bulkSelectedOrders from parent
+  // Sync excludedOrderLines with bulkSelectedOrders from parent ONCE on mount
   // This ensures that when we come back to this component, excluded orders are remembered
   useEffect(() => {
-    if (bulkSelectedOrders && selectedSuppliers.length > 0 && supplierOrders.size > 0) {
+    // Only sync once when component mounts with existing data
+    if (initialSyncDone.current) return;
+
+    if (
+      bulkSelectedOrders &&
+      bulkSelectedOrders.size > 0 &&
+      selectedSuppliers.length > 0 &&
+      supplierOrders.size > 0
+    ) {
       const newExcludedOrderLines = new Set<string>();
 
       // For each selected supplier, find orders that are NOT in bulkSelectedOrders
@@ -210,17 +223,11 @@ const BulkSupplierSelect: React.FC<BulkSupplierSelectProps> = ({
         });
       });
 
-      // Only update if there are differences to avoid infinite loops
-      const currentExcludedKeys = Array.from(excludedOrderLines).sort().join(',');
-      const newExcludedKeys = Array.from(newExcludedOrderLines).sort().join(',');
-
-      if (currentExcludedKeys !== newExcludedKeys) {
-        console.log('🔄 Syncing excludedOrderLines with bulkSelectedOrders:', {
-          current: currentExcludedKeys,
-          new: newExcludedKeys,
-        });
-        setExcludedOrderLines(newExcludedOrderLines);
-      }
+      console.log('🔄 Initial sync of excludedOrderLines from bulkSelectedOrders:', {
+        newExcludedKeys: Array.from(newExcludedOrderLines).join(','),
+      });
+      setExcludedOrderLines(newExcludedOrderLines);
+      initialSyncDone.current = true;
     }
   }, [bulkSelectedOrdersSerialized, selectedSuppliers, supplierOrders]);
 
@@ -234,35 +241,8 @@ const BulkSupplierSelect: React.FC<BulkSupplierSelectProps> = ({
     });
   }, [selectedSuppliers]);
 
-  // Send filtered order lines to parent component
-  useEffect(() => {
-    if (onOrderLinesSelected && selectedSuppliers.length > 0) {
-      let hasUpdates = false;
-
-      selectedSuppliers.forEach((supplier) => {
-        const orders = supplierOrders.get(supplier);
-        if (orders && orders.length > 0) {
-          const filteredOrderKeys = new Set(
-            orders
-              .filter((order) => !excludedOrderLines.has(order.key || ''))
-              .map((order) => order.key || '')
-          );
-
-          // Only update if different from what parent might have
-          // We can't easily check parent state here without passing it down fully,
-          // but we can prevent firing if nothing is selected
-          if (filteredOrderKeys.size > 0) {
-            onOrderLinesSelected(supplier, filteredOrderKeys);
-            hasUpdates = true;
-          }
-        }
-      });
-
-      if (hasUpdates) {
-        console.log('📤 BulkSupplierSelect: Updated order lines sent to parent');
-      }
-    }
-  }, [selectedSuppliers, excludedOrderLines, supplierOrders]); // Intentionally excluding onOrderLinesSelected to prevent re-renders
+  // REMOVED: Auto-push effect that caused infinite loops
+  // Order line changes are now pushed to parent directly in handleOrderLineExclusion
 
   // Handle individual supplier selection
   const handleSupplierSelect = (supplier: string) => {
@@ -344,8 +324,8 @@ const BulkSupplierSelect: React.FC<BulkSupplierSelectProps> = ({
     }
   };
 
-  // Handle excluding specific order lines
-  const handleOrderLineExclusion = (orderKey: string) => {
+  // Handle excluding specific order lines and push changes to parent
+  const handleOrderLineExclusion = (orderKey: string, supplier: string) => {
     setExcludedOrderLines((prev) => {
       const newSet = new Set(prev);
       if (newSet.has(orderKey)) {
@@ -353,6 +333,17 @@ const BulkSupplierSelect: React.FC<BulkSupplierSelectProps> = ({
       } else {
         newSet.add(orderKey);
       }
+
+      // Push the updated selection to parent immediately
+      if (onOrderLinesSelected) {
+        const orders = supplierOrders.get(supplier) || [];
+        const filteredOrderKeys = new Set(
+          orders.filter((order) => !newSet.has(order.key || '')).map((order) => order.key || '')
+        );
+        console.log(`📤 Pushing order update for ${supplier}:`, filteredOrderKeys.size, 'orders');
+        onOrderLinesSelected(supplier, filteredOrderKeys);
+      }
+
       return newSet;
     });
   };
@@ -622,7 +613,10 @@ const BulkSupplierSelect: React.FC<BulkSupplierSelectProps> = ({
                                               type="checkbox"
                                               checked={!excludedOrderLines.has(order.key || '')}
                                               onChange={() =>
-                                                handleOrderLineExclusion(order.key || '')
+                                                handleOrderLineExclusion(
+                                                  order.key || '',
+                                                  supplier.supplier
+                                                )
                                               }
                                               className="form-checkbox h-4 w-4 text-primary"
                                             />

@@ -223,7 +223,13 @@ const App: React.FC = () => {
     setAppState((prev) => ({
       ...prev,
       selectedWeekday: weekday,
-      selectedSupplier: '', // Reset supplier when weekday changes
+      selectedSupplier: '', // Reset single supplier state when weekday changes
+      selectedSuppliers: [], // Clear bulk selection to avoid cross-day bleed
+      showDataReview: false,
+      showEmailButton: false,
+      bulkEmailData: new Map(),
+      bulkSelectedOrders: new Map(),
+      bulkSupplierEmails: new Map(),
     }));
   }, []);
 

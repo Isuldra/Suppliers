@@ -62,6 +62,7 @@ interface ElectronAPI {
   }>;
   saveOrdersToDatabase: (payload: {
     fileBuffer: ArrayBuffer;
+    fileName?: string;
   }) => Promise<{ success: boolean; message?: string; error?: string }>;
   getOutstandingOrders: (supplier: string) => Promise<ExcelRow[]>;
   getSuppliersWithOutstandingOrders: () => Promise<{
@@ -384,7 +385,7 @@ contextBridge.exposeInMainWorld('electron', {
     return await ipcRenderer.invoke('getSuppliers');
   },
   // Database methods
-  saveOrdersToDatabase: async (payload: { fileBuffer: ArrayBuffer }) => {
+  saveOrdersToDatabase: async (payload: { fileBuffer: ArrayBuffer; fileName?: string }) => {
     return await ipcRenderer.invoke('saveOrdersToDatabase', payload);
   },
   getOutstandingOrders: async (supplier: string) => {
