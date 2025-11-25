@@ -228,7 +228,7 @@ export class EmailService {
           <tr>
             <td style="padding: 10px 10px 20px 10px; font-family: Arial, Helvetica, sans-serif; font-size: 14px; color: #333333;">
               <p>Hej,</p>
-              <p>Vi hänvisar till vår beställning och ser att följande orderrader fortfarande står som utestående hos er. Vi ber om en återkoppling med ny förväntad leveransdatum (ETA) för varje rad.</p>
+              <p>Vi hänvisar till vår beställning och ser att följande orderrader fortfarande står som utestående hos er. Vi ber om en återkoppling med nytt förväntat leveransdatum (ETA) för varje rad.</p>
               <p>Vänligen svara på detta e-postmeddelande med den ifyllda informationen i kolumnen <b>"Ny ETA"</b>.</p>
             </td>
           </tr>
@@ -276,7 +276,7 @@ export class EmailService {
           <tr>
             <td style="padding: 30px 10px 10px 10px; font-family: Arial, Helvetica, sans-serif; font-size: 14px; color: #333333;">
               <p>Med vänliga hälsningar,<br>
-              <b>OneMed Norge AS</b><br>
+              <b>OneMed Sverige AB</b><br>
               Supply Chain Team</p>
             </td>
           </tr>
@@ -294,7 +294,7 @@ export class EmailService {
 <html>
 <head>
   <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
-  <title>Påmindelse om udestående ordrer</title>
+  <title>Rykker på udestående ordrer</title>
 </head>
 <body style="margin: 0; padding: 0; background-color: #f6f6f6; font-family: Arial, Helvetica, sans-serif;">
 
@@ -307,7 +307,7 @@ export class EmailService {
           <tr>
             <td style="padding: 10px 10px 20px 10px; font-family: Arial, Helvetica, sans-serif; font-size: 14px; color: #333333;">
               <p>Hej,</p>
-              <p>Vi henviser til vores bestilling og ser, at følgende ordrelinjer stadig står som udestående hos jer. Vi beder om en tilbagemelding med ny forventet leveringsdato (ETA) for hver linje.</p>
+              <p>Vi henviser til vores bestilling og kan se, at følgende ordrelinjer stadig står som udestående hos jer. Vi beder om en tilbagemelding med ny forventet leveringsdato (ETA) for hver linje.</p>
               <p>Venligst svar på denne e-mail med den udfyldte information i kolonnen <b>"Ny ETA"</b>.</p>
             </td>
           </tr>
@@ -322,10 +322,10 @@ export class EmailService {
                   <tr style="background-color: #003366; color: #ffffff; text-align: left;">
                     <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">PO-nr</th>
                     <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">OneMed nr</th>
-                    <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">Lev. ArtNr</th>
+                    <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">Lev. Varenr</th>
                     <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">Kommentar</th>
-                    <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">Bestilt ant.</th>
-                    <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">Modtaget ant.</th>
+                    <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">Bestilt antal</th>
+                    <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">Modtaget antal</th>
                     <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">Forventet ETA</th>
                     <th style="padding: 8px 10px; background-color: #008000; border: 1px solid #4A7AAB;">Ny ETA</th>
                   </tr>
@@ -355,7 +355,7 @@ export class EmailService {
           <tr>
             <td style="padding: 30px 10px 10px 10px; font-family: Arial, Helvetica, sans-serif; font-size: 14px; color: #333333;">
               <p>Med venlig hilsen,<br>
-              <b>OneMed Norge AS</b><br>
+              <b>OneMed A/S</b><br>
               Supply Chain Team</p>
             </td>
           </tr>
@@ -373,7 +373,7 @@ export class EmailService {
 <html>
 <head>
   <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
-  <title>Muistutus vireillä olevista tilauksista</title>
+  <title>Muistutus avoimista tilauksista</title>
 </head>
 <body style="margin: 0; padding: 0; background-color: #f6f6f6; font-family: Arial, Helvetica, sans-serif;">
 
@@ -386,8 +386,8 @@ export class EmailService {
           <tr>
             <td style="padding: 10px 10px 20px 10px; font-family: Arial, Helvetica, sans-serif; font-size: 14px; color: #333333;">
               <p>Hei,</p>
-              <p>Viittaamme tilauksemme ja näemme, että seuraavat tilausrivit ovat edelleen vireillä teillä. Pyydämme palautetta uudella odotetulla toimituspäivämäärällä (ETA) jokaiselle riville.</p>
-              <p>Vastatkaa tähän sähköpostiin täyttämällä tiedot sarakkeessa <b>"Uusi ETA"</b>.</p>
+              <p>Viittaamme tilaukseemme ja huomaamme, että seuraavat tilausrivit ovat edelleen avoinna teillä. Pyydämme palautetta uudella arvioidulla toimituspäivällä (ETA) kullekin riville.</p>
+              <p>Vastaattehan tähän sähköpostiin täyttämällä tiedot sarakkeeseen <b>"Uusi ETA"</b>.</p>
             </td>
           </tr>
 
@@ -399,13 +399,13 @@ export class EmailService {
                 <!-- Taulukon otsikot -->
                 <thead>
                   <tr style="background-color: #003366; color: #ffffff; text-align: left;">
-                    <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">PO-nr</th>
-                    <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">OneMed nr</th>
-                    <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">Lev. ArtNr</th>
+                    <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">PO-nro</th>
+                    <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">OneMed nro</th>
+                    <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">Toim. Tuotenro</th>
                     <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">Kommentti</th>
                     <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">Tilattu määrä</th>
                     <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">Vastaanotettu määrä</th>
-                    <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">Odotettu ETA</th>
+                    <th style="padding: 8px 10px; border: 1px solid #4A7AAB;">Arvioitu ETA</th>
                     <th style="padding: 8px 10px; background-color: #008000; border: 1px solid #4A7AAB;">Uusi ETA</th>
                   </tr>
                 </thead>
@@ -434,7 +434,7 @@ export class EmailService {
           <tr>
             <td style="padding: 30px 10px 10px 10px; font-family: Arial, Helvetica, sans-serif; font-size: 14px; color: #333333;">
               <p>Ystävällisin terveisin,<br>
-              <b>OneMed Norge AS</b><br>
+              <b>OneMed Oy</b><br>
               Supply Chain Team</p>
             </td>
           </tr>
