@@ -62,7 +62,7 @@ interface ElectronAPI {
   }>;
   saveOrdersToDatabase: (
     // Use payload type consistent with main process handler
-    payload: { fileBuffer: ArrayBuffer }
+    payload: { fileBuffer: ArrayBuffer; fileName?: string }
   ) => Promise<{ success: boolean; message?: string; error?: string }>;
   getOutstandingOrders: (
     supplier: string,

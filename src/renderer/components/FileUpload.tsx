@@ -645,6 +645,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ onDataParsed, onValidationError
             // Call saveOrdersToDatabase with the fileBuffer
             const dbResult = await window.electron.saveOrdersToDatabase({
               fileBuffer: fileBuffer, // Pass the buffer directly
+              fileName: file.name, // Pass the original file name
             });
             console.log('Database import/save result:', dbResult);
 
