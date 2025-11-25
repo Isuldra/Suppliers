@@ -112,13 +112,32 @@ function cleanupOldTempFiles(): void {
 
 export async function importAlleArk(
   source: string | ArrayBuffer,
-  db: Database.Database
+  db: Database.Database,
+  originalFileName?: string // Added optional fileName parameter
 ): Promise<boolean> {
   // Clean up old temp files before starting new import
   cleanupOldTempFiles();
 
   // Let DatabaseService own the schema; importer just writes into existing tables
   log.info(`Starting Excel import...`);
+
+  // Determine file name for logging and detection
+  let fileName = originalFileName;
+  if (typeof source === 'string') {
+    fileName = source.split('/').pop()?.split('\\').pop();
+  }
+
+  if (fileName) {
+    log.info(`Importing file (in importAlleArk): ${fileName}`);
+
+    if (fileName.toLowerCase().includes('dk') || fileName.toLowerCase().includes('danmark')) {
+      log.info('🇩🇰 DK File Detected: Enabling Denmark-specific import logic');
+    } else {
+      log.info('🇳🇴 Standard NO Import: Filename does not contain "DK" or "Danmark"');
+    }
+  } else {
+    log.warn('⚠️ No filename provided to importAlleArk - defaulting to Standard NO Import');
+  }
 
   const wb = new ExcelJS.Workbook();
 
@@ -169,8 +188,27 @@ export async function importAlleArk(
 
     log.info(`Processing BP sheet starting from row ${startRow}`);
 
+    // Determine if this is a DK import for column mapping
+    const isDkImport =
+      fileName &&
+      (fileName.toLowerCase().includes('dk') || fileName.toLowerCase().includes('danmark'));
+
     for (let r = startRow; r <= bpSheet.rowCount; r++) {
       const row = bpSheet.getRow(r);
+
+      // Determine column indices based on market/file type
+      // Default (NO) vs DK (shifted quantities)
+      // NO: Qty in M(13), N(14), O(15). Comment in L(12).
+      // DK: Appears to lack Comment in L, so Qty shifts to L(12), M(13), N(14).
+      const colOrdered = isDkImport ? 12 : 13;
+      const colDelivered = isDkImport ? 13 : 14;
+      const colOutstanding = isDkImport ? 14 : 15;
+      // DK might have Supplier Name in O(15) instead of P(16)?
+      // If everything shifts left by 1 from L onwards:
+      // P(16) -> O(15)
+      // Q(17) -> P(16)
+      const colSupplier = isDkImport ? 15 : 16;
+      const colRowNr = isDkImport ? 16 : 17;
 
       // Column mapping based on user specification:
       // A (1) = ignore, B (2) = ignore
@@ -184,26 +222,27 @@ export async function importAlleArk(
       const etaDate2 = row.getCell(11).value; // Column K = Expected ETA 2
 
       // Column L = orpradtext (ERP comment) - DEBUG LOGGING
+      // For DK, this might actually be Ordered Qty if shifted
       const columnLCell = row.getCell(12);
-      const erpComment = getCellStringValue(columnLCell);
+      const erpComment = isDkImport ? '' : getCellStringValue(columnLCell);
 
       // Log column L data for first 10 rows to debug orpradtext import
       if (processedCount < 10) {
-        log.info(`🔍 Row ${r} Column L Debug:`, {
+        log.info(`🔍 Row ${r} Column L Debug (isDK=${isDkImport}):`, {
           rawValue: columnLCell.value,
           cellText: columnLCell.text,
           valueType: typeof columnLCell.value,
           isObject: typeof columnLCell.value === 'object',
-          extractedValue: erpComment,
-          hasData: erpComment.length > 0,
+          extractedValue: getCellStringValue(columnLCell),
+          interpretedAs: isDkImport ? 'OrderedQty' : 'Comment',
         });
       }
 
-      const orderedQty = parseFloat(getCellStringValue(row.getCell(13))) || 0; // Column M = Ordered quantity
-      const deliveredQty = parseFloat(getCellStringValue(row.getCell(14))) || 0; // Column N = Delivered quantity
-      const outstandingQty = parseFloat(getCellStringValue(row.getCell(15))) || 0; // Column O = Outstanding quantity
-      const supplierName = getCellStringValue(row.getCell(16)).trim(); // Column P = Supplier name (trimmed)
-      const orderRowNumber = getCellStringValue(row.getCell(17)); // Column Q = Order Row Number (bestradnr)
+      const orderedQty = parseFloat(getCellStringValue(row.getCell(colOrdered))) || 0;
+      const deliveredQty = parseFloat(getCellStringValue(row.getCell(colDelivered))) || 0;
+      const outstandingQty = parseFloat(getCellStringValue(row.getCell(colOutstanding))) || 0;
+      const supplierName = getCellStringValue(row.getCell(colSupplier)).trim();
+      const orderRowNumber = getCellStringValue(row.getCell(colRowNr));
 
       // Skip rows with no meaningful data
       if (!poNumber || !supplierName || poNumber.trim() === '' || supplierName.trim() === '') {
@@ -428,6 +467,58 @@ export async function importAlleArk(
           const clearStmt = db.prepare('DELETE FROM supplier_planning');
           const clearResult = clearStmt.run();
           log.info(`Cleared ${clearResult.changes} existing supplier planning records`);
+
+          // TEMPORARY DK TEST: Manual injection of DK suppliers
+          // Only inject if we detect "DK" in the filename OR if we find no planning data
+          // isDkImport is already calculated above but inside the previous transaction scope or loop.
+          // Re-calculate or use the captured variable if it was in scope.
+          // Since we are in a new transaction block here, let's check fileName again.
+          const isDkImportForPlanning =
+            fileName &&
+            (fileName.toLowerCase().includes('dk') || fileName.toLowerCase().includes('danmark'));
+
+          if (isDkImportForPlanning) {
+            log.info('🇩🇰 Injecting test suppliers for Denmark import...');
+            const dkSuppliers = [
+              'B. Braun Medical',
+              'Carpenter ApS',
+              'Coloplast Danmark A/S',
+              'ConvaTec Denmark A/S',
+              'Dansac & Hollister',
+              'Evolan Pharma AB',
+              'Focuscare Denmark A/S',
+              'ICU Medical Danmark ApS',
+              'KOWSKY',
+              'Medicon eG',
+              'Mediplast A/S',
+              'Novo Nordisk Danmark A/S',
+              'OneMed AB ( DKR )',
+              'Pikdare S.p.A.',
+              'Roche A/S',
+              'TONGXIANG DANFILL BEDDING CO.,LTD.',
+              'Viatris (Meda AS)',
+              'Wellell Inc.',
+              'embecta Sweden AB',
+            ];
+
+            const insertDkPlan = db.prepare(`
+               INSERT OR REPLACE INTO supplier_planning (supplier_name, weekday, planner_name, updated_at)
+               VALUES (?, 'Fredag', 'DK Innkjøper', CURRENT_TIMESTAMP)
+             `);
+
+            for (const supplier of dkSuppliers) {
+              try {
+                insertDkPlan.run(supplier);
+              } catch (e) {
+                log.warn(`Failed to insert temp DK supplier ${supplier}`, e);
+              }
+            }
+            log.info(`Inserted ${dkSuppliers.length} temporary DK suppliers for testing`);
+          } else {
+            log.info(
+              '🇳🇴 Standard NO Import: Skipping manual DK supplier injection (Filename does not contain "DK")'
+            );
+          }
 
           // Insert statement for supplier planning
           const planningInsert = db.prepare(`
