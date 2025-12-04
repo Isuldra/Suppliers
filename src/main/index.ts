@@ -13,9 +13,39 @@ import child_process, { spawn } from 'child_process'; // Added for send-logs-to-
 import { autoUpdater } from 'electron-updater'; // Added for update:install
 import type { ExcelData } from '../renderer/types/ExcelData';
 
+// Helper function to get sender email based on country
+function getSenderEmailForCountry(country?: string): string {
+  const senderEmails: Record<string, string> = {
+    DK: 'indkoeb.dk@onemed.com',
+    NO: 'supply.planning.no@onemed.com',
+    SE: 'supply.planning.no@onemed.com', // TODO: Update when SE email is known
+    FI: 'supply.planning.no@onemed.com', // TODO: Update when FI email is known
+  };
+  return senderEmails[country || ''] || 'supply.planning.no@onemed.com';
+}
+
+// Helper function to get sender display name based on country
+function getSenderDisplayNameForCountry(country?: string): string {
+  const senderNames: Record<string, string> = {
+    DK: 'Supply Chain - OneMed A/S',
+    NO: 'OneMed Norge AS',
+    SE: 'OneMed Sverige AB',
+    FI: 'OneMed Oy',
+  };
+  return senderNames[country || ''] || 'OneMed Norge AS';
+}
+
 // Configure detailed logging for troubleshooting
 log.transports.file.level = 'debug'; // Set to debug for maximum logging
-log.transports.console.level = 'debug';
+
+// Disable console transport in production to prevent EPIPE errors
+// EPIPE occurs when writing to console in packaged apps without an attached terminal
+const isPackaged = app.isPackaged;
+if (isPackaged) {
+  log.transports.console.level = false; // Disable console transport in production
+} else {
+  log.transports.console.level = 'debug';
+}
 
 // Set log file size and rotation
 log.transports.file.maxSize = 10 * 1024 * 1024; // 10MB
@@ -34,12 +64,34 @@ try {
 
   log.info('Log file location:', logFilePath);
 } catch (err) {
-  console.error('Failed to set up logging directory:', err);
+  // Use try-catch to prevent EPIPE if console is unavailable
+  try {
+    console.error('Failed to set up logging directory:', err);
+  } catch {
+    // Ignore console errors
+  }
 }
 
 // Add a global error handler for uncaught exceptions
 process.on('uncaughtException', (error) => {
-  log.error('Uncaught Exception:', error);
+  // Check if this is an EPIPE error from console logging - don't try to log it again
+  const errorCode = (error as NodeJS.ErrnoException).code;
+  const isEpipeError = error.message?.includes('EPIPE') || errorCode === 'EPIPE';
+
+  if (isEpipeError) {
+    // EPIPE errors are typically non-fatal and occur when console is unavailable
+    // Just disable console transport and continue
+    log.transports.console.level = false;
+    return; // Don't show error dialog for EPIPE
+  }
+
+  // Try to log the error, but catch any logging failures
+  try {
+    log.error('Uncaught Exception:', error);
+  } catch {
+    // If logging fails, continue to show the error dialog
+  }
+
   dialog.showErrorBox(
     'Fatal Application Error',
     `An unexpected error occurred: ${error.message}\n\nDetails: ${
@@ -543,81 +595,85 @@ ipcMain.handle('validateData', async (event: IpcMainInvokeEvent, parsedData: Exc
 });
 
 // Handle email sending via .eml file for proper HTML rendering
-ipcMain.handle('sendEmail', async (_, payload: { to: string; subject: string; html: string }) => {
-  try {
-    log.info(`Creating HTML email draft for: ${payload.to}`);
-    log.info(`Subject: ${payload.subject}`);
+ipcMain.handle(
+  'sendEmail',
+  async (_, payload: { to: string; subject: string; html: string; country?: string }) => {
+    try {
+      log.info(`Creating HTML email draft for: ${payload.to}`);
+      log.info(`Subject: ${payload.subject}`);
 
-    // Use the provided email address directly if it contains @, otherwise lookup in database
-    const emailTo = payload.to.includes('@')
-      ? payload.to
-      : databaseService.getSupplierEmail(payload.to) || payload.to;
-    log.info(`Resolved email address: ${emailTo}`);
+      // Use the provided email address directly if it contains @, otherwise lookup in database
+      const emailTo = payload.to.includes('@')
+        ? payload.to
+        : databaseService.getSupplierEmail(payload.to) || payload.to;
+      log.info(`Resolved email address: ${emailTo}`);
 
-    // Ensure we have a valid email address
-    if (!emailTo.includes('@')) {
-      log.warn(`No valid email address found for supplier: ${payload.to}`);
-      return {
-        success: false,
-        error: `Ingen e-postadresse funnet for ${payload.to}. Sjekk leverandør e-post innstillinger.`,
-      };
+      // Ensure we have a valid email address
+      if (!emailTo.includes('@')) {
+        log.warn(`No valid email address found for supplier: ${payload.to}`);
+        return {
+          success: false,
+          error: `Ingen e-postadresse funnet for ${payload.to}. Sjekk leverandør e-post innstillinger.`,
+        };
+      }
+
+      // Create .eml file with proper MIME headers for HTML
+      // Use country-based sender email address
+      const senderEmail = getSenderEmailForCountry(payload.country);
+      const senderDisplayName = getSenderDisplayNameForCountry(payload.country);
+      const EOL = '\r\n';
+
+      // Properly encode the subject for UTF-8
+      const encodedSubject = Buffer.from(payload.subject, 'utf8').toString('base64');
+      const headers = [
+        `From: ${senderDisplayName} <${senderEmail}>`,
+        `Reply-To: ${senderEmail}`,
+        `Sender: ${senderEmail}`,
+        `Return-Path: ${senderEmail}`,
+        `To: ${emailTo}`,
+        `Subject: =?UTF-8?B?${encodedSubject}?=`,
+        `MIME-Version: 1.0`,
+        `Content-Type: text/html; charset=UTF-8`,
+        `Content-Transfer-Encoding: 8bit`,
+        `X-Mailer: Pulse`,
+        ``,
+      ].join(EOL);
+
+      // Ensure proper line endings for email and clean up the HTML
+      const cleanHtml = payload.html
+        .replace(/<style>.*?<\/style>/gs, '')
+        .replace(/<head>.*?<\/head>/gs, '')
+        .replace(/<script>.*?<\/script>/gs, '')
+        .trim();
+
+      const body = cleanHtml.replace(/\r?\n/g, EOL);
+      const emlContent = headers + body;
+
+      // Write to temp file
+      const tempDir = app.getPath('temp');
+      const fileName = `onemed-reminder-${Date.now()}.eml`;
+      const filePath = path.join(tempDir, fileName);
+
+      fs.writeFileSync(filePath, emlContent, 'utf8');
+      log.info(`Created .eml file: ${filePath}`);
+
+      // Open in default mail client as HTML draft
+      await shell.openPath(filePath);
+      log.info(`Opened HTML email draft in default mail client`);
+
+      return { success: true, filePath };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      log.error('Error creating email draft:', errorMessage);
+      return { success: false, error: errorMessage };
     }
-
-    // Create .eml file with proper MIME headers for HTML
-    // Use the official supply planning email address for all communications
-    const senderEmail = 'supply.planning.no@onemed.com';
-    const EOL = '\r\n';
-
-    // Properly encode the subject for UTF-8
-    const encodedSubject = Buffer.from(payload.subject, 'utf8').toString('base64');
-    const headers = [
-      `From: OneMed Norge AS <${senderEmail}>`,
-      `Reply-To: ${senderEmail}`,
-      `Sender: ${senderEmail}`,
-      `Return-Path: ${senderEmail}`,
-      `To: ${emailTo}`,
-      `Subject: =?UTF-8?B?${encodedSubject}?=`,
-      `MIME-Version: 1.0`,
-      `Content-Type: text/html; charset=UTF-8`,
-      `Content-Transfer-Encoding: 8bit`,
-      `X-Mailer: Pulse`,
-      ``,
-    ].join(EOL);
-
-    // Ensure proper line endings for email and clean up the HTML
-    const cleanHtml = payload.html
-      .replace(/<style>.*?<\/style>/gs, '')
-      .replace(/<head>.*?<\/head>/gs, '')
-      .replace(/<script>.*?<\/script>/gs, '')
-      .trim();
-
-    const body = cleanHtml.replace(/\r?\n/g, EOL);
-    const emlContent = headers + body;
-
-    // Write to temp file
-    const tempDir = app.getPath('temp');
-    const fileName = `onemed-reminder-${Date.now()}.eml`;
-    const filePath = path.join(tempDir, fileName);
-
-    fs.writeFileSync(filePath, emlContent, 'utf8');
-    log.info(`Created .eml file: ${filePath}`);
-
-    // Open in default mail client as HTML draft
-    await shell.openPath(filePath);
-    log.info(`Opened HTML email draft in default mail client`);
-
-    return { success: true, filePath };
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-    log.error('Error creating email draft:', errorMessage);
-    return { success: false, error: errorMessage };
   }
-});
+);
 
 // Handle batch email sending via PowerShell - OPTIMIZED VERSION
 ipcMain.handle(
   'sendBatchEmails',
-  async (_, payload: Array<{ to: string; subject: string; html: string }>) => {
+  async (_, payload: Array<{ to: string; subject: string; html: string; country?: string }>) => {
     const tempFiles: string[] = [];
 
     try {
@@ -638,6 +694,7 @@ ipcMain.handle(
         htmlFile: string;
         subjectFile: string;
         resolvedEmail: string;
+        senderEmail: string;
       }> = [];
 
       for (let i = 0; i < payload.length; i++) {
@@ -653,6 +710,9 @@ ipcMain.handle(
           log.warn(`No valid email address found for supplier: ${email.to}`);
           continue; // Skip this email
         }
+
+        // Get sender email based on country
+        const senderEmail = getSenderEmailForCountry(email.country);
 
         // Create temporary files for this email
         const htmlFile = path.join(os.tmpdir(), `onemed-batch-${Date.now()}-${i}.html`);
@@ -671,6 +731,7 @@ ipcMain.handle(
           htmlFile,
           subjectFile,
           resolvedEmail: emailTo,
+          senderEmail,
         });
       }
 
@@ -695,6 +756,7 @@ ${emailData
     htmlFile = "${email.htmlFile.replace(/\\/g, '\\\\')}"
     subjectFile = "${email.subjectFile.replace(/\\/g, '\\\\')}"
     supplier = "${email.to}"
+    senderEmail = "${email.senderEmail}"
   }`
   )
   .join(',\n')}
@@ -712,7 +774,7 @@ try {
   
   foreach ($email in $emails) {
     try {
-      Write-Output "DEBUG: Processing email for $($email.supplier) -> $($email.to)"
+      Write-Output "DEBUG: Processing email for $($email.supplier) -> $($email.to) (sender: $($email.senderEmail))"
       
       # Check if files exist
       if (-not (Test-Path $email.htmlFile)) {
@@ -731,7 +793,7 @@ try {
       $mail.To = $email.resolvedEmail
       $mail.Subject = $subjectContent
       $mail.HTMLBody = $htmlContent
-      $mail.SentOnBehalfOfName = "supply.planning.no@onemed.com"
+      $mail.SentOnBehalfOfName = $email.senderEmail
       
       $mail.Send()
       $successCount++
@@ -1162,13 +1224,14 @@ async function handleEmailViaPowerShellMac(
 // Handle automatic email sending via Outlook COM API (LEGACY - kept for single emails)
 ipcMain.handle(
   'sendEmailAutomatically',
-  async (_, payload: { to: string; subject: string; html: string }) => {
+  async (_, payload: { to: string; subject: string; html: string; country?: string }) => {
     let tempHtmlFilePath: string | null = null; // To ensure cleanup
     let tempSubjectFilePath: string | null = null; // To ensure cleanup
 
     try {
       log.info(`Attempting automatic email send to: ${payload.to}`);
       log.info(`Subject: ${payload.subject}`);
+      log.info(`Country: ${payload.country || 'not specified (defaulting to NO)'}`);
 
       // Check if payload.to is already an email address or a supplier name
       let emailTo: string;
@@ -1266,8 +1329,8 @@ try {
   $mail.HTMLBody = $htmlContent # Assign the content read from file
   Write-Output "DEBUG: HTML body set successfully from file content."
 
-  $mail.SentOnBehalfOfName = "supply.planning.no@onemed.com"
-  Write-Output "DEBUG: Sender information set"
+  $mail.SentOnBehalfOfName = "${getSenderEmailForCountry(payload.country)}"
+  Write-Output "DEBUG: Sender information set to ${getSenderEmailForCountry(payload.country)}"
 
   $mail.Send()
   Write-Output "DEBUG: Send command executed"
@@ -1653,6 +1716,28 @@ ipcMain.handle('getSupplierEmail', async (event, supplierName: string) => {
   }
 });
 
+// Add IPC handler for getting supplier language (for email template selection)
+ipcMain.handle('getSupplierLanguage', async (event, supplierName: string) => {
+  try {
+    const language = databaseService.getSupplierLanguage(supplierName);
+    return { success: true, data: language };
+  } catch (error) {
+    log.error('Error getting supplier language:', error);
+    return { success: false, error: String(error) };
+  }
+});
+
+// Add IPC handler for getting supplier country (for email sender address selection)
+ipcMain.handle('getSupplierCountry', async (event, supplierName: string) => {
+  try {
+    const country = databaseService.getSupplierCountry(supplierName);
+    return { success: true, data: country };
+  } catch (error) {
+    log.error('Error getting supplier country:', error);
+    return { success: false, error: String(error) };
+  }
+});
+
 // Add IPC handlers for supplier planning
 ipcMain.handle('getSuppliersForWeekday', async (event, weekday: string, plannerName: string) => {
   try {
@@ -1739,7 +1824,7 @@ ipcMain.handle('openDebugFolder', async () => {
 // Handle automatic email sending via Outlook COM using .eml and OpenSharedItem
 ipcMain.handle(
   'sendEmailViaEmlAndCOM',
-  async (_, payload: { to: string; subject: string; html: string }) => {
+  async (_, payload: { to: string; subject: string; html: string; country?: string }) => {
     let tempEmlFilePath: string | null = null;
     try {
       log.info(`Attempting automatic email send via .eml/COM to: ${payload.to}`);
@@ -1763,13 +1848,15 @@ ipcMain.handle(
       }
 
       // Create .eml file with proper MIME headers for HTML
-      const senderEmail = 'supply.planning.no@onemed.com';
+      // Use country-based sender email address
+      const senderEmail = getSenderEmailForCountry(payload.country);
+      const senderDisplayName = getSenderDisplayNameForCountry(payload.country);
       const EOL = '\r\n';
 
       // Properly encode the subject for UTF-8
       const encodedSubject = Buffer.from(payload.subject, 'utf8').toString('base64');
       const headers = [
-        `From: OneMed Norge AS <${senderEmail}>`,
+        `From: ${senderDisplayName} <${senderEmail}>`,
         `To: ${emailTo}`,
         `Subject: =?UTF-8?B?${encodedSubject}?=`,
         `MIME-Version: 1.0`,
@@ -1797,7 +1884,7 @@ ipcMain.handle(
       // PowerShell script to load .eml, extract HTML, and send via new MailItem
       const powershellScript = `
         $tempEmlPath = '${tempEmlFilePath.replace(/'/g, "''")}'
-        $sender = 'supply.planning.no@onemed.com'
+        $sender = '${senderEmail}'
         
         try {
             Write-Output "STAGE 1: Loading .eml via OpenSharedItem..."

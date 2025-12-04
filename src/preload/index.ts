@@ -39,6 +39,7 @@ interface ElectronAPI {
       to: string;
       subject: string;
       html: string;
+      country?: string;
     }>
   ) => Promise<{
     success: boolean;
@@ -133,6 +134,9 @@ interface ElectronAPI {
 
   getAllSupplierNames: () => Promise<string[]>;
   getSupplierEmail: (supplierName: string) => Promise<string>;
+  getSupplierLanguage: (
+    supplierName: string
+  ) => Promise<{ success: boolean; data?: string | null; error?: string }>;
 
   // Settings methods
   getSettings: () => Promise<{
@@ -359,15 +363,25 @@ contextBridge.exposeInMainWorld('electron', {
     return await ipcRenderer.invoke('validateData', data);
   },
   // Email sending
-  sendEmail: async (payload: { to: string; subject: string; html: string }) => {
+  sendEmail: async (payload: { to: string; subject: string; html: string; country?: string }) => {
     return await ipcRenderer.invoke('sendEmail', payload);
   },
   // Automatic email sending via Outlook COM
-  sendEmailAutomatically: async (payload: { to: string; subject: string; html: string }) => {
+  sendEmailAutomatically: async (payload: {
+    to: string;
+    subject: string;
+    html: string;
+    country?: string;
+  }) => {
     return await ipcRenderer.invoke('sendEmailAutomatically', payload);
   },
   // Automatic email sending via .eml + OpenSharedItem
-  sendEmailViaEmlAndCOM: async (payload: { to: string; subject: string; html: string }) => {
+  sendEmailViaEmlAndCOM: async (payload: {
+    to: string;
+    subject: string;
+    html: string;
+    country?: string;
+  }) => {
     return await ipcRenderer.invoke('sendEmailViaEmlAndCOM', payload);
   },
   // Batch email sending via PowerShell - OPTIMIZED
@@ -376,6 +390,7 @@ contextBridge.exposeInMainWorld('electron', {
       to: string;
       subject: string;
       html: string;
+      country?: string;
     }>
   ) => {
     return await ipcRenderer.invoke('sendBatchEmails', payload);
@@ -525,6 +540,14 @@ contextBridge.exposeInMainWorld('electron', {
 
   getSupplierEmail: async (supplierName: string) => {
     return await ipcRenderer.invoke('getSupplierEmail', supplierName);
+  },
+
+  getSupplierLanguage: async (supplierName: string) => {
+    return await ipcRenderer.invoke('getSupplierLanguage', supplierName);
+  },
+
+  getSupplierCountry: async (supplierName: string) => {
+    return await ipcRenderer.invoke('getSupplierCountry', supplierName);
   },
 
   // Supplier planning methods
