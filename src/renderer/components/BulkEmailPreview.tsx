@@ -27,13 +27,29 @@ interface SupplierInfo {
 interface EmailPreviewData {
   supplier: string;
   email: string;
-  language: 'no' | 'en';
+  language: 'no' | 'en' | 'se' | 'da' | 'fi';
   languageDisplay: string;
+  country: string | null; // Country code for sender email selection (DK, NO, SE, FI)
   orderCount: number;
   orders: ExcelRow[];
   isSending: boolean;
   sendResult?: { success: boolean; error?: string };
 }
+
+// Helper function to get subject in the correct language
+const getSubjectForLanguage = (
+  language: 'no' | 'en' | 'se' | 'da' | 'fi',
+  supplier: string
+): string => {
+  const subjectTemplates: Record<string, string> = {
+    no: `Purring på manglende leveranser – ${supplier}`,
+    en: `Reminder: Outstanding Deliveries – ${supplier}`,
+    se: `Påminnelse om utestående leveranser – ${supplier}`,
+    da: `Påmindelse om udestående leverancer – ${supplier}`,
+    fi: `Muistutus vireillä olevista toimituksista – ${supplier}`,
+  };
+  return subjectTemplates[language] || subjectTemplates.no;
+};
 
 const BulkEmailPreview: React.FC<BulkEmailPreviewProps> = ({
   selectedSuppliers,
@@ -119,14 +135,35 @@ const BulkEmailPreview: React.FC<BulkEmailPreviewProps> = ({
           console.log('🔍 DEBUG: First filtered order specification:', orders[0]?.specification);
 
           if (orders.length > 0) {
-            const language = supplierInfo?.språkKode === 'ENG' ? 'en' : 'no';
-            const languageDisplay = supplierInfo?.språk || 'Norsk';
+            // Get language from database/country - this handles DK suppliers correctly
+            const language = await emailService.getLanguageForSupplier(supplierName);
+
+            // Get country for sender email selection
+            const country = await emailService.getSupplierCountryFromDB(supplierName);
+
+            // Map language code to display name
+            const languageDisplayMap: Record<string, string> = {
+              no: 'Norsk',
+              en: 'English',
+              se: 'Svenska',
+              da: 'Dansk',
+              fi: 'Suomi',
+            };
+            const languageDisplay = languageDisplayMap[language] || 'Norsk';
+
+            // Get email from database if not in static JSON
+            let email = supplierInfo?.epost || '';
+            if (!email) {
+              const emailResponse = await window.electron.getSupplierEmail(supplierName);
+              email = emailResponse.success ? emailResponse.data || '' : '';
+            }
 
             emailData.push({
               supplier: supplierName,
-              email: supplierInfo?.epost || '',
+              email,
               language,
               languageDisplay,
+              country,
               orderCount: orders.length,
               orders: orders as unknown as ExcelRow[],
               isSending: false,
@@ -190,10 +227,7 @@ const BulkEmailPreview: React.FC<BulkEmailPreviewProps> = ({
         orderRowNumber: order.orderRowNumber,
       })),
       language: supplierData.language,
-      subject:
-        supplierData.language === 'no'
-          ? `Purring på manglende leveranser – ${supplierData.supplier}`
-          : `Reminder: Outstanding Deliveries – ${supplierData.supplier}`,
+      subject: getSubjectForLanguage(supplierData.language, supplierData.supplier),
     };
 
     const html = emailService.generatePreview(emailData);
@@ -261,10 +295,7 @@ const BulkEmailPreview: React.FC<BulkEmailPreviewProps> = ({
               orderRowNumber: order.orderRowNumber,
             })),
             language: supplierData.language,
-            subject:
-              supplierData.language === 'no'
-                ? `Purring på manglende leveranser – ${supplierData.supplier}`
-                : `Reminder: Outstanding Deliveries – ${supplierData.supplier}`,
+            subject: getSubjectForLanguage(supplierData.language, supplierData.supplier),
           };
 
           const html = emailService.generatePreview(emailData);
@@ -272,6 +303,7 @@ const BulkEmailPreview: React.FC<BulkEmailPreviewProps> = ({
             to: recipientEmail, // Use the manually selected email address
             subject: emailData.subject,
             html: html,
+            country: supplierData.country || undefined, // For sender email selection (DK uses different sender)
           });
 
           // Update result
@@ -455,9 +487,13 @@ const BulkEmailPreview: React.FC<BulkEmailPreviewProps> = ({
 
                 <span
                   className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                    supplierData.language === 'no'
-                      ? 'bg-blue-100 text-blue-800'
-                      : 'bg-green-100 text-green-800'
+                    {
+                      no: 'bg-blue-100 text-blue-800',
+                      en: 'bg-green-100 text-green-800',
+                      se: 'bg-yellow-100 text-yellow-800',
+                      da: 'bg-red-100 text-red-800',
+                      fi: 'bg-purple-100 text-purple-800',
+                    }[supplierData.language] || 'bg-blue-100 text-blue-800'
                   }`}
                 >
                   {supplierData.languageDisplay}
@@ -602,10 +638,10 @@ const BulkEmailPreview: React.FC<BulkEmailPreviewProps> = ({
                 })) || [],
             language:
               emailPreviewData.find((s) => s.supplier === previewSupplier)?.language || 'no',
-            subject:
-              emailPreviewData.find((s) => s.supplier === previewSupplier)?.language === 'no'
-                ? `Purring på manglende leveranser – ${previewSupplier}`
-                : `Reminder: Outstanding Deliveries – ${previewSupplier}`,
+            subject: getSubjectForLanguage(
+              emailPreviewData.find((s) => s.supplier === previewSupplier)?.language || 'no',
+              previewSupplier || ''
+            ),
           }}
           previewHtml={previewHtml}
           onSend={() => {

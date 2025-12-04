@@ -355,8 +355,8 @@ export class EmailService {
           <tr>
             <td style="padding: 30px 10px 10px 10px; font-family: Arial, Helvetica, sans-serif; font-size: 14px; color: #333333;">
               <p>Med venlig hilsen,<br>
-              <b>OneMed A/S</b><br>
-              Supply Chain Team</p>
+              <b>Supply Chain</b><br>
+              OneMed A/S</p>
             </td>
           </tr>
 
@@ -499,7 +499,100 @@ export class EmailService {
     }
   }
 
-  // Get the preferred language for a supplier (legacy method - now uses app language)
+  // Get the preferred language for a supplier from the database
+  // Returns the language string (e.g., "Dansk", "Engelsk", "Norsk") or null if not found
+  async getSupplierLanguageFromDB(supplierName: string): Promise<string | null> {
+    try {
+      const result = await window.electron.getSupplierLanguage(supplierName);
+      if (result.success && result.data) {
+        return result.data;
+      }
+      return null;
+    } catch (error) {
+      console.error('Error getting supplier language from database:', error);
+      return null;
+    }
+  }
+
+  // Get the country for a supplier from the database
+  // Returns the country code (e.g., "DK", "NO") or null if not found
+  async getSupplierCountryFromDB(supplierName: string): Promise<string | null> {
+    try {
+      console.log(`getSupplierCountryFromDB: Looking up country for "${supplierName}"`);
+      const result = await window.electron.getSupplierCountry(supplierName);
+      console.log(`getSupplierCountryFromDB: Result for "${supplierName}":`, result);
+      if (result.success && result.data) {
+        console.log(
+          `getSupplierCountryFromDB: Found country "${result.data}" for "${supplierName}"`
+        );
+        return result.data;
+      }
+      console.log(`getSupplierCountryFromDB: No country found for "${supplierName}"`);
+      return null;
+    } catch (error) {
+      console.error('Error getting supplier country from database:', error);
+      return null;
+    }
+  }
+
+  // Get the sender email address based on country
+  getSenderEmailForCountry(country: string | null): string {
+    const senderEmails: Record<string, string> = {
+      DK: 'indkoeb.dk@onemed.com',
+      NO: 'supply.planning.no@onemed.com',
+      SE: 'supply.planning.no@onemed.com', // TODO: Update when SE email is known
+      FI: 'supply.planning.no@onemed.com', // TODO: Update when FI email is known
+    };
+    return senderEmails[country || ''] || 'supply.planning.no@onemed.com';
+  }
+
+  // Map language strings from Excel/DB to email template language codes
+  // Supports: Dansk, Engelsk, Norsk, Swedish variations
+  mapLanguageToCode(languageString: string | null): 'no' | 'en' | 'se' | 'da' | 'fi' | null {
+    if (!languageString) return null;
+
+    const lowerLang = languageString.toLowerCase().trim();
+
+    // Danish mappings
+    if (lowerLang === 'dansk' || lowerLang === 'danish' || lowerLang === 'da') {
+      return 'da';
+    }
+    // English mappings
+    if (
+      lowerLang === 'engelsk' ||
+      lowerLang === 'english' ||
+      lowerLang === 'eng' ||
+      lowerLang === 'en'
+    ) {
+      return 'en';
+    }
+    // Norwegian mappings
+    if (lowerLang === 'norsk' || lowerLang === 'norwegian' || lowerLang === 'no') {
+      return 'no';
+    }
+    // Swedish mappings
+    if (
+      lowerLang === 'svensk' ||
+      lowerLang === 'swedish' ||
+      lowerLang === 'svenska' ||
+      lowerLang === 'se'
+    ) {
+      return 'se';
+    }
+    // Finnish mappings
+    if (
+      lowerLang === 'finsk' ||
+      lowerLang === 'finnish' ||
+      lowerLang === 'suomi' ||
+      lowerLang === 'fi'
+    ) {
+      return 'fi';
+    }
+
+    return null;
+  }
+
+  // Get the preferred language for a supplier (legacy method - uses JSON data)
   getSupplierLanguage(supplierName: string): 'no' | 'en' {
     const supplierInfo = this.getSupplierInfo(supplierName);
     return supplierInfo?.språkKode === 'ENG' ? 'en' : 'no';
@@ -512,6 +605,69 @@ export class EmailService {
       return storedLanguage as 'no' | 'en' | 'se' | 'da' | 'fi';
     }
     return 'no'; // Default to Norwegian
+  }
+
+  /**
+   * Get the appropriate language for a supplier based on:
+   * 1. Database language setting (from Leverandør sheet)
+   * 2. Country-based fallback from supplier's warehouse (DK→da, SE→se, FI→fi, NO→no)
+   * 3. Predominant country fallback (most common warehouse in all orders)
+   * 4. Default to Norwegian as final fallback
+   */
+  async getLanguageForSupplier(supplierName: string): Promise<'no' | 'en' | 'se' | 'da' | 'fi'> {
+    const countryLanguageMap: Record<string, 'no' | 'en' | 'se' | 'da' | 'fi'> = {
+      DK: 'da',
+      NO: 'no',
+      SE: 'se',
+      FI: 'fi',
+    };
+
+    // Try database first
+    const dbLanguage = await this.getSupplierLanguageFromDB(supplierName);
+    if (dbLanguage) {
+      const mappedLanguage = this.mapLanguageToCode(dbLanguage);
+      if (mappedLanguage) {
+        console.log(
+          `getLanguageForSupplier: Using DB language for ${supplierName}: ${dbLanguage} -> ${mappedLanguage}`
+        );
+        return mappedLanguage;
+      }
+    }
+
+    // Try country-based fallback from supplier's warehouse
+    const country = await this.getSupplierCountryFromDB(supplierName);
+    if (country) {
+      const countryBasedLanguage = countryLanguageMap[country];
+      if (countryBasedLanguage) {
+        console.log(
+          `getLanguageForSupplier: Using country-based language for ${supplierName}: ${country} -> ${countryBasedLanguage}`
+        );
+        return countryBasedLanguage;
+      }
+    }
+
+    // Fallback to predominant country (the country most orders belong to)
+    // This handles cases where a DK file was imported but the specific supplier doesn't have warehouse data
+    try {
+      const predominantResult = await window.electron.getPredominantCountry();
+      if (predominantResult.success && predominantResult.data) {
+        const predominantLanguage = countryLanguageMap[predominantResult.data];
+        if (predominantLanguage) {
+          console.log(
+            `getLanguageForSupplier: Using predominant country language for ${supplierName}: ${predominantResult.data} -> ${predominantLanguage}`
+          );
+          return predominantLanguage;
+        }
+      }
+    } catch (error) {
+      console.error('Error getting predominant country:', error);
+    }
+
+    // Final fallback to Norwegian
+    console.log(
+      `getLanguageForSupplier: No language, country, or predominant country found for ${supplierName}, defaulting to Norwegian`
+    );
+    return 'no';
   }
 
   // New method to generate email preview HTML
@@ -537,12 +693,19 @@ export class EmailService {
     try {
       // Use manually overridden email if provided, otherwise get from supplier data
       let supplierEmail: string | null = data.recipientEmail || null;
-      const language: 'no' | 'en' | 'se' | 'da' | 'fi' = this.getAppLanguage(); // Use app language
+
+      // Get supplier country for determining sender email
+      const supplierCountry = await this.getSupplierCountryFromDB(data.supplier);
+
+      // Use explicit language from data, or resolve via the unified language resolution method
+      const language = data.language || (await this.getLanguageForSupplier(data.supplier));
 
       console.log('EmailService: sendReminder called with data:', {
         supplier: data.supplier,
         recipientEmail: data.recipientEmail,
         language: data.language,
+        resolvedLanguage: language,
+        country: supplierCountry,
       });
 
       if (!supplierEmail) {
@@ -552,7 +715,6 @@ export class EmailService {
 
         if (supplierInfo) {
           supplierEmail = supplierInfo.epost;
-          // Language is now determined by app settings, not supplier preference
           console.log('EmailService: Found supplier info in JSON:', supplierInfo);
         } else {
           // Fallback to database lookup (only if not found in JSON)
@@ -634,6 +796,7 @@ export class EmailService {
           to: supplierEmail,
           subject,
           html,
+          country: supplierCountry || undefined,
         });
 
         if (result.success) {
@@ -659,6 +822,7 @@ export class EmailService {
           to: supplierEmail,
           subject,
           html,
+          country: supplierCountry || undefined,
         });
 
         if (result.success) {
@@ -683,6 +847,7 @@ export class EmailService {
         to: supplierEmail,
         subject,
         html,
+        country: supplierCountry || undefined,
       });
 
       if (result.success) {
