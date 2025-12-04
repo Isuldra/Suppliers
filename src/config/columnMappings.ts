@@ -280,20 +280,25 @@ export function preScanForCountry(
   const warehouseAtNOPosition = getCellValue(getExcelJSIndex(STANDARD_BP_MAPPING.warehouse)); // Column 5 (E)
   const warehouseAtDKPosition = getCellValue(getExcelJSIndex(DK_BP_MAPPING.warehouse)); // Column 4 (D)
 
-  // Check if value at DK position is a valid DK warehouse code
+  // Check NO position FIRST - if it has "40", this is definitely a NO file
+  // This prevents false DK detection when a NO file has supplier number "80" in column D
+  const countryFromNOPosition = detectCountryFromWarehouse(warehouseAtNOPosition);
+  if (countryFromNOPosition === 'NO') {
+    return 'NO';
+  }
+
+  // Then check DK position
   const countryFromDKPosition = detectCountryFromWarehouse(warehouseAtDKPosition);
   if (countryFromDKPosition === 'DK') {
     return 'DK';
   }
 
-  // Check if value at NO position is a valid warehouse code
-  const countryFromNOPosition = detectCountryFromWarehouse(warehouseAtNOPosition);
+  // Fallback to any valid country from NO position (SE, FI, etc.)
   if (countryFromNOPosition) {
     return countryFromNOPosition;
   }
 
-  // If warehouse at DK position looks like a number that could be a warehouse code
-  // (80, 87, etc.), assume DK even if not explicitly mapped
+  // Final fallback for DK-like warehouse patterns
   if (warehouseAtDKPosition && /^8[0-9]$/.test(warehouseAtDKPosition.trim())) {
     return 'DK';
   }
