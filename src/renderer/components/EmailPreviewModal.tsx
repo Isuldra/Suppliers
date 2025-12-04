@@ -7,7 +7,7 @@ interface EmailPreviewModalProps {
   previewHtml: string;
   onSend: () => void;
   onCancel: () => void;
-  onChangeLanguage: (language: 'no' | 'en') => void;
+  onChangeLanguage: (language: 'no' | 'en' | 'se' | 'da' | 'fi') => void;
   onChangeRecipient: (email: string) => void;
 }
 
@@ -77,6 +77,27 @@ const EmailPreviewModal: React.FC<EmailPreviewModalProps> = ({
     setIsEditingEmail(false);
   };
 
+  // Get subject based on language
+  const getSubjectByLanguage = (lang: string): string => {
+    const subjects: Record<string, string> = {
+      no: `Purring på manglende leveranser - ${emailData.supplier}`,
+      en: `Reminder for Outstanding Orders - ${emailData.supplier}`,
+      da: `Påmindelse om udestående leveringer - ${emailData.supplier}`,
+      se: `Påminnelse om utestående leveranser - ${emailData.supplier}`,
+      fi: `Muistutus avoimista toimituksista - ${emailData.supplier}`,
+    };
+    return subjects[lang] || subjects.no;
+  };
+
+  // Language button configuration
+  const languageButtons: { code: 'no' | 'en' | 'se' | 'da' | 'fi'; label: string }[] = [
+    { code: 'no', label: 'Norsk' },
+    { code: 'da', label: 'Dansk' },
+    { code: 'se', label: 'Svenska' },
+    { code: 'fi', label: 'Suomi' },
+    { code: 'en', label: 'English' },
+  ];
+
   const modalContent = (
     <div
       className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
@@ -98,27 +119,20 @@ const EmailPreviewModal: React.FC<EmailPreviewModalProps> = ({
         <div className="p-6 border-b flex justify-between items-center flex-shrink-0">
           <h2 className="text-xl font-bold text-neutral">Forhåndsvisning av e-post</h2>
           <div className="flex items-center space-x-4">
-            <div className="flex space-x-2">
-              <button
-                className={`px-3 py-1 rounded-sm transition-default ${
-                  emailData.language === 'no'
-                    ? 'bg-primary text-neutral-white'
-                    : 'bg-neutral-light text-neutral'
-                }`}
-                onClick={() => onChangeLanguage('no')}
-              >
-                Norsk
-              </button>
-              <button
-                className={`px-3 py-1 rounded-sm transition-default ${
-                  emailData.language === 'en'
-                    ? 'bg-primary text-neutral-white'
-                    : 'bg-neutral-light text-neutral'
-                }`}
-                onClick={() => onChangeLanguage('en')}
-              >
-                English
-              </button>
+            <div className="flex space-x-1">
+              {languageButtons.map((lang) => (
+                <button
+                  key={lang.code}
+                  className={`px-3 py-1 rounded-sm transition-default text-sm ${
+                    emailData.language === lang.code
+                      ? 'bg-primary text-neutral-white'
+                      : 'bg-neutral-light text-neutral hover:bg-neutral-200'
+                  }`}
+                  onClick={() => onChangeLanguage(lang.code)}
+                >
+                  {lang.label}
+                </button>
+              ))}
             </div>
             <button
               onClick={onCancel}
@@ -203,9 +217,7 @@ const EmailPreviewModal: React.FC<EmailPreviewModalProps> = ({
           </div>
           <div>
             <span className="font-medium">Emne:</span>{' '}
-            {emailData.language === 'no'
-              ? `Purring på manglende leveranser - ${emailData.supplier}`
-              : `Reminder for Outstanding Orders - ${emailData.supplier}`}
+            {getSubjectByLanguage(emailData.language || 'no')}
           </div>
         </div>
 

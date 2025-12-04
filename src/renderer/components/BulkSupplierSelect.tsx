@@ -1,8 +1,7 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ChevronDownIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
 import { ExcelRow } from '../types/ExcelData';
-import supplierData from '../data/supplierData.json';
 import SelectToggleButton from './SelectToggleButton';
 
 interface BulkSupplierSelectProps {
@@ -16,13 +15,9 @@ interface BulkSupplierSelectProps {
   bulkSelectedOrders?: Map<string, Set<string>>; // Parent state for selected orders
 }
 
-interface SupplierInfo {
-  leverandør: string;
-  companyId: number;
-  epost: string;
-  språk: string;
-  språkKode: 'NO' | 'ENG';
-  purredag: string;
+interface SupplierDbInfo {
+  email: string | null;
+  language: string | null;
 }
 
 interface SupplierWithDetails {
@@ -60,17 +55,68 @@ const BulkSupplierSelect: React.FC<BulkSupplierSelectProps> = ({
   const [supplierOrders, setSupplierOrders] = useState<Map<string, ExcelRow[]>>(new Map());
   const [allDaysMode, setAllDaysMode] = useState(false); // Toggle for all days mode
   const initialSyncDone = useRef(false); // Guard to prevent repeated syncs from parent
+  const hasCheckedCountry = useRef(false); // Only check country once
 
-  // Get supplier info from supplierData.json
-  const getSupplierInfo = (supplierName: string): SupplierInfo | null => {
-    const supplier = supplierData.leverandører.find((s) => s.leverandør === supplierName);
-    return supplier
-      ? {
-          ...supplier,
-          språkKode: supplier.språkKode as 'NO' | 'ENG',
+  // Auto-enable "All days mode" for Denmark (DK)
+  // In Denmark, all suppliers have the same reminder day, so weekday filter doesn't make sense
+  // This runs immediately on mount - before the user selects a weekday
+  useEffect(() => {
+    const checkPredominantCountry = async () => {
+      // Only check once per session
+      if (hasCheckedCountry.current) return;
+      hasCheckedCountry.current = true;
+
+      try {
+        console.log('🔍 Checking predominant country for auto-DK mode...');
+        const result = await window.electron.getPredominantCountry();
+        console.log('🔍 Predominant country result:', result);
+
+        if (result.success && result.data === 'DK') {
+          console.log('🇩🇰 Detected DK as predominant country - auto-enabling All Days mode');
+          setAllDaysMode(true);
+        } else {
+          console.log(
+            `🌍 Predominant country is ${result.data || 'unknown'}, not enabling All Days mode`
+          );
         }
-      : null;
-  };
+      } catch (error) {
+        console.error('Error checking predominant country:', error);
+      }
+    };
+
+    // Small delay to ensure database is ready after file import
+    const timer = setTimeout(() => {
+      checkPredominantCountry();
+    }, 100);
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Fetch supplier info from database (email and language)
+  const fetchSupplierDbInfo = useCallback(async (supplierNames: string[]) => {
+    const newDbInfo = new Map<string, SupplierDbInfo>();
+
+    for (const supplierName of supplierNames) {
+      try {
+        // Fetch email from database
+        const emailResponse = await window.electron.getSupplierEmail(supplierName);
+        const email = emailResponse.success ? emailResponse.data || null : null;
+
+        // Fetch language from database
+        const langResponse = await window.electron.getSupplierLanguage(supplierName);
+        const language = langResponse.success ? langResponse.data || null : null;
+
+        newDbInfo.set(supplierName, { email, language });
+
+        console.log(`📧 Fetched DB info for ${supplierName}: email=${email}, lang=${language}`);
+      } catch (error) {
+        console.error(`Error fetching DB info for ${supplierName}:`, error);
+        newDbInfo.set(supplierName, { email: null, language: null });
+      }
+    }
+
+    return newDbInfo;
+  }, []);
 
   // Fetch suppliers with outstanding orders for the selected weekday or all days
   useEffect(() => {
@@ -117,20 +163,50 @@ const BulkSupplierSelect: React.FC<BulkSupplierSelectProps> = ({
         const outstandingOrders = await window.electron.getAllOrders();
         console.log('🟠 Outstanding orders:', outstandingOrders);
 
+        // Fetch database info for all suppliers (emails and languages)
+        const dbInfoMap = await fetchSupplierDbInfo(weekdaySuppliers);
+
+        // Get predominant country for fallback language
+        let defaultLanguage = 'Norsk';
+        try {
+          const predominantResult = await window.electron.getPredominantCountry();
+          if (predominantResult.success && predominantResult.data) {
+            const countryLanguageMap: Record<string, string> = {
+              DK: 'Dansk',
+              NO: 'Norsk',
+              SE: 'Svenska',
+              FI: 'Suomi',
+            };
+            defaultLanguage = countryLanguageMap[predominantResult.data] || 'Norsk';
+            console.log(
+              `🌍 Predominant country: ${predominantResult.data} -> default language: ${defaultLanguage}`
+            );
+          }
+        } catch (error) {
+          console.error('Error getting predominant country:', error);
+        }
+
         // Create supplier details with counts
         const suppliersWithDetails: SupplierWithDetails[] = weekdaySuppliers
           .map((supplier: string) => {
-            const supplierInfo = getSupplierInfo(supplier);
+            const dbInfo = dbInfoMap.get(supplier);
             const outstandingCount = outstandingOrders.filter(
               (order) => order.supplier === supplier
             ).length;
 
+            // Map database language to language code - use predominant country language as fallback
+            const language = dbInfo?.language || defaultLanguage;
+            const languageCode: 'NO' | 'ENG' =
+              language.toLowerCase().includes('eng') || language.toLowerCase().includes('english')
+                ? 'ENG'
+                : 'NO';
+
             return {
               supplier,
               outstandingCount,
-              email: supplierInfo?.epost || '',
-              language: supplierInfo?.språk || 'Norsk',
-              languageCode: supplierInfo?.språkKode || 'NO',
+              email: dbInfo?.email || '',
+              language: language,
+              languageCode: languageCode,
               isExpanded: expandedSuppliers.has(supplier),
             };
           })
@@ -150,7 +226,7 @@ const BulkSupplierSelect: React.FC<BulkSupplierSelectProps> = ({
     if ((selectedWeekday && selectedPlanner) || allDaysMode) {
       fetchSuppliers();
     }
-  }, [selectedWeekday, selectedPlanner, allDaysMode]);
+  }, [selectedWeekday, selectedPlanner, allDaysMode, fetchSupplierDbInfo]);
 
   // Debug effect to track selectedSuppliers prop changes
   useEffect(() => {
@@ -171,15 +247,16 @@ const BulkSupplierSelect: React.FC<BulkSupplierSelectProps> = ({
     setUserHasManuallySelected(false);
   }, [selectedWeekday, selectedPlanner]);
 
-  // Auto-select all suppliers when suppliers change (new weekday selected)
+  // Auto-select all suppliers when suppliers change (new weekday selected or allDaysMode)
   // But only if user hasn't manually selected anything yet
   useEffect(() => {
-    if (suppliers.length > 0 && !userHasManuallySelected && !allDaysMode) {
+    if (suppliers.length > 0 && !userHasManuallySelected) {
       const allSupplierNames = suppliers.map((s) => s.supplier);
       const currentSelectionSorted = [...selectedSuppliers].sort((a, b) => a.localeCompare(b));
       const availableSorted = [...allSupplierNames].sort((a, b) => a.localeCompare(b));
 
       if (JSON.stringify(currentSelectionSorted) !== JSON.stringify(availableSorted)) {
+        console.log('🔄 Auto-selecting all suppliers:', allSupplierNames.length);
         onSuppliersSelected(allSupplierNames);
       }
     }
@@ -560,10 +637,9 @@ const BulkSupplierSelect: React.FC<BulkSupplierSelectProps> = ({
                         <td colSpan={6} className="px-4 py-4">
                           <div className="bg-neutral-white rounded-md border border-neutral-light p-4">
                             <h4 className="text-sm font-medium text-neutral mb-3">
-                              {t('bulkSupplierSelect.outstandingOrdersFor').replace(
-                                '{supplier}',
-                                supplier.supplier
-                              )}
+                              {t('bulkSupplierSelect.outstandingOrdersFor', {
+                                supplier: supplier.supplier,
+                              })}
                             </h4>
                             {supplierOrders.get(supplier.supplier) ? (
                               <div className="overflow-x-auto">
