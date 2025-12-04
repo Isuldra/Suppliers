@@ -6,7 +6,12 @@ import toast from 'react-hot-toast';
 import * as XLSX from 'xlsx';
 import { QuestionMarkCircleIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import { parse as parseDateFns } from 'date-fns';
-import { getColumnMapping, ColumnMapping } from '../../config/columnMappings';
+import {
+  getColumnMapping,
+  ColumnMapping,
+  detectCountryFromWarehouse,
+  COLUMN_MAPPINGS,
+} from '../../config/columnMappings';
 
 interface FileUploadProps {
   onDataParsed: (data: ExcelData) => void;
@@ -535,9 +540,64 @@ const FileUpload: React.FC<FileUploadProps> = ({ onDataParsed, onValidationError
             return undefined;
           };
 
-          // Get column mapping based on filename
-          const columnMapping = getColumnMapping(file.name);
-          console.log(`Using column mapping for: ${columnMapping.id} (${columnMapping.name})`);
+          // Get initial column mapping based on filename
+          let columnMapping = getColumnMapping(file.name);
+          console.log(
+            `Initial column mapping from filename: ${columnMapping.id} (${columnMapping.name})`
+          );
+
+          // PRE-SCAN: Detect country from first data row to match backend behavior
+          // This prevents misalignment between preview and imported data
+          const bpSheet = workbook.Sheets[columnMapping.sheetName];
+          if (bpSheet) {
+            const range = XLSX.utils.decode_range(bpSheet['!ref'] || 'A1');
+            const startRow = columnMapping.startRow - 1; // 0-based
+
+            if (range.e.r >= startRow) {
+              // Read first data row as array
+              const firstRowData = XLSX.utils.sheet_to_json(bpSheet, {
+                header: 1,
+                range: XLSX.utils.encode_range({
+                  s: { r: startRow, c: 0 },
+                  e: { r: startRow, c: range.e.c },
+                }),
+                defval: '',
+                raw: true,
+              }) as unknown[][];
+
+              if (firstRowData.length > 0) {
+                const firstRow = firstRowData[0];
+                // NO warehouse is at column E (index 4), DK warehouse is at column D (index 3)
+                const warehouseAtNOPosition = String(firstRow[4] || '').trim();
+                const warehouseAtDKPosition = String(firstRow[3] || '').trim();
+
+                console.log(
+                  `PRE-SCAN: Warehouse at NO position (E): "${warehouseAtNOPosition}", at DK position (D): "${warehouseAtDKPosition}"`
+                );
+
+                // Check NO position FIRST (same priority as backend)
+                const countryFromNO = detectCountryFromWarehouse(warehouseAtNOPosition);
+                if (countryFromNO === 'NO') {
+                  columnMapping = COLUMN_MAPPINGS['NO'] || columnMapping;
+                  console.log(`PRE-SCAN: Detected NO from warehouse column E`);
+                } else {
+                  const countryFromDK = detectCountryFromWarehouse(warehouseAtDKPosition);
+                  if (countryFromDK === 'DK') {
+                    columnMapping = COLUMN_MAPPINGS['DK'] || columnMapping;
+                    console.log(`PRE-SCAN: Detected DK from warehouse column D`);
+                  } else if (countryFromNO) {
+                    columnMapping = COLUMN_MAPPINGS[countryFromNO] || columnMapping;
+                    console.log(`PRE-SCAN: Detected ${countryFromNO} from warehouse column E`);
+                  } else if (/^8[0-9]$/.test(warehouseAtDKPosition)) {
+                    columnMapping = COLUMN_MAPPINGS['DK'] || columnMapping;
+                    console.log(`PRE-SCAN: Detected DK from warehouse pattern in column D`);
+                  }
+                }
+              }
+            }
+          }
+
+          console.log(`Final column mapping: ${columnMapping.id} (${columnMapping.name})`);
 
           // Parse the BP sheet with the appropriate column mapping
           const bpData = parseBPSheet(columnMapping);
