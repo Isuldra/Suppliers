@@ -29,6 +29,7 @@ interface EmailPreviewData {
   email: string;
   language: 'no' | 'en' | 'se' | 'da' | 'fi';
   languageDisplay: string;
+  country: string | null; // Country code for sender email selection (DK, NO, SE, FI)
   orderCount: number;
   orders: ExcelRow[];
   isSending: boolean;
@@ -137,6 +138,9 @@ const BulkEmailPreview: React.FC<BulkEmailPreviewProps> = ({
             // Get language from database/country - this handles DK suppliers correctly
             const language = await emailService.getLanguageForSupplier(supplierName);
 
+            // Get country for sender email selection
+            const country = await emailService.getSupplierCountryFromDB(supplierName);
+
             // Map language code to display name
             const languageDisplayMap: Record<string, string> = {
               no: 'Norsk',
@@ -159,6 +163,7 @@ const BulkEmailPreview: React.FC<BulkEmailPreviewProps> = ({
               email,
               language,
               languageDisplay,
+              country,
               orderCount: orders.length,
               orders: orders as unknown as ExcelRow[],
               isSending: false,
@@ -298,6 +303,7 @@ const BulkEmailPreview: React.FC<BulkEmailPreviewProps> = ({
             to: recipientEmail, // Use the manually selected email address
             subject: emailData.subject,
             html: html,
+            country: supplierData.country || undefined, // For sender email selection (DK uses different sender)
           });
 
           // Update result
@@ -632,10 +638,10 @@ const BulkEmailPreview: React.FC<BulkEmailPreviewProps> = ({
                 })) || [],
             language:
               emailPreviewData.find((s) => s.supplier === previewSupplier)?.language || 'no',
-            subject:
-              emailPreviewData.find((s) => s.supplier === previewSupplier)?.language === 'no'
-                ? `Purring på manglende leveranser – ${previewSupplier}`
-                : `Reminder: Outstanding Deliveries – ${previewSupplier}`,
+            subject: getSubjectForLanguage(
+              emailPreviewData.find((s) => s.supplier === previewSupplier)?.language || 'no',
+              previewSupplier || ''
+            ),
           }}
           previewHtml={previewHtml}
           onSend={() => {
