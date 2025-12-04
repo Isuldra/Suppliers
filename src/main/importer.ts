@@ -7,6 +7,15 @@ import * as XLSX from 'xlsx';
 import { join } from 'path';
 import { existsSync, mkdirSync, readdirSync, statSync, unlinkSync } from 'fs';
 import { app, Notification } from 'electron';
+import {
+  getColumnMapping,
+  getExcelJSIndex,
+  detectCountryFromFilename,
+  detectCountryFromWarehouse,
+  shouldExcludeWarehouse,
+  logColumnMapping,
+  COLUMN_MAPPINGS,
+} from '../config/columnMappings';
 
 // Supported date formats for parsing
 const DATE_FORMATS = ['M/d/yyyy', 'd/M/yyyy', 'dd.MM.yyyy', 'yyyy-MM-dd', 'dd-MM-yyyy'];
@@ -127,16 +136,16 @@ export async function importAlleArk(
     fileName = source.split('/').pop()?.split('\\').pop();
   }
 
+  // Get column mapping based on filename (initial detection - may be refined later)
+  let columnMapping = getColumnMapping(fileName);
+  let detectedCountry = detectCountryFromFilename(fileName);
+
   if (fileName) {
     log.info(`Importing file (in importAlleArk): ${fileName}`);
-
-    if (fileName.toLowerCase().includes('dk') || fileName.toLowerCase().includes('danmark')) {
-      log.info('🇩🇰 DK File Detected: Enabling Denmark-specific import logic');
-    } else {
-      log.info('🇳🇴 Standard NO Import: Filename does not contain "DK" or "Danmark"');
-    }
+    log.info(`Initial country detection from filename: ${detectedCountry || 'Unknown'}`);
+    log.info(`Using column mapping:`, logColumnMapping(columnMapping));
   } else {
-    log.warn('⚠️ No filename provided to importAlleArk - defaulting to Standard NO Import');
+    log.warn('⚠️ No filename provided to importAlleArk - using default column mapping');
   }
 
   const wb = new ExcelJS.Workbook();
@@ -161,12 +170,12 @@ export async function importAlleArk(
     )`
   );
 
-  // Add supplier email insert statement
+  // Add supplier email insert statement (with language support for email template selection)
   const supplierEmailInsert = db.prepare(
     `INSERT OR REPLACE INTO supplier_emails (
-      supplier_name, email_address, updated_at
+      supplier_name, email_address, language, updated_at
     ) VALUES (
-      @supplier_name, @email_address, @updated_at
+      @supplier_name, @email_address, @language, @updated_at
     )`
   );
 
@@ -181,68 +190,86 @@ export async function importAlleArk(
     const deleteResult = db.prepare('DELETE FROM purchase_order').run();
     log.info(`Cleared ${deleteResult.changes} existing purchase order records`);
 
-    // BP sheet import (new structure) - data starts from row 6
-    const bpSheet = getSafeWorksheet(wb, 'BP');
-    const startRow = 6; // Data starts from row 6 (1-based)
+    // BP sheet import using column configuration
+    const bpSheet = getSafeWorksheet(wb, columnMapping.sheetName);
+    const startRow = columnMapping.startRow;
     const seenKeys = new Set<string>(); // Track keys we've seen to count duplicates
 
-    log.info(`Processing BP sheet starting from row ${startRow}`);
-
-    // Determine if this is a DK import for column mapping
-    const isDkImport =
-      fileName &&
-      (fileName.toLowerCase().includes('dk') || fileName.toLowerCase().includes('danmark'));
+    log.info(`Processing ${columnMapping.sheetName} sheet starting from row ${startRow}`);
 
     for (let r = startRow; r <= bpSheet.rowCount; r++) {
       const row = bpSheet.getRow(r);
 
-      // Determine column indices based on market/file type
-      // Default (NO) vs DK (shifted quantities)
-      // NO: Qty in M(13), N(14), O(15). Comment in L(12).
-      // DK: Appears to lack Comment in L, so Qty shifts to L(12), M(13), N(14).
-      const colOrdered = isDkImport ? 12 : 13;
-      const colDelivered = isDkImport ? 13 : 14;
-      const colOutstanding = isDkImport ? 14 : 15;
-      // DK might have Supplier Name in O(15) instead of P(16)?
-      // If everything shifts left by 1 from L onwards:
-      // P(16) -> O(15)
-      // Q(17) -> P(16)
-      const colSupplier = isDkImport ? 15 : 16;
-      const colRowNr = isDkImport ? 16 : 17;
+      // Use column mapping configuration (convert 0-based to 1-based for ExcelJS)
+      const poNumber = getCellStringValue(row.getCell(getExcelJSIndex(columnMapping.poNumber)));
+      const internalSupplierNumber = getCellStringValue(
+        row.getCell(getExcelJSIndex(columnMapping.internalSupplier))
+      );
+      const warehouse = getCellStringValue(row.getCell(getExcelJSIndex(columnMapping.warehouse)));
 
-      // Column mapping based on user specification:
-      // A (1) = ignore, B (2) = ignore
-      const poNumber = getCellStringValue(row.getCell(3)); // Column C = PO
-      const internalSupplierNumber = getCellStringValue(row.getCell(4)); // Column D = Internal supplier number
-      const warehouse = getCellStringValue(row.getCell(5)); // Column E = Warehouse
-      // F (6) = ignore, G (7) = ignore
-      const oneMedArticleNo = getCellStringValue(row.getCell(8)); // Column H = OneMed article number
-      const supplierArticleNo = getCellStringValue(row.getCell(9)); // Column I = Supplier article number
-      const etaDate1 = row.getCell(10).value; // Column J = Expected ETA 1
-      const etaDate2 = row.getCell(11).value; // Column K = Expected ETA 2
+      // Data-based country detection: Use warehouse code if filename detection didn't work
+      // This is more robust than filename detection since it's based on actual data
+      if (!detectedCountry && warehouse && processedCount === 0) {
+        const warehouseCountry = detectCountryFromWarehouse(warehouse);
+        if (warehouseCountry) {
+          detectedCountry = warehouseCountry;
+          columnMapping = COLUMN_MAPPINGS[warehouseCountry] || columnMapping;
+          log.info(`🔍 Country detected from warehouse code '${warehouse}': ${detectedCountry}`);
+          log.info(`📋 Updated column mapping:`, logColumnMapping(columnMapping));
+        }
+      }
 
-      // Column L = orpradtext (ERP comment) - DEBUG LOGGING
-      // For DK, this might actually be Ordered Qty if shifted
-      const columnLCell = row.getCell(12);
-      const erpComment = isDkImport ? '' : getCellStringValue(columnLCell);
+      // Skip warehouse 87 for DK files - these have a separate reminder routine
+      if (detectedCountry === 'DK' && shouldExcludeWarehouse('DK', warehouse)) {
+        if (processedCount < 5) {
+          log.info(
+            `⏭️ Skipping row ${r}: Warehouse ${warehouse} is excluded for DK (separate reminder routine)`
+          );
+        }
+        continue;
+      }
 
-      // Log column L data for first 10 rows to debug orpradtext import
-      if (processedCount < 10) {
-        log.info(`🔍 Row ${r} Column L Debug (isDK=${isDkImport}):`, {
-          rawValue: columnLCell.value,
-          cellText: columnLCell.text,
-          valueType: typeof columnLCell.value,
-          isObject: typeof columnLCell.value === 'object',
-          extractedValue: getCellStringValue(columnLCell),
-          interpretedAs: isDkImport ? 'OrderedQty' : 'Comment',
+      const oneMedArticleNo = getCellStringValue(
+        row.getCell(getExcelJSIndex(columnMapping.oneMedArticle))
+      );
+      const supplierArticleNo = getCellStringValue(
+        row.getCell(getExcelJSIndex(columnMapping.supplierArticle))
+      );
+      const etaDate1 = row.getCell(getExcelJSIndex(columnMapping.etaDate1)).value;
+      const etaDate2 = row.getCell(getExcelJSIndex(columnMapping.etaDate2)).value;
+
+      // ERP Comment (Column L) - may be null in some mappings
+      const erpCommentCell =
+        columnMapping.erpComment !== null
+          ? row.getCell(getExcelJSIndex(columnMapping.erpComment))
+          : null;
+      const erpComment = erpCommentCell ? getCellStringValue(erpCommentCell) : '';
+
+      // Log column data for first 10 rows to debug import
+      if (processedCount < 10 && erpCommentCell) {
+        log.info(`🔍 Row ${r} ERP Comment Debug (country=${detectedCountry || 'NO'}):`, {
+          rawValue: erpCommentCell.value,
+          cellText: erpCommentCell.text,
+          valueType: typeof erpCommentCell.value,
+          extractedValue: getCellStringValue(erpCommentCell),
         });
       }
 
-      const orderedQty = parseFloat(getCellStringValue(row.getCell(colOrdered))) || 0;
-      const deliveredQty = parseFloat(getCellStringValue(row.getCell(colDelivered))) || 0;
-      const outstandingQty = parseFloat(getCellStringValue(row.getCell(colOutstanding))) || 0;
-      const supplierName = getCellStringValue(row.getCell(colSupplier)).trim();
-      const orderRowNumber = getCellStringValue(row.getCell(colRowNr));
+      const orderedQty =
+        parseFloat(getCellStringValue(row.getCell(getExcelJSIndex(columnMapping.orderedQty)))) || 0;
+      const deliveredQty =
+        parseFloat(getCellStringValue(row.getCell(getExcelJSIndex(columnMapping.deliveredQty)))) ||
+        0;
+      const outstandingQty =
+        parseFloat(
+          getCellStringValue(row.getCell(getExcelJSIndex(columnMapping.outstandingQty)))
+        ) || 0;
+      const supplierName = getCellStringValue(
+        row.getCell(getExcelJSIndex(columnMapping.supplierName))
+      ).trim();
+      const orderRowNumber = getCellStringValue(
+        row.getCell(getExcelJSIndex(columnMapping.orderRowNumber))
+      );
 
       // Skip rows with no meaningful data
       if (!poNumber || !supplierName || poNumber.trim() === '' || supplierName.trim() === '') {
@@ -411,6 +438,7 @@ export async function importAlleArk(
                 supplierEmailInsert.run({
                   supplier_name: supplierName,
                   email_address: emailAddress,
+                  language: null, // Language not available in Sjekkliste sheet
                   updated_at: new Date().toISOString(),
                 });
                 emailCount++;
@@ -468,55 +496,49 @@ export async function importAlleArk(
           const clearResult = clearStmt.run();
           log.info(`Cleared ${clearResult.changes} existing supplier planning records`);
 
-          // TEMPORARY DK TEST: Manual injection of DK suppliers
-          // Only inject if we detect "DK" in the filename OR if we find no planning data
-          // isDkImport is already calculated above but inside the previous transaction scope or loop.
-          // Re-calculate or use the captured variable if it was in scope.
-          // Since we are in a new transaction block here, let's check fileName again.
-          const isDkImportForPlanning =
-            fileName &&
-            (fileName.toLowerCase().includes('dk') || fileName.toLowerCase().includes('danmark'));
+          // DK supplier planning: Use detectedCountry which is set by warehouse or filename detection
+          // This is more robust than just filename detection
+          const isDkImportForPlanning = detectedCountry === 'DK';
 
           if (isDkImportForPlanning) {
-            log.info('🇩🇰 Injecting test suppliers for Denmark import...');
-            const dkSuppliers = [
-              'B. Braun Medical',
-              'Carpenter ApS',
-              'Coloplast Danmark A/S',
-              'ConvaTec Denmark A/S',
-              'Dansac & Hollister',
-              'Evolan Pharma AB',
-              'Focuscare Denmark A/S',
-              'ICU Medical Danmark ApS',
-              'KOWSKY',
-              'Medicon eG',
-              'Mediplast A/S',
-              'Novo Nordisk Danmark A/S',
-              'OneMed AB ( DKR )',
-              'Pikdare S.p.A.',
-              'Roche A/S',
-              'TONGXIANG DANFILL BEDDING CO.,LTD.',
-              'Viatris (Meda AS)',
-              'Wellell Inc.',
-              'embecta Sweden AB',
-            ];
+            log.info(
+              '🇩🇰 Setting up DK suppliers for all weekdays (detected from warehouse or filename)...'
+            );
+
+            // Get unique suppliers from the imported purchase orders
+            const uniqueDkSuppliers = db
+              .prepare(
+                `SELECT DISTINCT COALESCE(supplier_name, ftgnavn) as name 
+               FROM purchase_order 
+               WHERE COALESCE(supplier_name, ftgnavn) IS NOT NULL 
+                 AND COALESCE(supplier_name, ftgnavn) != ''`
+              )
+              .all() as { name: string }[];
+
+            const weekdays = ['Mandag', 'Tirsdag', 'Onsdag', 'Torsdag', 'Fredag'];
 
             const insertDkPlan = db.prepare(`
                INSERT OR REPLACE INTO supplier_planning (supplier_name, weekday, planner_name, updated_at)
-               VALUES (?, 'Fredag', 'DK Innkjøper', CURRENT_TIMESTAMP)
+               VALUES (?, ?, 'Innkjøper', CURRENT_TIMESTAMP)
              `);
 
-            for (const supplier of dkSuppliers) {
-              try {
-                insertDkPlan.run(supplier);
-              } catch (e) {
-                log.warn(`Failed to insert temp DK supplier ${supplier}`, e);
+            let insertCount = 0;
+            for (const supplier of uniqueDkSuppliers) {
+              for (const weekday of weekdays) {
+                try {
+                  insertDkPlan.run(supplier.name, weekday);
+                  insertCount++;
+                } catch (e) {
+                  log.warn(`Failed to insert DK supplier ${supplier.name} for ${weekday}`, e);
+                }
               }
             }
-            log.info(`Inserted ${dkSuppliers.length} temporary DK suppliers for testing`);
+            log.info(
+              `Inserted ${uniqueDkSuppliers.length} DK suppliers for all ${weekdays.length} weekdays (${insertCount} total records)`
+            );
           } else {
             log.info(
-              '🇳🇴 Standard NO Import: Skipping manual DK supplier injection (Filename does not contain "DK")'
+              `🇳🇴 Standard Import (${detectedCountry || 'NO'}): Skipping DK-specific supplier injection`
             );
           }
 
@@ -528,14 +550,14 @@ export async function importAlleArk(
           `);
 
           // Process rows starting from row 2 (row 1 is headers)
-          // Structure: Column A = Supplier name, Column B = Company ID, Column C = Language, Column D = Weekday, Column F = Email
+          // Structure: Column A = Supplier name, Column B = Company ID, Column C = Language, Column D = Weekday, Column E = Email
           for (let r = 2; r <= leverandorSheet.rowCount; r++) {
             const row = leverandorSheet.getRow(r);
 
             const supplierName = getCellStringValue(row.getCell(1)).trim(); // Column A
             const language = getCellStringValue(row.getCell(3)).trim(); // Column C
             const weekday = getCellStringValue(row.getCell(4)).trim(); // Column D
-            const email = getCellStringValue(row.getCell(6)).trim(); // Column F
+            const email = getCellStringValue(row.getCell(5)).trim(); // Column E (was incorrectly reading from F/6)
 
             // Skip rows with no meaningful data
             if (!supplierName || !weekday || supplierName === '' || weekday === '') {
@@ -559,12 +581,13 @@ export async function importAlleArk(
                 planningInsert.run(supplierName, normalizedWeekday, 'Innkjøper');
                 planningCount++;
 
-                // Also insert/update supplier email if available
+                // Also insert/update supplier email with language if available
                 if (email && email.includes('@')) {
                   try {
                     supplierEmailInsert.run({
                       supplier_name: supplierName,
                       email_address: email,
+                      language: language || null, // Store language for email template selection
                       updated_at: new Date().toISOString(),
                     });
                   } catch (emailError) {
