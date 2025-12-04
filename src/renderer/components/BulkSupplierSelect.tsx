@@ -560,10 +560,9 @@ const BulkSupplierSelect: React.FC<BulkSupplierSelectProps> = ({
                         <td colSpan={6} className="px-4 py-4">
                           <div className="bg-neutral-white rounded-md border border-neutral-light p-4">
                             <h4 className="text-sm font-medium text-neutral mb-3">
-                              {t('bulkSupplierSelect.outstandingOrdersFor').replace(
-                                '{supplier}',
-                                supplier.supplier
-                              )}
+                              {t('bulkSupplierSelect.outstandingOrdersFor', {
+                                supplier: supplier.supplier,
+                              })}
                             </h4>
                             {supplierOrders.get(supplier.supplier) ? (
                               <div className="overflow-x-auto">

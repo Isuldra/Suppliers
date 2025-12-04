@@ -267,6 +267,20 @@ export class DatabaseService {
           log.error("Failed to add 'email_sent_at' to 'orders':", e);
         }
       }
+
+      // --- Migration for supplier_emails table (language) ---
+      // Add language column to store supplier's preferred email language (Dansk, Engelsk, Norsk, etc.)
+      try {
+        this.db.exec(`ALTER TABLE supplier_emails ADD COLUMN language TEXT`);
+        log.info("Added column 'language' to 'supplier_emails' table.");
+      } catch (e: unknown) {
+        if (e instanceof Error && e.message.includes('duplicate column name: language')) {
+          log.info("Column 'language' already exists in 'supplier_emails' table.");
+        } else {
+          log.error("Failed to add 'language' to 'supplier_emails':", e);
+        }
+      }
+
       log.info('Database schema initialization checked/updated successfully');
 
       // Clean up any corrupted supplier data
@@ -1036,6 +1050,134 @@ export class DatabaseService {
       }
     } catch (error) {
       log.error('Error getting supplier email:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Get the preferred language for a supplier from the database
+   * Used to determine which email template to use
+   * @param supplierName - The name of the supplier
+   * @returns Language string (e.g., "Dansk", "Engelsk", "Norsk") or null if not found
+   */
+  public getSupplierLanguage(supplierName: string): string | null {
+    if (!this.db) {
+      log.warn('getSupplierLanguage called but DB is not connected.');
+      return null;
+    }
+
+    try {
+      // First try exact match
+      let stmt = this.db.prepare(`
+        SELECT language 
+        FROM supplier_emails 
+        WHERE supplier_name = ? AND language IS NOT NULL
+        LIMIT 1
+      `);
+      let row = stmt.get(supplierName) as { language: string } | undefined;
+
+      if (row) {
+        log.info(`✅ DatabaseService: Found language for "${supplierName}": ${row.language}`);
+        return row.language;
+      }
+
+      // If no exact match, try case-insensitive match
+      stmt = this.db.prepare(`
+        SELECT language 
+        FROM supplier_emails 
+        WHERE LOWER(supplier_name) = LOWER(?) AND language IS NOT NULL
+        LIMIT 1
+      `);
+      row = stmt.get(supplierName) as { language: string } | undefined;
+
+      if (row) {
+        log.info(
+          `✅ DatabaseService: Found language (case-insensitive) for "${supplierName}": ${row.language}`
+        );
+        return row.language;
+      }
+
+      log.info(
+        `📝 DatabaseService: No language found for supplier: "${supplierName}" - will use app language`
+      );
+      return null;
+    } catch (error) {
+      log.error('Error getting supplier language:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Gets the country for a supplier based on warehouse codes in their orders.
+   * @param supplierName - The name of the supplier
+   * @returns Country code ('DK', 'NO', 'SE', 'FI') or null if not determined
+   */
+  public getSupplierCountry(supplierName: string): string | null {
+    if (!this.db) {
+      log.warn('getSupplierCountry called but DB is not connected.');
+      return null;
+    }
+
+    try {
+      // Look up the most common warehouse for this supplier from purchase_order table
+      const stmt = this.db.prepare(`
+        SELECT warehouse, COUNT(*) as count 
+        FROM purchase_order 
+        WHERE (ftgnavn = ? OR LOWER(ftgnavn) = LOWER(?))
+          AND warehouse IS NOT NULL 
+          AND warehouse != ''
+        GROUP BY warehouse 
+        ORDER BY count DESC 
+        LIMIT 1
+      `);
+      const row = stmt.get(supplierName, supplierName) as
+        | { warehouse: string; count: number }
+        | undefined;
+
+      if (row && row.warehouse) {
+        // Map warehouse codes to countries
+        // 80 = Denmark, 40 = Norway (based on columnMappings.ts detectCountryFromWarehouse)
+        const warehouseCountryMap: Record<string, string> = {
+          '80': 'DK',
+          '40': 'NO',
+          // Add more mappings as needed
+        };
+
+        const country = warehouseCountryMap[row.warehouse];
+        if (country) {
+          log.info(
+            `✅ DatabaseService: Found country for "${supplierName}" via warehouse ${row.warehouse}: ${country}`
+          );
+          return country;
+        }
+      }
+
+      // Fallback: check if the supplier language hints at country
+      const language = this.getSupplierLanguage(supplierName);
+      if (language) {
+        const languageCountryMap: Record<string, string> = {
+          Dansk: 'DK',
+          Danish: 'DK',
+          Norsk: 'NO',
+          Norwegian: 'NO',
+          Svensk: 'SE',
+          Swedish: 'SE',
+          Finsk: 'FI',
+          Finnish: 'FI',
+        };
+        const countryFromLang = languageCountryMap[language];
+        if (countryFromLang) {
+          log.info(
+            `✅ DatabaseService: Inferred country for "${supplierName}" from language "${language}": ${countryFromLang}`
+          );
+          return countryFromLang;
+        }
+      }
+
+      log.info(`📝 DatabaseService: No country found for supplier: "${supplierName}"`);
+      return null;
+    } catch (error) {
+      log.error('Error getting supplier country:', error);
       return null;
     }
   }
