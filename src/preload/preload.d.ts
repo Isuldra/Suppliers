@@ -22,22 +22,26 @@ interface ElectronAPI {
     to: string;
     subject: string;
     html: string;
+    country?: string;
   }) => Promise<{ success: boolean; error?: string }>;
   sendEmailAutomatically: (payload: {
     to: string;
     subject: string;
     html: string;
+    country?: string;
   }) => Promise<{ success: boolean; error?: string }>;
   sendEmailViaEmlAndCOM: (payload: {
     to: string;
     subject: string;
     html: string;
+    country?: string;
   }) => Promise<{ success: boolean; error?: string }>;
   sendBatchEmails: (
     payload: Array<{
       to: string;
       subject: string;
       html: string;
+      country?: string;
     }>
   ) => Promise<{
     success: boolean;
@@ -142,6 +146,14 @@ interface ElectronAPI {
   }>;
 
   getSupplierEmail: (
+    supplierName: string
+  ) => Promise<{ success: boolean; data?: string | null; error?: string }>;
+
+  getSupplierLanguage: (
+    supplierName: string
+  ) => Promise<{ success: boolean; data?: string | null; error?: string }>;
+
+  getSupplierCountry: (
     supplierName: string
   ) => Promise<{ success: boolean; data?: string | null; error?: string }>;
 

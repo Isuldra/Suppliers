@@ -22,7 +22,13 @@ const isDevelopment = process.env.NODE_ENV === 'development';
 
 // Configure logging
 log.transports.file.level = 'info';
-log.transports.console.level = isDevelopment ? 'debug' : 'info';
+// Disable console transport in production to prevent EPIPE errors
+// EPIPE occurs when writing to console in packaged apps without an attached terminal
+if (app.isPackaged) {
+  log.transports.console.level = false;
+} else {
+  log.transports.console.level = isDevelopment ? 'debug' : 'info';
+}
 
 // Define Content Security Policy
 const cspPolicy = {

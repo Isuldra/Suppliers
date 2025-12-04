@@ -671,8 +671,8 @@ const MainApp: React.FC<MainAppProps> = ({
         <div
           className={`mx-auto w-full bg-white/20 backdrop-blur-xl rounded-3xl border border-white/30 shadow-2xl ${
             appState.isBulkMode
-              ? 'max-w-7xl lg:max-w-6xl md:max-w-4xl px-4 sm:px-6 lg:px-8 p-4 sm:p-6 lg:p-8'
-              : 'max-w-4xl p-6 sm:p-8'
+              ? 'max-w-[95vw] xl:max-w-7xl px-4 sm:px-6 lg:px-8 p-4 sm:p-6 lg:p-8'
+              : 'max-w-6xl xl:max-w-7xl p-6 sm:p-8'
           }`}
         >
           {/* Progress Indicator - Show when file is uploaded */}
