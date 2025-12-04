@@ -157,6 +157,8 @@ interface ElectronAPI {
     supplierName: string
   ) => Promise<{ success: boolean; data?: string | null; error?: string }>;
 
+  getPredominantCountry: () => Promise<{ success: boolean; data?: string; error?: string }>;
+
   // Supplier planning methods
   getSuppliersForWeekday: (
     weekday: string,
