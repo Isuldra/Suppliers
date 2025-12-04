@@ -63,6 +63,19 @@ jobs:
         shell: pwsh
         run: npm run build
 
+      - name: Verify dist directory exists
+        shell: pwsh
+        run: |
+          if (Test-Path "dist") {
+            Write-Host "✅ dist/ directory exists"
+            Get-ChildItem dist -Recurse | Select-Object -First 20
+          } else {
+            Write-Host "❌ dist/ directory does NOT exist after build!"
+            Write-Host "Current directory contents:"
+            Get-ChildItem
+            exit 1
+          }
+
       - name: Package application
         shell: pwsh
         run: npm run dist:clean -- --skip-vite-build
