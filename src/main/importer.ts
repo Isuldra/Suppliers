@@ -11,10 +11,10 @@ import {
   getColumnMapping,
   getExcelJSIndex,
   detectCountryFromFilename,
-  detectCountryFromWarehouse,
   shouldExcludeWarehouse,
   logColumnMapping,
   COLUMN_MAPPINGS,
+  preScanForCountry,
 } from '../config/columnMappings';
 
 // Supported date formats for parsing
@@ -197,6 +197,25 @@ export async function importAlleArk(
 
     log.info(`Processing ${columnMapping.sheetName} sheet starting from row ${startRow}`);
 
+    // PRE-SCAN: Detect country from first data row BEFORE main loop to prevent first-row corruption
+    // This fixes the bug where fields were read with wrong mapping before country detection
+    if (!detectedCountry && bpSheet.rowCount >= startRow) {
+      const firstDataRow = bpSheet.getRow(startRow);
+      const preScanCountry = preScanForCountry((colIndex: number) => {
+        const cell = firstDataRow.getCell(colIndex);
+        return getCellStringValue(cell) || undefined;
+      });
+
+      if (preScanCountry) {
+        detectedCountry = preScanCountry;
+        columnMapping = COLUMN_MAPPINGS[preScanCountry] || columnMapping;
+        log.info(`🔍 PRE-SCAN: Country detected as '${detectedCountry}' from first data row`);
+        log.info(`📋 Using column mapping:`, logColumnMapping(columnMapping));
+      } else {
+        log.info('📋 PRE-SCAN: No country detected from data, using filename-based mapping');
+      }
+    }
+
     for (let r = startRow; r <= bpSheet.rowCount; r++) {
       const row = bpSheet.getRow(r);
 
@@ -206,18 +225,6 @@ export async function importAlleArk(
         row.getCell(getExcelJSIndex(columnMapping.internalSupplier))
       );
       const warehouse = getCellStringValue(row.getCell(getExcelJSIndex(columnMapping.warehouse)));
-
-      // Data-based country detection: Use warehouse code if filename detection didn't work
-      // This is more robust than filename detection since it's based on actual data
-      if (!detectedCountry && warehouse && processedCount === 0) {
-        const warehouseCountry = detectCountryFromWarehouse(warehouse);
-        if (warehouseCountry) {
-          detectedCountry = warehouseCountry;
-          columnMapping = COLUMN_MAPPINGS[warehouseCountry] || columnMapping;
-          log.info(`🔍 Country detected from warehouse code '${warehouse}': ${detectedCountry}`);
-          log.info(`📋 Updated column mapping:`, logColumnMapping(columnMapping));
-        }
-      }
 
       // Skip warehouse 87 for DK files - these have a separate reminder routine
       if (detectedCountry === 'DK' && shouldExcludeWarehouse('DK', warehouse)) {
