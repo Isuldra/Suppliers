@@ -43,15 +43,17 @@ export function getExcelJSIndex(zeroBasedIndex: number): number {
 }
 
 /**
- * Get column letter from 0-based index (e.g., 0 -> 'A', 2 -> 'C')
+ * Get column letter from 0-based index (e.g., 0 -> 'A', 25 -> 'Z', 26 -> 'AA')
+ * Uses standard bijective base-26 pattern (A=1, Z=26, AA=27)
  */
 export function getColumnLetter(zeroBasedIndex: number): string {
   let letter = '';
-  let index = zeroBasedIndex;
+  let n = zeroBasedIndex + 1; // Convert to 1-based column number
 
-  while (index >= 0) {
-    letter = String.fromCharCode((index % 26) + 65) + letter;
-    index = Math.floor(index / 26) - 1;
+  while (n > 0) {
+    n--;
+    letter = String.fromCharCode((n % 26) + 65) + letter;
+    n = Math.floor(n / 26);
   }
 
   return letter;
