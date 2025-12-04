@@ -1120,35 +1120,51 @@ export class DatabaseService {
 
     try {
       // Look up the most common warehouse for this supplier from purchase_order table
+      // Check both ftgnavn and supplier_name fields for maximum compatibility
       const stmt = this.db.prepare(`
         SELECT warehouse, COUNT(*) as count 
         FROM purchase_order 
-        WHERE (ftgnavn = ? OR LOWER(ftgnavn) = LOWER(?))
+        WHERE (
+          ftgnavn = ? 
+          OR LOWER(ftgnavn) = LOWER(?)
+          OR supplier_name = ?
+          OR LOWER(supplier_name) = LOWER(?)
+        )
           AND warehouse IS NOT NULL 
           AND warehouse != ''
         GROUP BY warehouse 
         ORDER BY count DESC 
         LIMIT 1
       `);
-      const row = stmt.get(supplierName, supplierName) as
+      const row = stmt.get(supplierName, supplierName, supplierName, supplierName) as
         | { warehouse: string; count: number }
         | undefined;
+
+      log.info(
+        `🔍 DatabaseService.getSupplierCountry: Looking for "${supplierName}", found warehouse: ${row?.warehouse || 'null'}`
+      );
 
       if (row && row.warehouse) {
         // Map warehouse codes to countries
         // 80 = Denmark, 40 = Norway (based on columnMappings.ts detectCountryFromWarehouse)
+        // Trim the warehouse value to handle whitespace
+        const trimmedWarehouse = row.warehouse.trim();
         const warehouseCountryMap: Record<string, string> = {
           '80': 'DK',
           '40': 'NO',
           // Add more mappings as needed
         };
 
-        const country = warehouseCountryMap[row.warehouse];
+        const country = warehouseCountryMap[trimmedWarehouse];
         if (country) {
           log.info(
-            `✅ DatabaseService: Found country for "${supplierName}" via warehouse ${row.warehouse}: ${country}`
+            `✅ DatabaseService: Found country for "${supplierName}" via warehouse ${trimmedWarehouse}: ${country}`
           );
           return country;
+        } else {
+          log.info(
+            `⚠️ DatabaseService: Warehouse "${trimmedWarehouse}" not mapped to any country for "${supplierName}"`
+          );
         }
       }
 
@@ -1179,6 +1195,58 @@ export class DatabaseService {
     } catch (error) {
       log.error('Error getting supplier country:', error);
       return null;
+    }
+  }
+
+  /**
+   * Gets the predominant country from all orders in the database.
+   * This is used as a fallback when a supplier's country can't be determined.
+   * If the file was imported as DK, most orders will have warehouse 80, so this returns 'DK'.
+   * @returns Country code ('DK', 'NO', 'SE', 'FI') or 'NO' as final fallback
+   */
+  public getPredominantCountry(): string {
+    if (!this.db) {
+      log.warn('getPredominantCountry called but DB is not connected.');
+      return 'NO';
+    }
+
+    try {
+      // Find the most common warehouse across all orders
+      const stmt = this.db.prepare(`
+        SELECT warehouse, COUNT(*) as count 
+        FROM purchase_order 
+        WHERE warehouse IS NOT NULL 
+          AND warehouse != ''
+        GROUP BY warehouse 
+        ORDER BY count DESC 
+        LIMIT 1
+      `);
+      const row = stmt.get() as { warehouse: string; count: number } | undefined;
+
+      if (row && row.warehouse) {
+        const trimmedWarehouse = row.warehouse.trim();
+        const warehouseCountryMap: Record<string, string> = {
+          '80': 'DK',
+          '40': 'NO',
+          // Add more mappings as needed
+        };
+
+        const country = warehouseCountryMap[trimmedWarehouse];
+        if (country) {
+          log.info(
+            `✅ DatabaseService.getPredominantCountry: Most common warehouse is ${trimmedWarehouse} -> ${country} (${row.count} orders)`
+          );
+          return country;
+        }
+      }
+
+      log.info(
+        '📝 DatabaseService.getPredominantCountry: No predominant country found, defaulting to NO'
+      );
+      return 'NO';
+    } catch (error) {
+      log.error('Error getting predominant country:', error);
+      return 'NO';
     }
   }
 

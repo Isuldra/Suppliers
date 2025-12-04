@@ -133,7 +133,9 @@ interface ElectronAPI {
   }>;
 
   getAllSupplierNames: () => Promise<string[]>;
-  getSupplierEmail: (supplierName: string) => Promise<string>;
+  getSupplierEmail: (
+    supplierName: string
+  ) => Promise<{ success: boolean; data?: string | null; error?: string }>;
   getSupplierLanguage: (
     supplierName: string
   ) => Promise<{ success: boolean; data?: string | null; error?: string }>;
@@ -548,6 +550,10 @@ contextBridge.exposeInMainWorld('electron', {
 
   getSupplierCountry: async (supplierName: string) => {
     return await ipcRenderer.invoke('getSupplierCountry', supplierName);
+  },
+
+  getPredominantCountry: async () => {
+    return await ipcRenderer.invoke('getPredominantCountry');
   },
 
   // Supplier planning methods

@@ -195,6 +195,9 @@ export function shouldExcludeWarehouse(country: string, warehouse: string): bool
 
 /**
  * Detect country code from filename
+ * Uses word boundary matching to avoid false positives from common English substrings
+ * E.g., "purchase" should NOT match "se", "file" should NOT match "fi"
+ *
  * @param fileName - The name of the file being imported
  * @returns Country code (NO, DK, SE, FI) or null if not detected
  */
@@ -203,16 +206,39 @@ export function detectCountryFromFilename(fileName: string | undefined): string 
 
   const lowerName = fileName.toLowerCase();
 
-  if (lowerName.includes('dk') || lowerName.includes('danmark') || lowerName.includes('denmark')) {
+  // Use word boundary patterns: code must be preceded/followed by:
+  // - underscore, dash, space, dot, or start/end of string
+  // This prevents matching "purchase" for "se" or "file" for "fi"
+
+  // Check for full country names first (these are unambiguous)
+  if (lowerName.includes('danmark') || lowerName.includes('denmark')) {
     return 'DK';
   }
-  if (lowerName.includes('se') || lowerName.includes('sverige') || lowerName.includes('sweden')) {
+  if (lowerName.includes('sverige') || lowerName.includes('sweden')) {
     return 'SE';
   }
-  if (lowerName.includes('fi') || lowerName.includes('finland') || lowerName.includes('suomi')) {
+  if (lowerName.includes('finland') || lowerName.includes('suomi')) {
     return 'FI';
   }
-  if (lowerName.includes('no') || lowerName.includes('norge') || lowerName.includes('norway')) {
+  if (lowerName.includes('norge') || lowerName.includes('norway')) {
+    return 'NO';
+  }
+
+  // For 2-letter codes, require word boundaries to avoid false positives
+  // Pattern: (start or separator) + code + (separator or end)
+  const boundaryPattern = (code: string) =>
+    new RegExp(`(^|[_\\-\\s\\.])${code}([_\\-\\s\\.]|$)`, 'i');
+
+  if (boundaryPattern('dk').test(lowerName)) {
+    return 'DK';
+  }
+  if (boundaryPattern('se').test(lowerName)) {
+    return 'SE';
+  }
+  if (boundaryPattern('fi').test(lowerName)) {
+    return 'FI';
+  }
+  if (boundaryPattern('no').test(lowerName)) {
     return 'NO';
   }
 
@@ -232,6 +258,45 @@ export function getColumnMapping(fileName?: string): ColumnMapping {
   }
 
   return DEFAULT_MAPPING;
+}
+
+/**
+ * Pre-scan first data row to detect country before main import loop.
+ * This prevents the first-row corruption bug where fields are read with wrong mapping
+ * before country detection kicks in.
+ *
+ * @param getCellValue - Function to get cell value at a given 1-based column index
+ * @returns Detected country code or null
+ */
+export function preScanForCountry(
+  getCellValue: (columnIndex: number) => string | undefined
+): string | null {
+  // Try to read warehouse from both possible column positions
+  // NO uses column E (index 4, 1-based: 5)
+  // DK uses column D (index 3, 1-based: 4)
+
+  const warehouseAtNOPosition = getCellValue(getExcelJSIndex(STANDARD_BP_MAPPING.warehouse)); // Column 5 (E)
+  const warehouseAtDKPosition = getCellValue(getExcelJSIndex(DK_BP_MAPPING.warehouse)); // Column 4 (D)
+
+  // Check if value at DK position is a valid DK warehouse code
+  const countryFromDKPosition = detectCountryFromWarehouse(warehouseAtDKPosition);
+  if (countryFromDKPosition === 'DK') {
+    return 'DK';
+  }
+
+  // Check if value at NO position is a valid warehouse code
+  const countryFromNOPosition = detectCountryFromWarehouse(warehouseAtNOPosition);
+  if (countryFromNOPosition) {
+    return countryFromNOPosition;
+  }
+
+  // If warehouse at DK position looks like a number that could be a warehouse code
+  // (80, 87, etc.), assume DK even if not explicitly mapped
+  if (warehouseAtDKPosition && /^8[0-9]$/.test(warehouseAtDKPosition.trim())) {
+    return 'DK';
+  }
+
+  return null;
 }
 
 /**

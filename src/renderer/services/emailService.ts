@@ -518,10 +518,16 @@ export class EmailService {
   // Returns the country code (e.g., "DK", "NO") or null if not found
   async getSupplierCountryFromDB(supplierName: string): Promise<string | null> {
     try {
+      console.log(`getSupplierCountryFromDB: Looking up country for "${supplierName}"`);
       const result = await window.electron.getSupplierCountry(supplierName);
+      console.log(`getSupplierCountryFromDB: Result for "${supplierName}":`, result);
       if (result.success && result.data) {
+        console.log(
+          `getSupplierCountryFromDB: Found country "${result.data}" for "${supplierName}"`
+        );
         return result.data;
       }
+      console.log(`getSupplierCountryFromDB: No country found for "${supplierName}"`);
       return null;
     } catch (error) {
       console.error('Error getting supplier country from database:', error);
@@ -601,6 +607,69 @@ export class EmailService {
     return 'no'; // Default to Norwegian
   }
 
+  /**
+   * Get the appropriate language for a supplier based on:
+   * 1. Database language setting (from Leverandør sheet)
+   * 2. Country-based fallback from supplier's warehouse (DK→da, SE→se, FI→fi, NO→no)
+   * 3. Predominant country fallback (most common warehouse in all orders)
+   * 4. Default to Norwegian as final fallback
+   */
+  async getLanguageForSupplier(supplierName: string): Promise<'no' | 'en' | 'se' | 'da' | 'fi'> {
+    const countryLanguageMap: Record<string, 'no' | 'en' | 'se' | 'da' | 'fi'> = {
+      DK: 'da',
+      NO: 'no',
+      SE: 'se',
+      FI: 'fi',
+    };
+
+    // Try database first
+    const dbLanguage = await this.getSupplierLanguageFromDB(supplierName);
+    if (dbLanguage) {
+      const mappedLanguage = this.mapLanguageToCode(dbLanguage);
+      if (mappedLanguage) {
+        console.log(
+          `getLanguageForSupplier: Using DB language for ${supplierName}: ${dbLanguage} -> ${mappedLanguage}`
+        );
+        return mappedLanguage;
+      }
+    }
+
+    // Try country-based fallback from supplier's warehouse
+    const country = await this.getSupplierCountryFromDB(supplierName);
+    if (country) {
+      const countryBasedLanguage = countryLanguageMap[country];
+      if (countryBasedLanguage) {
+        console.log(
+          `getLanguageForSupplier: Using country-based language for ${supplierName}: ${country} -> ${countryBasedLanguage}`
+        );
+        return countryBasedLanguage;
+      }
+    }
+
+    // Fallback to predominant country (the country most orders belong to)
+    // This handles cases where a DK file was imported but the specific supplier doesn't have warehouse data
+    try {
+      const predominantResult = await window.electron.getPredominantCountry();
+      if (predominantResult.success && predominantResult.data) {
+        const predominantLanguage = countryLanguageMap[predominantResult.data];
+        if (predominantLanguage) {
+          console.log(
+            `getLanguageForSupplier: Using predominant country language for ${supplierName}: ${predominantResult.data} -> ${predominantLanguage}`
+          );
+          return predominantLanguage;
+        }
+      }
+    } catch (error) {
+      console.error('Error getting predominant country:', error);
+    }
+
+    // Final fallback to Norwegian
+    console.log(
+      `getLanguageForSupplier: No language, country, or predominant country found for ${supplierName}, defaulting to Norwegian`
+    );
+    return 'no';
+  }
+
   // New method to generate email preview HTML
   generatePreview(data: EmailData): string {
     const language = data.language || 'no'; // Default to Norwegian
@@ -628,6 +697,9 @@ export class EmailService {
       // Determine language: 1) data.language (explicit), 2) database, 3) app setting
       let supplierLanguage: 'no' | 'en' | 'se' | 'da' | 'fi' | null = null;
 
+      // Get supplier country for determining sender email AND language fallback
+      const supplierCountry = await this.getSupplierCountryFromDB(data.supplier);
+
       // Try to get language from database first (imported from Leverandør sheet)
       const dbLanguage = await this.getSupplierLanguageFromDB(data.supplier);
       if (dbLanguage) {
@@ -640,11 +712,45 @@ export class EmailService {
         }
       }
 
-      // Fallback to app language if not found in database
-      const language: 'no' | 'en' | 'se' | 'da' | 'fi' = supplierLanguage || this.getAppLanguage();
+      // If no language in database, use country-based default language
+      // This handles DK suppliers that are auto-inserted without language data
+      const countryLanguageMap: Record<string, 'no' | 'en' | 'se' | 'da' | 'fi'> = {
+        DK: 'da', // Denmark → Danish
+        NO: 'no', // Norway → Norwegian
+        SE: 'se', // Sweden → Swedish
+        FI: 'fi', // Finland → Finnish
+      };
 
-      // Get supplier country for determining sender email
-      const supplierCountry = await this.getSupplierCountryFromDB(data.supplier);
+      if (!supplierLanguage && supplierCountry) {
+        const countryBasedLanguage = countryLanguageMap[supplierCountry];
+        if (countryBasedLanguage) {
+          supplierLanguage = countryBasedLanguage;
+          console.log(
+            `EmailService: Using country-based language for ${data.supplier}: country=${supplierCountry} -> ${countryBasedLanguage}`
+          );
+        }
+      }
+
+      // Fallback to predominant country (most common warehouse across all orders)
+      if (!supplierLanguage) {
+        try {
+          const predominantResult = await window.electron.getPredominantCountry();
+          if (predominantResult.success && predominantResult.data) {
+            const predominantLanguage = countryLanguageMap[predominantResult.data];
+            if (predominantLanguage) {
+              supplierLanguage = predominantLanguage;
+              console.log(
+                `EmailService: Using predominant country language for ${data.supplier}: ${predominantResult.data} -> ${predominantLanguage}`
+              );
+            }
+          }
+        } catch (error) {
+          console.error('Error getting predominant country:', error);
+        }
+      }
+
+      // Final fallback to Norwegian
+      const language: 'no' | 'en' | 'se' | 'da' | 'fi' = supplierLanguage || 'no';
 
       console.log('EmailService: sendReminder called with data:', {
         supplier: data.supplier,
