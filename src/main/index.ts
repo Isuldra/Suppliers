@@ -1738,6 +1738,16 @@ ipcMain.handle('getSupplierCountry', async (event, supplierName: string) => {
   }
 });
 
+ipcMain.handle('getPredominantCountry', async () => {
+  try {
+    const country = databaseService.getPredominantCountry();
+    return { success: true, data: country };
+  } catch (error) {
+    log.error('Error getting predominant country:', error);
+    return { success: false, error: String(error) };
+  }
+});
+
 // Add IPC handlers for supplier planning
 ipcMain.handle('getSuppliersForWeekday', async (event, weekday: string, plannerName: string) => {
   try {
