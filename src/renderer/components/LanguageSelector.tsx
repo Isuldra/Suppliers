@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { resetLanguageToSystem } from '../services/languageDetectionService';
@@ -22,16 +22,32 @@ const LanguageSelector: React.FC<LanguageSelectorProps> = ({
   const buttonRef = useRef<HTMLButtonElement>(null);
   const [dropdownPosition, setDropdownPosition] = useState<DropdownPosition>({ top: 0, right: 0 });
 
-  // Calculate dropdown position when opening
-  useEffect(() => {
-    if (isOpen && buttonRef.current) {
+  // Calculate dropdown position based on button location
+  const updatePosition = useCallback(() => {
+    if (buttonRef.current) {
       const rect = buttonRef.current.getBoundingClientRect();
       setDropdownPosition({
         top: rect.bottom + 4, // 4px margin (mt-1)
         right: window.innerWidth - rect.right,
       });
     }
-  }, [isOpen]);
+  }, []);
+
+  // Calculate dropdown position when opening and update on resize/scroll
+  useEffect(() => {
+    if (isOpen) {
+      updatePosition();
+
+      // Update position on window resize and scroll
+      window.addEventListener('resize', updatePosition);
+      window.addEventListener('scroll', updatePosition, true);
+
+      return () => {
+        window.removeEventListener('resize', updatePosition);
+        window.removeEventListener('scroll', updatePosition, true);
+      };
+    }
+  }, [isOpen, updatePosition]);
 
   const languages = [
     { code: 'no', name: t('languages.norwegian'), flag: '🇳🇴' },
