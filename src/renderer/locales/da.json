@@ -68,6 +68,14 @@
     "suppliers": "Leverandører",
     "sendingModeDescription": "Vælg mellem enkelt leverandør eller flere leverandører"
   },
+  "warehouseFilter": {
+    "title": "DK Lagersted",
+    "description": "Vælg hvilket lagersted du vil se ordrer fra.",
+    "warehouse80": "Lager 80",
+    "warehouse87": "Lager 87",
+    "both": "Begge",
+    "detected": "Registreret"
+  },
   "validation": {
     "errors": "Fejl ved validering:"
   },
