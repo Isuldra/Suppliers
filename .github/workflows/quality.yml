@@ -11,7 +11,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  NODE_VERSION: "22.x"
+  BUN_VERSION: "latest"
 
 jobs:
   quality:
@@ -24,26 +24,25 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
         with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
+          bun-version: ${{ env.BUN_VERSION }}
 
       - name: Install dependencies
-        run: npm ci
+        run: bun install --frozen-lockfile
 
       - name: Check formatting (Prettier)
-        run: npm run format:check
+        run: bun run format:check
 
       - name: Lint (ESLint)
-        run: npm run lint
+        run: bun run lint
 
       - name: Type check (TypeScript)
-        run: npm run typecheck
+        run: bun run typecheck
 
       - name: Run tests (Vitest)
-        run: npm run test -- --run --passWithNoTests
+        run: bun run test -- --run --passWithNoTests
 
       - name: Summary
         if: success()
@@ -63,6 +62,5 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "One or more quality gates failed. Please fix the issues and try again." >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Run locally with: \`npm run quality\`" >> $GITHUB_STEP_SUMMARY
-          echo "Auto-fix with: \`npm run quality:fix\`" >> $GITHUB_STEP_SUMMARY
-
+          echo "Run locally with: \`bun run quality\`" >> $GITHUB_STEP_SUMMARY
+          echo "Auto-fix with: \`bun run quality:fix\`" >> $GITHUB_STEP_SUMMARY
