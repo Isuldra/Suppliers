@@ -11,6 +11,9 @@ on:
         required: true
         type: string
 
+env:
+  BUN_VERSION: "latest"
+
 jobs:
   release:
     runs-on: windows-latest
@@ -24,15 +27,19 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           fetch-depth: 0
 
-      - name: Setup Node.js
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+
+      - name: Setup Node.js (for npm version command)
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
-          cache: "npm"
+          node-version: "22"
 
       - name: Install dependencies
         shell: pwsh
-        run: npm ci
+        run: bun install --frozen-lockfile
 
       - name: Set version from tag or input
         id: version
@@ -61,7 +68,7 @@ jobs:
 
       - name: Build renderer
         shell: pwsh
-        run: npm run build
+        run: bun run build
 
       - name: Verify dist directory exists
         shell: pwsh
@@ -78,15 +85,15 @@ jobs:
 
       - name: Package application
         shell: pwsh
-        run: npm run dist:clean -- --skip-vite-build
+        run: bun run dist:clean -- --skip-vite-build
 
       - name: Prepare Cloudflare metadata
         shell: pwsh
-        run: npm run release:prepare
+        run: bun run release:prepare
 
       - name: Create GitHub Release
         shell: pwsh
-        run: npm run release:github
+        run: bun run release:github
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -175,7 +182,7 @@ jobs:
         run: |
           if [ -n "$SLACK_WEBHOOK_URL" ] && [ "$SLACK_WEBHOOK_URL" != "" ]; then
             echo "📋 Sending CHANGELOG to Slack..."
-            node scripts/send-changelog-to-slack.js "${{ steps.version.outputs.version }}"
+            bun run scripts/send-changelog-to-slack.js "${{ steps.version.outputs.version }}"
           else
             echo "⚠️  SLACK_WEBHOOK_URL secret not set, skipping Slack notification"
           fi
