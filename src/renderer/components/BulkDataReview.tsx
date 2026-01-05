@@ -4,6 +4,7 @@ import { ChevronDownIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
 import { ExcelRow } from '../types/ExcelData';
 import supplierData from '../data/supplierData.json';
 import SelectToggleButton from './SelectToggleButton';
+import { useWarehouseFilter } from '../context/WarehouseFilterContext';
 
 interface BulkDataReviewProps {
   selectedSuppliers: string[];
@@ -42,6 +43,7 @@ const BulkDataReview: React.FC<BulkDataReviewProps> = ({
   onOrdersChanged,
 }) => {
   const { t } = useTranslation();
+  const { warehouseFilter, showWarehouseFilter } = useWarehouseFilter();
   const [supplierOrders, setSupplierOrders] = useState<SupplierOrders[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [expandedSuppliers, setExpandedSuppliers] = useState<Set<string>>(new Set());
@@ -72,7 +74,9 @@ const BulkDataReview: React.FC<BulkDataReviewProps> = ({
     const fetchOrdersForSuppliers = async () => {
       setIsLoading(true);
       try {
-        const allOrders = await window.electron.getAllOrders();
+        // Use warehouse filter for DK data
+        const filterToUse = showWarehouseFilter ? warehouseFilter : undefined;
+        const allOrders = await window.electron.getAllOrders(filterToUse);
         const suppliersData: SupplierOrders[] = [];
 
         for (const supplierName of selectedSuppliers) {
@@ -114,7 +118,7 @@ const BulkDataReview: React.FC<BulkDataReviewProps> = ({
     if (selectedSuppliers.length > 0) {
       fetchOrdersForSuppliers();
     }
-  }, [selectedSuppliers, bulkSelectedOrdersSerialized]);
+  }, [selectedSuppliers, bulkSelectedOrdersSerialized, warehouseFilter, showWarehouseFilter]);
 
   // Handle expanding supplier details
   const handleExpandSupplier = (supplier: string) => {

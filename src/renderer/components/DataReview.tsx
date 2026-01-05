@@ -14,6 +14,7 @@ import { useTranslation } from 'react-i18next';
 import { ExcelData, ExcelRow } from '../types/ExcelData';
 // import knownSuppliersData from "../data/suppliers.json"; // Unused for now
 import { DateFilterSettings } from './DateFilter';
+import { useWarehouseFilter } from '../context/WarehouseFilterContext';
 
 interface DataReviewProps {
   excelData?: ExcelData;
@@ -33,6 +34,7 @@ const DataReview: React.FC<DataReviewProps> = ({
   onPrevious,
 }) => {
   const { t } = useTranslation();
+  const { warehouseFilter, showWarehouseFilter } = useWarehouseFilter();
   // Enhanced sorting state to support multiple columns
   const [sorting, setSorting] = React.useState<SortingState>([
     { id: 'status', desc: true }, // Primary sort by status
@@ -280,7 +282,12 @@ const DataReview: React.FC<DataReviewProps> = ({
     void (async () => {
       try {
         // IPC returns an object { success: boolean, data?: ExcelRow[], error?: string }
-        const response = await window.electron.getOutstandingOrders(selectedSupplier || '');
+        // Pass warehouse filter for DK data
+        const filterToUse = showWarehouseFilter ? warehouseFilter : undefined;
+        const response = await window.electron.getOutstandingOrders(
+          selectedSupplier || '',
+          filterToUse
+        );
         if (response.success && response.data) {
           setRowsToRender(response.data as ExcelRow[]);
         } else {
@@ -295,7 +302,7 @@ const DataReview: React.FC<DataReviewProps> = ({
         setRowsToRender([]);
       }
     })();
-  }, [selectedSupplier]);
+  }, [selectedSupplier, warehouseFilter, showWarehouseFilter]);
 
   // Table instance
   const table = useReactTable({
