@@ -1657,47 +1657,56 @@ ipcMain.handle('send-logs-to-support', async () => {
 });
 
 // Expose outstanding POs to the renderer
-ipcMain.handle('getOutstandingOrders', async (_event, supplier: string) => {
-  try {
-    const dbsvc = databaseService;
-    if (!dbsvc.getDbInstance()) {
-      // It's better to return a structured error response
-      return { success: false, error: 'Database not connected' };
+// Now supports optional warehouse filter for DK data
+ipcMain.handle(
+  'getOutstandingOrders',
+  async (_event, supplier: string, warehouseFilter?: '80' | '87' | 'all') => {
+    try {
+      const dbsvc = databaseService;
+      if (!dbsvc.getDbInstance()) {
+        // It's better to return a structured error response
+        return { success: false, error: 'Database not connected' };
+      }
+      const orders = dbsvc.getOutstandingOrders(supplier, warehouseFilter);
+      return { success: true, data: orders }; // Wrap the response
+    } catch (err) {
+      log.error('IPC getOutstandingOrders error:', err);
+      // Ensure a structured error response is also returned on catch
+      return {
+        success: false,
+        error: err instanceof Error ? err.message : String(err),
+      };
     }
-    const orders = dbsvc.getOutstandingOrders(supplier);
-    return { success: true, data: orders }; // Wrap the response
-  } catch (err) {
-    log.error('IPC getOutstandingOrders error:', err);
-    // Ensure a structured error response is also returned on catch
-    return {
-      success: false,
-      error: err instanceof Error ? err.message : String(err),
-    };
   }
-});
+);
 
 // Expose suppliers with outstanding orders to the renderer
-ipcMain.handle('getSuppliersWithOutstandingOrders', async () => {
-  try {
-    const dbsvc = databaseService;
-    if (!dbsvc.getDbInstance()) {
-      return { success: false, error: 'Database not connected' };
+// Now supports optional warehouse filter for DK data
+ipcMain.handle(
+  'getSuppliersWithOutstandingOrders',
+  async (_event, warehouseFilter?: '80' | '87' | 'all') => {
+    try {
+      const dbsvc = databaseService;
+      if (!dbsvc.getDbInstance()) {
+        return { success: false, error: 'Database not connected' };
+      }
+      const suppliers = dbsvc.getSuppliersWithOutstandingOrders(warehouseFilter);
+      return { success: true, data: suppliers };
+    } catch (err) {
+      log.error('IPC getSuppliersWithOutstandingOrders error:', err);
+      return {
+        success: false,
+        error: err instanceof Error ? err.message : String(err),
+      };
     }
-    const suppliers = dbsvc.getSuppliersWithOutstandingOrders();
-    return { success: true, data: suppliers };
-  } catch (err) {
-    log.error('IPC getSuppliersWithOutstandingOrders error:', err);
-    return {
-      success: false,
-      error: err instanceof Error ? err.message : String(err),
-    };
   }
-});
+);
 
 // Add new IPC handler to get all supplier names for debugging
-ipcMain.handle('getAllSupplierNames', async () => {
+// Now supports optional warehouse filter for DK data
+ipcMain.handle('getAllSupplierNames', async (_event, warehouseFilter?: '80' | '87' | 'all') => {
   try {
-    const suppliers = databaseService.getAllSupplierNames();
+    const suppliers = databaseService.getAllSupplierNames(warehouseFilter);
     return { success: true, data: suppliers };
   } catch (error) {
     log.error('Error getting supplier names:', error);
