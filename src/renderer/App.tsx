@@ -19,6 +19,8 @@ import { HashRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import supplyPlannersData from './data/supplyPlanners.json';
 import { SlackService } from './services/slackService';
 import { Cog6ToothIcon, ChartBarIcon, CommandLineIcon } from '@heroicons/react/24/outline';
+import WarehouseToggle from './components/WarehouseToggle';
+import { useWarehouseFilter } from './context/WarehouseFilterContext';
 
 // i18n is now initialized asynchronously in index.tsx
 
@@ -204,32 +206,41 @@ const App: React.FC = () => {
   // Global app state that persists across route changes
   const [appState, setAppState] = useState<AppState>(getInitialState());
 
-  const handleDataParsed = React.useCallback(async (data: ExcelData) => {
-    console.log('Excel data parsed in App:', data);
-    setAppState((prev) => ({
-      ...prev,
-      excelData: data,
-    }));
+  // Get the warehouse filter context refresh function
+  const { refreshCountryDetection } = useWarehouseFilter();
 
-    // Check if this is a DK file - if so, auto-select a weekday and enable bulk mode
-    // This makes the DK flow simpler since all suppliers have the same reminder day
-    try {
-      const result = await window.electron.getPredominantCountry();
-      console.log('🔍 Checking predominant country after file parse:', result);
-      if (result.success && result.data === 'DK') {
-        console.log('🇩🇰 DK file detected - auto-selecting Onsdag and enabling bulk mode');
-        // Auto-select Wednesday (Onsdag) as it's the common reminder day for DK
-        // Also enable bulk mode for easier workflow
-        setAppState((prev) => ({
-          ...prev,
-          selectedWeekday: 'Onsdag',
-          isBulkMode: true,
-        }));
+  const handleDataParsed = React.useCallback(
+    async (data: ExcelData) => {
+      console.log('Excel data parsed in App:', data);
+      setAppState((prev) => ({
+        ...prev,
+        excelData: data,
+      }));
+
+      // Refresh country detection for warehouse filter
+      await refreshCountryDetection();
+
+      // Check if this is a DK file - if so, auto-select a weekday and enable bulk mode
+      // This makes the DK flow simpler since all suppliers have the same reminder day
+      try {
+        const result = await window.electron.getPredominantCountry();
+        console.log('🔍 Checking predominant country after file parse:', result);
+        if (result.success && result.data === 'DK') {
+          console.log('🇩🇰 DK file detected - auto-selecting Onsdag and enabling bulk mode');
+          // Auto-select Wednesday (Onsdag) as it's the common reminder day for DK
+          // Also enable bulk mode for easier workflow
+          setAppState((prev) => ({
+            ...prev,
+            selectedWeekday: 'Onsdag',
+            isBulkMode: true,
+          }));
+        }
+      } catch (error) {
+        console.error('Error checking predominant country:', error);
       }
-    } catch (error) {
-      console.error('Error checking predominant country:', error);
-    }
-  }, []);
+    },
+    [refreshCountryDetection]
+  );
 
   const handleValidationErrors = React.useCallback((errors: ValidationError[]) => {
     setAppState((prev) => ({
@@ -797,6 +808,9 @@ const MainApp: React.FC<MainAppProps> = ({
                   </div>
                 </div>
               )}
+
+              {/* Warehouse Filter - Only show for DK data */}
+              <WarehouseToggle />
 
               {/* Supplier Selection - Only show if weekday is selected */}
               {appState.selectedWeekday && (

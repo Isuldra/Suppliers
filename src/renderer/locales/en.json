@@ -81,6 +81,14 @@
     "suppliers": "Suppliers",
     "sendingModeDescription": "Choose between single supplier or multiple suppliers"
   },
+  "warehouseFilter": {
+    "title": "DK Warehouse",
+    "description": "Select which warehouse you want to see orders from.",
+    "warehouse80": "Warehouse 80",
+    "warehouse87": "Warehouse 87",
+    "both": "Both",
+    "detected": "Detected"
+  },
   "validation": {
     "errors": "Validation errors:"
   },
