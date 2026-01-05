@@ -16,7 +16,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  NODE_VERSION: "22.x"
+  BUN_VERSION: "latest"
   SHARP_IGNORE_GLOBAL_LIBVIPS: "1"
 
 jobs:
@@ -35,23 +35,18 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           fetch-depth: 0
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
         with:
-          node-version: ${{ env.NODE_VERSION }}
+          bun-version: ${{ env.BUN_VERSION }}
 
-      - name: Get npm cache directory
-        id: npm-cache-dir
-        shell: pwsh
-        run: echo "dir=$(npm config get cache)" >> ${env:GITHUB_OUTPUT}
-
-      - name: Cache npm dependencies
+      - name: Cache Bun dependencies
         uses: actions/cache@v4
         with:
-          path: ${{ steps.npm-cache-dir.outputs.dir }}
-          key: ${{ runner.os }}-npm-${{ hashFiles('**/package-lock.json') }}
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lockb') }}
           restore-keys: |
-            ${{ runner.os }}-npm-
+            ${{ runner.os }}-bun-
 
       - name: Cache electron-builder dependencies
         uses: actions/cache@v4
@@ -59,18 +54,18 @@ jobs:
           path: |
             ~\AppData\Local\electron\Cache
             ~\AppData\Local\electron-builder\Cache
-          key: ${{ runner.os }}-electron-builder-${{ hashFiles('**/package-lock.json') }}
+          key: ${{ runner.os }}-electron-builder-${{ hashFiles('**/bun.lockb') }}
           restore-keys: |
             ${{ runner.os }}-electron-builder-
 
       - name: Install dependencies
-        run: npm ci
+        run: bun install --frozen-lockfile
 
       - name: Build Application
         shell: pwsh
         run: |
           Write-Host "Building application..."
-          npm run dist
+          bun run dist
 
       - name: Exclude build directories from Windows Defender
         if: runner.os == 'Windows'
@@ -107,21 +102,21 @@ jobs:
         shell: pwsh
         run: |
           Write-Host "Generating latest.yml for portable auto-updates..."
-          node scripts/generate-latest-yml.js
+          bun run scripts/generate-latest-yml.js
 
       - name: Generate app-update.yml for NSIS Auto-Updates
         if: startsWith(github.ref, 'refs/tags/')
         shell: pwsh
         run: |
           Write-Host "Generating app-update.yml for NSIS auto-updates..."
-          node scripts/generate-app-update-yml.js
+          bun run scripts/generate-app-update-yml.js
 
       - name: Prepare Cloudflare metadata
         if: startsWith(github.ref, 'refs/tags/')
         shell: pwsh
         run: |
           Write-Host "Preparing Cloudflare metadata for auto-updates..."
-          npm run release:prepare
+          bun run release:prepare
 
       - name: Commit and push Cloudflare metadata
         if: startsWith(github.ref, 'refs/tags/')
@@ -167,7 +162,7 @@ jobs:
           Write-Host "--- Attempting to list ASAR contents ---"
           $asarPath = Get-ChildItem -Path release -Recurse -Filter app.asar | Select-Object -First 1
           if ($asarPath) {
-            npx asar list $asarPath.FullName
+            bunx asar list $asarPath.FullName
           } else {
             Write-Host "app.asar not found."
           }
@@ -212,7 +207,7 @@ jobs:
           if [ -n "$SLACK_WEBHOOK_URL" ] && [ "$SLACK_WEBHOOK_URL" != "" ]; then
             VERSION="${GITHUB_REF#refs/tags/v}"
             echo "📋 Sending CHANGELOG to Slack for version $VERSION..."
-            node scripts/send-changelog-to-slack.js "$VERSION"
+            bun run scripts/send-changelog-to-slack.js "$VERSION"
           else
             echo "⚠️  SLACK_WEBHOOK_URL secret not set, skipping Slack notification"
           fi
