@@ -547,9 +547,22 @@ export class DatabaseService {
     }
   }
 
-  public getAllOrders(): ExcelRow[] {
+  /**
+   * Get all orders
+   * @param warehouseFilter - Optional warehouse filter ('80', '87', or 'all'). Only applies to DK data.
+   */
+  public getAllOrders(warehouseFilter?: '80' | '87' | 'all'): ExcelRow[] {
     if (!this.db) throw new Error('Database not connected.');
     try {
+      // Build warehouse filter condition
+      let warehouseCondition = '';
+      const params: string[] = [];
+
+      if (warehouseFilter && warehouseFilter !== 'all') {
+        warehouseCondition = 'WHERE warehouse = ?';
+        params.push(warehouseFilter);
+      }
+
       const stmt = this.db!.prepare(`
         SELECT 
           nøkkel AS key,
@@ -571,10 +584,11 @@ export class DatabaseService {
           warehouse,
           order_row_number AS orderRowNumber
         FROM purchase_order
+        ${warehouseCondition}
         ORDER BY date(eta_supplier) ASC, ordreNr ASC, itemNo ASC
       `);
 
-      const rows = stmt.all() as Array<{
+      const rows = stmt.all(...params) as Array<{
         key: string;
         poNumber: string;
         status: string;
@@ -709,17 +723,34 @@ export class DatabaseService {
     }
   }
 
-  public getOutstandingOrders(supplierName: string): DbOrder[] {
+  /**
+   * Get outstanding orders for a supplier
+   * @param supplierName - The supplier name to filter by
+   * @param warehouseFilter - Optional warehouse filter ('80', '87', or 'all'). Only applies to DK data.
+   */
+  public getOutstandingOrders(
+    supplierName: string,
+    warehouseFilter?: '80' | '87' | 'all'
+  ): DbOrder[] {
     if (!this.db) {
       log.warn('getOutstandingOrders called but DB is not connected.');
       return [];
     }
     this.queryCounter += 1;
     log.info(
-      `[Query #${this.queryCounter}] Fetching outstanding orders (from purchase_order) for supplier: ${supplierName}`
+      `[Query #${this.queryCounter}] Fetching outstanding orders (from purchase_order) for supplier: ${supplierName}, warehouseFilter: ${warehouseFilter || 'none'}`
     );
 
     try {
+      // Build warehouse filter condition
+      let warehouseCondition = '';
+      const params: string[] = [];
+
+      if (warehouseFilter && warehouseFilter !== 'all') {
+        warehouseCondition = 'AND warehouse = ?';
+        params.push(warehouseFilter);
+      }
+
       const sql = `
       SELECT
         (ordreNr || '-' || itemNo) AS key,
@@ -745,13 +776,14 @@ export class DatabaseService {
         AND (outstanding_qty > 0 OR (order_qty - COALESCE(received_qty, 0)) > 0)
         AND eta_supplier IS NOT NULL 
         AND eta_supplier != ''
+        ${warehouseCondition}
       ORDER BY date(eta_supplier) ASC, ordreNr ASC, itemNo ASC
     `;
 
       // Use LIKE with wildcards for more flexible matching
       const searchPattern = `%${supplierName.trim()}%`;
       const stmt = this.db.prepare(sql);
-      const rows = stmt.all(searchPattern) as DbOrder[];
+      const rows = stmt.all(searchPattern, ...params) as DbOrder[];
 
       // Convert date strings to Date objects
       rows.forEach((row) => {
@@ -788,26 +820,42 @@ export class DatabaseService {
     }
   }
 
-  public getAllSupplierNames(): string[] {
+  /**
+   * Get all unique supplier names with outstanding orders
+   * @param warehouseFilter - Optional warehouse filter ('80', '87', or 'all'). Only applies to DK data.
+   */
+  public getAllSupplierNames(warehouseFilter?: '80' | '87' | 'all'): string[] {
     if (!this.db) {
       log.warn('getAllSupplierNames called but DB is not connected.');
       return [];
     }
 
     try {
+      // Build warehouse filter condition
+      let warehouseCondition = '';
+      const params: string[] = [];
+
+      if (warehouseFilter && warehouseFilter !== 'all') {
+        warehouseCondition = 'AND warehouse = ?';
+        params.push(warehouseFilter);
+      }
+
       const sql = `
         SELECT DISTINCT supplier_name AS name
         FROM purchase_order
         WHERE outstanding_qty > 0
           AND supplier_name IS NOT NULL
           AND supplier_name != ''
+          ${warehouseCondition}
         ORDER BY supplier_name ASC
       `;
       const stmt = this.db.prepare(sql);
-      const rows = stmt.all() as { name: string }[];
+      const rows = stmt.all(...params) as { name: string }[];
       const suppliers = rows.map((row) => row.name);
 
-      log.info(`Found ${suppliers.length} unique suppliers with outstanding orders`);
+      log.info(
+        `Found ${suppliers.length} unique suppliers with outstanding orders (warehouseFilter: ${warehouseFilter || 'none'})`
+      );
       if (process.env.NODE_ENV === 'development') {
         log.info('Available suppliers:', suppliers.slice(0, 10)); // Log first 10
       }
@@ -819,13 +867,26 @@ export class DatabaseService {
     }
   }
 
-  public getSuppliersWithOutstandingOrders(): string[] {
+  /**
+   * Get list of suppliers that have outstanding orders
+   * @param warehouseFilter - Optional warehouse filter ('80', '87', or 'all'). Only applies to DK data.
+   */
+  public getSuppliersWithOutstandingOrders(warehouseFilter?: '80' | '87' | 'all'): string[] {
     if (!this.db) {
       log.warn('getSuppliersWithOutstandingOrders called but DB is not connected.');
       return [];
     }
 
     try {
+      // Build warehouse filter condition
+      let warehouseCondition = '';
+      const params: string[] = [];
+
+      if (warehouseFilter && warehouseFilter !== 'all') {
+        warehouseCondition = 'AND warehouse = ?';
+        params.push(warehouseFilter);
+      }
+
       const sql = `
         SELECT DISTINCT COALESCE(supplier_name, ftgnavn) AS supplier
         FROM purchase_order
@@ -835,10 +896,11 @@ export class DatabaseService {
           AND (outstanding_qty > 0 OR (order_qty - COALESCE(received_qty, 0)) > 0)
           AND eta_supplier IS NOT NULL 
           AND eta_supplier != ''
+          ${warehouseCondition}
         ORDER BY supplier
       `;
       const stmt = this.db.prepare(sql);
-      const rows = stmt.all() as { supplier: string }[];
+      const rows = stmt.all(...params) as { supplier: string }[];
       const suppliers = rows
         .map((row) => row.supplier)
         .filter(
@@ -849,7 +911,9 @@ export class DatabaseService {
             !supplier.includes('[object Object]')
         );
 
-      log.info(`Found ${suppliers.length} suppliers with outstanding orders`);
+      log.info(
+        `Found ${suppliers.length} suppliers with outstanding orders (warehouseFilter: ${warehouseFilter || 'none'})`
+      );
       if (process.env.NODE_ENV === 'development') {
         log.info('Suppliers with outstanding orders:', suppliers.slice(0, 10)); // Log first 10
       }
@@ -1227,22 +1291,21 @@ export class DatabaseService {
         const trimmedWarehouse = row.warehouse.trim();
         const warehouseCountryMap: Record<string, string> = {
           '80': 'DK',
+          '87': 'DK', // Also Danish warehouse
           '40': 'NO',
-          // Add more mappings as needed
+          // Add more mappings as needed (SE, FI, etc.)
         };
 
         const country = warehouseCountryMap[trimmedWarehouse];
         if (country) {
           log.info(
-            `✅ DatabaseService.getPredominantCountry: Most common warehouse is ${trimmedWarehouse} -> ${country} (${row.count} orders)`
+            `✅ getPredominantCountry: warehouse ${trimmedWarehouse} -> ${country} (${row.count} orders)`
           );
           return country;
         }
       }
 
-      log.info(
-        '📝 DatabaseService.getPredominantCountry: No predominant country found, defaulting to NO'
-      );
+      log.info('📝 getPredominantCountry: No known warehouse found, defaulting to NO');
       return 'NO';
     } catch (error) {
       log.error('Error getting predominant country:', error);
