@@ -25,15 +25,20 @@ const version = packageJson.version;
 
 console.log(`📦 Building version: ${version}`);
 
-// Clean build cache first
-console.log('🧹 Cleaning build cache...');
-try {
-  execSync('node scripts/clean-build-cache.js', {
-    cwd: projectRoot,
-    stdio: 'inherit',
-  });
-} catch (error) {
-  console.log('⚠️  Cache cleaning failed, continuing with build...');
+// Clean build cache first (only when doing a full build)
+// When --skip-vite-build is used, we want to preserve the existing dist directory
+if (!skipViteBuild) {
+  console.log('🧹 Cleaning build cache...');
+  try {
+    execSync('node scripts/clean-build-cache.js', {
+      cwd: projectRoot,
+      stdio: 'inherit',
+    });
+  } catch (error) {
+    console.log('⚠️  Cache cleaning failed, continuing with build...');
+  }
+} else {
+  console.log('⚡ Skipping cache clean (reusing existing dist)...');
 }
 
 // Ensure version is properly set in all relevant files

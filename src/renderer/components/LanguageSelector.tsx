@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { resetLanguageToSystem } from '../services/languageDetectionService';
 
@@ -7,12 +8,30 @@ interface LanguageSelectorProps {
   className?: string;
 }
 
+interface DropdownPosition {
+  top: number;
+  right: number;
+}
+
 const LanguageSelector: React.FC<LanguageSelectorProps> = ({
   mode = 'compact',
   className = '',
 }) => {
   const { t, i18n } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const [dropdownPosition, setDropdownPosition] = useState<DropdownPosition>({ top: 0, right: 0 });
+
+  // Calculate dropdown position when opening
+  useEffect(() => {
+    if (isOpen && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      setDropdownPosition({
+        top: rect.bottom + 4, // 4px margin (mt-1)
+        right: window.innerWidth - rect.right,
+      });
+    }
+  }, [isOpen]);
 
   const languages = [
     { code: 'no', name: t('languages.norwegian'), flag: '🇳🇴' },
@@ -73,6 +92,7 @@ const LanguageSelector: React.FC<LanguageSelectorProps> = ({
   return (
     <div className={`relative ${className}`}>
       <button
+        ref={buttonRef}
         onClick={() => setIsOpen(!isOpen)}
         className="h-11 w-11 bg-gradient-to-br from-white/20 to-white/10 backdrop-blur-xl rounded-xl border border-white/30 flex items-center justify-center hover:from-white/30 hover:to-white/20 hover:scale-105 active:scale-95 transition-all duration-200 shadow-lg hover:shadow-xl group"
         title={t('navigation.language') || 'Language'}
@@ -82,38 +102,48 @@ const LanguageSelector: React.FC<LanguageSelectorProps> = ({
         </span>
       </button>
 
-      {isOpen && (
-        <>
-          {/* Backdrop */}
-          <div className="fixed inset-0 z-10" onClick={() => setIsOpen(false)} />
+      {isOpen &&
+        createPortal(
+          <>
+            {/* Backdrop */}
+            <div className="fixed inset-0 z-[9998]" onClick={() => setIsOpen(false)} />
 
-          {/* Dropdown */}
-          <div className="absolute top-full right-0 mt-1 w-48 bg-neutral-white border border-neutral-light rounded-md shadow-lg z-20">
-            {languages.map((language) => (
-              <button
-                key={language.code}
-                onClick={() => handleLanguageChange(language.code)}
-                className={`w-full flex items-center space-x-3 px-3 py-2 text-left hover:bg-neutral-light transition-colors ${
-                  i18n.language === language.code ? 'bg-primary text-neutral-white' : 'text-neutral'
-                }`}
-              >
-                <span className="text-lg">{language.flag}</span>
-                <span className="font-medium">{language.name}</span>
-                {i18n.language === language.code && <span className="ml-auto text-sm">✓</span>}
-              </button>
-            ))}
-            <div className="border-t border-neutral-light">
-              <button
-                onClick={handleResetToSystem}
-                className="w-full flex items-center space-x-3 px-3 py-2 text-left hover:bg-neutral-light transition-colors text-neutral text-sm"
-              >
-                <span className="text-sm">🔄</span>
-                <span>Reset to system language</span>
-              </button>
+            {/* Dropdown */}
+            <div
+              className="fixed w-48 bg-neutral-white border border-neutral-light rounded-md shadow-lg z-[9999]"
+              style={{
+                top: dropdownPosition.top,
+                right: dropdownPosition.right,
+              }}
+            >
+              {languages.map((language) => (
+                <button
+                  key={language.code}
+                  onClick={() => handleLanguageChange(language.code)}
+                  className={`w-full flex items-center space-x-3 px-3 py-2 text-left hover:bg-neutral-light transition-colors ${
+                    i18n.language === language.code
+                      ? 'bg-primary text-neutral-white'
+                      : 'text-neutral'
+                  }`}
+                >
+                  <span className="text-lg">{language.flag}</span>
+                  <span className="font-medium">{language.name}</span>
+                  {i18n.language === language.code && <span className="ml-auto text-sm">✓</span>}
+                </button>
+              ))}
+              <div className="border-t border-neutral-light">
+                <button
+                  onClick={handleResetToSystem}
+                  className="w-full flex items-center space-x-3 px-3 py-2 text-left hover:bg-neutral-light transition-colors text-neutral text-sm"
+                >
+                  <span className="text-sm">🔄</span>
+                  <span>Reset to system language</span>
+                </button>
+              </div>
             </div>
-          </div>
-        </>
-      )}
+          </>,
+          document.body
+        )}
     </div>
   );
 };
