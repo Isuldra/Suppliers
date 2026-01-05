@@ -1,5 +1,40 @@
 # Documentation Changelog
 
+## Version 1.5.0: Denmark Support & Multi-Language Improvements
+
+_December 2025_
+
+Denne releasen legger til full støtte for danske filer og forbedrer språkhåndteringen for alle nordiske land.
+
+### Viktigste endringer
+
+- **Full Danmark-støtte**: Automatisk deteksjon av DK-filer basert på warehouse-kode (80)
+- **Auto-aktivert "All days mode" for DK**: Forenklet arbeidsflyt for danske brukere
+- **5-språks e-postmaler**: Støtte for Norsk, Dansk, Svensk, Finsk og Engelsk
+- **Korrekt avsender-e-post per land**: DK bruker `indkoeb.dk@onemed.com`
+
+### Språk og Lokalisering
+
+- Fikset i18next interpolasjon (`{{count}}` i stedet for `{count}`)
+- Ny `getPredominantCountry()` funksjon for å bestemme filens dominerende land
+- Språk-fallback basert på land, ikke app-språk
+- EmailPreviewModal støtter nå alle 5 språk med korrekte emnelinjer
+
+### Bugfixes
+
+- **Kolonnemapping**: Fikset førsteradkorrupsjon ved import av DK-filer uten "dk" i filnavn
+- **Filnavn-deteksjon**: Unngår falske positiver (f.eks. "purchase" matchet ikke lenger "se")
+- **NO/DK prioritering**: Sjekker NO warehouse (kolonne E) før DK (kolonne D)
+- **Frontend/Backend sync**: FileUpload.tsx bruker nå samme pre-scan logikk som importer.ts
+- **Deduplisert kode**: `sendReminder` bruker nå `getLanguageForSupplier()` i stedet for duplisert logikk
+- **Country parameter**: BulkEmailPreview sender nå country til `sendEmailAutomatically`
+
+### Tekniske forbedringer
+
+- Forbedret `getColumnLetter()` algoritme med klarere bijective base-26 mønster
+- Lagt til `country` felt i `EmailPreviewData` interface
+- Bedre logging for debugging av språk/land-deteksjon
+
 ## Version 1.4.5: Cloudflare Portal & Release Automation
 
 _November 2025_

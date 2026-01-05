@@ -202,7 +202,7 @@ const DataReview: React.FC<DataReviewProps> = ({
       columnHelper.accessor((row) => row.dueDate, {
         id: 'dueDate',
         header: t('table.dueDate'),
-        size: 120,
+        size: 130,
         cell: (info) => {
           const date = info.getValue();
           return date instanceof Date && !isNaN(date.getTime())
@@ -213,33 +213,33 @@ const DataReview: React.FC<DataReviewProps> = ({
 
       columnHelper.accessor('poNumber', {
         header: t('table.poNumber'),
-        size: 100,
+        size: 110,
         cell: (info) => info.getValue() || '-',
       }),
       columnHelper.accessor('itemNo', {
         header: t('table.itemNumber'),
         cell: (info) => info.getValue() || '-',
-        size: 120,
+        size: 140,
       }),
       columnHelper.accessor('description', {
         header: t('table.supplierArticleNumber'),
         cell: (info) => info.getValue() || '-',
-        size: 150,
+        size: 180,
       }),
       columnHelper.accessor('specification', {
         header: t('table.comment'),
         cell: (info) => info.getValue() || '-',
-        size: 150,
+        size: 200,
       }),
       columnHelper.accessor('orderRowNumber', {
         header: t('table.orderRow'),
         cell: (info) => info.getValue() || '-',
-        size: 100,
+        size: 90,
       }),
       columnHelper.accessor((row) => row.orderQty - row.receivedQty, {
         id: 'outstandingQty',
         header: t('table.outstanding'),
-        size: 100,
+        size: 110,
         cell: (info) => (
           <div
             className={`text-right font-medium ${
@@ -250,15 +250,7 @@ const DataReview: React.FC<DataReviewProps> = ({
           </div>
         ),
       }),
-      columnHelper.accessor('key', {
-        header: t('table.key'),
-        size: 150,
-        cell: (info) => (
-          <div className="truncate max-w-[150px]" title={info.getValue()}>
-            {info.getValue()}
-          </div>
-        ),
-      }),
+      // Key column removed - key is for internal use only (database ID, React keys)
     ],
     [_dateFilterSettings]
   );

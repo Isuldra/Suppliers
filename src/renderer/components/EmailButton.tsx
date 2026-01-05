@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { EmailService, EmailData } from '../services/emailService';
 import toast from 'react-hot-toast';
 import EmailPreviewModal from './EmailPreviewModal';
@@ -20,24 +20,49 @@ const EmailButton: React.FC<EmailButtonProps> = ({
   const [isSending, setIsSending] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
   const [showPreview, setShowPreview] = useState(false);
-  const [emailData, setEmailData] = useState<EmailData>(() => {
-    const preferredLanguage = emailService.getSupplierLanguage(selectedSupplier || '');
-    return {
-      supplier: selectedSupplier || '',
-      orders: [],
-      language: preferredLanguage, // Use supplier's preferred language
-      subject: '', // Provide a default subject
-    };
+  const [supplierLanguage, setSupplierLanguage] = useState<'no' | 'en' | 'se' | 'da' | 'fi'>('no');
+  const [emailData, setEmailData] = useState<EmailData>({
+    supplier: selectedSupplier || '',
+    orders: [],
+    language: 'no', // Will be updated by useEffect
+    subject: '',
   });
   const [previewHtml, setPreviewHtml] = useState('');
+
+  // Fetch supplier language from database/country when supplier changes
+  useEffect(() => {
+    const fetchLanguage = async () => {
+      if (!selectedSupplier) return;
+
+      try {
+        const language = await emailService.getLanguageForSupplier(selectedSupplier);
+        console.log(`EmailButton: Fetched language for ${selectedSupplier}: ${language}`);
+        setSupplierLanguage(language);
+        setEmailData((prev) => ({ ...prev, language }));
+      } catch (error) {
+        console.error('Failed to fetch supplier language:', error);
+        // Keep the default 'no' language
+      }
+    };
+
+    fetchLanguage();
+  }, [selectedSupplier]);
 
   // Create order list from excel data with language-aware date formatting
   const orders = useMemo(() => {
     if (!excelData?.bp || !selectedSupplier) return [];
 
-    // Get the preferred language for date formatting
-    const preferredLanguage = emailService.getSupplierLanguage(selectedSupplier || '');
-    const dateLocale = preferredLanguage === 'en' ? 'en-GB' : 'no-NO'; // Use British format for English
+    // Use the fetched language for date formatting
+    const dateLocale =
+      supplierLanguage === 'en'
+        ? 'en-GB'
+        : supplierLanguage === 'da'
+          ? 'da-DK'
+          : supplierLanguage === 'se'
+            ? 'sv-SE'
+            : supplierLanguage === 'fi'
+              ? 'fi-FI'
+              : 'no-NO';
 
     return excelData.bp
       .filter((row) => row.supplier === selectedSupplier)
@@ -49,24 +74,20 @@ const EmailButton: React.FC<EmailButtonProps> = ({
         specification: String(row.specification || ''),
         orderQty: Number(row.orderQty || 0),
         receivedQty: Number(row.receivedQty || 0),
-        estReceiptDate: row.dueDate ? row.dueDate.toLocaleDateString(dateLocale) : '', // Format date based on supplier's language preference
-        // Legacy fields for backward compatibility
+        estReceiptDate: row.dueDate ? row.dueDate.toLocaleDateString(dateLocale) : '',
         outstandingQty: Number(row.outstandingQty || 0),
         orderRowNumber: String(row.orderRowNumber || ''),
       }));
-  }, [excelData, selectedSupplier]);
+  }, [excelData, selectedSupplier, supplierLanguage]);
 
   // Handler to prepare and show the email preview
   const handlePreview = () => {
-    // Get the preferred language for this supplier
-    const preferredLanguage = emailService.getSupplierLanguage(selectedSupplier || '');
-
-    // Update email data with the latest supplier and orders
+    // Update email data with the latest supplier, orders, and language
     const updatedData: EmailData = {
       supplier: selectedSupplier || '',
       orders,
-      language: emailData.language || preferredLanguage, // Use supplier's preferred language if not already set
-      subject: emailData.subject, // Carry over existing subject
+      language: emailData.language || supplierLanguage,
+      subject: emailData.subject,
     };
     setEmailData(updatedData);
 
@@ -79,7 +100,7 @@ const EmailButton: React.FC<EmailButtonProps> = ({
   };
 
   // Handle language change
-  const handleLanguageChange = (language: 'no' | 'en') => {
+  const handleLanguageChange = (language: 'no' | 'en' | 'se' | 'da' | 'fi') => {
     const updatedData = { ...emailData, language };
     setEmailData(updatedData);
 
@@ -152,9 +173,7 @@ const EmailButton: React.FC<EmailButtonProps> = ({
             </button>
           </span>,
           {
-            duration: 10000, // Keep duration or adjust
-            // Remove the invalid 'action' property
-            // action: { ... },
+            duration: 10000,
           }
         );
       }

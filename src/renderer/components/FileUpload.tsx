@@ -6,6 +6,12 @@ import toast from 'react-hot-toast';
 import * as XLSX from 'xlsx';
 import { QuestionMarkCircleIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import { parse as parseDateFns } from 'date-fns';
+import {
+  getColumnMapping,
+  ColumnMapping,
+  detectCountryFromWarehouse,
+  COLUMN_MAPPINGS,
+} from '../../config/columnMappings';
 
 interface FileUploadProps {
   onDataParsed: (data: ExcelData) => void;
@@ -376,52 +382,54 @@ const FileUpload: React.FC<FileUploadProps> = ({ onDataParsed, onValidationError
           setProcessingStage('Konverterer data...');
           console.log('Converting BP sheet to JSON...');
 
-          // Parse BP sheet with new structure
-          const parseBPSheet = (): ExcelRow[] => {
+          // Parse BP sheet with column mapping configuration
+          const parseBPSheet = (mapping: ColumnMapping): ExcelRow[] => {
             try {
-              const sheet = workbook.Sheets['BP'];
+              const sheet = workbook.Sheets[mapping.sheetName];
               if (!sheet) {
-                console.warn('BP sheet not found during parsing');
+                console.warn(`${mapping.sheetName} sheet not found during parsing`);
                 return [];
               }
 
-              // Data starts from row 6 (index 5), so we skip the first 5 rows
+              // Data starts from configured row (convert 1-based to 0-based index)
               const range = XLSX.utils.decode_range(sheet['!ref'] || 'A1');
-              const startRow = 5; // Row 6 in Excel (0-based index)
+              const startRow = mapping.startRow - 1; // Convert to 0-based index
 
-              console.log(`Parsing BP sheet from row ${startRow + 1} to ${range.e.r + 1}`);
+              console.log(
+                `Parsing ${mapping.sheetName} sheet (${mapping.id}) from row ${startRow + 1} to ${range.e.r + 1}`
+              );
 
-              // Read data starting from row 6
+              // Read data starting from configured row
+              // Use raw: true to prevent XLSX from auto-converting numbers to dates
               const rawData = XLSX.utils.sheet_to_json(sheet, {
                 header: 1, // Use array format to access by column index
                 range: XLSX.utils.encode_range({
-                  s: { r: startRow, c: 0 }, // Start from row 6, column A
+                  s: { r: startRow, c: 0 }, // Start from configured row, column A
                   e: { r: range.e.r, c: range.e.c }, // End at last row and column
                 }),
                 defval: '', // Default value for empty cells
-                raw: false, // Let XLSX try type conversion
+                raw: true, // Keep raw values to prevent incorrect date conversion
               }) as unknown[][];
 
               console.log(`BP raw data (first 3 rows):`, rawData.slice(0, 3));
 
-              // Map each row to ExcelRow format using column indices
+              // Map each row to ExcelRow format using column mapping
               const processedData: ExcelRow[] = rawData.map((row: unknown[], index) => {
-                // Column mapping based on user specification:
-                // A (0) = ignore, B (1) = ignore
-                const poNumber = String(row[2] || '').trim(); // Column C = PO
-                const internalSupplierNumber = String(row[3] || '').trim(); // Column D = Internal supplier number
-                const warehouse = String(row[4] || '').trim(); // Column E = Warehouse
-                // F (5) = ignore, G (6) = ignore
-                const oneMedArticleNo = String(row[7] || '').trim(); // Column H = OneMed article number
-                const supplierArticleNo = String(row[8] || '').trim(); // Column I = Supplier article number
-                const etaDate1 = row[9]; // Column J = Expected ETA 1
-                const etaDate2 = row[10]; // Column K = Expected ETA 2
-                const erpComment = String(row[11] || '').trim(); // Column L = ERP comment
-                const orderedQty = Number(row[12] || 0); // Column M = Ordered quantity
-                const deliveredQty = Number(row[13] || 0); // Column N = Delivered quantity
-                const outstandingQty = Number(row[14] || 0); // Column O = Outstanding quantity
-                const supplierName = String(row[15] || '').trim(); // Column P = Supplier name
-                const orderRowNumber = String(row[16] || '').trim(); // Column Q = Order Row Number (bestradnr)
+                // Use column mapping configuration (0-based indices)
+                const poNumber = String(row[mapping.poNumber] || '').trim();
+                const internalSupplierNumber = String(row[mapping.internalSupplier] || '').trim();
+                const warehouse = String(row[mapping.warehouse] || '').trim();
+                const oneMedArticleNo = String(row[mapping.oneMedArticle] || '').trim();
+                const supplierArticleNo = String(row[mapping.supplierArticle] || '').trim();
+                const etaDate1 = row[mapping.etaDate1];
+                const etaDate2 = row[mapping.etaDate2];
+                const erpComment =
+                  mapping.erpComment !== null ? String(row[mapping.erpComment] || '').trim() : '';
+                const orderedQty = Number(row[mapping.orderedQty] || 0);
+                const deliveredQty = Number(row[mapping.deliveredQty] || 0);
+                const outstandingQty = Number(row[mapping.outstandingQty] || 0);
+                const supplierName = String(row[mapping.supplierName] || '').trim();
+                const orderRowNumber = String(row[mapping.orderRowNumber] || '').trim();
 
                 // Parse ETA dates (prefer J over K, both should be past dates)
                 let dueDate: Date | undefined = undefined;
@@ -473,10 +481,12 @@ const FileUpload: React.FC<FileUploadProps> = ({ onDataParsed, onValidationError
                   row.supplier.trim() !== ''
               );
 
-              console.log(`Processed ${filteredData.length} valid rows from BP sheet`);
+              console.log(
+                `Processed ${filteredData.length} valid rows from ${mapping.sheetName} sheet`
+              );
               return filteredData;
             } catch (err) {
-              console.error('Error parsing BP sheet:', err);
+              console.error(`Error parsing ${mapping.sheetName} sheet:`, err);
               toast.error('Feil ved lesing av BP-ark');
               return [];
             }
@@ -530,8 +540,67 @@ const FileUpload: React.FC<FileUploadProps> = ({ onDataParsed, onValidationError
             return undefined;
           };
 
-          // Parse the BP sheet
-          const bpData = parseBPSheet();
+          // Get initial column mapping based on filename
+          let columnMapping = getColumnMapping(file.name);
+          console.log(
+            `Initial column mapping from filename: ${columnMapping.id} (${columnMapping.name})`
+          );
+
+          // PRE-SCAN: Detect country from first data row to match backend behavior
+          // This prevents misalignment between preview and imported data
+          const bpSheet = workbook.Sheets[columnMapping.sheetName];
+          if (bpSheet) {
+            const range = XLSX.utils.decode_range(bpSheet['!ref'] || 'A1');
+            const startRow = columnMapping.startRow - 1; // 0-based
+
+            if (range.e.r >= startRow) {
+              // Read first data row as array
+              const firstRowData = XLSX.utils.sheet_to_json(bpSheet, {
+                header: 1,
+                range: XLSX.utils.encode_range({
+                  s: { r: startRow, c: 0 },
+                  e: { r: startRow, c: range.e.c },
+                }),
+                defval: '',
+                raw: true,
+              }) as unknown[][];
+
+              if (firstRowData.length > 0) {
+                const firstRow = firstRowData[0];
+                // NO warehouse is at column E (index 4), DK warehouse is at column D (index 3)
+                const warehouseAtNOPosition = String(firstRow[4] || '').trim();
+                const warehouseAtDKPosition = String(firstRow[3] || '').trim();
+
+                console.log(
+                  `PRE-SCAN: Warehouse at NO position (E): "${warehouseAtNOPosition}", at DK position (D): "${warehouseAtDKPosition}"`
+                );
+
+                // Check NO position FIRST (same priority as backend)
+                const countryFromNO = detectCountryFromWarehouse(warehouseAtNOPosition);
+                if (countryFromNO === 'NO') {
+                  columnMapping = COLUMN_MAPPINGS['NO'] || columnMapping;
+                  console.log(`PRE-SCAN: Detected NO from warehouse column E`);
+                } else {
+                  const countryFromDK = detectCountryFromWarehouse(warehouseAtDKPosition);
+                  if (countryFromDK === 'DK') {
+                    columnMapping = COLUMN_MAPPINGS['DK'] || columnMapping;
+                    console.log(`PRE-SCAN: Detected DK from warehouse column D`);
+                  } else if (countryFromNO) {
+                    columnMapping = COLUMN_MAPPINGS[countryFromNO] || columnMapping;
+                    console.log(`PRE-SCAN: Detected ${countryFromNO} from warehouse column E`);
+                  } else if (/^8[0-9]$/.test(warehouseAtDKPosition)) {
+                    columnMapping = COLUMN_MAPPINGS['DK'] || columnMapping;
+                    console.log(`PRE-SCAN: Detected DK from warehouse pattern in column D`);
+                  }
+                }
+              }
+            }
+          }
+
+          console.log(`Final column mapping: ${columnMapping.id} (${columnMapping.name})`);
+
+          // Parse the BP sheet with the appropriate column mapping
+          const bpData = parseBPSheet(columnMapping);
 
           console.log('Parsed data counts:', {
             bpCount: bpData.length,
