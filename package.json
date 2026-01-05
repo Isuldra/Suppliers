@@ -220,7 +220,9 @@
   },
   "overrides": {
     "@electron-toolkit/utils": "^2.0.1",
-    "electron-builder": "^26.0.12"
+    "electron-builder": "^26.0.12",
+    "functions-have-names": "1.2.3",
+    "queue-microtask": "1.2.3"
   },
   "optionalDependencies": {
     "@rollup/rollup-win32-x64-msvc": "^4.44.0"
