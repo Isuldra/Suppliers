@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { ChevronDownIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
 import { ExcelRow } from '../types/ExcelData';
 import SelectToggleButton from './SelectToggleButton';
+import { useWarehouseFilter } from '../context/WarehouseFilterContext';
 
 interface BulkSupplierSelectProps {
   onSuppliersSelected: (suppliers: string[]) => void;
@@ -40,6 +41,7 @@ const BulkSupplierSelect: React.FC<BulkSupplierSelectProps> = ({
   bulkSelectedOrders,
 }) => {
   const { t } = useTranslation();
+  const { warehouseFilter, showWarehouseFilter } = useWarehouseFilter();
   console.log('🟡 BulkSupplierSelect: Component rendered with props:', {
     selectedWeekday,
     selectedPlanner,
@@ -130,9 +132,12 @@ const BulkSupplierSelect: React.FC<BulkSupplierSelectProps> = ({
       try {
         let weekdaySuppliers: string[] = [];
 
+        // Determine warehouse filter to use (only for DK data)
+        const filterToUse = showWarehouseFilter ? warehouseFilter : undefined;
+
         if (allDaysMode) {
           // In "All Days" mode, get ALL suppliers with outstanding orders
-          const allSuppliersResponse = await window.electron.getAllSupplierNames();
+          const allSuppliersResponse = await window.electron.getAllSupplierNames(filterToUse);
           console.log('🟠 All suppliers response (all days mode):', allSuppliersResponse);
 
           if (allSuppliersResponse.success && allSuppliersResponse.data) {
@@ -159,8 +164,8 @@ const BulkSupplierSelect: React.FC<BulkSupplierSelectProps> = ({
 
         console.log('🟠 Final weekday suppliers:', weekdaySuppliers);
 
-        // Get outstanding orders to count per supplier
-        const outstandingOrders = await window.electron.getAllOrders();
+        // Get outstanding orders to count per supplier (with warehouse filter for DK)
+        const outstandingOrders = await window.electron.getAllOrders(filterToUse);
         console.log('🟠 Outstanding orders:', outstandingOrders);
 
         // Fetch database info for all suppliers (emails and languages)
@@ -226,7 +231,14 @@ const BulkSupplierSelect: React.FC<BulkSupplierSelectProps> = ({
     if ((selectedWeekday && selectedPlanner) || allDaysMode) {
       fetchSuppliers();
     }
-  }, [selectedWeekday, selectedPlanner, allDaysMode, fetchSupplierDbInfo]);
+  }, [
+    selectedWeekday,
+    selectedPlanner,
+    allDaysMode,
+    fetchSupplierDbInfo,
+    warehouseFilter,
+    showWarehouseFilter,
+  ]);
 
   // Debug effect to track selectedSuppliers prop changes
   useEffect(() => {
@@ -384,7 +396,9 @@ const BulkSupplierSelect: React.FC<BulkSupplierSelectProps> = ({
 
   const fetchSupplierOrders = async (supplier: string) => {
     try {
-      const allOrders = await window.electron.getAllOrders();
+      // Use warehouse filter for DK data
+      const filterToUse = showWarehouseFilter ? warehouseFilter : undefined;
+      const allOrders = await window.electron.getAllOrders(filterToUse);
       const filteredOrders = allOrders.filter((order) => order.supplier === supplier);
       setSupplierOrders(
         new Map(supplierOrders.set(supplier, filteredOrders as unknown as ExcelRow[]))
