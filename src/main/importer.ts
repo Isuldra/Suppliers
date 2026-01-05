@@ -11,7 +11,6 @@ import {
   getColumnMapping,
   getExcelJSIndex,
   detectCountryFromFilename,
-  shouldExcludeWarehouse,
   logColumnMapping,
   COLUMN_MAPPINGS,
   preScanForCountry,
@@ -226,15 +225,9 @@ export async function importAlleArk(
       );
       const warehouse = getCellStringValue(row.getCell(getExcelJSIndex(columnMapping.warehouse)));
 
-      // Skip warehouse 87 for DK files - these have a separate reminder routine
-      if (detectedCountry === 'DK' && shouldExcludeWarehouse('DK', warehouse)) {
-        if (processedCount < 5) {
-          log.info(
-            `⏭️ Skipping row ${r}: Warehouse ${warehouse} is excluded for DK (separate reminder routine)`
-          );
-        }
-        continue;
-      }
+      // NOTE: Warehouse 87 is now included for DK files
+      // Filtering is done in the UI via warehouse toggle instead of at import time
+      // This allows users to switch between viewing L80, L87, or both
 
       const oneMedArticleNo = getCellStringValue(
         row.getCell(getExcelJSIndex(columnMapping.oneMedArticle))

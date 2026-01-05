@@ -55,11 +55,13 @@ export function setupDatabaseHandlers() {
     }
   });
 
-  // Get all orders
-  ipcMain.handle('db:getAllOrders', async () => {
-    log.info("--- VERIFIKASJON: IPC-handler for 'db:getAllOrders' ble kalt. ---");
+  // Get all orders (now supports warehouse filter for DK data)
+  ipcMain.handle('db:getAllOrders', async (_event, warehouseFilter?: '80' | '87' | 'all') => {
+    log.info(
+      `--- VERIFIKASJON: IPC-handler for 'db:getAllOrders' ble kalt (warehouseFilter: ${warehouseFilter || 'none'}). ---`
+    );
     try {
-      const orders = databaseService.getAllOrders();
+      const orders = databaseService.getAllOrders(warehouseFilter);
       log.info(`--- VERIFIKASJON: getAllOrders returnerte ${orders.length} ordre. ---`);
       return orders;
     } catch (error) {
