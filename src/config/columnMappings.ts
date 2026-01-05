@@ -147,15 +147,21 @@ export const DEFAULT_MAPPING = COLUMN_MAPPINGS.NO;
 export const WAREHOUSE_COUNTRY_MAPPING: Record<string, string> = {
   '40': 'NO', // Norway main warehouse
   '80': 'DK', // Denmark main warehouse
-  // Note: Warehouse 87 is DK but should be filtered out (separate reminder routine)
+  '87': 'DK', // Denmark secondary warehouse (included in import, filtered via UI toggle)
 };
 
 /**
- * Warehouses that should be excluded from import
- * These have separate reminder routines and should not appear in Pulse
+ * Warehouses configuration
+ * NOTE: Previously L87 was excluded from import, but now both L80 and L87 are imported.
+ * Filtering is done in the UI via a warehouse toggle instead.
+ * Keeping this config for reference but not actively used for exclusion.
  */
+export const DK_WAREHOUSES = ['80', '87'] as const;
+export type DKWarehouse = (typeof DK_WAREHOUSES)[number];
+
+// Legacy: No longer excluding warehouses at import time
 export const EXCLUDED_WAREHOUSES: Record<string, string[]> = {
-  DK: ['87'], // DK warehouse 87 has a separate reminder routine
+  // DK: ['87'], // Commented out - now handled by UI toggle
 };
 
 /**
@@ -169,14 +175,9 @@ export function detectCountryFromWarehouse(warehouse: string | undefined): strin
 
   const trimmedWarehouse = warehouse.trim();
 
-  // Check main warehouses
+  // Check all known warehouses (includes 80 and 87 for DK, 40 for NO)
   if (WAREHOUSE_COUNTRY_MAPPING[trimmedWarehouse]) {
     return WAREHOUSE_COUNTRY_MAPPING[trimmedWarehouse];
-  }
-
-  // Warehouse 87 is also DK (but will be filtered out during import)
-  if (trimmedWarehouse === '87') {
-    return 'DK';
   }
 
   return null;
