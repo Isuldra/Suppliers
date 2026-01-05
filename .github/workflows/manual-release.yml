@@ -8,6 +8,9 @@ on:
         required: true
         type: string
 
+env:
+  BUN_VERSION: "latest"
+
 jobs:
   manual-release:
     runs-on: windows-latest
@@ -21,15 +24,19 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           fetch-depth: 0
 
-      - name: Setup Node.js
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+
+      - name: Setup Node.js (for npm version command)
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
-          cache: "npm"
+          node-version: "22"
 
       - name: Install dependencies
         shell: pwsh
-        run: npm ci
+        run: bun install --frozen-lockfile
 
       - name: Update package.json version
         shell: pwsh
@@ -46,15 +53,15 @@ jobs:
 
       - name: Build application
         shell: pwsh
-        run: npm run dist:clean
+        run: bun run dist:clean
 
       - name: Prepare Cloudflare metadata
         shell: pwsh
-        run: npm run release:prepare
+        run: bun run release:prepare
 
       - name: Create GitHub Release
         shell: pwsh
-        run: npm run release:github
+        run: bun run release:github
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
