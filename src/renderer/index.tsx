@@ -5,6 +5,7 @@ import ReactDOM from 'react-dom/client';
 import App from './App';
 import './styles/index.css';
 import { initializeI18n } from './i18n/config';
+import { WarehouseFilterProvider } from './context/WarehouseFilterContext';
 
 if (!window.electron) {
   const errorDiv = document.createElement('div');
@@ -30,7 +31,9 @@ initializeI18n().then(() => {
   if (root) {
     ReactDOM.createRoot(root).render(
       <React.StrictMode>
-        <App />
+        <WarehouseFilterProvider>
+          <App />
+        </WarehouseFilterProvider>
       </React.StrictMode>
     );
   }
