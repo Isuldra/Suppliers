@@ -557,47 +557,17 @@ export class DatabaseService {
   public getAllOrders(includeICTOrders: boolean = false): ExcelRow[] {
     if (!this.db) throw new Error('Database not connected.');
     try {
-      // Debug: Log the query and check total rows before filtering
-      const totalRowsStmt = this.db!.prepare('SELECT COUNT(*) as total FROM purchase_order');
-      const totalRows = (totalRowsStmt.get() as { total: number })?.total || 0;
-
-      // Debug: Check company_code distribution
-      const companyCodeStmt = this.db!.prepare(
-        'SELECT company_code, COUNT(*) as count FROM purchase_order GROUP BY company_code'
-      );
-      const companyCodeDist = companyCodeStmt.all() as Array<{
-        company_code: string | null;
-        count: number;
-      }>;
-
-      // Debug: Check besttyp distribution
-      const besttypStmt = this.db!.prepare(
-        'SELECT besttyp, COUNT(*) as count FROM purchase_order GROUP BY besttyp'
-      );
-      const besttypDist = besttypStmt.all() as Array<{
-        besttyp: number | null;
-        count: number;
-      }>;
-
-      log.info(`[getAllOrders] Total rows: ${totalRows}, includeICTOrders: ${includeICTOrders}`);
-      log.info('[getAllOrders] Company code distribution:', JSON.stringify(companyCodeDist));
-      log.info('[getAllOrders] Besttyp distribution:', JSON.stringify(besttypDist));
-
-      // TEMPORARY: Disable filtering to see what's in the database
-      // TODO: Re-enable filtering once we understand the data
-      const whereClause = '';
-      const params: string[] = [];
-
-      // Original filter (commented out for debugging):
       // Always exclude company code 87 (hardcoded)
       // Optionally include/exclude ICT orders (besttyp 70)
-      // const whereConditions: string[] = [
-      //   "(company_code IS NULL OR CAST(company_code AS TEXT) != '87')",
-      // ];
-      // if (!includeICTOrders) {
-      //   whereConditions.push('(besttyp IS NULL OR besttyp != 70)');
-      // }
-      // const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : '';
+      const whereConditions: string[] = [
+        "(company_code IS NULL OR CAST(company_code AS TEXT) != '87')",
+      ];
+      if (!includeICTOrders) {
+        whereConditions.push('(besttyp IS NULL OR besttyp != 70)');
+      }
+      const whereClause =
+        whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : '';
+      const params: string[] = [];
 
       const stmt = this.db!.prepare(`
         SELECT 
