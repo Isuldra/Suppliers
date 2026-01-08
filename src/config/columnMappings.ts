@@ -20,6 +20,7 @@ export interface ColumnMapping {
   startRow: number; // 1-based row number where data starts
 
   // Column indices (0-based, as used by XLSX/SheetJS)
+  companyCode: number; // Column A = 0 (foretaksnummer)
   poNumber: number; // Column C = 2
   internalSupplier: number; // Column D = 3
   warehouse: number; // Column E = 4
@@ -33,6 +34,7 @@ export interface ColumnMapping {
   outstandingQty: number; // Column O = 14
   supplierName: number; // Column P = 15
   orderRowNumber: number; // Column Q = 16
+  besttyp: number; // Column F = 5 (NO) or E = 4 (DK) - order type (0=normal, 70=ICT Sweden Order)
 }
 
 /**
@@ -70,9 +72,11 @@ const STANDARD_BP_MAPPING: ColumnMapping = {
   startRow: 6,
 
   // Column indices (0-based) for Norwegian file structure
+  companyCode: 0, // A - foretaksnummer (company code: 40=NO, 87=other)
   poNumber: 2, // C - bestnr (PO number)
   internalSupplier: 3, // D - ftgnr
   warehouse: 4, // E - lagstalle
+  besttyp: 5, // F - besttyp (order type: 0=normal, 70=ICT Sweden Order)
   oneMedArticle: 7, // H - artnr
   supplierArticle: 8, // I - artnrlev
   etaDate1: 9, // J - bestberlevdat
@@ -97,9 +101,11 @@ const DK_BP_MAPPING: ColumnMapping = {
   startRow: 6, // Header row is 5, data starts at row 6
 
   // Column indices (0-based) based on actual DK file structure
+  companyCode: 0, // A - foretaksnummer (company code: 80=DK, 87=other)
   poNumber: 1, // B - bestnr (PO number)
   internalSupplier: 2, // C - ftgnr (internal supplier number)
   warehouse: 3, // D - lagstalle (80 or 87 for DK)
+  besttyp: 4, // E - besttyp (order type: 0=normal, 70=ICT Sweden Order) - shifted left by 1 compared to NO
   oneMedArticle: 6, // G - artnr (OneMed article number)
   supplierArticle: 7, // H - artnrlev (supplier article number)
   etaDate1: 8, // I - bestberlevdat (order date)
