@@ -240,6 +240,8 @@ export class DatabaseService {
         { name: 'warehouse', type: 'TEXT' },
         { name: 'outstanding_qty', type: 'REAL DEFAULT 0' },
         { name: 'order_row_number', type: 'TEXT' },
+        { name: 'company_code', type: 'TEXT' },
+        { name: 'besttyp', type: 'INTEGER' },
       ];
 
       for (const col of poColumns) {
@@ -549,19 +551,53 @@ export class DatabaseService {
 
   /**
    * Get all orders
-   * @param warehouseFilter - Optional warehouse filter ('80', '87', or 'all'). Only applies to DK data.
+   * @param includeICTOrders - Optional flag to include ICT orders (besttyp 70). Default false.
+   * Company code 87 orders are always excluded (hardcoded).
    */
-  public getAllOrders(warehouseFilter?: '80' | '87' | 'all'): ExcelRow[] {
+  public getAllOrders(includeICTOrders: boolean = false): ExcelRow[] {
     if (!this.db) throw new Error('Database not connected.');
     try {
-      // Build warehouse filter condition
-      let warehouseCondition = '';
+      // Debug: Log the query and check total rows before filtering
+      const totalRowsStmt = this.db!.prepare('SELECT COUNT(*) as total FROM purchase_order');
+      const totalRows = (totalRowsStmt.get() as { total: number })?.total || 0;
+
+      // Debug: Check company_code distribution
+      const companyCodeStmt = this.db!.prepare(
+        'SELECT company_code, COUNT(*) as count FROM purchase_order GROUP BY company_code'
+      );
+      const companyCodeDist = companyCodeStmt.all() as Array<{
+        company_code: string | null;
+        count: number;
+      }>;
+
+      // Debug: Check besttyp distribution
+      const besttypStmt = this.db!.prepare(
+        'SELECT besttyp, COUNT(*) as count FROM purchase_order GROUP BY besttyp'
+      );
+      const besttypDist = besttypStmt.all() as Array<{
+        besttyp: number | null;
+        count: number;
+      }>;
+
+      log.info(`[getAllOrders] Total rows: ${totalRows}, includeICTOrders: ${includeICTOrders}`);
+      log.info('[getAllOrders] Company code distribution:', JSON.stringify(companyCodeDist));
+      log.info('[getAllOrders] Besttyp distribution:', JSON.stringify(besttypDist));
+
+      // TEMPORARY: Disable filtering to see what's in the database
+      // TODO: Re-enable filtering once we understand the data
+      const whereClause = '';
       const params: string[] = [];
 
-      if (warehouseFilter && warehouseFilter !== 'all') {
-        warehouseCondition = 'WHERE warehouse = ?';
-        params.push(warehouseFilter);
-      }
+      // Original filter (commented out for debugging):
+      // Always exclude company code 87 (hardcoded)
+      // Optionally include/exclude ICT orders (besttyp 70)
+      // const whereConditions: string[] = [
+      //   "(company_code IS NULL OR CAST(company_code AS TEXT) != '87')",
+      // ];
+      // if (!includeICTOrders) {
+      //   whereConditions.push('(besttyp IS NULL OR besttyp != 70)');
+      // }
+      // const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : '';
 
       const stmt = this.db!.prepare(`
         SELECT 
@@ -584,7 +620,7 @@ export class DatabaseService {
           warehouse,
           order_row_number AS orderRowNumber
         FROM purchase_order
-        ${warehouseCondition}
+        ${whereClause}
         ORDER BY date(eta_supplier) ASC, ordreNr ASC, itemNo ASC
       `);
 
@@ -726,29 +762,34 @@ export class DatabaseService {
   /**
    * Get outstanding orders for a supplier
    * @param supplierName - The supplier name to filter by
-   * @param warehouseFilter - Optional warehouse filter ('80', '87', or 'all'). Only applies to DK data.
+   * @param includeICTOrders - Optional flag to include ICT orders (besttyp 70). Default false.
+   * Company code 87 orders are always excluded (hardcoded).
    */
-  public getOutstandingOrders(
-    supplierName: string,
-    warehouseFilter?: '80' | '87' | 'all'
-  ): DbOrder[] {
+  public getOutstandingOrders(supplierName: string, includeICTOrders: boolean = false): DbOrder[] {
     if (!this.db) {
       log.warn('getOutstandingOrders called but DB is not connected.');
       return [];
     }
     this.queryCounter += 1;
     log.info(
-      `[Query #${this.queryCounter}] Fetching outstanding orders (from purchase_order) for supplier: ${supplierName}, warehouseFilter: ${warehouseFilter || 'none'}`
+      `[Query #${this.queryCounter}] Fetching outstanding orders (from purchase_order) for supplier: ${supplierName}, includeICTOrders: ${includeICTOrders}`
     );
 
     try {
-      // Build warehouse filter condition
-      let warehouseCondition = '';
+      // Always exclude company code 87 (hardcoded)
+      // Optionally include/exclude ICT orders (besttyp 70)
+      const conditions: string[] = [
+        'COALESCE(supplier_name, ftgnavn) LIKE ?',
+        '(outstanding_qty > 0 OR (order_qty - COALESCE(received_qty, 0)) > 0)',
+        'eta_supplier IS NOT NULL',
+        "eta_supplier != ''",
+        "(company_code IS NULL OR CAST(company_code AS TEXT) != '87')",
+      ];
       const params: string[] = [];
 
-      if (warehouseFilter && warehouseFilter !== 'all') {
-        warehouseCondition = 'AND warehouse = ?';
-        params.push(warehouseFilter);
+      if (!includeICTOrders) {
+        // Exclude ICT orders (besttyp 70) when flag is false
+        conditions.push('(besttyp IS NULL OR besttyp != 70)');
       }
 
       const sql = `
@@ -772,11 +813,7 @@ export class DatabaseService {
         warehouse,
         order_row_number AS orderRowNumber
       FROM purchase_order
-      WHERE COALESCE(supplier_name, ftgnavn) LIKE ? 
-        AND (outstanding_qty > 0 OR (order_qty - COALESCE(received_qty, 0)) > 0)
-        AND eta_supplier IS NOT NULL 
-        AND eta_supplier != ''
-        ${warehouseCondition}
+      WHERE ${conditions.join(' AND ')}
       ORDER BY date(eta_supplier) ASC, ordreNr ASC, itemNo ASC
     `;
 
@@ -822,39 +859,42 @@ export class DatabaseService {
 
   /**
    * Get all unique supplier names with outstanding orders
-   * @param warehouseFilter - Optional warehouse filter ('80', '87', or 'all'). Only applies to DK data.
+   * @param includeICTOrders - Optional flag to include ICT orders (besttyp 70). Default false.
+   * Company code 87 orders are always excluded (hardcoded).
    */
-  public getAllSupplierNames(warehouseFilter?: '80' | '87' | 'all'): string[] {
+  public getAllSupplierNames(includeICTOrders: boolean = false): string[] {
     if (!this.db) {
       log.warn('getAllSupplierNames called but DB is not connected.');
       return [];
     }
 
     try {
-      // Build warehouse filter condition
-      let warehouseCondition = '';
-      const params: string[] = [];
+      // Always exclude company code 87 (hardcoded)
+      // Optionally include/exclude ICT orders (besttyp 70)
+      const conditions: string[] = [
+        'outstanding_qty > 0',
+        'supplier_name IS NOT NULL',
+        "supplier_name != ''",
+        "(company_code IS NULL OR CAST(company_code AS TEXT) != '87')",
+      ];
 
-      if (warehouseFilter && warehouseFilter !== 'all') {
-        warehouseCondition = 'AND warehouse = ?';
-        params.push(warehouseFilter);
+      if (!includeICTOrders) {
+        // Exclude ICT orders (besttyp 70) when flag is false
+        conditions.push('(besttyp IS NULL OR besttyp != 70)');
       }
 
       const sql = `
         SELECT DISTINCT supplier_name AS name
         FROM purchase_order
-        WHERE outstanding_qty > 0
-          AND supplier_name IS NOT NULL
-          AND supplier_name != ''
-          ${warehouseCondition}
+        WHERE ${conditions.join(' AND ')}
         ORDER BY supplier_name ASC
       `;
       const stmt = this.db.prepare(sql);
-      const rows = stmt.all(...params) as { name: string }[];
+      const rows = stmt.all() as { name: string }[];
       const suppliers = rows.map((row) => row.name);
 
       log.info(
-        `Found ${suppliers.length} unique suppliers with outstanding orders (warehouseFilter: ${warehouseFilter || 'none'})`
+        `Found ${suppliers.length} unique suppliers with outstanding orders (includeICTOrders: ${includeICTOrders})`
       );
       if (process.env.NODE_ENV === 'development') {
         log.info('Available suppliers:', suppliers.slice(0, 10)); // Log first 10
@@ -869,38 +909,41 @@ export class DatabaseService {
 
   /**
    * Get list of suppliers that have outstanding orders
-   * @param warehouseFilter - Optional warehouse filter ('80', '87', or 'all'). Only applies to DK data.
+   * @param includeICTOrders - Optional flag to include ICT orders (besttyp 70). Default false.
+   * Company code 87 orders are always excluded (hardcoded).
    */
-  public getSuppliersWithOutstandingOrders(warehouseFilter?: '80' | '87' | 'all'): string[] {
+  public getSuppliersWithOutstandingOrders(includeICTOrders: boolean = false): string[] {
     if (!this.db) {
       log.warn('getSuppliersWithOutstandingOrders called but DB is not connected.');
       return [];
     }
 
     try {
-      // Build warehouse filter condition
-      let warehouseCondition = '';
-      const params: string[] = [];
+      // Always exclude company code 87 (hardcoded)
+      // Optionally include/exclude ICT orders (besttyp 70)
+      const conditions: string[] = [
+        'COALESCE(supplier_name, ftgnavn) IS NOT NULL',
+        "COALESCE(supplier_name, ftgnavn) != ''",
+        "COALESCE(supplier_name, ftgnavn) != '[object Object]'",
+        '(outstanding_qty > 0 OR (order_qty - COALESCE(received_qty, 0)) > 0)',
+        'eta_supplier IS NOT NULL',
+        "eta_supplier != ''",
+        "(company_code IS NULL OR CAST(company_code AS TEXT) != '87')",
+      ];
 
-      if (warehouseFilter && warehouseFilter !== 'all') {
-        warehouseCondition = 'AND warehouse = ?';
-        params.push(warehouseFilter);
+      if (!includeICTOrders) {
+        // Exclude ICT orders (besttyp 70) when flag is false
+        conditions.push('(besttyp IS NULL OR besttyp != 70)');
       }
 
       const sql = `
         SELECT DISTINCT COALESCE(supplier_name, ftgnavn) AS supplier
         FROM purchase_order
-        WHERE COALESCE(supplier_name, ftgnavn) IS NOT NULL 
-          AND COALESCE(supplier_name, ftgnavn) != ''
-          AND COALESCE(supplier_name, ftgnavn) != '[object Object]'
-          AND (outstanding_qty > 0 OR (order_qty - COALESCE(received_qty, 0)) > 0)
-          AND eta_supplier IS NOT NULL 
-          AND eta_supplier != ''
-          ${warehouseCondition}
+        WHERE ${conditions.join(' AND ')}
         ORDER BY supplier
       `;
       const stmt = this.db.prepare(sql);
-      const rows = stmt.all(...params) as { supplier: string }[];
+      const rows = stmt.all() as { supplier: string }[];
       const suppliers = rows
         .map((row) => row.supplier)
         .filter(
@@ -912,7 +955,7 @@ export class DatabaseService {
         );
 
       log.info(
-        `Found ${suppliers.length} suppliers with outstanding orders (warehouseFilter: ${warehouseFilter || 'none'})`
+        `Found ${suppliers.length} suppliers with outstanding orders (includeICTOrders: ${includeICTOrders})`
       );
       if (process.env.NODE_ENV === 'development') {
         log.info('Suppliers with outstanding orders:', suppliers.slice(0, 10)); // Log first 10

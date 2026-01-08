@@ -89,6 +89,12 @@
     "both": "Both",
     "detected": "Detected"
   },
+  "ictOrderToggle": {
+    "title": "ICT Orders (besttyp 70)",
+    "description": "Include ICT Sweden orders (besttyp 70) in the results.",
+    "included": "Included",
+    "excluded": "Excluded"
+  },
   "validation": {
     "errors": "Validation errors:"
   },

@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { ChevronDownIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
 import { ExcelRow } from '../types/ExcelData';
 import SelectToggleButton from './SelectToggleButton';
-import { useWarehouseFilter } from '../context/WarehouseFilterContext';
+import { useICTOrder } from '../context/ICTOrderContext';
 
 interface BulkSupplierSelectProps {
   onSuppliersSelected: (suppliers: string[]) => void;
@@ -41,7 +41,7 @@ const BulkSupplierSelect: React.FC<BulkSupplierSelectProps> = ({
   bulkSelectedOrders,
 }) => {
   const { t } = useTranslation();
-  const { warehouseFilter, showWarehouseFilter } = useWarehouseFilter();
+  const { includeICTOrders } = useICTOrder();
   console.log('🟡 BulkSupplierSelect: Component rendered with props:', {
     selectedWeekday,
     selectedPlanner,
@@ -132,12 +132,11 @@ const BulkSupplierSelect: React.FC<BulkSupplierSelectProps> = ({
       try {
         let weekdaySuppliers: string[] = [];
 
-        // Determine warehouse filter to use (only for DK data)
-        const filterToUse = showWarehouseFilter ? warehouseFilter : undefined;
-
+        // Use ICT order filter
         if (allDaysMode) {
           // In "All Days" mode, get ALL suppliers with outstanding orders
-          const allSuppliersResponse = await window.electron.getAllSupplierNames(filterToUse);
+          const allSuppliersResponse =
+            await window.electron.getSuppliersWithOutstandingOrders(includeICTOrders);
           console.log('🟠 All suppliers response (all days mode):', allSuppliersResponse);
 
           if (allSuppliersResponse.success && allSuppliersResponse.data) {
@@ -164,8 +163,8 @@ const BulkSupplierSelect: React.FC<BulkSupplierSelectProps> = ({
 
         console.log('🟠 Final weekday suppliers:', weekdaySuppliers);
 
-        // Get outstanding orders to count per supplier (with warehouse filter for DK)
-        const outstandingOrders = await window.electron.getAllOrders(filterToUse);
+        // Get outstanding orders to count per supplier (with ICT order filter)
+        const outstandingOrders = await window.electron.getAllOrders(includeICTOrders);
         console.log('🟠 Outstanding orders:', outstandingOrders);
 
         // Fetch database info for all suppliers (emails and languages)
@@ -231,14 +230,7 @@ const BulkSupplierSelect: React.FC<BulkSupplierSelectProps> = ({
     if ((selectedWeekday && selectedPlanner) || allDaysMode) {
       fetchSuppliers();
     }
-  }, [
-    selectedWeekday,
-    selectedPlanner,
-    allDaysMode,
-    fetchSupplierDbInfo,
-    warehouseFilter,
-    showWarehouseFilter,
-  ]);
+  }, [selectedWeekday, selectedPlanner, allDaysMode, fetchSupplierDbInfo, includeICTOrders]);
 
   // Debug effect to track selectedSuppliers prop changes
   useEffect(() => {
@@ -384,21 +376,12 @@ const BulkSupplierSelect: React.FC<BulkSupplierSelectProps> = ({
     }
   };
 
-  // Check for mixed languages
-  const selectedSuppliersInfo = suppliers.filter((s) => selectedSuppliers.includes(s.supplier));
-  const hasMixedLanguages = useMemo(() => {
-    if (selectedSuppliersInfo.length <= 1) return false;
-    const languages = new Set(selectedSuppliersInfo.map((s) => s.languageCode));
-    return languages.size > 1;
-  }, [selectedSuppliersInfo]);
-
   // Get outstanding orders for a specific supplier
 
   const fetchSupplierOrders = async (supplier: string) => {
     try {
-      // Use warehouse filter for DK data
-      const filterToUse = showWarehouseFilter ? warehouseFilter : undefined;
-      const allOrders = await window.electron.getAllOrders(filterToUse);
+      // Use ICT order filter
+      const allOrders = await window.electron.getAllOrders(includeICTOrders);
       const filteredOrders = allOrders.filter((order) => order.supplier === supplier);
       setSupplierOrders(
         new Map(supplierOrders.set(supplier, filteredOrders as unknown as ExcelRow[]))
@@ -513,28 +496,6 @@ const BulkSupplierSelect: React.FC<BulkSupplierSelectProps> = ({
           </div>
         </div>
       </div>
-
-      {/* Language warning */}
-      {hasMixedLanguages && selectedSuppliers.length > 0 && (
-        <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
-          <div className="flex">
-            <div className="flex-shrink-0">
-              <svg className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
-                <path
-                  fillRule="evenodd"
-                  d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
-                  clipRule="evenodd"
-                />
-              </svg>
-            </div>
-            <div className="ml-3">
-              <p className="text-sm text-yellow-800">
-                {t('bulkSupplierSelect.mixedLanguageWarning')}
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Select all button */}
       <div className="mb-4 flex items-center gap-2">
@@ -786,11 +747,6 @@ const BulkSupplierSelect: React.FC<BulkSupplierSelectProps> = ({
             </strong>{' '}
             {t('bulkSupplierSelect.totalOutstandingLines')}
           </p>
-          {hasMixedLanguages && (
-            <p className="text-sm text-yellow-700 mt-1">
-              {t('bulkSupplierSelect.mixedLanguageInfo')}
-            </p>
-          )}
         </div>
       )}
     </div>
