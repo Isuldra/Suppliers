@@ -4,7 +4,8 @@ import { ChevronDownIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
 import { ExcelRow } from '../types/ExcelData';
 import supplierData from '../data/supplierData.json';
 import SelectToggleButton from './SelectToggleButton';
-import { useWarehouseFilter } from '../context/WarehouseFilterContext';
+import { useICTOrder } from '../context/ICTOrderContext';
+import { EmailService } from '../services/emailService';
 
 interface BulkDataReviewProps {
   selectedSuppliers: string[];
@@ -43,10 +44,11 @@ const BulkDataReview: React.FC<BulkDataReviewProps> = ({
   onOrdersChanged,
 }) => {
   const { t } = useTranslation();
-  const { warehouseFilter, showWarehouseFilter } = useWarehouseFilter();
+  const { includeICTOrders } = useICTOrder();
   const [supplierOrders, setSupplierOrders] = useState<SupplierOrders[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [expandedSuppliers, setExpandedSuppliers] = useState<Set<string>>(new Set());
+  const emailService = useMemo(() => new EmailService(), []);
 
   // Get supplier info from supplierData.json
   const getSupplierInfo = (supplierName: string): SupplierInfo | null => {
@@ -74,9 +76,8 @@ const BulkDataReview: React.FC<BulkDataReviewProps> = ({
     const fetchOrdersForSuppliers = async () => {
       setIsLoading(true);
       try {
-        // Use warehouse filter for DK data
-        const filterToUse = showWarehouseFilter ? warehouseFilter : undefined;
-        const allOrders = await window.electron.getAllOrders(filterToUse);
+        // Use ICT order filter
+        const allOrders = await window.electron.getAllOrders(includeICTOrders);
         const suppliersData: SupplierOrders[] = [];
 
         for (const supplierName of selectedSuppliers) {
@@ -95,13 +96,30 @@ const BulkDataReview: React.FC<BulkDataReviewProps> = ({
             selectedOrdersSet: selectedOrdersSet.size,
           });
 
+          // Get language from database/country - this handles DK suppliers correctly
+          const languageCode = await emailService.getLanguageForSupplier(supplierName);
+
+          // Map language code to display name
+          const languageDisplayMap: Record<string, string> = {
+            no: 'Norsk',
+            en: 'English',
+            se: 'Svenska',
+            da: 'Dansk',
+            fi: 'Suomi',
+          };
+          const languageDisplay =
+            languageDisplayMap[languageCode] || supplierInfo?.språk || 'Norsk';
+
+          // Map to old languageCode format for backward compatibility
+          const oldLanguageCode: 'NO' | 'ENG' = languageCode === 'en' ? 'ENG' : 'NO';
+
           suppliersData.push({
             supplier: supplierName,
             orders: orders as unknown as ExcelRow[],
             selectedOrders: selectedOrdersSet,
             isExpanded: false,
-            language: supplierInfo?.språk || 'Norsk',
-            languageCode: supplierInfo?.språkKode || 'NO',
+            language: languageDisplay,
+            languageCode: oldLanguageCode,
             email: supplierInfo?.epost || '',
           });
         }
@@ -118,7 +136,7 @@ const BulkDataReview: React.FC<BulkDataReviewProps> = ({
     if (selectedSuppliers.length > 0) {
       fetchOrdersForSuppliers();
     }
-  }, [selectedSuppliers, bulkSelectedOrdersSerialized, warehouseFilter, showWarehouseFilter]);
+  }, [selectedSuppliers, bulkSelectedOrdersSerialized, includeICTOrders]);
 
   // Handle expanding supplier details
   const handleExpandSupplier = (supplier: string) => {
@@ -202,7 +220,7 @@ const BulkDataReview: React.FC<BulkDataReviewProps> = ({
   // Check for mixed languages
   const hasMixedLanguages = useMemo(() => {
     if (supplierOrders.length <= 1) return false;
-    const languages = new Set(supplierOrders.map((s) => s.languageCode));
+    const languages = new Set(supplierOrders.map((s) => s.language));
     return languages.size > 1;
   }, [supplierOrders]);
 
@@ -273,9 +291,15 @@ const BulkDataReview: React.FC<BulkDataReviewProps> = ({
 
                   <span
                     className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                      supplierData.languageCode === 'NO'
-                        ? 'bg-blue-100 text-blue-800'
-                        : 'bg-green-100 text-green-800'
+                      supplierData.language === 'Dansk'
+                        ? 'bg-red-100 text-red-800'
+                        : supplierData.language === 'Svenska'
+                          ? 'bg-yellow-100 text-yellow-800'
+                          : supplierData.language === 'Suomi'
+                            ? 'bg-purple-100 text-purple-800'
+                            : supplierData.languageCode === 'NO'
+                              ? 'bg-blue-100 text-blue-800'
+                              : 'bg-green-100 text-green-800'
                     }`}
                   >
                     {supplierData.language}
