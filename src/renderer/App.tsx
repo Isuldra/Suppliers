@@ -19,7 +19,8 @@ import { HashRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import supplyPlannersData from './data/supplyPlanners.json';
 import { SlackService } from './services/slackService';
 import { Cog6ToothIcon, ChartBarIcon, CommandLineIcon } from '@heroicons/react/24/outline';
-import WarehouseToggle from './components/WarehouseToggle';
+import ICTOrderToggle from './components/ICTOrderToggle';
+import { useICTOrder } from './context/ICTOrderContext';
 import { useWarehouseFilter } from './context/WarehouseFilterContext';
 
 // i18n is now initialized asynchronously in index.tsx
@@ -553,6 +554,9 @@ const MainApp: React.FC<MainAppProps> = ({
   const [appVersion, setAppVersion] = useState<string>('');
   // Welcome screen removed - language is now detected automatically
 
+  // Get ICT order filter state
+  const { includeICTOrders, setIncludeICTOrders } = useICTOrder();
+
   useEffect(() => {
     console.log('🟢 App.tsx mounted!');
 
@@ -809,8 +813,8 @@ const MainApp: React.FC<MainAppProps> = ({
                 </div>
               )}
 
-              {/* Warehouse Filter - Only show for DK data */}
-              <WarehouseToggle />
+              {/* ICT Order Toggle - Optional filter for ICT orders (besttyp 70) */}
+              <ICTOrderToggle includeICTOrders={includeICTOrders} onToggle={setIncludeICTOrders} />
 
               {/* Supplier Selection - Only show if weekday is selected */}
               {appState.selectedWeekday && (

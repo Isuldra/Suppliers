@@ -55,13 +55,14 @@ export function setupDatabaseHandlers() {
     }
   });
 
-  // Get all orders (now supports warehouse filter for DK data)
-  ipcMain.handle('db:getAllOrders', async (_event, warehouseFilter?: '80' | '87' | 'all') => {
+  // Get all orders (now supports ICT order filter)
+  // Company code 87 orders are always excluded (hardcoded)
+  ipcMain.handle('db:getAllOrders', async (_event, includeICTOrders: boolean = false) => {
     log.info(
-      `--- VERIFIKASJON: IPC-handler for 'db:getAllOrders' ble kalt (warehouseFilter: ${warehouseFilter || 'none'}). ---`
+      `--- VERIFIKASJON: IPC-handler for 'db:getAllOrders' ble kalt (includeICTOrders: ${includeICTOrders}). ---`
     );
     try {
-      const orders = databaseService.getAllOrders(warehouseFilter);
+      const orders = databaseService.getAllOrders(includeICTOrders);
       log.info(`--- VERIFIKASJON: getAllOrders returnerte ${orders.length} ordre. ---`);
       return orders;
     } catch (error) {
