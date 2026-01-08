@@ -14,7 +14,7 @@ import { useTranslation } from 'react-i18next';
 import { ExcelData, ExcelRow } from '../types/ExcelData';
 // import knownSuppliersData from "../data/suppliers.json"; // Unused for now
 import { DateFilterSettings } from './DateFilter';
-import { useWarehouseFilter } from '../context/WarehouseFilterContext';
+import { useICTOrder } from '../context/ICTOrderContext';
 
 interface DataReviewProps {
   excelData?: ExcelData;
@@ -34,7 +34,7 @@ const DataReview: React.FC<DataReviewProps> = ({
   onPrevious,
 }) => {
   const { t } = useTranslation();
-  const { warehouseFilter, showWarehouseFilter } = useWarehouseFilter();
+  const { includeICTOrders } = useICTOrder();
   // Enhanced sorting state to support multiple columns
   const [sorting, setSorting] = React.useState<SortingState>([
     { id: 'status', desc: true }, // Primary sort by status
@@ -282,11 +282,10 @@ const DataReview: React.FC<DataReviewProps> = ({
     void (async () => {
       try {
         // IPC returns an object { success: boolean, data?: ExcelRow[], error?: string }
-        // Pass warehouse filter for DK data
-        const filterToUse = showWarehouseFilter ? warehouseFilter : undefined;
+        // Pass ICT order filter
         const response = await window.electron.getOutstandingOrders(
           selectedSupplier || '',
-          filterToUse
+          includeICTOrders
         );
         if (response.success && response.data) {
           setRowsToRender(response.data as ExcelRow[]);
@@ -302,7 +301,7 @@ const DataReview: React.FC<DataReviewProps> = ({
         setRowsToRender([]);
       }
     })();
-  }, [selectedSupplier, warehouseFilter, showWarehouseFilter]);
+  }, [selectedSupplier, includeICTOrders]);
 
   // Table instance
   const table = useReactTable({

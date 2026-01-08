@@ -67,6 +67,20 @@
     "suppliers": "Leverantörer",
     "sendingModeDescription": "Välj mellan enskild leverantör eller flera leverantörer"
   },
+  "warehouseFilter": {
+    "title": "DK Lager",
+    "description": "Välj vilket lager du vill se ordrar från.",
+    "warehouse80": "Lager 80",
+    "warehouse87": "Lager 87",
+    "both": "Båda",
+    "detected": "Upptäckt"
+  },
+  "ictOrderToggle": {
+    "title": "ICT Ordrar (besttyp 70)",
+    "description": "Inkludera ICT Sverige ordrar (besttyp 70) i resultaten.",
+    "included": "Inkluderad",
+    "excluded": "Exkluderad"
+  },
   "validation": {
     "errors": "Fel vid validering:"
   },

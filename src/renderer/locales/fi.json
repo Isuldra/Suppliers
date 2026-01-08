@@ -81,6 +81,20 @@
     "suppliers": "Toimittajat",
     "sendingModeDescription": "Valitse yksi toimittaja tai useita toimittajia"
   },
+  "warehouseFilter": {
+    "title": "DK Varasto",
+    "description": "Valitse mistä varastosta haluat nähdä tilaukset.",
+    "warehouse80": "Varasto 80",
+    "warehouse87": "Varasto 87",
+    "both": "Molemmat",
+    "detected": "Havaittu"
+  },
+  "ictOrderToggle": {
+    "title": "ICT Tilaukset (besttyp 70)",
+    "description": "Sisällytä ICT Ruotsi tilaukset (besttyp 70) tuloksiin.",
+    "included": "Sisällytetty",
+    "excluded": "Suljettu pois"
+  },
   "email": {
     "title": "Lähetä sähköposti",
     "previewAndSend": "Sähköpostin esikatselu ja lähetys"

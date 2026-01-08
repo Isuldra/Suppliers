@@ -65,8 +65,15 @@ interface ElectronAPI {
     fileBuffer: ArrayBuffer;
     fileName?: string;
   }) => Promise<{ success: boolean; message?: string; error?: string }>;
-  getOutstandingOrders: (supplier: string) => Promise<ExcelRow[]>;
-  getSuppliersWithOutstandingOrders: () => Promise<{
+  getOutstandingOrders: (
+    supplier: string,
+    includeICTOrders?: boolean
+  ) => Promise<{
+    success: boolean;
+    data?: ExcelRow[];
+    error?: string;
+  }>;
+  getSuppliersWithOutstandingOrders: (includeICTOrders?: boolean) => Promise<{
     success: boolean;
     data?: string[];
     error?: string;
@@ -82,7 +89,7 @@ interface ElectronAPI {
   insertOrUpdateOrder: (order: ExcelRow) => Promise<number>;
   insertOrUpdateOrders: (orders: ExcelRow[]) => Promise<number[]>;
   getOrdersBySupplier: (supplier: string) => Promise<ExcelRow[]>;
-  getAllOrders: (warehouseFilter?: '80' | '87' | 'all') => Promise<ExcelRow[]>;
+  getAllOrders: (includeICTOrders?: boolean) => Promise<ExcelRow[]>;
   getOrdersDueWithinDays: (days: number) => Promise<ExcelRow[]>;
   markOrderAsConfirmed: (supplier: string, orderNumber: string | null) => Promise<boolean>;
   deleteOrder: (supplier: string, orderNumber: string | null) => Promise<boolean>;
@@ -132,7 +139,7 @@ interface ElectronAPI {
     error?: string;
   }>;
 
-  getAllSupplierNames: (warehouseFilter?: '80' | '87' | 'all') => Promise<{
+  getAllSupplierNames: (includeICTOrders?: boolean) => Promise<{
     success: boolean;
     data?: string[];
     error?: string;
@@ -409,11 +416,11 @@ contextBridge.exposeInMainWorld('electron', {
   saveOrdersToDatabase: async (payload: { fileBuffer: ArrayBuffer; fileName?: string }) => {
     return await ipcRenderer.invoke('saveOrdersToDatabase', payload);
   },
-  getOutstandingOrders: async (supplier: string, warehouseFilter?: '80' | '87' | 'all') => {
-    return await ipcRenderer.invoke('getOutstandingOrders', supplier, warehouseFilter);
+  getOutstandingOrders: async (supplier: string, includeICTOrders: boolean = false) => {
+    return await ipcRenderer.invoke('getOutstandingOrders', supplier, includeICTOrders);
   },
-  getSuppliersWithOutstandingOrders: async (warehouseFilter?: '80' | '87' | 'all') => {
-    return await ipcRenderer.invoke('getSuppliersWithOutstandingOrders', warehouseFilter);
+  getSuppliersWithOutstandingOrders: async (includeICTOrders: boolean = false) => {
+    return await ipcRenderer.invoke('getSuppliersWithOutstandingOrders', includeICTOrders);
   },
   recordEmailSent: async (
     supplier: string,
@@ -434,8 +441,8 @@ contextBridge.exposeInMainWorld('electron', {
   getOrdersBySupplier: async (supplier: string) => {
     return await ipcRenderer.invoke('db:getOrdersBySupplier', supplier);
   },
-  getAllOrders: async (warehouseFilter?: '80' | '87' | 'all') => {
-    return await ipcRenderer.invoke('db:getAllOrders', warehouseFilter);
+  getAllOrders: async (includeICTOrders: boolean = false) => {
+    return await ipcRenderer.invoke('db:getAllOrders', includeICTOrders);
   },
   getOrdersDueWithinDays: async (days: number) => {
     return await ipcRenderer.invoke('db:getOrdersDueWithinDays', days);
@@ -540,8 +547,8 @@ contextBridge.exposeInMainWorld('electron', {
     return await ipcRenderer.invoke('read-log-tail', lineCount);
   },
 
-  getAllSupplierNames: async (warehouseFilter?: '80' | '87' | 'all') => {
-    return await ipcRenderer.invoke('getAllSupplierNames', warehouseFilter);
+  getAllSupplierNames: async (includeICTOrders: boolean = false) => {
+    return await ipcRenderer.invoke('getAllSupplierNames', includeICTOrders);
   },
 
   getSupplierEmail: async (supplierName: string) => {
