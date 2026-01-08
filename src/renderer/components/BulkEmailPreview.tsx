@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { EyeIcon, PaperAirplaneIcon } from '@heroicons/react/24/outline';
 import { EmailService, EmailData } from '../services/emailService';
@@ -75,121 +75,124 @@ const BulkEmailPreview: React.FC<BulkEmailPreviewProps> = ({
     Map<string, 'no' | 'en' | 'se' | 'da' | 'fi'>
   >(new Map());
 
-  const emailService = new EmailService();
+  const emailService = useMemo(() => new EmailService(), []);
 
   // Get supplier info from supplierData.json
-  const getSupplierInfo = (supplierName: string): SupplierInfo | null => {
-    console.log(`🔍 BulkEmailPreview: Looking for supplier: "${supplierName}"`);
-    // First try exact match
-    let supplier = supplierData.leverandører.find((s) => s.leverandør === supplierName);
+  const getSupplierInfo = useCallback(
+    (supplierName: string): SupplierInfo | null => {
+      console.log(`🔍 BulkEmailPreview: Looking for supplier: "${supplierName}"`);
+      // First try exact match
+      let supplier = supplierData.leverandører.find((s) => s.leverandør === supplierName);
 
-    // If no exact match, try case-insensitive match
-    if (!supplier) {
-      supplier = supplierData.leverandører.find(
-        (s) => s.leverandør.toLowerCase() === supplierName.toLowerCase()
-      );
-    }
+      // If no exact match, try case-insensitive match
+      if (!supplier) {
+        supplier = supplierData.leverandører.find(
+          (s) => s.leverandør.toLowerCase() === supplierName.toLowerCase()
+        );
+      }
 
-    // If still no match, try partial match (contains)
-    if (!supplier) {
-      supplier = supplierData.leverandører.find(
-        (s) =>
-          s.leverandør.toLowerCase().includes(supplierName.toLowerCase()) ||
-          supplierName.toLowerCase().includes(s.leverandør.toLowerCase())
-      );
-    }
+      // If still no match, try partial match (contains)
+      if (!supplier) {
+        supplier = supplierData.leverandører.find(
+          (s) =>
+            s.leverandør.toLowerCase().includes(supplierName.toLowerCase()) ||
+            supplierName.toLowerCase().includes(s.leverandør.toLowerCase())
+        );
+      }
 
-    if (supplier) {
-      console.log(`✅ BulkEmailPreview: Found supplier info:`, supplier);
-      const customEmail = bulkSupplierEmails?.get(supplierName);
-      return {
-        ...supplier,
-        språkKode: supplier.språkKode as 'NO' | 'ENG',
-        epost: customEmail !== undefined ? customEmail : supplier.epost,
-      };
-    } else {
-      console.log(`❌ BulkEmailPreview: Supplier not found: "${supplierName}"`);
-      console.log(
-        `Available suppliers:`,
-        supplierData.leverandører.map((s) => s.leverandør)
-      );
-    }
-    return null;
-  };
+      if (supplier) {
+        console.log(`✅ BulkEmailPreview: Found supplier info:`, supplier);
+        const customEmail = bulkSupplierEmails?.get(supplierName);
+        return {
+          ...supplier,
+          språkKode: supplier.språkKode as 'NO' | 'ENG',
+          epost: customEmail !== undefined ? customEmail : supplier.epost,
+        };
+      } else {
+        console.log(`❌ BulkEmailPreview: Supplier not found: "${supplierName}"`);
+        console.log(
+          `Available suppliers:`,
+          supplierData.leverandører.map((s) => s.leverandør)
+        );
+      }
+      return null;
+    },
+    [bulkSupplierEmails]
+  );
 
   // Prepare email data for all suppliers
-  useEffect(() => {
-    const prepareEmailData = async () => {
-      console.log('🔵 BulkEmailPreview: prepareEmailData called');
-      console.log('🔵 selectedSuppliers:', selectedSuppliers);
-      console.log('🔵 selectedOrders:', selectedOrders);
-      setIsLoading(true);
-      try {
-        const allOrders = await window.electron.getAllOrders(includeICTOrders);
-        console.log('🔍 DEBUG: First order from getAllOrders:', allOrders[0]);
-        console.log('🔍 DEBUG: Does first order have specification?', allOrders[0]?.specification);
-        const emailData: EmailPreviewData[] = [];
+  const prepareEmailData = useCallback(async () => {
+    console.log('🔵 BulkEmailPreview: prepareEmailData called');
+    console.log('🔵 selectedSuppliers:', selectedSuppliers);
+    console.log('🔵 selectedOrders:', selectedOrders);
+    setIsLoading(true);
+    try {
+      const allOrders = await window.electron.getAllOrders(includeICTOrders);
+      console.log('🔍 DEBUG: First order from getAllOrders:', allOrders[0]);
+      console.log('🔍 DEBUG: Does first order have specification?', allOrders[0]?.specification);
+      const emailData: EmailPreviewData[] = [];
 
-        for (const supplierName of selectedSuppliers) {
-          const supplierInfo = getSupplierInfo(supplierName);
-          const supplierOrderKeys = selectedOrders.get(supplierName) || new Set();
-          console.log(`🔵 Supplier: ${supplierName}, OrderKeys:`, supplierOrderKeys);
-          const orders = allOrders.filter(
-            (order) => order.supplier === supplierName && supplierOrderKeys.has(order.key)
-          );
-          console.log(`🔵 Filtered orders for ${supplierName}:`, orders.length);
-          console.log('🔍 DEBUG: First filtered order specification:', orders[0]?.specification);
+      for (const supplierName of selectedSuppliers) {
+        const supplierInfo = getSupplierInfo(supplierName);
+        const supplierOrderKeys = selectedOrders.get(supplierName) || new Set();
+        console.log(`🔵 Supplier: ${supplierName}, OrderKeys:`, supplierOrderKeys);
+        const orders = allOrders.filter(
+          (order) => order.supplier === supplierName && supplierOrderKeys.has(order.key)
+        );
+        console.log(`🔵 Filtered orders for ${supplierName}:`, orders.length);
+        console.log('🔍 DEBUG: First filtered order specification:', orders[0]?.specification);
 
-          if (orders.length > 0) {
-            // Get language from database/country - this handles DK suppliers correctly
-            const language = await emailService.getLanguageForSupplier(supplierName);
+        if (orders.length > 0) {
+          // Get language from database/country - this handles DK suppliers correctly
+          const language = await emailService.getLanguageForSupplier(supplierName);
 
-            // Get country for sender email selection
-            const country = await emailService.getSupplierCountryFromDB(supplierName);
+          // Get country for sender email selection
+          const country = await emailService.getSupplierCountryFromDB(supplierName);
 
-            // Map language code to display name
-            const languageDisplayMap: Record<string, string> = {
-              no: 'Norsk',
-              en: 'English',
-              se: 'Svenska',
-              da: 'Dansk',
-              fi: 'Suomi',
-            };
-            const languageDisplay = languageDisplayMap[language] || 'Norsk';
+          // Map language code to display name
+          const languageDisplayMap: Record<string, string> = {
+            no: 'Norsk',
+            en: 'English',
+            se: 'Svenska',
+            da: 'Dansk',
+            fi: 'Suomi',
+          };
+          const languageDisplay = languageDisplayMap[language] || 'Norsk';
 
-            // Get email from database if not in static JSON
-            let email = supplierInfo?.epost || '';
-            if (!email) {
-              const emailResponse = await window.electron.getSupplierEmail(supplierName);
-              email = emailResponse.success ? emailResponse.data || '' : '';
-            }
-
-            emailData.push({
-              supplier: supplierName,
-              email,
-              language,
-              languageDisplay,
-              country,
-              orderCount: orders.length,
-              orders: orders as unknown as ExcelRow[],
-              isSending: false,
-            });
+          // Get email from database if not in static JSON
+          let email = supplierInfo?.epost || '';
+          if (!email) {
+            const emailResponse = await window.electron.getSupplierEmail(supplierName);
+            email = emailResponse.success ? emailResponse.data || '' : '';
           }
+
+          emailData.push({
+            supplier: supplierName,
+            email,
+            language,
+            languageDisplay,
+            country,
+            orderCount: orders.length,
+            orders: orders as unknown as ExcelRow[],
+            isSending: false,
+          });
         }
-
-        console.log('🔵 Final emailData:', emailData);
-        setEmailPreviewData(emailData);
-      } catch (error) {
-        console.error('Error preparing email data:', error);
-      } finally {
-        setIsLoading(false);
       }
-    };
 
+      console.log('🔵 Final emailData:', emailData);
+      setEmailPreviewData(emailData);
+    } catch (error) {
+      console.error('Error preparing email data:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [selectedSuppliers, selectedOrders, includeICTOrders, getSupplierInfo, emailService]);
+
+  useEffect(() => {
     if (selectedSuppliers.length > 0) {
       prepareEmailData();
     }
-  }, [selectedSuppliers, selectedOrders.size, bulkSupplierEmails, includeICTOrders]);
+  }, [selectedSuppliers, prepareEmailData]);
 
   // Handle email editing
   const handleEmailChange = (supplier: string, email: string) => {
