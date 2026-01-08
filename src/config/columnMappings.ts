@@ -153,7 +153,7 @@ export const DEFAULT_MAPPING = COLUMN_MAPPINGS.NO;
 export const WAREHOUSE_COUNTRY_MAPPING: Record<string, string> = {
   '40': 'NO', // Norway main warehouse
   '80': 'DK', // Denmark main warehouse
-  '87': 'DK', // Denmark secondary warehouse (included in import, filtered via UI toggle)
+  '87': 'DK', // Denmark secondary warehouse (included in import, but company code 87 orders are always excluded at database level)
 };
 
 /**

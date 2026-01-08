@@ -121,6 +121,16 @@ export class DatabaseService {
     return this.db;
   }
 
+  /**
+   * Get SQL condition to exclude company code 87 orders
+   * Company code 87 orders are always excluded from queries (hardcoded business rule)
+   * @returns SQL condition string
+   */
+  private getCompanyCode87ExclusionCondition(): string {
+    // company_code is TEXT type, so no CAST needed
+    return "(company_code IS NULL OR company_code != '87')";
+  }
+
   private initialize(): void {
     if (!this.db) {
       log.error('Initialize called but database is not connected.');
@@ -559,9 +569,7 @@ export class DatabaseService {
     try {
       // Always exclude company code 87 (hardcoded)
       // Optionally include/exclude ICT orders (besttyp 70)
-      const whereConditions: string[] = [
-        "(company_code IS NULL OR CAST(company_code AS TEXT) != '87')",
-      ];
+      const whereConditions: string[] = [this.getCompanyCode87ExclusionCondition()];
       if (!includeICTOrders) {
         whereConditions.push('(besttyp IS NULL OR besttyp != 70)');
       }
@@ -753,7 +761,7 @@ export class DatabaseService {
         '(outstanding_qty > 0 OR (order_qty - COALESCE(received_qty, 0)) > 0)',
         'eta_supplier IS NOT NULL',
         "eta_supplier != ''",
-        "(company_code IS NULL OR CAST(company_code AS TEXT) != '87')",
+        this.getCompanyCode87ExclusionCondition(),
       ];
       const params: string[] = [];
 
@@ -845,7 +853,7 @@ export class DatabaseService {
         'outstanding_qty > 0',
         'supplier_name IS NOT NULL',
         "supplier_name != ''",
-        "(company_code IS NULL OR CAST(company_code AS TEXT) != '87')",
+        this.getCompanyCode87ExclusionCondition(),
       ];
 
       if (!includeICTOrders) {
@@ -898,7 +906,7 @@ export class DatabaseService {
         '(outstanding_qty > 0 OR (order_qty - COALESCE(received_qty, 0)) > 0)',
         'eta_supplier IS NOT NULL',
         "eta_supplier != ''",
-        "(company_code IS NULL OR CAST(company_code AS TEXT) != '87')",
+        this.getCompanyCode87ExclusionCondition(),
       ];
 
       if (!includeICTOrders) {

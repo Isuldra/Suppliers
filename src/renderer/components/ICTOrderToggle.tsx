@@ -11,7 +11,8 @@ interface ICTOrderToggleProps {
 /**
  * ICT Order toggle component
  * Allows users to optionally include/exclude ICT orders (besttyp 70)
- * Only visible for DK data (same logic as warehouse filter)
+ * Only visible for DK data (ICT orders should only be visible when DK file is loaded)
+ * Note: Company code 87 orders are always excluded at database level (hardcoded)
  */
 const ICTOrderToggle: React.FC<ICTOrderToggleProps> = ({ includeICTOrders, onToggle }) => {
   const { t } = useTranslation();
