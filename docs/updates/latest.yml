@@ -1,8 +1,8 @@
-version: 1.5.2
+version: 1.5.3
 files:
-  - url: https://github.com/Isuldra/Suppliers/releases/download/v1.5.2/Pulse-1.5.2-setup.exe
+  - url: https://github.com/Isuldra/Suppliers/releases/download/v1.5.3/Pulse-1.5.3-setup.exe
     sha512: PENDING_BUILD
     size: 0
-path: Pulse-1.5.2-setup.exe
+path: Pulse-1.5.3-setup.exe
 sha512: PENDING_BUILD
-releaseDate: '2025-01-05T15:00:00.000Z'
+releaseDate: '2026-01-08T15:00:00.000Z'
