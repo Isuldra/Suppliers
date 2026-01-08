@@ -89,6 +89,12 @@
     "both": "Begge",
     "detected": "Oppdaget"
   },
+  "ictOrderToggle": {
+    "title": "ICT Ordre (besttyp 70)",
+    "description": "Inkluder ICT Sverige ordre (besttyp 70) i resultatene.",
+    "included": "Inkludert",
+    "excluded": "Ekskludert"
+  },
   "validation": {
     "errors": "Feil ved validering:"
   },
