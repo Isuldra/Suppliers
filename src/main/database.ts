@@ -4,14 +4,8 @@ import { ExcelRow } from '../types/ExcelRow';
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const log = require('electron-log/main');
 
-// STEG 1: Legg til denne logglinjen for å bekrefte at filen leses
-log.info('--- VERIFIKASJON: Filen database.ts blir nå kjørt. ---');
-
 // Database interface for IPC communication
 export function setupDatabaseHandlers() {
-  // STEG 2: Legg til denne for å bekrefte at funksjonen kalles
-  log.info('--- VERIFIKASJON: Funksjonen setupDatabaseHandlers() blir nå kalt. ---');
-
   // Initialize database
   try {
     // Database is automatically initialized when the singleton is accessed
@@ -58,12 +52,8 @@ export function setupDatabaseHandlers() {
   // Get all orders (now supports ICT order filter)
   // Company code 87 orders are always excluded (hardcoded)
   ipcMain.handle('db:getAllOrders', async (_event, includeICTOrders: boolean = false) => {
-    log.info(
-      `--- VERIFIKASJON: IPC-handler for 'db:getAllOrders' ble kalt (includeICTOrders: ${includeICTOrders}). ---`
-    );
     try {
       const orders = databaseService.getAllOrders(includeICTOrders);
-      log.info(`--- VERIFIKASJON: getAllOrders returnerte ${orders.length} ordre. ---`);
       return orders;
     } catch (error) {
       log.error("Feil i 'db:getAllOrders' handler:", error);
