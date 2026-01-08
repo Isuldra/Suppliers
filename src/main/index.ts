@@ -1657,17 +1657,18 @@ ipcMain.handle('send-logs-to-support', async () => {
 });
 
 // Expose outstanding POs to the renderer
-// Now supports optional warehouse filter for DK data
+// Now supports optional ICT order filter
+// Company code 87 orders are always excluded (hardcoded)
 ipcMain.handle(
   'getOutstandingOrders',
-  async (_event, supplier: string, warehouseFilter?: '80' | '87' | 'all') => {
+  async (_event, supplier: string, includeICTOrders: boolean = false) => {
     try {
       const dbsvc = databaseService;
       if (!dbsvc.getDbInstance()) {
         // It's better to return a structured error response
         return { success: false, error: 'Database not connected' };
       }
-      const orders = dbsvc.getOutstandingOrders(supplier, warehouseFilter);
+      const orders = dbsvc.getOutstandingOrders(supplier, includeICTOrders);
       return { success: true, data: orders }; // Wrap the response
     } catch (err) {
       log.error('IPC getOutstandingOrders error:', err);
@@ -1681,16 +1682,17 @@ ipcMain.handle(
 );
 
 // Expose suppliers with outstanding orders to the renderer
-// Now supports optional warehouse filter for DK data
+// Now supports optional ICT order filter
+// Company code 87 orders are always excluded (hardcoded)
 ipcMain.handle(
   'getSuppliersWithOutstandingOrders',
-  async (_event, warehouseFilter?: '80' | '87' | 'all') => {
+  async (_event, includeICTOrders: boolean = false) => {
     try {
       const dbsvc = databaseService;
       if (!dbsvc.getDbInstance()) {
         return { success: false, error: 'Database not connected' };
       }
-      const suppliers = dbsvc.getSuppliersWithOutstandingOrders(warehouseFilter);
+      const suppliers = dbsvc.getSuppliersWithOutstandingOrders(includeICTOrders);
       return { success: true, data: suppliers };
     } catch (err) {
       log.error('IPC getSuppliersWithOutstandingOrders error:', err);
@@ -1703,10 +1705,11 @@ ipcMain.handle(
 );
 
 // Add new IPC handler to get all supplier names for debugging
-// Now supports optional warehouse filter for DK data
-ipcMain.handle('getAllSupplierNames', async (_event, warehouseFilter?: '80' | '87' | 'all') => {
+// Now supports optional ICT order filter
+// Company code 87 orders are always excluded (hardcoded)
+ipcMain.handle('getAllSupplierNames', async (_event, includeICTOrders: boolean = false) => {
   try {
-    const suppliers = databaseService.getAllSupplierNames(warehouseFilter);
+    const suppliers = databaseService.getAllSupplierNames(includeICTOrders);
     return { success: true, data: suppliers };
   } catch (error) {
     log.error('Error getting supplier names:', error);

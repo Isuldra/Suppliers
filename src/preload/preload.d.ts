@@ -70,10 +70,10 @@ interface ElectronAPI {
   ) => Promise<{ success: boolean; message?: string; error?: string }>;
   getOutstandingOrders: (
     supplier: string,
-    warehouseFilter?: '80' | '87' | 'all'
+    includeICTOrders?: boolean
   ) => Promise<{ success: boolean; data?: unknown[]; error?: string }>;
   getSuppliersWithOutstandingOrders: (
-    warehouseFilter?: '80' | '87' | 'all'
+    includeICTOrders?: boolean
   ) => Promise<{ success: boolean; data?: string[]; error?: string }>;
   recordEmailSent: (
     supplier: string,
@@ -86,7 +86,7 @@ interface ElectronAPI {
   insertOrUpdateOrder: (order: ExcelRow) => Promise<number>;
   insertOrUpdateOrders: (orders: ExcelRow[]) => Promise<number[]>;
   getOrdersBySupplier: (supplier: string) => Promise<ExcelRow[]>;
-  getAllOrders: (warehouseFilter?: '80' | '87' | 'all') => Promise<ExcelRow[]>;
+  getAllOrders: (includeICTOrders?: boolean) => Promise<ExcelRow[]>;
   getOrdersDueWithinDays: (days: number) => Promise<ExcelRow[]>;
   markOrderAsConfirmed: (supplier: string, orderNumber: string | null) => Promise<boolean>;
   deleteOrder: (supplier: string, orderNumber: string | null) => Promise<boolean>;
@@ -136,7 +136,7 @@ interface ElectronAPI {
     error?: string;
   }>;
 
-  getAllSupplierNames: (warehouseFilter?: '80' | '87' | 'all') => Promise<{
+  getAllSupplierNames: (includeICTOrders?: boolean) => Promise<{
     success: boolean;
     data?: string[];
     error?: string;
