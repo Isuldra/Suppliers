@@ -161,11 +161,11 @@ export async function importAlleArk(
     `INSERT OR REPLACE INTO purchase_order (
       nøkkel, ordreNr, itemNo, beskrivelse, dato, ftgnavn,
       status, producer_item, specification, note, inventory_balance, order_qty, received_qty, purchaser,
-      incoming_date, eta_supplier, supplier_name, warehouse, outstanding_qty, order_row_number
+      incoming_date, eta_supplier, supplier_name, warehouse, outstanding_qty, order_row_number, company_code, besttyp
     ) VALUES (
       @nøkkel, @ordreNr, @itemNo, @beskrivelse, @dato, @ftgnavn,
       @status, @producer_item, @specification, @note, @inventory_balance, @order_qty, @received_qty, @purchaser,
-      @incoming_date, @eta_supplier, @supplier_name, @warehouse, @outstanding_qty, @order_row_number
+      @incoming_date, @eta_supplier, @supplier_name, @warehouse, @outstanding_qty, @order_row_number, @company_code, @besttyp
     )`
   );
 
@@ -219,6 +219,9 @@ export async function importAlleArk(
       const row = bpSheet.getRow(r);
 
       // Use column mapping configuration (convert 0-based to 1-based for ExcelJS)
+      const companyCode = getCellStringValue(
+        row.getCell(getExcelJSIndex(columnMapping.companyCode))
+      );
       const poNumber = getCellStringValue(row.getCell(getExcelJSIndex(columnMapping.poNumber)));
       const internalSupplierNumber = getCellStringValue(
         row.getCell(getExcelJSIndex(columnMapping.internalSupplier))
@@ -270,6 +273,10 @@ export async function importAlleArk(
       const orderRowNumber = getCellStringValue(
         row.getCell(getExcelJSIndex(columnMapping.orderRowNumber))
       );
+
+      // Read besttyp from column F (NO) or E (DK)
+      const besttypValue = getCellStringValue(row.getCell(getExcelJSIndex(columnMapping.besttyp)));
+      const besttyp = parseInt(besttypValue, 10) || null; // Parse as integer, or null if not a number
 
       // Skip rows with no meaningful data
       if (!poNumber || !supplierName || poNumber.trim() === '' || supplierName.trim() === '') {
@@ -343,6 +350,8 @@ export async function importAlleArk(
         warehouse: warehouse,
         outstanding_qty: outstandingQty,
         order_row_number: orderRowNumber,
+        company_code: companyCode || null,
+        besttyp: besttyp,
       });
 
       // Log what was written to specification field for first 10 rows

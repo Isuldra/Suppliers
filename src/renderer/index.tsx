@@ -6,6 +6,7 @@ import App from './App';
 import './styles/index.css';
 import { initializeI18n } from './i18n/config';
 import { WarehouseFilterProvider } from './context/WarehouseFilterContext';
+import { ICTOrderProvider } from './context/ICTOrderContext';
 
 if (!window.electron) {
   const errorDiv = document.createElement('div');
@@ -32,7 +33,9 @@ initializeI18n().then(() => {
     ReactDOM.createRoot(root).render(
       <React.StrictMode>
         <WarehouseFilterProvider>
-          <App />
+          <ICTOrderProvider>
+            <App />
+          </ICTOrderProvider>
         </WarehouseFilterProvider>
       </React.StrictMode>
     );

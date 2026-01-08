@@ -67,7 +67,11 @@ const BulkEmailPreview: React.FC<BulkEmailPreviewProps> = ({
   const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [previewSupplier, setPreviewSupplier] = useState<string | null>(null);
   const [previewHtml, setPreviewHtml] = useState<string>('');
+  const [previewLanguage, setPreviewLanguage] = useState<'no' | 'en' | 'se' | 'da' | 'fi'>('no');
   const [customEmails, setCustomEmails] = useState<Map<string, string>>(new Map());
+  const [customLanguages, setCustomLanguages] = useState<
+    Map<string, 'no' | 'en' | 'se' | 'da' | 'fi'>
+  >(new Map());
 
   const emailService = new EmailService();
 
@@ -204,10 +208,26 @@ const BulkEmailPreview: React.FC<BulkEmailPreviewProps> = ({
     return defaultEmail;
   };
 
+  // Get language for supplier (custom or default)
+  const getLanguageForSupplier = (
+    supplier: string,
+    defaultLanguage: 'no' | 'en' | 'se' | 'da' | 'fi'
+  ): 'no' | 'en' | 'se' | 'da' | 'fi' => {
+    // Check if supplier has a custom language override
+    if (customLanguages.has(supplier)) {
+      return customLanguages.get(supplier)!;
+    }
+    // Return default language
+    return defaultLanguage;
+  };
+
   // Preview email for a supplier
   const handlePreviewEmail = async (supplier: string) => {
     const supplierData = emailPreviewData.find((s) => s.supplier === supplier);
     if (!supplierData) return;
+
+    // Use custom language if set, otherwise use default
+    const currentLanguage = getLanguageForSupplier(supplier, supplierData.language);
 
     const emailData: EmailData = {
       supplier: supplierData.supplier,
@@ -226,14 +246,52 @@ const BulkEmailPreview: React.FC<BulkEmailPreviewProps> = ({
         outstandingQty: order.outstandingQty,
         orderRowNumber: order.orderRowNumber,
       })),
-      language: supplierData.language,
-      subject: getSubjectForLanguage(supplierData.language, supplierData.supplier),
+      language: currentLanguage,
+      subject: getSubjectForLanguage(currentLanguage, supplierData.supplier),
     };
 
     const html = emailService.generatePreview(emailData);
     setPreviewHtml(html);
     setPreviewSupplier(supplier);
+    setPreviewLanguage(currentLanguage);
     setShowPreviewModal(true);
+  };
+
+  // Handle language change in preview modal
+  const handleLanguageChange = (supplier: string, language: 'no' | 'en' | 'se' | 'da' | 'fi') => {
+    // Save custom language for this supplier
+    setCustomLanguages(new Map(customLanguages.set(supplier, language)));
+
+    // Update preview language state
+    setPreviewLanguage(language);
+
+    // Update preview HTML immediately
+    const supplierData = emailPreviewData.find((s) => s.supplier === supplier);
+    if (supplierData) {
+      const emailData: EmailData = {
+        supplier: supplierData.supplier,
+        recipientEmail: getEmailForSupplier(supplierData.supplier, supplierData.email),
+        orders: supplierData.orders.map((order) => ({
+          key: order.key,
+          poNumber: order.poNumber,
+          itemNo: order.itemNo || '',
+          description: order.supplierArticleNo || order.description || '',
+          specification: order.specification || '',
+          orderQty: order.orderQty,
+          receivedQty: order.receivedQty,
+          estReceiptDate: order.dueDate
+            ? new Date(order.dueDate).toLocaleDateString('nb-NO')
+            : 'Ikke spesifisert',
+          outstandingQty: order.outstandingQty,
+          orderRowNumber: order.orderRowNumber,
+        })),
+        language: language,
+        subject: getSubjectForLanguage(language, supplierData.supplier),
+      };
+
+      const html = emailService.generatePreview(emailData);
+      setPreviewHtml(html);
+    }
   };
 
   // Send all emails using optimized batch function
@@ -277,6 +335,12 @@ const BulkEmailPreview: React.FC<BulkEmailPreviewProps> = ({
             continue;
           }
 
+          // Use custom language if set, otherwise use default
+          const currentLanguage = getLanguageForSupplier(
+            supplierData.supplier,
+            supplierData.language
+          );
+
           const emailData: EmailData = {
             supplier: supplierData.supplier,
             recipientEmail: recipientEmail,
@@ -294,8 +358,8 @@ const BulkEmailPreview: React.FC<BulkEmailPreviewProps> = ({
               outstandingQty: order.outstandingQty,
               orderRowNumber: order.orderRowNumber,
             })),
-            language: supplierData.language,
-            subject: getSubjectForLanguage(supplierData.language, supplierData.supplier),
+            language: currentLanguage,
+            subject: getSubjectForLanguage(currentLanguage, supplierData.supplier),
           };
 
           const html = emailService.generatePreview(emailData);
@@ -402,13 +466,6 @@ const BulkEmailPreview: React.FC<BulkEmailPreviewProps> = ({
     };
   }, [emailPreviewData]);
 
-  // Check for mixed languages
-  const hasMixedLanguages = useMemo(() => {
-    if (emailPreviewData.length <= 1) return false;
-    const languages = new Set(emailPreviewData.map((s) => s.language));
-    return languages.size > 1;
-  }, [emailPreviewData]);
-
   if (isLoading) {
     return (
       <div className="w-full">
@@ -441,11 +498,6 @@ const BulkEmailPreview: React.FC<BulkEmailPreviewProps> = ({
             {totals.totalSuppliers}
           </div>
         </div>
-        {hasMixedLanguages && (
-          <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-sm text-yellow-800">
-            {t('bulkEmailPreview.mixedLanguageInfo')}
-          </div>
-        )}
       </div>
 
       {/* Sending progress */}
@@ -481,22 +533,55 @@ const BulkEmailPreview: React.FC<BulkEmailPreviewProps> = ({
                 <div>
                   <h3 className="font-medium text-slate-900">{supplierData.supplier}</h3>
                   <p className="text-sm text-slate-800">
-                    {supplierData.orderCount} ordrelinjer • {supplierData.languageDisplay}
+                    {supplierData.orderCount} ordrelinjer •{' '}
+                    {(() => {
+                      const currentLanguage = getLanguageForSupplier(
+                        supplierData.supplier,
+                        supplierData.language
+                      );
+                      const languageDisplayMap: Record<string, string> = {
+                        no: 'Norsk',
+                        en: 'English',
+                        se: 'Svenska',
+                        da: 'Dansk',
+                        fi: 'Suomi',
+                      };
+                      return languageDisplayMap[currentLanguage] || supplierData.languageDisplay;
+                    })()}
                   </p>
                 </div>
 
                 <span
-                  className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                    {
-                      no: 'bg-blue-100 text-blue-800',
-                      en: 'bg-green-100 text-green-800',
-                      se: 'bg-yellow-100 text-yellow-800',
-                      da: 'bg-red-100 text-red-800',
-                      fi: 'bg-purple-100 text-purple-800',
-                    }[supplierData.language] || 'bg-blue-100 text-blue-800'
-                  }`}
+                  className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${(() => {
+                    const currentLanguage = getLanguageForSupplier(
+                      supplierData.supplier,
+                      supplierData.language
+                    );
+                    return (
+                      {
+                        no: 'bg-blue-100 text-blue-800',
+                        en: 'bg-green-100 text-green-800',
+                        se: 'bg-yellow-100 text-yellow-800',
+                        da: 'bg-red-100 text-red-800',
+                        fi: 'bg-purple-100 text-purple-800',
+                      }[currentLanguage] || 'bg-blue-100 text-blue-800'
+                    );
+                  })()}`}
                 >
-                  {supplierData.languageDisplay}
+                  {(() => {
+                    const currentLanguage = getLanguageForSupplier(
+                      supplierData.supplier,
+                      supplierData.language
+                    );
+                    const languageDisplayMap: Record<string, string> = {
+                      no: 'Norsk',
+                      en: 'English',
+                      se: 'Svenska',
+                      da: 'Dansk',
+                      fi: 'Suomi',
+                    };
+                    return languageDisplayMap[currentLanguage] || supplierData.languageDisplay;
+                  })()}
                 </span>
               </div>
 
@@ -636,12 +721,8 @@ const BulkEmailPreview: React.FC<BulkEmailPreviewProps> = ({
                   outstandingQty: order.outstandingQty,
                   orderRowNumber: order.orderRowNumber,
                 })) || [],
-            language:
-              emailPreviewData.find((s) => s.supplier === previewSupplier)?.language || 'no',
-            subject: getSubjectForLanguage(
-              emailPreviewData.find((s) => s.supplier === previewSupplier)?.language || 'no',
-              previewSupplier || ''
-            ),
+            language: previewLanguage,
+            subject: getSubjectForLanguage(previewLanguage, previewSupplier || ''),
           }}
           previewHtml={previewHtml}
           onSend={() => {
@@ -650,8 +731,10 @@ const BulkEmailPreview: React.FC<BulkEmailPreviewProps> = ({
             setShowPreviewModal(false);
           }}
           onCancel={() => setShowPreviewModal(false)}
-          onChangeLanguage={() => {
-            // Language change not supported in bulk mode preview
+          onChangeLanguage={(language) => {
+            if (previewSupplier) {
+              handleLanguageChange(previewSupplier, language);
+            }
           }}
           onChangeRecipient={() => {
             // Recipient change not supported in bulk mode preview
