@@ -280,6 +280,13 @@ export async function importAlleArk(
       const parsedBesttyp = parseInt(besttypValue, 10);
       const besttyp = isNaN(parsedBesttyp) ? null : parsedBesttyp; // Parse as integer, or null if not a number (0 is valid)
 
+      // Log warning for unexpected besttyp values (for debugging)
+      if (besttyp !== null && besttyp !== 0 && besttyp !== 70) {
+        log.warn(
+          `Unexpected besttyp value: ${besttyp} at row ${r} (PO: ${poNumber}, Supplier: ${supplierName})`
+        );
+      }
+
       // Skip rows with no meaningful data
       if (!poNumber || !supplierName || poNumber.trim() === '' || supplierName.trim() === '') {
         continue;
