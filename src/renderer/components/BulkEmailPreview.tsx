@@ -6,6 +6,7 @@ import { ExcelRow } from '../types/ExcelData';
 import supplierData from '../data/supplierData.json';
 import EmailPreviewModal from './EmailPreviewModal';
 import { SlackService } from '../services/slackService';
+import { useICTOrder } from '../context/ICTOrderContext';
 
 interface BulkEmailPreviewProps {
   selectedSuppliers: string[];
@@ -59,6 +60,7 @@ const BulkEmailPreview: React.FC<BulkEmailPreviewProps> = ({
   onComplete,
 }) => {
   const { t } = useTranslation();
+  const { includeICTOrders } = useICTOrder();
   const [emailPreviewData, setEmailPreviewData] = useState<EmailPreviewData[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSending, setIsSending] = useState(false);
@@ -123,7 +125,7 @@ const BulkEmailPreview: React.FC<BulkEmailPreviewProps> = ({
       console.log('🔵 selectedOrders:', selectedOrders);
       setIsLoading(true);
       try {
-        const allOrders = await window.electron.getAllOrders();
+        const allOrders = await window.electron.getAllOrders(includeICTOrders);
         console.log('🔍 DEBUG: First order from getAllOrders:', allOrders[0]);
         console.log('🔍 DEBUG: Does first order have specification?', allOrders[0]?.specification);
         const emailData: EmailPreviewData[] = [];
@@ -187,7 +189,7 @@ const BulkEmailPreview: React.FC<BulkEmailPreviewProps> = ({
     if (selectedSuppliers.length > 0) {
       prepareEmailData();
     }
-  }, [selectedSuppliers, selectedOrders.size, bulkSupplierEmails]);
+  }, [selectedSuppliers, selectedOrders.size, bulkSupplierEmails, includeICTOrders]);
 
   // Handle email editing
   const handleEmailChange = (supplier: string, email: string) => {

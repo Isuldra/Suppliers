@@ -275,8 +275,10 @@ export async function importAlleArk(
       );
 
       // Read besttyp from column F (NO) or E (DK)
+      // 0 = normal orders, 70 = ICT Sweden orders
       const besttypValue = getCellStringValue(row.getCell(getExcelJSIndex(columnMapping.besttyp)));
-      const besttyp = parseInt(besttypValue, 10) || null; // Parse as integer, or null if not a number
+      const parsedBesttyp = parseInt(besttypValue, 10);
+      const besttyp = isNaN(parsedBesttyp) ? null : parsedBesttyp; // Parse as integer, or null if not a number (0 is valid)
 
       // Skip rows with no meaningful data
       if (!poNumber || !supplierName || poNumber.trim() === '' || supplierName.trim() === '') {
