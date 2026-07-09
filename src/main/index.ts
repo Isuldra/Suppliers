@@ -1,4 +1,13 @@
-import { app, BrowserWindow, ipcMain, shell, dialog, Menu, IpcMainInvokeEvent } from 'electron';
+import {
+  app,
+  BrowserWindow,
+  ipcMain,
+  shell,
+  dialog,
+  Menu,
+  session,
+  IpcMainInvokeEvent,
+} from 'electron';
 import path from 'path';
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const log = require('electron-log/main'); // Required for CJS interop in Electron main process
@@ -12,6 +21,100 @@ import { importAlleArk } from './importer'; // Import the Excel importer
 import child_process, { spawn } from 'child_process'; // Added for send-logs-to-support
 import { autoUpdater } from 'electron-updater'; // Added for update:install
 import type { ExcelData } from '../renderer/types/ExcelData';
+
+// Content-Security-Policy applied to every response in the default session.
+const CSP_POLICY = [
+  "default-src 'self'",
+  "script-src 'self'",
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data: blob:",
+  "font-src 'self'",
+  "connect-src 'self'",
+  "worker-src 'self' blob:",
+  "object-src 'none'",
+  "base-uri 'none'",
+  "frame-ancestors 'none'",
+].join('; ');
+
+/**
+ * Only these protocols may be handed to the OS via shell.openExternal.
+ * Anything else (file:, smb:, ms-msdt:, javascript:, ...) is refused.
+ */
+const ALLOWED_EXTERNAL_PROTOCOLS = new Set(['https:', 'mailto:']);
+
+function isAllowedExternalUrl(url: string): boolean {
+  try {
+    return ALLOWED_EXTERNAL_PROTOCOLS.has(new URL(url).protocol);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Install the response headers and navigation guards that keep a compromised
+ * renderer from reaching the OS. Must run after app.whenReady().
+ */
+function applySecurityPolicy(): void {
+  session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+    callback({
+      responseHeaders: {
+        ...details.responseHeaders,
+        'Content-Security-Policy': [CSP_POLICY],
+        'X-Content-Type-Options': ['nosniff'],
+        'X-Frame-Options': ['SAMEORIGIN'],
+      },
+    });
+  });
+}
+
+/**
+ * Deny in-app navigation away from the app origin and refuse to let the
+ * renderer spawn windows; vetted links go out through the OS browser instead.
+ */
+function applyWindowSecurity(window: BrowserWindow): void {
+  window.webContents.setWindowOpenHandler(({ url }) => {
+    if (isAllowedExternalUrl(url)) {
+      void shell.openExternal(url);
+    } else {
+      log.warn(`Blocked window.open for disallowed URL: ${url}`);
+    }
+    return { action: 'deny' };
+  });
+
+  window.webContents.on('will-navigate', (event, url) => {
+    const currentUrl = window.webContents.getURL();
+    if (currentUrl && new URL(url).origin === new URL(currentUrl).origin) {
+      return; // in-app navigation (dev server HMR, hash routes)
+    }
+    event.preventDefault();
+    if (isAllowedExternalUrl(url)) {
+      void shell.openExternal(url);
+    } else {
+      log.warn(`Blocked navigation to disallowed URL: ${url}`);
+    }
+  });
+}
+
+/**
+ * Escape a value for embedding in a PowerShell *single-quoted* string literal.
+ * Single-quoted PS strings do not perform variable or $(...) subexpression
+ * expansion, so this is the only safe way to inline untrusted data. Callers
+ * must wrap the result in single quotes themselves.
+ */
+function psLiteral(value: string): string {
+  return value.replace(/'/g, "''");
+}
+
+/**
+ * Recipient addresses reach us from imported Excel workbooks and from the
+ * renderer, so they are untrusted. Anything that is not a plain address is
+ * rejected rather than escaped.
+ */
+const EMAIL_PATTERN = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
+
+function isValidEmailAddress(value: string): boolean {
+  return EMAIL_PATTERN.test(value.trim());
+}
 
 // Helper function to get sender email based on country
 function getSenderEmailForCountry(country?: string): string {
@@ -161,6 +264,8 @@ function createWindow(): BrowserWindow {
     },
   });
 
+  applyWindowSecurity(mainWindow);
+
   // Open DevTools in renderer
   if (process.env.NODE_ENV === 'development') {
     mainWindow.webContents.openDevTools({ mode: 'right' });
@@ -194,6 +299,7 @@ function loadWindowURL(window: BrowserWindow): void {
 // Initialize database when the app is ready
 app.whenReady().then(async () => {
   log.info('App is ready. Initializing database and application...');
+  applySecurityPolicy();
   try {
     // 1. Initialize or Load Database (this now also connects/initializes DatabaseService)
     // The function createOrLoadDatabase will now ensure the databaseService is connected and initialized.
@@ -608,12 +714,13 @@ ipcMain.handle(
         : databaseService.getSupplierEmail(payload.to) || payload.to;
       log.info(`Resolved email address: ${emailTo}`);
 
-      // Ensure we have a valid email address
-      if (!emailTo.includes('@')) {
+      // Ensure we have a valid email address. Rejecting anything that is not a
+      // bare address also keeps CR/LF out of the .eml MIME headers below.
+      if (!isValidEmailAddress(emailTo)) {
         log.warn(`No valid email address found for supplier: ${payload.to}`);
         return {
           success: false,
-          error: `Ingen e-postadresse funnet for ${payload.to}. Sjekk leverandør e-post innstillinger.`,
+          error: `Ingen gyldig e-postadresse funnet for ${payload.to}. Sjekk leverandør e-post innstillinger.`,
         };
       }
 
@@ -706,7 +813,7 @@ ipcMain.handle(
           : databaseService.getSupplierEmail(email.to) || email.to;
 
         // Ensure we have a valid email address
-        if (!emailTo.includes('@')) {
+        if (!isValidEmailAddress(emailTo)) {
           log.warn(`No valid email address found for supplier: ${email.to}`);
           continue; // Skip this email
         }
@@ -730,7 +837,7 @@ ipcMain.handle(
           to: email.to,
           htmlFile,
           subjectFile,
-          resolvedEmail: emailTo,
+          resolvedEmail: emailTo.trim(),
           senderEmail,
         });
       }
@@ -752,11 +859,11 @@ $emails = @(
 ${emailData
   .map(
     (email) => `  @{
-    to = "${email.resolvedEmail}"
-    htmlFile = "${email.htmlFile.replace(/\\/g, '\\\\')}"
-    subjectFile = "${email.subjectFile.replace(/\\/g, '\\\\')}"
-    supplier = "${email.to}"
-    senderEmail = "${email.senderEmail}"
+    to = '${psLiteral(email.resolvedEmail)}'
+    htmlFile = '${psLiteral(email.htmlFile)}'
+    subjectFile = '${psLiteral(email.subjectFile)}'
+    supplier = '${psLiteral(email.to)}'
+    senderEmail = '${psLiteral(email.senderEmail)}'
   }`
   )
   .join(',\n')}
@@ -790,18 +897,18 @@ try {
       
       # Create and send email
       $mail = $outlook.CreateItem(0)
-      $mail.To = $email.resolvedEmail
+      $mail.To = $email.to
       $mail.Subject = $subjectContent
       $mail.HTMLBody = $htmlContent
       $mail.SentOnBehalfOfName = $email.senderEmail
       
       $mail.Send()
       $successCount++
-      Write-Output "SUCCESS: Email sent to $($email.resolvedEmail)"
+      Write-Output "SUCCESS: Email sent to $($email.to)"
       
       $results += @{
         supplier = $email.supplier
-        email = $email.resolvedEmail
+        email = $email.to
         success = $true
         error = $null
       }
@@ -809,11 +916,11 @@ try {
     } catch {
       $failCount++
       $errorMsg = $_.Exception.Message
-      Write-Output "ERROR: Failed to send to $($email.resolvedEmail): $errorMsg"
+      Write-Output "ERROR: Failed to send to $($email.to): $errorMsg"
       
       $results += @{
         supplier = $email.supplier
-        email = $email.resolvedEmail
+        email = $email.to
         success = $false
         error = $errorMsg
       }
@@ -839,8 +946,9 @@ try {
     }
   }
   
-  # Output results as JSON
-  $resultsJson = $results | ConvertTo-Json -Depth 3
+  # Output results as JSON. @(...) forces an array so a single result still
+  # serializes as a JSON array rather than a bare object.
+  $resultsJson = ConvertTo-Json -InputObject @($results) -Depth 3
   Write-Output "RESULTS_JSON: $resultsJson"
 }
 `;
@@ -952,274 +1060,6 @@ try {
   }
 );
 
-// REMOVED: PowerShell function for macOS - using simple .eml approach instead
-/*
-async function handleEmailViaPowerShellMac(
-  payload: { to: string; subject: string; html: string },
-  emailTo: string
-): Promise<{ success: boolean; error?: string }> {
-  try {
-    log.info(`Attempting PowerShell email send on macOS to: ${emailTo}`);
-    log.info(`Subject: ${payload.subject}`);
-
-    // Ensure we have a valid email address
-    if (!emailTo.includes("@")) {
-      log.warn(`No valid email address found for supplier: ${payload.to}`);
-      return {
-        success: false,
-        error: `Ingen e-postadresse funnet for ${payload.to}. Sjekk leverandør e-post innstillinger.`,
-      };
-    }
-
-    // Create a temporary HTML file for PowerShell to use
-    const tempDir = app.getPath("temp");
-    const htmlFileName = `onemed-reminder-${Date.now()}.html`;
-    const htmlFilePath = path.join(tempDir, htmlFileName);
-
-    // Clean up the HTML content
-    const cleanHtml = payload.html
-      .replace(/<style>.*?<\/style>/gs, "")
-      .replace(/<head>.*?<\/head>/gs, "")
-      .replace(/<script>.*?<\/script>/gs, "")
-      .trim();
-
-    fs.writeFileSync(htmlFilePath, cleanHtml, "utf8");
-    log.info(`Created HTML file for PowerShell: ${htmlFilePath}`);
-
-    // PowerShell script that uses Exchange Online PowerShell
-    const powershellScript = `
-      try {
-        Write-Output "Starting PowerShell email send on macOS using Exchange Online..."
-        
-        # Create HTML content from file
-        $htmlContent = Get-Content -Path '${htmlFilePath.replace(
-          /'/g,
-          "''"
-        )}' -Raw
-        
-        # Send email using Exchange Online PowerShell
-        Write-Output "Sending email via Exchange Online PowerShell..."
-        
-        # Try to establish Exchange Online session if not already connected
-        try {
-          # Check if we're already connected to Exchange Online
-          $existingSession = Get-PSSession | Where-Object { $_.ConfigurationName -eq "Microsoft.Exchange" -and $_.State -eq "Opened" }
-          
-          if ($existingSession) {
-            Write-Output "Found existing Exchange Online session, using it..."
-            $session = $existingSession
-          } else {
-            # Check if we can use existing Azure AD authentication
-            try {
-              Write-Output "Checking for existing Azure AD authentication..."
-              $context = Get-AzContext -ErrorAction SilentlyContinue
-              if ($context) {
-                Write-Output "Found existing Azure AD context, attempting to use it for Exchange Online..."
-                # Try to connect using existing Azure AD context
-                Connect-ExchangeOnline -UserPrincipalName "supply.planning.no@onemed.com" -ShowProgress:$false -ShowBanner:$false
-                Write-Output "Connected to Exchange Online using existing Azure AD authentication"
-                $session = Get-PSSession | Where-Object { $_.ConfigurationName -eq "Microsoft.Exchange" -and $_.State -eq "Opened" }
-              } else {
-                throw "No existing Azure AD context found"
-              }
-            } catch {
-              Write-Output "No existing Azure AD context available, proceeding with standard authentication..."
-            }
-            
-            Write-Output "No existing Exchange Online session found, attempting to connect..."
-            
-            # Try to connect to Exchange Online using modern authentication
-            try {
-              # Import Exchange Online module if available
-              if (Get-Module -ListAvailable -Name "ExchangeOnlineManagement") {
-                Import-Module ExchangeOnlineManagement -Force
-                Write-Output "ExchangeOnlineManagement module imported"
-                
-                # Connect to Exchange Online with proper parameters
-                # Try device code authentication first (works with SSO/MFA)
-                try {
-                  Connect-ExchangeOnline -UserPrincipalName "supply.planning.no@onemed.com" -ShowProgress:$false -ShowBanner:$false -Device
-                  Write-Output "Connected to Exchange Online successfully using device code authentication"
-                } catch {
-                  Write-Output "Device code authentication failed, trying interactive authentication..."
-                  # Fallback to interactive authentication (may not work in non-interactive environment)
-                  try {
-                    Connect-ExchangeOnline -UserPrincipalName "supply.planning.no@onemed.com" -ShowProgress:$false -ShowBanner:$false
-                    Write-Output "Connected to Exchange Online successfully using interactive authentication"
-                  } catch {
-                    Write-Output "Interactive authentication also failed: $($_.Exception.Message)"
-                    throw "All Exchange Online authentication methods failed"
-                  }
-                }
-                
-                # Get the session we just created
-                $session = Get-PSSession | Where-Object { $_.ConfigurationName -eq "Microsoft.Exchange" -and $_.State -eq "Opened" }
-                if (-not $session) {
-                  throw "Exchange Online session was not established properly"
-                }
-                Write-Output "Exchange Online session verified and ready"
-              } else {
-                Write-Output "ExchangeOnlineManagement module not available, trying alternative method..."
-                throw "ExchangeOnlineManagement module not found"
-              }
-            } catch {
-              Write-Output "Failed to connect to Exchange Online: $($_.Exception.Message)"
-              Write-Output "Falling back to SMTP method..."
-              
-              # Fallback to SMTP with non-interactive credentials using .NET SMTP client
-              # Load credentials from environment variables for security
-              $smtpUser = "supply.planning.no@onemed.com"
-              $smtpPass = $env:ONEMED_EMAIL_PASSWORD
-              
-              # Check if environment variable is set
-              if (-not $smtpPass) {
-                Write-Output "ONEMED_EMAIL_PASSWORD environment variable is not set. Trying alternative authentication methods..."
-                
-                # Try to use default credentials (Windows authentication)
-                try {
-                  Write-Output "Attempting to use default credentials for SMTP..."
-                  $smtpClient = New-Object System.Net.Mail.SmtpClient("smtp.office365.com", 587)
-                  $smtpClient.EnableSsl = $true
-                  $smtpClient.UseDefaultCredentials = $true
-                  Write-Output "Using default credentials for SMTP authentication"
-                } catch {
-                  Write-Output "Default credentials failed: $($_.Exception.Message)"
-                  throw "No valid SMTP authentication method available. Please set ONEMED_EMAIL_PASSWORD environment variable with your Office 365 email password or app password."
-                }
-              } else {
-                # Convert the password to a SecureString
-                $securePassword = ConvertTo-SecureString $smtpPass -AsPlainText -Force
-                
-                # Create the non-interactive credential object
-                $credential = New-Object System.Management.Automation.PSCredential($smtpUser, $securePassword)
-                
-                $smtpClient = New-Object System.Net.Mail.SmtpClient("smtp.office365.com", 587)
-                $smtpClient.EnableSsl = $true
-                $smtpClient.Credentials = $credential
-                Write-Output "Using provided credentials for SMTP authentication"
-              }
-              
-              # Create and send email message
-              $mailMessage = New-Object System.Net.Mail.MailMessage
-              $mailMessage.From = "supply.planning.no@onemed.com"
-              $mailMessage.To.Add("${emailTo}")
-              $mailMessage.Subject = "${payload.subject.replace(/"/g, '\\"')}"
-              $mailMessage.Body = $htmlContent
-              $mailMessage.IsBodyHtml = $true
-              
-              $smtpClient.Send($mailMessage)
-              Write-Output "SUCCESS: Email sent via .NET SMTP fallback to ${emailTo}"
-              exit 0
-            }
-          }
-        } catch {
-          Write-Output "Exchange Online connection failed: $($_.Exception.Message)"
-          Write-Output "Falling back to SMTP method..."
-          
-          # Final SMTP fallback
-          try {
-            $smtpUser = "supply.planning.no@onemed.com"
-            $smtpPass = $env:ONEMED_EMAIL_PASSWORD
-            
-            if (-not $smtpPass) {
-              throw "ONEMED_EMAIL_PASSWORD environment variable is not set. Please set this variable with your Office 365 email password or app password."
-            }
-            
-            $securePassword = ConvertTo-SecureString $smtpPass -AsPlainText -Force
-            $credential = New-Object System.Management.Automation.PSCredential($smtpUser, $securePassword)
-            
-            $smtpClient = New-Object System.Net.Mail.SmtpClient("smtp.office365.com", 587)
-            $smtpClient.EnableSsl = $true
-            $smtpClient.Credentials = $credential
-            
-            $mailMessage = New-Object System.Net.Mail.MailMessage
-            $mailMessage.From = "supply.planning.no@onemed.com"
-            $mailMessage.To.Add("${emailTo}")
-            $mailMessage.Subject = "${payload.subject.replace(/"/g, '\\"')}"
-            $mailMessage.Body = $htmlContent
-            $mailMessage.IsBodyHtml = $true
-            
-            $smtpClient.Send($mailMessage)
-            Write-Output "SUCCESS: Email sent via .NET SMTP with environment credentials to ${emailTo}"
-          } catch {
-            Write-Output "All email methods failed: $($_.Exception.Message)"
-            throw
-          }
-        }
-        
-      } catch {
-        Write-Output "ERROR: $($_.Exception.Message)"
-        Write-Output "ERROR_DETAILS: $($_.Exception.ToString())"
-        exit 1
-      } finally {
-        # Clean up HTML file
-        if (Test-Path '${htmlFilePath.replace(/'/g, "''")}') {
-          try { Remove-Item -Path '${htmlFilePath.replace(/'/g, "''")}' -Force }
-          catch { Write-Output "WARN: Failed to cleanup HTML file." }
-        }
-      }
-    `;
-
-    // Execute PowerShell script
-    const { spawn } = await import("child_process");
-
-    return new Promise((resolve) => {
-      const psProcess = spawn("pwsh", ["-Command", powershellScript], {
-        stdio: ["pipe", "pipe", "pipe"],
-      });
-
-      let stdout = "";
-      let stderr = "";
-
-      psProcess.stdout?.on("data", (data) => {
-        const output = data.toString();
-        stdout += output;
-        log.info(`PowerShell stdout: ${output.trim()}`);
-      });
-
-      psProcess.stderr?.on("data", (data) => {
-        const output = data.toString();
-        stderr += output;
-        log.warn(`PowerShell stderr: ${output.trim()}`);
-      });
-
-      psProcess.on("close", (code) => {
-        log.info(`PowerShell process exited with code: ${code}`);
-
-        if (code === 0) {
-          log.info("PowerShell email send completed successfully");
-          resolve({
-            success: true,
-            error: undefined,
-          });
-        } else {
-          log.error(`PowerShell email send failed with code ${code}`);
-          resolve({
-            success: false,
-            error: `PowerShell e-post sending feilet: ${stderr || stdout}`,
-          });
-        }
-      });
-
-      psProcess.on("error", (error) => {
-        log.error("Failed to start PowerShell process:", error);
-        resolve({
-          success: false,
-          error: `Kunne ikke starte PowerShell: ${error.message}`,
-        });
-      });
-    });
-  } catch (error) {
-    const errorMessage =
-      error instanceof Error ? error.message : "Unknown error occurred";
-    log.error("Error in PowerShell email sending on macOS:", errorMessage);
-    return {
-      success: false,
-      error: `Feil ved PowerShell e-post sending: ${errorMessage}`,
-    };
-  }
-}
-*/
 
 // Handle automatic email sending via Outlook COM API (LEGACY - kept for single emails)
 ipcMain.handle(
@@ -1245,17 +1085,15 @@ ipcMain.handle(
         log.info(`Resolved email address for supplier ${payload.to}: ${emailTo}`);
       }
 
-      // For all platforms, use the simple .eml file approach
-      log.info('Using .eml file approach for email sending');
-
-      // Ensure we have a valid email address
-      if (!emailTo.includes('@')) {
+      // Ensure we have a valid email address before it reaches the PowerShell script
+      if (!isValidEmailAddress(emailTo)) {
         log.warn(`No valid email address found for supplier: ${payload.to}`);
         return {
           success: false,
-          error: `Ingen e-postadresse funnet for ${payload.to}. Sjekk leverandør e-post innstillinger.`,
+          error: `Ingen gyldig e-postadresse funnet for ${payload.to}. Sjekk leverandør e-post innstillinger.`,
         };
       }
+      emailTo = emailTo.trim();
 
       // 🚀 NEW APPROACH: Write HTML to temporary file to avoid string embedding issues
       // 1. Create a temporary file for the HTML content (use raw, unescaped payload.html)
@@ -1280,6 +1118,8 @@ ipcMain.handle(
 
       const escapedTempHtmlFilePath = tempHtmlFilePath.replace(/'/g, "''"); // Escape single quotes for PS literal string
 
+      const senderEmail = getSenderEmailForCountry(payload.country);
+
       // PowerShell script will now READ HTML and SUBJECT from temp files.
       // This avoids all encoding issues with Norwegian characters.
       const powershellScript = `
@@ -1289,6 +1129,8 @@ $OutputEncoding = [System.Text.Encoding]::UTF8
 
 $tempHtmlPath = '${escapedTempHtmlFilePath}' # Use single quotes for literal path
 $tempSubjectPath = '${escapedTempSubjectFilePath}' # Subject file path
+$recipient = '${psLiteral(emailTo)}'
+$sender = '${psLiteral(senderEmail)}'
 $htmlFileReadError = $null
 $subjectFileReadError = $null
 
@@ -1320,8 +1162,8 @@ try {
   $mail = $outlook.CreateItem(0)
   Write-Output "DEBUG: Mail item created"
 
-  $mail.To = "${emailTo}"
-  Write-Output "DEBUG: Recipient set to ${emailTo}"
+  $mail.To = $recipient
+  Write-Output "DEBUG: Recipient set to $recipient"
 
   $mail.Subject = $subjectContent
   Write-Output "DEBUG: Subject set from file"
@@ -1329,12 +1171,12 @@ try {
   $mail.HTMLBody = $htmlContent # Assign the content read from file
   Write-Output "DEBUG: HTML body set successfully from file content."
 
-  $mail.SentOnBehalfOfName = "${getSenderEmailForCountry(payload.country)}"
-  Write-Output "DEBUG: Sender information set to ${getSenderEmailForCountry(payload.country)}"
+  $mail.SentOnBehalfOfName = $sender
+  Write-Output "DEBUG: Sender information set to $sender"
 
   $mail.Send()
   Write-Output "DEBUG: Send command executed"
-  Write-Output "SUCCESS: Email sent successfully to ${emailTo}"
+  Write-Output "SUCCESS: Email sent successfully to $recipient"
 } catch {
   Write-Output "ERROR: $($_.Exception.Message)"
   if ($htmlFileReadError) {
@@ -1511,6 +1353,10 @@ ipcMain.handle('update:install', async () => {
 ipcMain.handle('openExternalLink', async (_, url: string) => {
   try {
     log.info(`Attempting to open external link: ${url}`);
+    if (!isAllowedExternalUrl(url)) {
+      log.warn(`Refused to open external link with disallowed protocol: ${url}`);
+      return { success: false, error: 'Ugyldig eller ikke-tillatt lenke.' };
+    }
     await shell.openExternal(url);
     return { success: true };
   } catch (error) {
@@ -1801,8 +1647,13 @@ ipcMain.handle(
         fs.mkdirSync(debugDir, { recursive: true });
       }
 
-      // Create full file path
-      const filePath = path.join(debugDir, payload.filename);
+      // Strip any directory component so a crafted filename cannot escape debugDir
+      const safeName = path.basename(payload.filename);
+      const filePath = path.join(debugDir, safeName);
+      if (path.dirname(filePath) !== debugDir) {
+        log.warn(`Refused debug HTML write outside debug dir: ${payload.filename}`);
+        return { success: false, error: 'Ugyldig filnavn.' };
+      }
 
       // Write HTML content to file
       await fs.promises.writeFile(filePath, payload.content, 'utf8');
@@ -1861,11 +1712,13 @@ ipcMain.handle(
       log.info('Using .eml file approach for email sending');
       log.info(`Resolved email address: ${emailTo}`);
 
-      if (!emailTo.includes('@')) {
+      // Ensure we have a valid email address. Rejecting anything that is not a
+      // bare address also keeps CR/LF out of the .eml MIME headers below.
+      if (!isValidEmailAddress(emailTo)) {
         log.warn(`No valid email address found for supplier: ${payload.to}`);
         return {
           success: false,
-          error: `Ingen e-postadresse funnet for ${payload.to}. Sjekk leverandør e-post innstillinger.`,
+          error: `Ingen gyldig e-postadresse funnet for ${payload.to}. Sjekk leverandør e-post innstillinger.`,
         };
       }
 
