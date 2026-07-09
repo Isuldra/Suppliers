@@ -136,7 +136,6 @@ Suppliers/
 │   │   └── App.tsx       # Main React app
 │   ├── services/         # Shared services (main + renderer)
 │   │   ├── databaseService.ts
-│   │   ├── supabaseClient.ts
 │   │   └── emailTemplates/ # Handlebars templates
 │   ├── types/            # TypeScript type definitions
 │   └── utils/            # Utility functions

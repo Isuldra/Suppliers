@@ -156,73 +156,13 @@ export function setupDatabaseHandlers() {
     }
   );
 
-  // Product Catalog handlers
-  ipcMain.handle('product-catalog:sync', async () => {
-    try {
-      const { productCatalogService } = await import('../services/productCatalogService');
-      const result = await productCatalogService.syncFromCloud();
-      return result;
-    } catch (error) {
-      log.error('Error in product-catalog:sync handler:', error);
-      return {
-        success: false,
-        count: 0,
-        error: error instanceof Error ? error.message : 'Unknown error',
-      };
-    }
-  });
-
-  ipcMain.handle('product-catalog:upload', async (_event, buffer: ArrayBuffer) => {
-    try {
-      const { parseProductCatalogForUpload } = await import('./productCatalogImporter');
-      const { productCatalogService } = await import('../services/productCatalogService');
-
-      // Parse Excel file
-      const parseResult = await parseProductCatalogForUpload(buffer);
-      if (!parseResult.success || !parseResult.products) {
-        return {
-          success: false,
-          count: 0,
-          error: parseResult.error || 'Failed to parse Excel file',
-        };
-      }
-
-      // Upload to Supabase
-      const uploadResult = await productCatalogService.uploadToCloud(parseResult.products);
-      return uploadResult;
-    } catch (error) {
-      log.error('Error in product-catalog:upload handler:', error);
-      return {
-        success: false,
-        count: 0,
-        error: error instanceof Error ? error.message : 'Unknown error',
-      };
-    }
-  });
-
-  ipcMain.handle('product-catalog:get-stats', async () => {
-    try {
-      const { productCatalogService } = await import('../services/productCatalogService');
-      const stats = productCatalogService.getCacheStats();
-      return { success: true, data: stats };
-    } catch (error) {
-      log.error('Error in product-catalog:get-stats handler:', error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
-      };
-    }
-  });
-
   ipcMain.handle('get-top-items', async (_event, limit: number = 30) => {
     try {
       const items = databaseService.getTopItemsByOutstanding(limit);
 
-      // Enrich with product names from catalog
-      const { productCatalogService } = await import('../services/productCatalogService');
       const enrichedItems = items.map((item) => ({
         ...item,
-        productName: productCatalogService.getProductName(item.itemNo) || item.description,
+        productName: item.description,
       }));
 
       return { success: true, data: enrichedItems };

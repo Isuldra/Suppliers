@@ -53,14 +53,12 @@ src/
 ├── renderer/                   # React-frontend (Vite root)
 │   ├── App.tsx
 │   ├── components/             # UI-komponenter, inkl. components/dashboard/
-│   ├── services/                # emailService.ts, languageDetectionService.ts, slackService.ts
+│   ├── services/                # emailService.ts, languageDetectionService.ts
 │   ├── locales/                  # no.json, en.json, se.json, da.json, fi.json (i18next)
 │   ├── i18n/                    # i18next-oppsett
 │   ├── context/, data/, styles/, types/, assets/
 ├── services/                    # Delt mellom main og renderer
 │   ├── databaseService.ts        # Singleton SQLite-tjeneste (better-sqlite3)
-│   ├── supabaseClient.ts         # Supabase-klient (kun anon-nøkkel, kun produktkatalog)
-│   ├── productCatalogService.ts
 │   └── emailTemplates/           # Handlebars-maler
 ├── config/
 ├── generated/                    # Genererte filer (f.eks. kompilert e-postmal)
@@ -117,9 +115,6 @@ Eksempler på registrerte kanaler: `sendEmail`, `sendEmailAutomatically`, `sendE
 - **SQLite** via `better-sqlite3`, singleton `DatabaseService` — se
   [Database](features/database.md) for fullt skjema (seks tabeller: `orders`, `audit_log`,
   `weekly_status`, `purchase_order`, `supplier_emails`, `supplier_planning`).
-- **Supabase** (`src/services/supabaseClient.ts`) brukes utelukkende til å synkronisere en
-  produktkatalog fra skyen, med en anon-nøkkel. Ordre- og leverandørdata forlater aldri
-  brukerens maskin via Supabase.
 
 ## Sikkerhet
 
@@ -137,7 +132,6 @@ Eksempler på registrerte kanaler: `sendEmail`, `sendEmailAutomatically`, `sendE
 - **Tailwind CSS**
 - **better-sqlite3** (SQLite)
 - **i18next** / **react-i18next** (5 språk: no, en, se, da, fi)
-- **Supabase JS SDK** (produktkatalog-sync)
 - **electron-updater** (auto-oppdateringer via manuelt publiserte GitHub Releases)
 - **Vitest** for testing — prosjektet bruker **ikke** Jest eller Playwright
 

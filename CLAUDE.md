@@ -62,8 +62,6 @@ Data imported from a user's Excel file (supplier names, item descriptions, comme
 - **SQLite** via `better-sqlite3` (`src/services/databaseService.ts`), six tables: `orders`,
   `audit_log`, `weekly_status`, `purchase_order`, `supplier_emails`, `supplier_planning`. See
   `docs/features/database.md`.
-- **Supabase** (`src/services/supabaseClient.ts`) is used only to sync a read-only product
-  catalog, with an anon key — not for order/supplier data.
 - 5 locales: `src/renderer/locales/{no,en,se,da,fi}.json` (i18next). Any user-facing copy change
   should consider all five.
 
