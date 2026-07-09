@@ -9,6 +9,7 @@ import fs from 'fs';
 import { app } from 'electron';
 import { ExcelRow } from '../types/ExcelRow';
 import type { DashboardStats, SupplierStat, WeekStat } from '../renderer/types/Dashboard';
+import { getISOWeek, getISOWeekYear, getISOWeekMonday } from '../utils/dateUtils';
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const log = require('electron-log/main');
 
@@ -1474,6 +1475,10 @@ export class DatabaseService {
     try {
       log.info('Fetching fresh dashboard stats from database');
 
+      // Exclude company code 87 orders, consistent with the order list queries,
+      // so dashboard totals can be reconciled against the lists.
+      const excludeCC87 = this.getCompanyCode87ExclusionCondition();
+
       // Total outstanding lines (WHERE outstanding_qty > 0)
       const totalOutstandingLines = this.db
         .prepare(
@@ -1481,6 +1486,7 @@ export class DatabaseService {
         SELECT COUNT(*) as count
         FROM purchase_order
         WHERE outstanding_qty > 0
+          AND ${excludeCC87}
       `
         )
         .get() as { count: number };
@@ -1492,6 +1498,7 @@ export class DatabaseService {
         SELECT COUNT(DISTINCT COALESCE(supplier_name, ftgnavn)) as count
         FROM purchase_order
         WHERE outstanding_qty > 0
+          AND ${excludeCC87}
           AND COALESCE(supplier_name, ftgnavn) IS NOT NULL
           AND COALESCE(supplier_name, ftgnavn) != ''
       `
@@ -1505,6 +1512,7 @@ export class DatabaseService {
         SELECT COUNT(*) as count
         FROM purchase_order
         WHERE outstanding_qty > 0
+          AND ${excludeCC87}
           AND eta_supplier IS NOT NULL
           AND eta_supplier != ''
           AND date(eta_supplier) < date('now')
@@ -1519,6 +1527,7 @@ export class DatabaseService {
         SELECT MIN(eta_supplier) as next_date
         FROM purchase_order
         WHERE outstanding_qty > 0
+          AND ${excludeCC87}
           AND eta_supplier IS NOT NULL
           AND eta_supplier != ''
           AND date(eta_supplier) >= date('now')
@@ -1533,6 +1542,7 @@ export class DatabaseService {
         SELECT AVG(julianday('now') - julianday(eta_supplier)) as avgDelay
         FROM purchase_order
         WHERE outstanding_qty > 0
+          AND ${excludeCC87}
           AND eta_supplier IS NOT NULL
           AND eta_supplier != ''
           AND date(eta_supplier) < date('now')
@@ -1547,6 +1557,7 @@ export class DatabaseService {
         SELECT COUNT(*) as count
         FROM purchase_order
         WHERE outstanding_qty > 0
+          AND ${excludeCC87}
           AND eta_supplier IS NOT NULL
           AND eta_supplier != ''
           AND date(eta_supplier) < date('now')
@@ -1559,11 +1570,12 @@ export class DatabaseService {
       const onTimeStats = this.db
         .prepare(
           `
-        SELECT 
+        SELECT
           COUNT(*) as total,
           SUM(CASE WHEN date(eta_supplier) < date('now') THEN 1 ELSE 0 END) as overdue
         FROM purchase_order
         WHERE outstanding_qty > 0
+          AND ${excludeCC87}
           AND eta_supplier IS NOT NULL
           AND eta_supplier != ''
       `
@@ -1582,6 +1594,7 @@ export class DatabaseService {
         SELECT MIN(date(eta_supplier)) as oldest_date
         FROM purchase_order
         WHERE outstanding_qty > 0
+          AND ${excludeCC87}
           AND eta_supplier IS NOT NULL
           AND eta_supplier != ''
       `
@@ -1644,6 +1657,7 @@ export class DatabaseService {
           END as onTimeRate
         FROM purchase_order
         WHERE outstanding_qty > 0
+          AND ${this.getCompanyCode87ExclusionCondition()}
           AND supplier_name IS NOT NULL
           AND supplier_name != ''
           AND eta_supplier IS NOT NULL
@@ -1705,6 +1719,7 @@ export class DatabaseService {
           END as onTimeRate
         FROM purchase_order
         WHERE outstanding_qty > 0
+          AND ${this.getCompanyCode87ExclusionCondition()}
           AND supplier_name = ?
           AND supplier_name IS NOT NULL
           AND supplier_name != ''
@@ -1771,6 +1786,7 @@ export class DatabaseService {
           COUNT(DISTINCT supplier_name) as supplierCount
         FROM purchase_order
         WHERE outstanding_qty > 0
+          AND ${this.getCompanyCode87ExclusionCondition()}
           AND itemNo IS NOT NULL
           AND itemNo != ''
         GROUP BY itemNo
@@ -1799,20 +1815,33 @@ export class DatabaseService {
     }
 
     try {
+      // Group by ISO-8601 week. SQLite has no native ISO week, so derive the
+      // Thursday of each row's ISO week: date(eta_supplier, '-3 days', 'weekday 4').
+      // The ISO week-year is the calendar year of that Thursday, and the ISO week
+      // ordinal is ((dayOfYear(Thursday) - 1) / 7) + 1. This keeps the SQL
+      // grouping, the JS week labels, and the current-week highlight all on the
+      // same ISO scheme, which matters most at year boundaries.
       const sql = `
-        SELECT 
-          CAST(strftime('%W', eta_supplier) AS INTEGER) as week,
-          CAST(strftime('%Y', eta_supplier) AS INTEGER) as year,
+        WITH iso AS (
+          SELECT
+            eta_supplier,
+            date(eta_supplier, '-3 days', 'weekday 4') AS iso_thursday
+          FROM purchase_order
+          WHERE outstanding_qty > 0
+            AND ${this.getCompanyCode87ExclusionCondition()}
+            AND eta_supplier IS NOT NULL
+            AND eta_supplier != ''
+            AND date(eta_supplier) BETWEEN
+              date('now', '-' || ? || ' days') AND
+              date('now', '+' || ? || ' days')
+        )
+        SELECT
+          (CAST(strftime('%j', iso_thursday) AS INTEGER) - 1) / 7 + 1 as week,
+          CAST(strftime('%Y', iso_thursday) AS INTEGER) as year,
           COUNT(*) as orderCount,
           SUM(CASE WHEN date(eta_supplier) < date('now') THEN 1 ELSE 0 END) as overdueCount
-        FROM purchase_order
-        WHERE outstanding_qty > 0
-          AND eta_supplier IS NOT NULL
-          AND eta_supplier != ''
-          AND date(eta_supplier) BETWEEN 
-            date('now', '-' || ? || ' days') AND 
-            date('now', '+' || ? || ' days')
-        GROUP BY strftime('%W', eta_supplier), strftime('%Y', eta_supplier)
+        FROM iso
+        GROUP BY year, week
         ORDER BY year ASC, week ASC
       `;
 
@@ -1824,11 +1853,12 @@ export class DatabaseService {
       }>;
 
       const now = new Date();
-      const currentWeek = this.getWeekNumber(now);
+      const currentWeek = getISOWeek(now);
+      const currentYear = getISOWeekYear(now);
 
       return rows.map((row) => {
         // Calculate date range for the week
-        const weekStart = this.getDateOfISOWeek(row.week, row.year);
+        const weekStart = getISOWeekMonday(row.week, row.year);
         const weekEnd = new Date(weekStart);
         weekEnd.setDate(weekEnd.getDate() + 6);
 
@@ -1857,35 +1887,13 @@ export class DatabaseService {
           orderCount: row.orderCount,
           overdueCount: row.overdueCount,
           dateRange: `${formatDate(weekStart)} - ${formatDate(weekEnd)}`,
-          isCurrentWeek: row.week === currentWeek && row.year === now.getFullYear(),
+          isCurrentWeek: row.week === currentWeek && row.year === currentYear,
         };
       });
     } catch (error) {
       log.error('Error getting orders by week:', error);
       throw error;
     }
-  }
-
-  // Helper method to get ISO week number
-  private getWeekNumber(date: Date): number {
-    const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
-    const dayNum = d.getUTCDay() || 7;
-    d.setUTCDate(d.getUTCDate() + 4 - dayNum);
-    const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-    return Math.ceil(((d.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
-  }
-
-  // Helper method to get date of ISO week
-  private getDateOfISOWeek(week: number, year: number): Date {
-    const simple = new Date(year, 0, 1 + (week - 1) * 7);
-    const dow = simple.getDay();
-    const ISOweekStart = simple;
-    if (dow <= 4) {
-      ISOweekStart.setDate(simple.getDate() - simple.getDay() + 1);
-    } else {
-      ISOweekStart.setDate(simple.getDate() + 8 - simple.getDay());
-    }
-    return ISOweekStart;
   }
 
   public invalidateDashboardCache(): void {
