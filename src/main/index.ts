@@ -22,7 +22,17 @@ import child_process, { spawn } from 'child_process'; // Added for send-logs-to-
 import { autoUpdater } from 'electron-updater'; // Added for update:install
 import type { ExcelData } from '../renderer/types/ExcelData';
 
-// Content-Security-Policy applied to every response in the default session.
+/**
+ * Content-Security-Policy applied to every response in the default session.
+ *
+ * Note that in a packaged build the renderer is loaded from file://, which
+ * onHeadersReceived does not see, so this header only covers the dev server.
+ * The equivalent policy is injected as a <meta> tag at build time (see the
+ * csp-meta plugin in electron.vite.config.ts) — keep the two in sync.
+ *
+ * The renderer makes no cross-origin requests: all network access (updates,
+ * email) happens in the main process, where CSP does not apply.
+ */
 const CSP_POLICY = [
   "default-src 'self'",
   "script-src 'self'",
@@ -318,23 +328,6 @@ app.whenReady().then(async () => {
     log.info('Setting up IPC Handlers...');
     setupDatabaseHandlers();
     log.info('IPC Handlers setup complete.');
-
-    // 2.5. Sync Product Catalog from Supabase (background, non-blocking)
-    log.info('Starting product catalog sync from Supabase...');
-    import('../services/productCatalogService')
-      .then(({ productCatalogService }) => {
-        return productCatalogService.syncFromCloud();
-      })
-      .then((result) => {
-        if (result.success) {
-          log.info(`Product catalog synced successfully: ${result.count} products`);
-        } else {
-          log.warn(`Product catalog sync failed: ${result.error || 'Unknown error'}`);
-        }
-      })
-      .catch((error) => {
-        log.error('Error during product catalog sync:', error);
-      });
 
     // 3. Create Main Window (but don't load URL yet)
     log.info('Creating main window...');
@@ -1114,9 +1107,9 @@ ipcMain.handle(
       log.info(`Subject written to temp file: ${tempSubjectFilePath}`);
 
       // Escape tempFilePath for PowerShell string
-      const escapedTempSubjectFilePath = tempSubjectFilePath.replace(/'/g, "''");
+      const escapedTempSubjectFilePath = psLiteral(tempSubjectFilePath);
 
-      const escapedTempHtmlFilePath = tempHtmlFilePath.replace(/'/g, "''"); // Escape single quotes for PS literal string
+      const escapedTempHtmlFilePath = psLiteral(tempHtmlFilePath);
 
       const senderEmail = getSenderEmailForCountry(payload.country);
 
@@ -1758,8 +1751,8 @@ ipcMain.handle(
 
       // PowerShell script to load .eml, extract HTML, and send via new MailItem
       const powershellScript = `
-        $tempEmlPath = '${tempEmlFilePath.replace(/'/g, "''")}'
-        $sender = '${senderEmail}'
+        $tempEmlPath = '${psLiteral(tempEmlFilePath)}'
+        $sender = '${psLiteral(senderEmail)}'
         
         try {
             Write-Output "STAGE 1: Loading .eml via OpenSharedItem..."

@@ -8,6 +8,46 @@ import commonjs from '@rollup/plugin-commonjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
+/**
+ * The production renderer is loaded from file://, which the main process's
+ * onHeadersReceived hook never sees, so a response-header CSP does not protect
+ * a packaged build. Inject the policy as a <meta> tag instead.
+ *
+ * Keep in sync with CSP_POLICY in src/main/index.ts. The dev server needs its
+ * HMR websocket allowed; the production policy must not carry that exception.
+ */
+function cspMetaPlugin() {
+  const base = [
+    "default-src 'self'",
+    "script-src 'self'",
+    "style-src 'self' 'unsafe-inline'",
+    "img-src 'self' data: blob:",
+    "font-src 'self'",
+    "worker-src 'self' blob:",
+    "object-src 'none'",
+    "base-uri 'none'",
+    "frame-ancestors 'none'",
+  ];
+
+  return {
+    name: 'csp-meta',
+    transformIndexHtml(_html: string, ctx: { server?: unknown }) {
+      const isDev = ctx.server !== undefined;
+      // The dev server needs its HMR websocket; production needs nothing.
+      const connectSrc = isDev ? "connect-src 'self' ws://localhost:5173" : "connect-src 'self'";
+      const policy = [...base, connectSrc].join('; ');
+
+      return [
+        {
+          tag: 'meta',
+          attrs: { 'http-equiv': 'Content-Security-Policy', content: policy },
+          injectTo: 'head-prepend' as const,
+        },
+      ];
+    },
+  };
+}
+
 export default defineConfig({
   main: {
     build: {
@@ -113,6 +153,6 @@ export default defineConfig({
         '@services': path.resolve(__dirname, 'src/services'),
       },
     },
-    plugins: [react()],
+    plugins: [react(), cspMetaPlugin()],
   },
 });

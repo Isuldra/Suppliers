@@ -758,7 +758,10 @@ export class DatabaseService {
       // Always exclude company code 87 (hardcoded)
       // Optionally include/exclude ICT orders (besttyp 70)
       const conditions: string[] = [
-        'COALESCE(supplier_name, ftgnavn) LIKE ?',
+        // Exact match: the supplier list the UI selects from is built from the
+        // stored supplier_name values, so a LIKE '%...%' pattern would leak
+        // orders from every supplier whose name contains this one as a substring.
+        'COALESCE(supplier_name, ftgnavn) = ?',
         '(outstanding_qty > 0 OR (order_qty - COALESCE(received_qty, 0)) > 0)',
         'eta_supplier IS NOT NULL',
         "eta_supplier != ''",
@@ -796,10 +799,8 @@ export class DatabaseService {
       ORDER BY date(eta_supplier) ASC, ordreNr ASC, itemNo ASC
     `;
 
-      // Use LIKE with wildcards for more flexible matching
-      const searchPattern = `%${supplierName.trim()}%`;
       const stmt = this.db.prepare(sql);
-      const rows = stmt.all(searchPattern, ...params) as DbOrder[];
+      const rows = stmt.all(supplierName.trim(), ...params) as DbOrder[];
 
       // Convert date strings to Date objects
       rows.forEach((row) => {
