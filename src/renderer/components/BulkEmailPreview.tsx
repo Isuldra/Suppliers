@@ -128,8 +128,6 @@ const BulkEmailPreview: React.FC<BulkEmailPreviewProps> = ({
     setIsLoading(true);
     try {
       const allOrders = await window.electron.getAllOrders(includeICTOrders);
-      console.log('🔍 DEBUG: First order from getAllOrders:', allOrders[0]);
-      console.log('🔍 DEBUG: Does first order have specification?', allOrders[0]?.specification);
       const emailData: EmailPreviewData[] = [];
 
       for (const supplierName of selectedSuppliers) {
@@ -140,7 +138,6 @@ const BulkEmailPreview: React.FC<BulkEmailPreviewProps> = ({
           (order) => order.supplier === supplierName && supplierOrderKeys.has(order.key)
         );
         console.log(`🔵 Filtered orders for ${supplierName}:`, orders.length);
-        console.log('🔍 DEBUG: First filtered order specification:', orders[0]?.specification);
 
         if (orders.length > 0) {
           // Get language from database/country - this handles DK suppliers correctly
@@ -196,20 +193,24 @@ const BulkEmailPreview: React.FC<BulkEmailPreviewProps> = ({
 
   // Handle email editing
   const handleEmailChange = (supplier: string, email: string) => {
-    setCustomEmails(new Map(customEmails.set(supplier, email)));
+    setCustomEmails((prev) => {
+      const next = new Map(prev);
+      next.set(supplier, email);
+      return next;
+    });
   };
 
-  // Get email for supplier (custom or default)
+  // Get email for supplier (custom override wins, then bulk selection, then default)
   const getEmailForSupplier = (supplier: string, defaultEmail: string): string => {
-    // First check if supplier has a bulk email from BulkSupplierSelect
-    if (bulkSupplierEmails?.has(supplier)) {
-      return bulkSupplierEmails.get(supplier) || '';
-    }
-    // Then check if supplier has a custom email in this component (including empty string)
+    // First check if the user has overridden the email in this component (including empty string)
     if (customEmails.has(supplier)) {
       return customEmails.get(supplier) || '';
     }
-    // Return default email only if no custom email has been set
+    // Then check if supplier has a bulk email from BulkSupplierSelect
+    if (bulkSupplierEmails?.has(supplier)) {
+      return bulkSupplierEmails.get(supplier) || '';
+    }
+    // Return default email only if no override has been set
     return defaultEmail;
   };
 
@@ -265,7 +266,11 @@ const BulkEmailPreview: React.FC<BulkEmailPreviewProps> = ({
   // Handle language change in preview modal
   const handleLanguageChange = (supplier: string, language: 'no' | 'en' | 'se' | 'da' | 'fi') => {
     // Save custom language for this supplier
-    setCustomLanguages(new Map(customLanguages.set(supplier, language)));
+    setCustomLanguages((prev) => {
+      const next = new Map(prev);
+      next.set(supplier, language);
+      return next;
+    });
 
     // Update preview language state
     setPreviewLanguage(language);
@@ -308,6 +313,7 @@ const BulkEmailPreview: React.FC<BulkEmailPreviewProps> = ({
       const totalEmails = emailPreviewData.length;
       let successCount = 0;
       let failCount = 0;
+      const failures: { supplier: string; error: string }[] = [];
 
       for (let i = 0; i < emailPreviewData.length; i++) {
         const supplierData = emailPreviewData[i];
@@ -337,6 +343,10 @@ const BulkEmailPreview: React.FC<BulkEmailPreviewProps> = ({
                   : s
               )
             );
+            failures.push({
+              supplier: supplierData.supplier,
+              error: t('bulkEmailPreview.noEmailProvided'),
+            });
             continue;
           }
 
@@ -388,6 +398,10 @@ const BulkEmailPreview: React.FC<BulkEmailPreviewProps> = ({
             successCount++;
           } else {
             failCount++;
+            failures.push({
+              supplier: supplierData.supplier,
+              error: result.error || 'Unknown error',
+            });
           }
         } catch (error) {
           console.error(`Error sending email to ${supplierData.supplier}:`, error);
@@ -403,6 +417,7 @@ const BulkEmailPreview: React.FC<BulkEmailPreviewProps> = ({
             )
           );
           failCount++;
+          failures.push({ supplier: supplierData.supplier, error: String(error) });
         }
 
         // Update progress
@@ -411,13 +426,6 @@ const BulkEmailPreview: React.FC<BulkEmailPreviewProps> = ({
 
       // Send Slack notification (non-blocking)
       try {
-        const failures = emailPreviewData
-          .filter((s) => s.sendResult && !s.sendResult.success)
-          .map((s) => ({
-            supplier: s.supplier,
-            error: s.sendResult?.error || 'Unknown error',
-          }));
-
         await SlackService.sendBulkEmailNotification({
           recipientCount: totalEmails,
           template: 'Standard Reminder (Norwegian/English)',

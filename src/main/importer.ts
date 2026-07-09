@@ -20,25 +20,45 @@ import {
 const DATE_FORMATS = ['M/d/yyyy', 'd/M/yyyy', 'dd.MM.yyyy', 'yyyy-MM-dd', 'dd-MM-yyyy'];
 
 /**
- * Safely parse various Excel date inputs into ISO YYYY-MM-DD strings
+ * Format the calendar-date components of a Date into an ISO YYYY-MM-DD string
+ * using the LOCAL date parts. This avoids the `.toISOString()` hazard where a
+ * local-midnight Date is shifted back one day when serialized to UTC
+ * (e.g. in Norway, UTC+1/+2, the previous day would be produced).
  */
-function safeParseDate(value: unknown): string | null {
+function formatLocalDate(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+/**
+ * Safely parse various Excel date inputs into ISO YYYY-MM-DD strings
+ *
+ * Exported for unit testing of the date-parsing logic.
+ */
+export function safeParseDate(value: unknown): string | null {
   if (value instanceof Date && isValid(value)) {
-    return value.toISOString().split('T')[0];
+    return formatLocalDate(value);
   }
   if (typeof value === 'string' && value.trim()) {
     for (const fmt of DATE_FORMATS) {
       const parsed = parseDateFns(value.trim(), fmt, new Date());
-      if (isValid(parsed)) return parsed.toISOString().split('T')[0];
+      if (isValid(parsed)) return formatLocalDate(parsed);
     }
     const fallback = new Date(value);
-    if (isValid(fallback)) return fallback.toISOString().split('T')[0];
+    if (isValid(fallback)) return formatLocalDate(fallback);
   }
   if (typeof value === 'number') {
     try {
       const parsed = XLSX.SSF.parse_date_code(value);
       if (parsed && parsed.y) {
-        return new Date(parsed.y, parsed.m - 1, parsed.d).toISOString().split('T')[0];
+        // Format the y/m/d parts directly with zero-padding. Do NOT round-trip
+        // through `new Date(y, m-1, d).toISOString()`: that builds LOCAL midnight
+        // and then shifts to UTC, yielding the previous day in UTC+ timezones.
+        const month = String(parsed.m).padStart(2, '0');
+        const day = String(parsed.d).padStart(2, '0');
+        return `${parsed.y}-${month}-${day}`;
       }
     } catch {
       // ignore parse errors
