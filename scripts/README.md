@@ -130,10 +130,10 @@ This directory contains utility scripts for building, testing, releasing, and ma
 
 ### `parse-changelog.js`
 
-**Status**: Active (used by other scripts)  
-**Used by**: `send-changelog-to-slack.js`  
+**Status**: Manual Utility  
+**Used by**: None (standalone)  
 **Purpose**: Parses CHANGELOG.md to extract release notes for a specific version.  
-**Usage**: Called internally by Slack notification script.
+**Usage**: `node scripts/parse-changelog.js <version>`
 
 ### `prepare-cloudflare-release.js`
 
@@ -141,16 +141,6 @@ This directory contains utility scripts for building, testing, releasing, and ma
 **Used by**: `npm run release:prepare`  
 **Purpose**: Prepares Cloudflare Pages release by generating `latest.yml`, `latest.json`, updating `index.html`, and copying metadata files to `docs/updates/`. Generates update manifests internally (no longer uses separate generate-\* scripts).  
 **Usage**: `npm run release:prepare` (automatically runs after builds)
-
-### `send-changelog-to-slack.js`
-
-**Status**: Active  
-**Used by**: `npm run slack:changelog`, `npm run slack:changelog:latest`  
-**Purpose**: Sends changelog entries to Slack webhook.  
-**Usage**:
-
-- `npm run slack:changelog` - Send latest changelog
-- `npm run slack:changelog:latest` - Same as above
 
 ---
 

@@ -181,9 +181,6 @@ CREATE INDEX IF NOT EXISTS idx_supplier_planning_planner ON supplier_planning(pl
 
 - **Lokal lagring**: Alle data lagres lokalt på brukerens maskin. Applikasjonen synkroniserer ikke
   ordre-/leverandørdata til noen sky-tjeneste.
-- **Supabase**: Brukes kun for å synkronisere en produktkatalog fra skyen
-  (`src/services/supabaseClient.ts`), med kun en anon-nøkkel — ikke for ordre- eller
-  leverandørdata, og ikke skrivbar fra klienten uten videre.
 - **SQL injection**: Unngås ved konsekvent bruk av prepared statements.
 - **Ingen database-kryptering** er implementert per i dag.
 

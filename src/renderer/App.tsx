@@ -17,7 +17,6 @@ import LanguageSelector from './components/LanguageSelector';
 import { ExcelData, ValidationError } from './types/ExcelData';
 import { HashRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import supplyPlannersData from './data/supplyPlanners.json';
-import { SlackService } from './services/slackService';
 import { Cog6ToothIcon, ChartBarIcon, CommandLineIcon } from '@heroicons/react/24/outline';
 import ICTOrderToggle from './components/ICTOrderToggle';
 import { useICTOrder } from './context/ICTOrderContext';
@@ -574,24 +573,9 @@ const MainApp: React.FC<MainAppProps> = ({
 
     fetchVersion();
 
-    // Listen for update available events and send Slack notification
+    // Listen for update available events
     const unsubscribeUpdate = window.electron.onUpdateAvailable((info: unknown) => {
       console.log('Update available:', info);
-
-      // Type guard for update info
-      const updateInfo = info as { version?: string };
-      if (!updateInfo.version) return;
-
-      // Send Slack notification (non-blocking)
-      SlackService.sendDeploymentNotification({
-        version: updateInfo.version as string,
-        timestamp: new Date().toLocaleString('no-NO', {
-          dateStyle: 'short',
-          timeStyle: 'short',
-        }),
-      }).catch((error: Error) => {
-        console.error('Failed to send Slack deployment notification:', error);
-      });
     });
 
     return () => {

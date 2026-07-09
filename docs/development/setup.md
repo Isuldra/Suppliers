@@ -54,11 +54,6 @@ bun pm ls
 
 ## 🔧 Konfigurasjon
 
-### Miljøvariabler
-
-Se `.env.example` for gjeldende variabler (blant annet Supabase-konfigurasjon for
-produktkatalog-synkronisering).
-
 ### VS Code Anbefalinger
 
 Installer følgende extensions:
@@ -147,7 +142,7 @@ src/
 │   ├── components/
 │   ├── services/
 │   └── locales/                # no, en, se, da, fi
-└── services/                    # Delt mellom main og renderer (databaseService, supabaseClient)
+└── services/                    # Delt mellom main og renderer (databaseService)
 docs/                            # Dokumentasjon
 resources/                       # App-ressurser (ikoner, installer-config)
 scripts/                         # Bygg- og release-scripts

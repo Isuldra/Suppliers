@@ -5,7 +5,6 @@ import { EmailService, EmailData } from '../services/emailService';
 import { ExcelRow } from '../types/ExcelData';
 import supplierData from '../data/supplierData.json';
 import EmailPreviewModal from './EmailPreviewModal';
-import { SlackService } from '../services/slackService';
 import { useICTOrder } from '../context/ICTOrderContext';
 
 interface BulkEmailPreviewProps {
@@ -313,7 +312,6 @@ const BulkEmailPreview: React.FC<BulkEmailPreviewProps> = ({
       const totalEmails = emailPreviewData.length;
       let successCount = 0;
       let failCount = 0;
-      const failures: { supplier: string; error: string }[] = [];
 
       for (let i = 0; i < emailPreviewData.length; i++) {
         const supplierData = emailPreviewData[i];
@@ -343,10 +341,6 @@ const BulkEmailPreview: React.FC<BulkEmailPreviewProps> = ({
                   : s
               )
             );
-            failures.push({
-              supplier: supplierData.supplier,
-              error: t('bulkEmailPreview.noEmailProvided'),
-            });
             continue;
           }
 
@@ -398,10 +392,6 @@ const BulkEmailPreview: React.FC<BulkEmailPreviewProps> = ({
             successCount++;
           } else {
             failCount++;
-            failures.push({
-              supplier: supplierData.supplier,
-              error: result.error || 'Unknown error',
-            });
           }
         } catch (error) {
           console.error(`Error sending email to ${supplierData.supplier}:`, error);
@@ -417,26 +407,10 @@ const BulkEmailPreview: React.FC<BulkEmailPreviewProps> = ({
             )
           );
           failCount++;
-          failures.push({ supplier: supplierData.supplier, error: String(error) });
         }
 
         // Update progress
         setSendingProgress(((i + 1) / totalEmails) * 100);
-      }
-
-      // Send Slack notification (non-blocking)
-      try {
-        await SlackService.sendBulkEmailNotification({
-          recipientCount: totalEmails,
-          template: 'Standard Reminder (Norwegian/English)',
-          scheduled: 'Immediate',
-          successCount,
-          failCount,
-          failures: failures.length > 0 ? failures : undefined,
-        });
-      } catch (slackError) {
-        console.error('Failed to send Slack notification:', slackError);
-        // Don't show error to user - Slack is optional
       }
 
       // Show completion message

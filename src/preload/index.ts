@@ -209,22 +209,6 @@ interface ElectronAPI {
     error?: string;
   }>;
 
-  // Product Catalog methods
-  productCatalogSync: () => Promise<{
-    success: boolean;
-    count: number;
-    error?: string;
-  }>;
-  productCatalogUpload: (buffer: ArrayBuffer) => Promise<{
-    success: boolean;
-    count: number;
-    error?: string;
-  }>;
-  productCatalogGetStats: () => Promise<{
-    success: boolean;
-    data?: { count: number; lastSync: Date | null };
-    error?: string;
-  }>;
   getTopItems: (limit?: number) => Promise<{
     success: boolean;
     data?: Array<{
@@ -615,16 +599,6 @@ contextBridge.exposeInMainWorld('electron', {
     return await ipcRenderer.invoke('get-orders-by-week', weeksAhead, weeksBehind);
   },
 
-  // Product Catalog methods
-  productCatalogSync: async () => {
-    return await ipcRenderer.invoke('product-catalog:sync');
-  },
-  productCatalogUpload: async (buffer: ArrayBuffer) => {
-    return await ipcRenderer.invoke('product-catalog:upload', buffer);
-  },
-  productCatalogGetStats: async () => {
-    return await ipcRenderer.invoke('product-catalog:get-stats');
-  },
   getTopItems: async (limit?: number) => {
     return await ipcRenderer.invoke('get-top-items', limit);
   },
