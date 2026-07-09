@@ -16,7 +16,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  BUN_VERSION: "latest"
+  BUN_VERSION: "1.3.14"
   SHARP_IGNORE_GLOBAL_LIBVIPS: "1"
 
 jobs:
@@ -44,7 +44,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.bun/install/cache
-          key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lockb') }}
+          key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lock') }}
           restore-keys: |
             ${{ runner.os }}-bun-
 
@@ -54,7 +54,7 @@ jobs:
           path: |
             ~\AppData\Local\electron\Cache
             ~\AppData\Local\electron-builder\Cache
-          key: ${{ runner.os }}-electron-builder-${{ hashFiles('**/bun.lockb') }}
+          key: ${{ runner.os }}-electron-builder-${{ hashFiles('**/bun.lock') }}
           restore-keys: |
             ${{ runner.os }}-electron-builder-
 
@@ -97,63 +97,9 @@ jobs:
             Write-Warning "Failed to add Windows Defender exclusions: $_. Exception will be ignored and build will continue."
           }
 
-      - name: Generate latest.yml for Portable Auto-Updates
-        if: startsWith(github.ref, 'refs/tags/')
-        shell: pwsh
-        run: |
-          Write-Host "Generating latest.yml for portable auto-updates..."
-          bun run scripts/generate-latest-yml.js
-
-      - name: Generate app-update.yml for NSIS Auto-Updates
-        if: startsWith(github.ref, 'refs/tags/')
-        shell: pwsh
-        run: |
-          Write-Host "Generating app-update.yml for NSIS auto-updates..."
-          bun run scripts/generate-app-update-yml.js
-
-      - name: Prepare Cloudflare metadata
-        if: startsWith(github.ref, 'refs/tags/')
-        shell: pwsh
-        run: |
-          Write-Host "Preparing Cloudflare metadata for auto-updates..."
-          bun run release:prepare
-
-      - name: Commit and push Cloudflare metadata
-        if: startsWith(github.ref, 'refs/tags/')
-        shell: bash
-        run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
-
-          # Add the metadata files
-          git add docs/updates/latest.yml
-          git add docs/updates/latest.json
-          git add docs/updates/index.html
-          git add docs/updates/_redirects
-
-          # Check if there are any changes to commit
-          if git diff-index --quiet HEAD; then
-            echo "No changes in Cloudflare metadata to commit."
-          else
-            git commit -m "chore(release): Update Cloudflare metadata for v${GITHUB_REF#refs/tags/v}"
-            git push origin main
-            echo "Successfully pushed Cloudflare metadata updates"
-          fi
-
-      - name: Upload to GitHub Release
-        if: startsWith(github.ref, 'refs/tags/')
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        uses: softprops/action-gh-release@v1
-        with:
-          files: |
-            release/*Portable.exe
-            release/*.zip
-            release/*.exe
-            release/latest.yml
-            release/app-update.yml
-          draft: false
-          prerelease: false
+      # NOTE: Release publishing (GitHub Release + Cloudflare metadata) is handled
+      # exclusively by release.yml on tag push. build.yml only builds and uploads
+      # CI artifacts for main/PR; it has no tag trigger and must not publish.
 
       - name: List ASAR Contents on Failure
         if: failure()
@@ -194,20 +140,3 @@ jobs:
           name: SupplyChain-NSIS-Windows
           path: release/*.exe
           retention-days: 3
-
-      # Note: SLACK_WEBHOOK_URL is an optional secret. If not set, this step will be skipped.
-      # The linter warning about "Context access might be invalid" is expected and can be ignored.
-      - name: Send CHANGELOG to Slack
-        if: startsWith(github.ref, 'refs/tags/') && success()
-        shell: bash
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL || '' }}
-          SLACK_DISPLAY_NAME: ${{ github.actor }} (GitHub)
-        run: |
-          if [ -n "$SLACK_WEBHOOK_URL" ] && [ "$SLACK_WEBHOOK_URL" != "" ]; then
-            VERSION="${GITHUB_REF#refs/tags/v}"
-            echo "📋 Sending CHANGELOG to Slack for version $VERSION..."
-            bun run scripts/send-changelog-to-slack.js "$VERSION"
-          else
-            echo "⚠️  SLACK_WEBHOOK_URL secret not set, skipping Slack notification"
-          fi

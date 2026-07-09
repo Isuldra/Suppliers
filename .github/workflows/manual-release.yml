@@ -1,19 +1,22 @@
-name: Manual Release
+name: Manual Release (Tag Only)
+
+# This workflow does NOT build or publish anything itself.
+# It only creates and pushes a `v<version>` tag, which triggers release.yml —
+# the single workflow responsible for building and publishing the GitHub Release.
+# Use this when you want to release an explicit version without a semver bump.
+# For a normal patch/minor/major bump, use the "Version Management" workflow instead.
 
 on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Version to release (e.g., 1.3.5)"
+        description: "Exact version to release (e.g., 1.5.3, without the leading v)"
         required: true
         type: string
 
-env:
-  BUN_VERSION: "latest"
-
 jobs:
-  manual-release:
-    runs-on: windows-latest
+  tag:
+    runs-on: ubuntu-latest
     permissions:
       contents: write
 
@@ -24,79 +27,27 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           fetch-depth: 0
 
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: ${{ env.BUN_VERSION }}
-
-      - name: Setup Node.js (for npm version command)
-        uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-
-      - name: Install dependencies
-        shell: pwsh
-        run: bun install --frozen-lockfile
-
-      - name: Update package.json version
-        shell: pwsh
+      - name: Validate version and create tag
         run: |
-          $currentVersion = (Get-Content package.json | ConvertFrom-Json).version
-          $targetVersion = "${{ github.event.inputs.version }}"
+          VERSION="${{ github.event.inputs.version }}"
 
-          if ($currentVersion -ne $targetVersion) {
-            npm version $targetVersion --no-git-tag-version
-            Write-Host "Updated package.json from $currentVersion to $targetVersion"
-          } else {
-            Write-Host "Package.json already at version $targetVersion, skipping update"
-          }
+          # Reject a leading "v" and enforce plain semver X.Y.Z
+          if ! echo "$VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "::error::Invalid version '$VERSION'. Use plain semver without a leading 'v', e.g. 1.5.3"
+            exit 1
+          fi
 
-      - name: Build application
-        shell: pwsh
-        run: bun run dist:clean
+          TAG="v$VERSION"
 
-      - name: Prepare Cloudflare metadata
-        shell: pwsh
-        run: bun run release:prepare
+          # Fail loudly if the tag already exists (avoid clobbering a release)
+          if git ls-remote --exit-code --tags origin "refs/tags/$TAG" >/dev/null 2>&1; then
+            echo "::error::Tag $TAG already exists on origin. Nothing to do."
+            exit 1
+          fi
 
-      - name: Create GitHub Release
-        shell: pwsh
-        run: bun run release:github
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git tag "$TAG"
+          git push origin "$TAG"
 
-      - name: Commit and push Cloudflare metadata
-        shell: pwsh
-        run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
-
-          # Add the metadata files
-          git add docs/updates/latest.yml
-          git add docs/updates/latest.json
-          git add docs/updates/index.html
-          git add docs/updates/_redirects
-
-          # Check if there are any changes to commit
-          if (git diff-index --quiet HEAD) {
-            Write-Host "No changes in Cloudflare metadata to commit."
-          } else {
-            git commit -m "chore(release): Update Cloudflare metadata for v${{ github.event.inputs.version }}"
-            git push origin HEAD:main
-            Write-Host "Successfully pushed Cloudflare metadata updates"
-          }
-
-      - name: Create and push git tag
-        shell: pwsh
-        run: |
-          git tag "v${{ github.event.inputs.version }}"
-          git push origin "v${{ github.event.inputs.version }}"
-          Write-Host "Created and pushed tag v${{ github.event.inputs.version }}"
-
-      - name: Verify deployment
-        shell: pwsh
-        run: |
-          Write-Host "✅ Release v${{ github.event.inputs.version }} completed!"
-          Write-Host "📱 GitHub Release: https://github.com/Isuldra/Suppliers/releases/tag/v${{ github.event.inputs.version }}"
-          Write-Host "🌐 Cloudflare Pages: https://suppliers-anx.pages.dev/"
-          Write-Host "🔄 Auto-update URL: https://suppliers-anx.pages.dev/latest.yml"
+          echo "Pushed $TAG. release.yml will now build and publish the GitHub Release." >> "$GITHUB_STEP_SUMMARY"

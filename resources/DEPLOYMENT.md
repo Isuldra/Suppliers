@@ -10,7 +10,9 @@ To build the Windows installer package, run:
 npm run dist:win
 ```
 
-This will create an NSIS installer in the `release` directory, named something like `Supplier-Reminder-Pro-1.0.0-setup.exe`.
+This will create an NSIS installer in the `release` directory, named
+`Pulse-{version}-setup.exe` (e.g. `Pulse-1.5.3-setup.exe`), per the `artifactName` configured in
+`package.json`'s `build.win` section.
 
 ## Silent Installation Options
 
@@ -27,12 +29,12 @@ You can deploy silently directly from the command line:
 
 ```powershell
 # PowerShell
-Start-Process -Wait -FilePath "Pulse-1.0.0-setup.exe" -ArgumentList "/S /D=C:\Program Files\Pulse"
+Start-Process -Wait -FilePath "Pulse-1.5.3-setup.exe" -ArgumentList "/S /D=C:\Program Files\Pulse"
 ```
 
 ```batch
 REM Command Prompt/Batch
-"Pulse-1.0.0-setup.exe" /S /D="C:\Program Files\Pulse"
+"Pulse-1.5.3-setup.exe" /S /D="C:\Program Files\Pulse"
 ```
 
 ### Method 2: Using the Provided PowerShell Script
@@ -85,7 +87,7 @@ Example GPO script:
 # Check if already installed
 if (-not (Test-Path "C:\Program Files\Pulse\Pulse.exe")) {
     # Install silently
-    Start-Process -Wait -FilePath "\\server\share\Supplier-Reminder-Pro-1.0.0-setup.exe" -ArgumentList "/S"
+    Start-Process -Wait -FilePath "\\server\share\Pulse-1.5.3-setup.exe" -ArgumentList "/S"
 }
 ```
 

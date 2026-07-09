@@ -1,4 +1,4 @@
-# Oversikt: SupplyChain OneMed Applikasjon
+# Oversikt: Pulse Applikasjon
 
 **Dato:** 21. april 2025
 
@@ -6,7 +6,7 @@
 
 **Fra:** [Andreas Elvethun / Kundeservice]
 
-**Emne:** Introduksjon til "SupplyChain OneMed" - Verktøy for Leverandøroppfølging
+**Emne:** Introduksjon til "Pulse" - Verktøy for Leverandøroppfølging
 
 ---
 

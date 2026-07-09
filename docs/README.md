@@ -1,10 +1,10 @@
-# OneMed SupplyChain - Dokumentasjon
+# Pulse (OneMed SupplyChain) - Dokumentasjon
 
-Velkommen til dokumentasjonen for OneMed SupplyChain, en moderne desktop-applikasjon for effektiv leverandørstyring og ordreoppfølging.
+Velkommen til dokumentasjonen for Pulse, en moderne desktop-applikasjon for effektiv leverandørstyring og ordreoppfølging.
 
 ## 🚀 Oversikt
 
-OneMed SupplyChain er en Electron-basert desktop-applikasjon bygget for OneMed for å effektivt administrere leverandørdata og interaksjoner. Applikasjonen tilbyr en strømlinjeformet brukeropplevelse med moderne UI/UX-prinsipper.
+Pulse er en Electron-basert desktop-applikasjon bygget for OneMed for å effektivt administrere leverandørdata og interaksjoner. Applikasjonen tilbyr en strømlinjeformet brukeropplevelse med moderne UI/UX-prinsipper.
 
 ### Hovedfunksjoner
 
@@ -31,22 +31,20 @@ OneMed SupplyChain er en Electron-basert desktop-applikasjon bygget for OneMed f
 
 - **[Kom i gang](getting-started.md)**: Installasjon og første bruk
 - **[Brukerguide](user-guide.md)**: Detaljert brukerguide for alle funksjoner
-- **[Dashboard](dashboard.md)**: Bruk av dashboard og statistikk
-- **[E-post System](email-system.md)**: Sending av påminnelser til leverandører
+- **[Multi-språk Brukerguide](user-guide-multilang.md)**: Brukerguide på no/en/se/da/fi
 
 ### Utviklerguider
 
 - **[Utviklingsmiljø](development/setup.md)**: Sette opp utviklingsmiljø
 - **[Arkitektur](architecture.md)**: Applikasjonsarkitektur og komponenter
-- **[API Dokumentasjon](api/README.md)**: IPC API og database operasjoner
 - **[Bygging og Distribusjon](distribution/README.md)**: Pakking og distribusjon
 
 ### Funksjoner
 
 - **[Excel Import](features/excel-import.md)**: Import av ordredata
 - **[Database](features/database.md)**: Datastruktur og lagring
+- **[E-post Setup](features/email-setup.md)**: Hvordan e-post faktisk sendes (Outlook COM)
 - **[E-post Templates](features/email-templates.md)**: E-post maler og tilpasning
-- **[Sikkerhet](features/security.md)**: Sikkerhetsfunksjoner
 
 ## 🎯 Hovedarbeidsflyt
 
@@ -86,4 +84,4 @@ For teknisk support eller spørsmål, kontakt utviklingsteamet eller administrat
 ---
 
 **Versjon**: Se package.json for gjeldende versjon  
-**Sist oppdatert**: Juli 2024
+**Sist oppdatert**: juli 2026

@@ -2,12 +2,12 @@
 
 ## Supported Versions
 
-We actively support the following versions of OneMed SupplyChain:
+We actively support the following versions of Pulse (OneMed SupplyChain):
 
 | Version | Supported |
 | ------- | --------- |
-| 1.1.x   | Yes       |
-| < 1.1   | No        |
+| 1.5.x   | Yes       |
+| < 1.5   | No        |
 
 ## Security Best Practices
 
@@ -15,24 +15,24 @@ We actively support the following versions of OneMed SupplyChain:
 
 This project follows OWASP best practices for dependency management:
 
-1. **Regular Security Audits**: Run `npm run security-check` weekly
-2. **Automated Updates**: Use `npm audit fix` for compatible updates
+1. **Regular Security Audits**: Run `bun run security-check` weekly
+2. **Automated Updates**: Use `bun update` for compatible updates
 3. **Monitoring**: GitHub Actions automatically audit dependencies
 
 ### Security Commands
 
 ```bash
 # Run comprehensive security check
-npm run security-check
+bun run security-check
 
 # Quick security audit
-npm run security-audit
+bun run security-audit
 
 # Fix compatible vulnerabilities
-npm audit fix
+bun update
 
 # Check for outdated packages
-npx npm-check-updates
+bunx npm-check-updates
 ```
 
 ### Reporting Vulnerabilities
@@ -67,7 +67,7 @@ If you discover a security vulnerability, please:
 
 When contributing:
 
-1. Run `npm run security-check` before submitting PRs
+1. Run `bun run security-check` before submitting PRs
 2. Ensure no new vulnerabilities are introduced
 3. Follow secure coding practices
 4. Test security fixes thoroughly
@@ -76,18 +76,16 @@ When contributing:
 
 We use the following security tools:
 
-- `npm audit` - Vulnerability scanning
+- `bun audit` - Vulnerability scanning
 - `npm-check-updates` - Dependency updates
-- GitHub Actions - Automated security checks
-- Custom security scripts - Comprehensive auditing
+- GitHub Actions (`.github/workflows/security-audit.yml`) - Automated security checks
+- `scripts/security-check.js` - Comprehensive auditing
 
 ## Changelog
 
-### Security Updates
-
-- **2024-12-19**: Fixed 5 security vulnerabilities in dependencies
-- **2024-12-19**: Implemented automated security monitoring
-- **2024-12-19**: Added comprehensive security check script
+Security-relevant changes are not tracked separately from the rest of the project. See
+[`docs/CHANGELOG.md`](docs/CHANGELOG.md) for the full release history. No security incidents or
+fixes have been recorded in this document since it was created.
 
 ---
 

@@ -1,6 +1,6 @@
 # Version Management System
 
-This document describes the production-ready version management system for the OneMed SupplyChain application.
+This document describes the production-ready version management system for the Pulse application.
 
 ## Features
 

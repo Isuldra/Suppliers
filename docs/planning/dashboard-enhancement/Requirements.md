@@ -2,7 +2,7 @@
 
 ## Introduction
 
-Dette dokumentet beskriver kravene for å utvide det eksisterende dashboardet i OneMed SupplyChain Pulse-applikasjonen. Målet er å transformere det nåværende enkle dashboardet til et avansert, visuelt dashboard som gir innkjøpere en komplett oversikt over restordrer, leverandører og oppgaver på 10 sekunder. Dashboardet skal bruke profesjonelle visualiseringsbiblioteker (Recharts) og gi brukeren mulighet til å raskt identifisere kritiske områder som krever oppfølging.
+Dette dokumentet beskriver kravene for å utvide det eksisterende dashboardet i Pulse-applikasjonen. Målet er å transformere det nåværende enkle dashboardet til et avansert, visuelt dashboard som gir innkjøpere en komplett oversikt over restordrer, leverandører og oppgaver på 10 sekunder. Dashboardet skal bruke profesjonelle visualiseringsbiblioteker (Recharts) og gi brukeren mulighet til å raskt identifisere kritiske områder som krever oppfølging.
 
 ## Glossary
 

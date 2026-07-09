@@ -16,16 +16,9 @@ This directory contains documentation related to building, packaging, and distri
   - Installation errors and solutions
   - Manual troubleshooting steps
 
-## Installation Documentation
-
-_(Note: Links below may need verification)_
-
-- [End User Installation Guide](../installation/end-user-installation.md) - Detailed installation guide for end users (if exists)
-
 ## Related Documentation
 
-_(Note: Links below may need verification)_
-
-- [Building for Production](../development/building-for-production.md) - Guide for building the application for production (if exists)
-- [Publishing Updates](../development/publishing-updates.md) - Guide for publishing updates (if exists)
-- [Automatic Updates](../features/auto-updates.md) - Documentation on the automatic update system (if exists)
+- [Publishing Updates](../development/publishing-updates.md) - Guide for publishing updates
+- [Auto-Update Workflow](../development/auto-update-workflow.md) - How the Cloudflare Pages update
+  system works
+- [Getting Started](../getting-started.md) - End-user quick start guide

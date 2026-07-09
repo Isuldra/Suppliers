@@ -1,94 +1,62 @@
-# Email Setup Instructions
+# Email Setup
 
-## Environment Variable Configuration
+## How Email Sending Actually Works
 
-## Authentication Options
+Pulse does **not** use SMTP, an app password, or any stored credential. Email is sent through
+**Outlook automation on Windows**, driven from the main process
+(`src/main/index.ts`) and orchestrated from `src/renderer/services/emailService.ts`.
 
-The application supports multiple authentication methods for Office 365 email:
+There is no environment variable to configure and no password to set up. The
+application relies entirely on the user already being signed into the desktop
+Outlook client on their Windows machine.
 
-### Option 1: SSO/Azure AD Authentication (Recommended for SSO environments)
+### Sending flow (with automatic fallback)
 
-If your organization uses SSO with Microsoft Authenticator, the application will attempt to use existing authentication sessions. This works when:
+`EmailService.sendReminder()` tries three methods in order, falling back if one fails:
 
-- You have an active Azure AD session
-- You're logged into Office 365 in your browser
-- You have the Azure PowerShell module installed
+1. **`sendEmailViaEmlAndCOM`** (preferred): writes the message to a temporary
+   `.eml` file and uses Outlook's COM automation (via a PowerShell script spawned
+   with `child_process.spawn('powershell', ...)`, script piped over stdin) to
+   import and send it directly.
+2. **`sendEmailAutomatically`**: a more defensive variant of the same
+   HTML + Outlook COM approach, also via a temporary file.
+3. **`sendEmail`**: final fallback — writes the `.eml` file and opens it, requiring
+   the user to click send in Outlook.
 
-### Option 2: Device Code Authentication
+All three ultimately go through Outlook already running/configured on the
+user's machine — none of them talk to an SMTP server or ask for a password.
 
-For SSO environments, the application will try device code authentication, which allows you to authenticate using a web browser even in non-interactive environments.
+### Sender address per country
 
-### Option 3: App Password (Fallback)
+The "from" identity is not user-configurable. It is derived from the supplier's
+country (see `getSenderEmailForCountry()` in both
+`src/renderer/services/emailService.ts` and `src/main/index.ts`):
 
-**REQUIRED as fallback**: If SSO methods fail, you MUST set up an environment variable with an Office 365 app password.
+| Country | Sender address              |
+| ------- | ---------------------------- |
+| Denmark | `indkoeb.dk@onemed.com`      |
+| Norway  | `supply.planning.no@onemed.com` |
+| Sweden  | `supply.planning.no@onemed.com` (placeholder, no dedicated SE address yet) |
+| Finland | `supply.planning.no@onemed.com` (placeholder, no dedicated FI address yet) |
 
-### Setting the Environment Variable
+### Requirements
 
-#### On macOS/Linux:
-
-```bash
-export ONEMED_EMAIL_PASSWORD="***REMOVED***"
-```
-
-#### On Windows:
-
-```cmd
-set ONEMED_EMAIL_PASSWORD=your_actual_password_here
-```
-
-#### For PowerShell on Windows:
-
-```powershell
-$env:ONEMED_EMAIL_PASSWORD = "***REMOVED***"
-```
-
-### Important Security Notes
-
-1. **Use App Passwords**: If your Office 365 account has Multi-Factor Authentication (MFA) enabled, you must use an App Password instead of your regular password.
-
-2. **Never commit passwords to version control**: The environment variable approach ensures your password is not stored in the code.
-
-3. **No hardcoded passwords**: The application is designed to fail securely if the environment variable is not set, preventing accidental exposure of credentials.
-
-4. **Required for all environments**: Both development and production environments must use environment variables.
-
-### How to Generate an App Password (if MFA is enabled)
-
-1. Go to https://account.microsoft.com/security
-2. Sign in with your Office 365 account
-3. Go to "Security" → "Advanced security options"
-4. Under "App passwords", click "Create a new app password"
-5. Give it a name like "OneMed Supply Chain App"
-6. Copy the generated password and use it as your `ONEMED_EMAIL_PASSWORD`
-
-### Testing the Setup
-
-The application will try authentication methods in this order:
-
-1. **Check for existing Exchange Online session** - Uses any active PowerShell session
-2. **Check for Azure AD context** - Uses existing Azure authentication if available
-3. **Device code authentication** - Opens browser for SSO authentication
-4. **Interactive authentication** - Standard Office 365 login (may not work in non-interactive mode)
-5. **SMTP fallback** - Uses app password from environment variable
-
-### For SSO Environments (Recommended)
-
-1. **First, try without setting the environment variable** - The app may work with your existing SSO session
-2. **If that fails, set the environment variable as fallback**:
-   ```bash
-   export ONEMED_EMAIL_PASSWORD="***REMOVED***"
-   ```
-
-### For Non-SSO Environments
-
-You must set the environment variable:
-
-```bash
-export ONEMED_EMAIL_PASSWORD="***REMOVED***"
-```
+- Windows only. Outlook COM automation does not work on macOS/Linux.
+- The desktop Outlook client must be installed and the user signed in.
+- PowerShell must be available and allowed to run (`-ExecutionPolicy Bypass`
+  is used for the spawned script only, not system-wide).
 
 ### Troubleshooting
 
-- If you see "ONEMED_EMAIL_PASSWORD environment variable is not set", you need to set the environment variable
-- If you get authentication errors, verify your password is correct and that you're using an App Password if MFA is enabled
-- Check that the email address `supply.planning.no@onemed.com` has the necessary permissions to send emails
+- **Nothing happens / "Run anyway" style prompts**: confirm Outlook is
+  installed, running, and the user has an active mail profile.
+- **All three send attempts fail**: check the application logs
+  (`electron-log`) for the PowerShell stderr/stdout captured for each attempt.
+- **Wrong sender address**: verify the detected country for the supplier —
+  the sender is picked automatically and cannot currently be overridden per
+  message.
+
+There is no MFA, app-password, device-code, or SSO/Azure AD flow in the
+current codebase. Earlier revisions of this document described an
+environment-variable-based SMTP password fallback; that code path no longer
+exists in the application.

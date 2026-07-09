@@ -1,6 +1,6 @@
 # Planned Features & Enhancements
 
-This document outlines planned features and potential future enhancements for the SupplyChain OneMed application. It serves as a reference for development priorities and desired functionality that is not yet implemented.
+This document outlines planned features and potential future enhancements for the Pulse application. It serves as a reference for development priorities and desired functionality that is not yet implemented.
 
 ## Feature Areas
 

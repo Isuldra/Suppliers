@@ -1,4 +1,7 @@
-# Repo Cleanup Backlog
+# Repo Cleanup Backlog (Archived)
+
+> Archived: all 43/43 tasks were completed as of 2025-11-10. Kept for history only —
+> not an active plan.
 
 **Status**: 43/43 tasks completed (ALL CLEANUP TASKS COMPLETE)  
 **Last updated**: 2025-11-10

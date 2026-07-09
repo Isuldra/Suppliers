@@ -1,4 +1,4 @@
-# Language Detection - OneMed SupplyChain
+# Language Detection - Pulse
 
 ## Overview
 

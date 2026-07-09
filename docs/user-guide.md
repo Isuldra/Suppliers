@@ -1,6 +1,6 @@
-# Brukerguide - OneMed SupplyChain
+# Brukerguide - Pulse
 
-Denne brukerguiden beskriver hvordan du bruker OneMed SupplyChain for effektiv leverandørstyring og ordreoppfølging.
+Denne brukerguiden beskriver hvordan du bruker Pulse for effektiv leverandørstyring og ordreoppfølging.
 
 ## 🚀 Kom i gang
 

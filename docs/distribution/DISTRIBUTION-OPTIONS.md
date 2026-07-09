@@ -1,10 +1,10 @@
-# SupplyChain OneMed - Distribution Options
+# Pulse - Distribution Options
 
-This document provides comprehensive information about the different distribution options available for SupplyChain OneMed, including how to create and distribute each format.
+This document provides comprehensive information about the different distribution options available for Pulse, including how to create and distribute each format.
 
 ## Available Distribution Formats
 
-SupplyChain OneMed can be distributed in the following formats for Windows (builds for macOS/Linux may also be configured but focus here is Windows):
+Pulse can be distributed in the following formats for Windows (builds for macOS/Linux may also be configured but focus here is Windows):
 
 1. **Standard Installer (NSIS)** - Traditional Windows installer (`.exe`) allowing user-level (no admin) or machine-level installation.
 2. **MSI Package** - Microsoft Installer format (`.msi`) often preferred for enterprise deployment via tools like Group Policy.
@@ -46,7 +46,7 @@ Using the standard `electron-builder` scripts defined in `package.json` is often
 npm run dist:nsis
 ```
 
-Output: `release/OneMed SupplyChain-[version]-setup.exe` (Filename based on `build.win.artifactName`)
+Output: `release/Pulse-[version]-setup.exe` (Filename based on `build.win.artifactName`)
 
 #### MSI Package
 
@@ -54,7 +54,7 @@ Output: `release/OneMed SupplyChain-[version]-setup.exe` (Filename based on `bui
 npm run dist:msi
 ```
 
-Output: `release/OneMed SupplyChain-[version]-Setup.msi` (Filename based on `build.msi.artifactName`)
+Output: `release/Pulse-[version]-Setup.msi` (Filename based on `build.msi.artifactName`)
 
 #### Portable Version
 
@@ -62,7 +62,7 @@ Output: `release/OneMed SupplyChain-[version]-Setup.msi` (Filename based on `bui
 npm run dist:portable
 ```
 
-Output: `release/OneMed SupplyChain-Portable.exe` (Filename based on `build.portable.artifactName`)
+Output: `release/Pulse-Portable.exe` (Filename based on `build.portable.artifactName`)
 
 _(Note: There is also an `npm run portable` script that uses `scripts/create-portable.js`. Prefer `npm run dist:portable` unless the custom script offers specific needed functionality.)_
 
@@ -72,7 +72,7 @@ _(Note: There is also an `npm run portable` script that uses `scripts/create-por
 
 #### Manual Installation
 
-1. Double-click the `OneMed SupplyChain-[version]-setup.exe` file.
+1. Double-click the `Pulse-[version]-setup.exe` file.
 2. Select installation type:
    - "Install for all users" (requires admin rights, requires `perMachine: true` in `build.nsis` config - currently `false`).
    - "Install for current user only" (no admin rights required - default behavior with current config).
@@ -85,13 +85,13 @@ For automated deployment:
 
 ```bash
 # Install for current user only (no admin required - default behavior)
-.\\"OneMed SupplyChain-1.0.0-setup.exe" /S /CURRENTUSER
+.\\"Pulse-1.0.0-setup.exe" /S /CURRENTUSER
 
 # Install to a custom directory (for current user)
-.\\"OneMed SupplyChain-1.0.0-setup.exe" /S /CURRENTUSER /D=C:\CustomPath
+.\\"Pulse-1.0.0-setup.exe" /S /CURRENTUSER /D=C:\CustomPath
 
 # (Requires build.nsis.perMachine=true and admin rights)
-# .\\"OneMed SupplyChain-1.0.0-setup.exe" /S /ALLUSERS
+# .\\"Pulse-1.0.0-setup.exe" /S /ALLUSERS
 ```
 
 _Replace filename with the actual version._
@@ -100,7 +100,7 @@ _Replace filename with the actual version._
 
 #### Manual Installation
 
-1. Double-click the `OneMed SupplyChain-[version]-Setup.msi` file.
+1. Double-click the `Pulse-[version]-Setup.msi` file.
 2. Follow the installation wizard (configured for current user by default `perMachine: false`).
 
 #### Silent Installation
@@ -109,16 +109,16 @@ For automated deployment:
 
 ```bash
 # Basic silent install (for current user by default)
-msiexec /i "OneMed SupplyChain-1.0.0-Setup.msi" /quiet
+msiexec /i "Pulse-1.0.0-Setup.msi" /quiet
 
 # Explicitly for current user (redundant with current config but good practice)
-msiexec /i "OneMed SupplyChain-1.0.0-Setup.msi" ALLUSERS=2 /quiet
+msiexec /i "Pulse-1.0.0-Setup.msi" ALLUSERS=2 /quiet
 
 # Install to a custom directory (for current user)
-msiexec /i "OneMed SupplyChain-1.0.0-Setup.msi" INSTALLDIR="C:\CustomPath" ALLUSERS=2 /quiet
+msiexec /i "Pulse-1.0.0-Setup.msi" INSTALLDIR="C:\CustomPath" ALLUSERS=2 /quiet
 
 # Silent uninstall
-msiexec /x "OneMed SupplyChain-1.0.0-Setup.msi" /quiet
+msiexec /x "Pulse-1.0.0-Setup.msi" /quiet
 ```
 
 _Replace filename with the actual version._
@@ -137,9 +137,9 @@ The MSI package can be deployed via Group Policy in domain environments:
 
 #### Usage
 
-1. Obtain the `OneMed SupplyChain-Portable.exe` file.
+1. Obtain the `Pulse-Portable.exe` file.
 2. Place the `.exe` file in any desired location (local drive, USB drive, network share).
-3. Run `OneMed SupplyChain-Portable.exe` directly.
+3. Run `Pulse-Portable.exe` directly.
 
 #### Notes
 

@@ -1,13 +1,13 @@
-# Kom i gang - OneMed SupplyChain
+# Kom i gang - Pulse (OneMed SupplyChain)
 
-Velkommen til OneMed SupplyChain! Denne guiden hjelper deg med å komme i gang med applikasjonen.
+Velkommen til Pulse! Denne guiden hjelper deg med å komme i gang med applikasjonen.
 
 ## 🚀 Første Oppstart
 
 ### 1. Start Applikasjonen
 
 1. **Finn applikasjonen** på din datamaskin
-2. **Dobbeltklikk** på OneMed SupplyChain ikonet
+2. **Dobbeltklikk** på Pulse-ikonet
 3. **Vent** mens applikasjonen starter opp
 
 ### 2. Første Import
@@ -118,17 +118,16 @@ BP-arket må inneholde:
 
 ### E-post Templates
 
-Applikasjonen bruker forhåndsdefinerte maler:
-
-- **Norsk mal**: Standard norsk e-post
-- **Engelsk mal**: For internasjonale leverandører
+Applikasjonen velger automatisk riktig språkmal basert på leverandørens land. Det finnes maler for
+5 språk: norsk, engelsk, svensk, dansk og finsk (se [E-post Templates](features/email-templates.md)).
 
 ### Sending av E-post
 
-1. **Automatisk generering** basert på valgt leverandør og ordre
+1. **Automatisk generering** basert på valgt leverandør og ordre, med riktig språk og avsender
 2. **Preview** før sending
-3. **E-postklient** åpnes med forhåndsutfylt e-post
-4. **Manuell sending** fra din e-postklient
+3. **Sending skjer via Outlook** på din Windows-maskin (COM-automasjon) — se
+   [Email Setup](features/email-setup.md) for detaljer
+4. Hvis automatisk sending feiler, åpnes e-posten i Outlook for manuell sending
 
 ### E-post Tracking
 
@@ -196,8 +195,7 @@ Applikasjonen bruker forhåndsdefinerte maler:
 ### Lær Mer
 
 - **[Brukerguide](user-guide.md)**: Detaljert brukerguide
-- **[Dashboard](dashboard.md)**: Bruk av dashboard
-- **[E-post System](email-system.md)**: E-post funksjoner
+- **[E-post Setup](features/email-setup.md)**: Hvordan e-post faktisk sendes
 - **[Excel Import](features/excel-import.md)**: Import av data
 
 ### Tips og Triks
@@ -226,5 +224,5 @@ For teknisk support eller spørsmål:
 
 ---
 
-**Sist oppdatert**: Juli 2024  
+**Sist oppdatert**: juli 2026  
 **Versjon**: Se package.json for gjeldende versjon

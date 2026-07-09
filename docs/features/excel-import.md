@@ -1,10 +1,10 @@
-# Excel Import - OneMed SupplyChain
+# Excel Import - Pulse
 
-Denne dokumentasjonen beskriver Excel import funksjonaliteten i OneMed SupplyChain.
+Denne dokumentasjonen beskriver Excel import funksjonaliteten i Pulse.
 
 ## 📋 Oversikt
 
-Excel import er en kjernefunksjon som lar brukere laste opp ordre- og leverandørstatusdata fra spesifikke Excel-regneark. Denne funksjonaliteten muliggjør hovedarbeidsflyten for å laste data inn i OneMed SupplyChain for gjennomgang og generering av e-post påminnelser.
+Excel import er en kjernefunksjon som lar brukere laste opp ordre- og leverandørstatusdata fra spesifikke Excel-regneark. Denne funksjonaliteten muliggjør hovedarbeidsflyten for å laste data inn i Pulse for gjennomgang og generering av e-post påminnelser.
 
 ## 📁 Støttede Filformater
 

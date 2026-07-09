@@ -1,4 +1,9 @@
-# Update Server Solution
+# Update Server Solution (Archived)
+
+> Archived: this proposal (a custom/generic update server) was superseded by the live setup —
+> Cloudflare Pages serving `docs/updates/` alongside GitHub Releases (see
+> [Auto-Update Workflow](../development/auto-update-workflow.md) and
+> [Publishing Updates](../development/publishing-updates.md)). Kept for history only.
 
 ## Problem
 

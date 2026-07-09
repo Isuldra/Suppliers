@@ -2,7 +2,7 @@
 
 ## Overview
 
-The auto-update system uses Cloudflare Pages to serve update files for the OneMed SupplyChain application. The system supports both NSIS installer updates and portable version updates.
+The auto-update system uses Cloudflare Pages to serve update files for the Pulse application. The system supports both NSIS installer updates and portable version updates.
 
 ## Architecture
 
@@ -15,13 +15,13 @@ The auto-update system uses Cloudflare Pages to serve update files for the OneMe
 ### For NSIS Installer Updates
 
 - `latest.yml` - Contains metadata for electron-updater
-- `OneMed SupplyChain-{version}-setup.exe` - NSIS installer
-- `OneMed SupplyChain-{version}-setup.exe.blockmap` - Block map for delta updates
+- `Pulse-{version}-setup.exe` - NSIS installer
+- `Pulse-{version}-setup.exe.blockmap` - Block map for delta updates
 
 ### For Portable Version Updates
 
 - `latest.json` - Contains metadata for portable version updates
-- `OneMed SupplyChain-Portable.exe` - Portable executable
+- `Pulse-Portable.exe` - Portable executable
 
 ## Build Process
 
@@ -70,7 +70,7 @@ After deployment, verify these URLs work:
 
 - `https://suppliers-anx.pages.dev/latest.yml`
 - `https://suppliers-anx.pages.dev/latest.json`
-- `https://suppliers-anx.pages.dev/OneMed SupplyChain-Portable.exe`
+- `https://suppliers-anx.pages.dev/Pulse-Portable.exe`
 
 ## File Structure
 
@@ -80,9 +80,9 @@ docs/updates/
 ├── index.html          # Update page (shows current version)
 ├── latest.yml          # NSIS installer update metadata
 ├── latest.json         # Portable version update metadata
-├── OneMed SupplyChain-{version}-setup.exe
-├── OneMed SupplyChain-{version}-setup.exe.blockmap
-└── OneMed SupplyChain-Portable.exe
+├── Pulse-{version}-setup.exe
+├── Pulse-{version}-setup.exe.blockmap
+└── Pulse-Portable.exe
 ```
 
 ## Update URLs
