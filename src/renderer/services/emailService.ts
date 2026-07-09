@@ -738,10 +738,6 @@ export class EmailService {
       const compiledTemplate = Handlebars.compile(template);
       const rawHtml = compiledTemplate(data);
 
-      // 🔍 DEBUG: Log raw HTML before juice processing
-      console.log('=== RAW HTML BEFORE JUICE ===');
-      console.log(rawHtml.substring(0, 500) + '...');
-
       // Save raw HTML to file for debugging
       try {
         await window.electron.saveDebugHtml({
@@ -763,10 +759,6 @@ export class EmailService {
         applyHeightAttributes: true, // Convert CSS heights to height attributes
         preserveImportant: true, // Keep !important declarations
       });
-
-      // 🔍 DEBUG: Log processed HTML after juice
-      console.log('=== PROCESSED HTML AFTER JUICE ===');
-      console.log(html.substring(0, 500) + '...');
 
       // Save processed HTML to file for debugging
       try {
