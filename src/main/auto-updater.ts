@@ -27,6 +27,64 @@ let lastUpdateNotificationTime: number = 0;
 const UPDATE_NOTIFICATION_COOLDOWN = 24 * 60 * 60 * 1000; // 24 hours
 
 /**
+ * electron-updater emits 'update-downloaded' only when a download completes in
+ * the current session — never on a later start with the installer already
+ * cached on disk. To notice an update that was downloaded but never installed,
+ * record it ourselves and read the record back at startup.
+ */
+interface PendingUpdateMarker {
+  version: string;
+  downloadedAt: string;
+}
+
+function pendingUpdateMarkerPath(): string {
+  return path.join(app.getPath('userData'), 'pending-update.json');
+}
+
+function writePendingUpdateMarker(version: string): void {
+  try {
+    const marker: PendingUpdateMarker = {
+      version,
+      downloadedAt: new Date().toISOString(),
+    };
+    fs.writeFileSync(pendingUpdateMarkerPath(), JSON.stringify(marker), 'utf8');
+    updateLogger.info(`Recorded pending update marker for ${version}`);
+  } catch (error) {
+    updateLogger.error('Failed to write pending update marker:', error);
+  }
+}
+
+function readPendingUpdateMarker(): PendingUpdateMarker | null {
+  try {
+    const markerPath = pendingUpdateMarkerPath();
+    if (!fs.existsSync(markerPath)) {
+      return null;
+    }
+    const parsed = JSON.parse(fs.readFileSync(markerPath, 'utf8')) as Partial<PendingUpdateMarker>;
+    if (typeof parsed.version !== 'string' || parsed.version.length === 0) {
+      updateLogger.warn('Pending update marker is malformed; discarding');
+      clearPendingUpdateMarker();
+      return null;
+    }
+    return { version: parsed.version, downloadedAt: parsed.downloadedAt ?? '' };
+  } catch (error) {
+    updateLogger.error('Failed to read pending update marker:', error);
+    return null;
+  }
+}
+
+function clearPendingUpdateMarker(): void {
+  try {
+    const markerPath = pendingUpdateMarkerPath();
+    if (fs.existsSync(markerPath)) {
+      fs.unlinkSync(markerPath);
+    }
+  } catch (error) {
+    updateLogger.error('Failed to clear pending update marker:', error);
+  }
+}
+
+/**
  * Detect if the app is running as a portable version
  * Portable apps typically run from a temporary or user-defined location
  * and don't have the standard installation structure
@@ -376,47 +434,36 @@ export function setupAutoUpdater() {
  * This is useful when the app was force-quit before installation completed
  */
 async function checkForPendingUpdate() {
-  try {
-    updateLogger.info('Checking for pending updates at startup...');
+  updateLogger.info('Checking for pending updates at startup...');
 
-    // Listen for update-downloaded event which indicates a pending update
-    let hasPendingUpdate = false;
+  const pending = readPendingUpdateMarker();
+  if (!pending) {
+    updateLogger.info('No pending updates found at startup');
+    return;
+  }
 
-    const pendingUpdateHandler = () => {
-      hasPendingUpdate = true;
-    };
+  // The marker outlives the restart that installs it, so its mere presence
+  // proves nothing. Compare against the version we are actually running.
+  if (pending.version === app.getVersion()) {
+    updateLogger.info(`Pending update ${pending.version} is already installed; clearing marker`);
+    clearPendingUpdateMarker();
+    return;
+  }
 
-    autoUpdater.once('update-downloaded', pendingUpdateHandler);
+  updateLogger.info(`Found pending update ${pending.version}, prompting user for installation...`);
 
-    // Try to check for updates - if an update is already downloaded,
-    // it will trigger the update-downloaded event immediately
-    await autoUpdater.checkForUpdates();
+  const result = await dialog.showMessageBox({
+    type: 'question',
+    title: 'Uinstallert oppdatering funnet',
+    message: `Versjon ${pending.version} ble lastet ned, men ikke installert.`,
+    detail: 'Vil du installere oppdateringen nå? Applikasjonen vil starte på nytt.',
+    buttons: ['Installer nå', 'Senere'],
+    defaultId: 0,
+  });
 
-    // Small delay to allow event to fire
-    await new Promise((resolve) => setTimeout(resolve, 500));
-
-    if (hasPendingUpdate) {
-      updateLogger.info('Found pending update, prompting user for installation...');
-
-      const result = await dialog.showMessageBox({
-        type: 'question',
-        title: 'Uinstallert oppdatering funnet',
-        message: 'Det finnes en oppdatering som ble lastet ned men ikke installert.',
-        detail: 'Vil du installere oppdateringen nå? Applikasjonen vil starte på nytt.',
-        buttons: ['Installer nå', 'Senere'],
-        defaultId: 0,
-      });
-
-      if (result.response === 0) {
-        updateLogger.info('User chose to install pending update...');
-        autoUpdater.quitAndInstall(false, true);
-      }
-    } else {
-      updateLogger.info('No pending updates found at startup');
-    }
-  } catch (error) {
-    // This is expected if no pending update exists
-    updateLogger.info('No pending update or error checking:', error);
+  if (result.response === 0) {
+    updateLogger.info('User chose to install pending update...');
+    autoUpdater.quitAndInstall(false, true);
   }
 }
 
@@ -505,6 +552,7 @@ function setupStandardUpdater() {
   // Oppdatering er lastet ned og klar for installasjon
   autoUpdater.on('update-downloaded', ((info: UpdateInfo) => {
     updateLogger.info('Oppdatering lastet ned:', info);
+    writePendingUpdateMarker(info.version);
 
     // Send update downloaded to UI
     const mainWindow = BrowserWindow.getAllWindows()[0];
