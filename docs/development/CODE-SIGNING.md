@@ -119,7 +119,7 @@ When `electron-updater` downloads an update:
 Looking at the logs:
 
 ```
-• signing with signtool.exe  path=release/win-arm64-unpacked/OneMed SupplyChain.exe
+• signing with signtool.exe  path=release/win-arm64-unpacked/Pulse.exe
 ```
 
 This indicates electron-builder is TRYING to sign, but no certificate is configured, so it's essentially a no-op.

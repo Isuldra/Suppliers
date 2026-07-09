@@ -1,10 +1,10 @@
 # Publishing Updates
 
-This guide explains how to publish updates for SupplyChain OneMed using the automated CI/CD pipeline.
+This guide explains how to publish updates for Pulse using the automated CI/CD pipeline.
 
 ## Overview
 
-SupplyChain OneMed uses [electron-updater](https://www.electron.build/auto-update) to handle automatic updates. The CI pipeline automatically builds the application artifacts and publishes them to GitHub Releases when a version tag is pushed.
+Pulse uses [electron-updater](https://www.electron.build/auto-update) to handle automatic updates. The CI pipeline automatically builds the application artifacts and publishes them to GitHub Releases when a version tag is pushed.
 
 ### Key Features
 
@@ -39,8 +39,8 @@ Update the `version` field in `package.json`:
 ```json
 {
   "name": "one-med-supplychain-app",
-  "version": "1.1.8",
-  "description": "OneMed SupplyChain - Pulse"
+  "version": "1.5.3",
+  "description": "Pulse - Desktop application for managing supplier workflows and data"
 }
 ```
 
@@ -65,7 +65,7 @@ Once you push the tag, GitHub Actions will automatically:
 1. **Build the application** using `npm run dist`
 2. **Generate latest.yml** for portable auto-updates
 3. **Upload to GitHub Release** with all artifacts:
-   - Portable executable (`OneMed SupplyChain-Portable.exe`)
+   - Portable executable (`Pulse-Portable.exe`)
    - ZIP archive
    - `latest.yml` (update metadata)
 
@@ -77,8 +77,8 @@ After the automated release is complete:
 
 1. **Check GitHub Releases**: Navigate to the GitHub Releases page and verify the new release appears
 2. **Verify Assets**: Confirm all files are uploaded:
-   - `OneMed SupplyChain-Portable.exe`
-   - `OneMed SupplyChain-1.1.8-setup.zip`
+   - `Pulse-Portable.exe`
+   - `Pulse-1.1.8-setup.zip`
    - `latest.yml`
 3. **Test Auto-Update**: Install a previous version and test the auto-update functionality
 

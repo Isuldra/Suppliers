@@ -1,19 +1,25 @@
-# Utviklingsmiljø - OneMed SupplyChain
+# Utviklingsmiljø - OneMed SupplyChain (Pulse)
 
-Denne guiden beskriver hvordan du setter opp utviklingsmiljøet for OneMed SupplyChain.
+Denne guiden beskriver hvordan du setter opp utviklingsmiljøet for Pulse.
 
 ## 🛠️ Forutsetninger
 
 ### Nødvendige Verktøy
 
-- **Node.js**: Versjon 18 eller nyere
-- **npm**: Kommer med Node.js
+- **Bun**: Prosjektets pakkebehandler. `bun.lock` er canonical, og CI kjører
+  `bun install --frozen-lockfile`. Bruk `bun install`/`bun run <script>`, ikke `npm install`.
+- **Node.js**: Versjon 22 (brukt av flere GitHub Actions workflows, f.eks.
+  `.github/workflows/release.yml`, `manual-release.yml`, `security-audit.yml`,
+  `version-management.yml`). `build.yml` selv bruker kun Bun og trenger ikke en separat
+  Node-setup.
 - **Git**: For versjonskontroll
 - **Code Editor**: VS Code anbefales
 
 ### Systemkrav
 
-- **OS**: Windows 10+, macOS 10.15+, eller Linux
+- **OS for utvikling**: Windows, macOS eller Linux
+- **OS for produksjonsbygg**: Windows (native moduler som `better-sqlite3` bygges kun pålitelig
+  for Windows-target; Outlook-integrasjonen krever uansett Windows i produksjon)
 - **RAM**: Minimum 4GB, anbefalt 8GB
 - **Diskplass**: 2GB ledig plass
 - **Nettverk**: Internett for nedlasting av dependencies
@@ -24,47 +30,34 @@ Denne guiden beskriver hvordan du setter opp utviklingsmiljøet for OneMed Suppl
 
 ```bash
 git clone <repository-url>
-cd supplier-reminder-pro
+cd Suppliers
 ```
 
 ### 2. Installer Dependencies
 
 ```bash
-npm install
+bun install
 ```
 
 ### 3. Sjekk Installasjon
 
 ```bash
 # Sjekk Node.js versjon
-node --version  # Skal være 18+
+node --version  # Skal være 22.x
 
-# Sjekk npm versjon
-npm --version
+# Sjekk Bun-versjon
+bun --version
 
 # Sjekk at alle dependencies er installert
-npm list --depth=0
+bun pm ls
 ```
 
 ## 🔧 Konfigurasjon
 
 ### Miljøvariabler
 
-Opprett en `.env` fil i prosjektroten:
-
-```env
-# Development
-NODE_ENV=development
-
-# Database
-DB_PATH=./data/app.sqlite
-
-# Logging
-LOG_LEVEL=debug
-
-# Auto-updater (development)
-AUTO_UPDATER_ENABLED=false
-```
+Se `.env.example` for gjeldende variabler (blant annet Supabase-konfigurasjon for
+produktkatalog-synkronisering).
 
 ### VS Code Anbefalinger
 
@@ -72,312 +65,169 @@ Installer følgende extensions:
 
 - **ESLint**: JavaScript/TypeScript linting
 - **Prettier**: Code formatting
-- **TypeScript Importer**: Auto-import
 - **Tailwind CSS IntelliSense**: CSS autocomplete
-- **Electron Debugger**: Debug Electron apps
-
-### VS Code Settings
-
-Legg til i `.vscode/settings.json`:
-
-```json
-{
-  "editor.formatOnSave": true,
-  "editor.defaultFormatter": "esbenp.prettier-vscode",
-  "typescript.preferences.importModuleSpecifier": "relative",
-  "tailwindCSS.includeLanguages": {
-    "typescript": "javascript",
-    "typescriptreact": "javascript"
-  }
-}
-```
 
 ## 🏃‍♂️ Utvikling
 
 ### Start Development Server
 
 ```bash
-npm run dev
+bun run dev
 ```
 
-Dette starter:
+Dette kjører `scripts/ensure-electron-modules.js` og starter deretter `electron-vite dev`:
 
-- Vite dev server for renderer process
-- Electron main process
+- Vite dev server for renderer-prosessen
+- Electron main-prosess
 - Hot Module Replacement (HMR)
-- Auto-reload ved filendringer
 
-### Build for Production
-
-```bash
-# Development build
-npm run build
-
-# Production build
-npm run build:prod
-```
-
-### Package Application
+### Build
 
 ```bash
-# Package for current platform
-npm run package
-
-# Package for all platforms
-npm run package:all
+bun run build
 ```
 
 ## 🧪 Testing
 
-### Unit Tests
+Prosjektet bruker **Vitest** (ikke Jest, ikke Playwright).
 
 ```bash
 # Kjør alle tester
-npm test
+bun run test
 
 # Kjør tester i watch mode
-npm run test:watch
+bun run test:watch
 
 # Kjør tester med coverage
-npm run test:coverage
+bun run test:coverage
 ```
 
-### E2E Tests
+### Manuell testing
 
-```bash
-# Kjør E2E tester
-npm run test:e2e
-
-# Kjør E2E tester i headed mode
-npm run test:e2e:headed
-```
-
-### Manual Testing
-
-1. **Start applikasjonen**: `npm run dev`
-2. **Test Excel import**: Last opp en test Excel-fil
-3. **Test e-post sending**: Send test e-post
+1. **Start applikasjonen**: `bun run dev`
+2. **Test Excel-import**: Last opp en test Excel-fil
+3. **Test e-post-sending**: Krever Windows + Outlook installert og innlogget (se
+   [Email Setup](../features/email-setup.md))
 4. **Test dashboard**: Naviger til dashboard
-5. **Test keyboard shortcuts**: Bruk Ctrl/Cmd + ?
 
-## 🐛 Debugging
+## 🔍 Kvalitetssjekk (Quality Gate)
 
-### Main Process Debugging
-
-```bash
-# Start med debugging
-npm run dev:debug
-```
-
-Eller legg til i `package.json`:
-
-```json
-{
-  "scripts": {
-    "dev:debug": "cross-env NODE_ENV=development electron-vite dev --inspect=5858"
-  }
-}
-```
-
-### Renderer Process Debugging
-
-1. Åpne DevTools: `Ctrl+Shift+I` (Windows/Linux) eller `Cmd+Option+I` (macOS)
-2. Bruk Console for logging
-3. Bruk Sources for breakpoints
-4. Bruk Network for API-kall
-
-### Database Debugging
+Kanonisk kommando før commit/PR:
 
 ```bash
-# Åpne SQLite database
-sqlite3 ./data/app.sqlite
+bun run quality
+```
 
-# Kjør queries
-SELECT * FROM purchase_order LIMIT 10;
-SELECT * FROM supplier_emails LIMIT 10;
+Dette kjører `format:check`, `lint`, `typecheck`, og `test` (med `--passWithNoTests`) i rekkefølge.
+Andre nyttige varianter:
+
+```bash
+# Auto-fikser formattering og linting, kjører deretter typecheck
+bun run quality:fix
+
+# Rask sjekk uten tester
+bun run quality:fast
+
+# Kun formattering
+bun run format
+bun run format:check
+
+# Kun linting
+bun run lint
 ```
 
 ## 📁 Prosjektstruktur
 
 ```
-supplier-reminder-pro/
-├── src/
-│   ├── main/                    # Main process
-│   │   ├── index.ts            # Entry point
-│   │   ├── database.ts         # Database service
-│   │   ├── importer.ts         # Excel import
-│   │   └── auto-updater.ts     # Auto-update
-│   ├── renderer/               # Renderer process
-│   │   ├── App.tsx            # Main component
-│   │   ├── components/        # React components
-│   │   ├── services/          # Business logic
-│   │   └── types/             # TypeScript types
-│   └── preload/               # Preload scripts
-├── docs/                      # Documentation
-├── resources/                 # App resources
-├── scripts/                   # Build scripts
-├── tests/                     # Test files
-└── dist/                      # Build output
+src/
+├── main/                       # Main-prosess (entry: index.ts → dist/main/main.cjs)
+├── preload/                    # Preload-script (contextBridge + kanal-allowlist)
+├── renderer/                   # React-frontend
+│   ├── App.tsx
+│   ├── components/
+│   ├── services/
+│   └── locales/                # no, en, se, da, fi
+└── services/                    # Delt mellom main og renderer (databaseService, supabaseClient)
+docs/                            # Dokumentasjon
+resources/                       # App-ressurser (ikoner, installer-config)
+scripts/                         # Bygg- og release-scripts
+tests/                           # Vitest-oppsett
+dist/                            # Byggoutput (gitignored)
 ```
 
-## 🔍 Linting og Formatting
+Se [Arkitektur](../architecture.md) for full detaljer.
 
-### ESLint
+## 📦 Produksjonsbygg (Windows)
 
 ```bash
-# Kjør linting
-npm run lint
-
-# Fix auto-fixable issues
-npm run lint:fix
+bun run dist            # Full NSIS + portable + zip, med Cloudflare-forberedelse
+bun run dist:portable   # Kun portable .exe
+bun run dist:nsis       # Kun NSIS-installer
+bun run dist:msi        # Kun MSI-pakke
 ```
 
-### Prettier
-
-```bash
-# Format all files
-npm run format
-
-# Check formatting
-npm run format:check
-```
-
-## 📦 Build Scripts
-
-### Development
-
-```bash
-# Start development
-npm run dev
-
-# Build development
-npm run build:dev
-
-# Package development
-npm run package:dev
-```
-
-### Production
-
-```bash
-# Build production
-npm run build:prod
-
-# Package production
-npm run package:prod
-
-# Create installer
-npm run make
-```
-
-## 🔄 Git Workflow
-
-### Branch Strategy
-
-- **main**: Production code
-- **develop**: Development branch
-- **feature/\***: New features
-- **bugfix/\***: Bug fixes
-- **hotfix/\***: Critical fixes
-
-### Commit Convention
-
-```
-type(scope): description
-
-feat: add new feature
-fix: fix bug
-docs: update documentation
-style: formatting changes
-refactor: code refactoring
-test: add tests
-chore: maintenance tasks
-```
-
-### Pre-commit Hooks
-
-```bash
-# Install husky
-npm install husky --save-dev
-
-# Setup pre-commit hooks
-npx husky install
-npx husky add .husky/pre-commit "npm run lint && npm run test"
-```
+Se [Distribusjon](../distribution/DISTRIBUTION.md) og
+[Publishing Updates](publishing-updates.md) for release-prosessen.
 
 ## 🚨 Vanlige Problemer
 
 ### Node Modules Feil
 
 ```bash
-# Ryd node_modules og reinstall
-rm -rf node_modules package-lock.json
-npm install
-```
-
-### Electron Rebuild
-
-```bash
-# Rebuild native modules
-npm run rebuild
-
-# Eller manuelt
-npx electron-rebuild
+rm -rf node_modules
+bun install
 ```
 
 ### Database Feil
 
 ```bash
-# Slett database og start på nytt
-rm -rf data/app.sqlite
-npm run dev
+# Slett lokal database og start på nytt (data ligger i app-data-mappen, ikke i repoet)
+bun run dev
 ```
 
 ### Build Feil
 
 ```bash
-# Ryd build cache
 rm -rf dist/
-npm run build
+bun run build
 ```
 
 ## 📚 Ressurser
-
-### Dokumentasjon
 
 - [Electron Documentation](https://www.electronjs.org/docs)
 - [React Documentation](https://reactjs.org/docs)
 - [TypeScript Documentation](https://www.typescriptlang.org/docs)
 - [Tailwind CSS Documentation](https://tailwindcss.com/docs)
-
-### Verktøy
-
 - [Vite](https://vitejs.dev/)
 - [Electron Vite](https://electron-vite.org/)
 - [Better SQLite3](https://github.com/WiseLibs/better-sqlite3)
-- [ExcelJS](https://github.com/exceljs/exceljs)
+- [Bun](https://bun.sh/docs)
 
 ## 🤝 Bidrag
 
 ### Pull Request Prosess
 
-1. Fork repository
-2. Opprett feature branch
-3. Gjør endringer
-4. Kjør tester
-5. Opprett pull request
-6. Code review
-7. Merge
+1. Opprett feature branch fra `main`
+2. Gjør endringer i små, fokuserte commits
+3. Kjør `bun run quality`
+4. Opprett pull request
+5. Vent på CI (kjører samme kvalitetssjekk) og code review
+6. Merge
 
-### Code Review Checklist
+### Commit Convention
 
-- [ ] Kode følger style guide
-- [ ] Tester er inkludert
-- [ ] Dokumentasjon er oppdatert
-- [ ] Ingen breaking changes
-- [ ] Performance er optimalisert
+```
+type(scope): description
+
+feat: ny feature
+fix: bugfix
+docs: dokumentasjonsoppdatering
+refactor: refaktorering
+test: tester
+chore: vedlikehold
+```
 
 ---
 
-**Sist oppdatert**: Juli 2024  
+**Sist oppdatert**: juli 2026
 **Versjon**: Se package.json for gjeldende versjon

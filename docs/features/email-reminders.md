@@ -1,10 +1,10 @@
 # Email Reminders
 
-This document provides detailed information about the email reminder functionality in SupplyChain OneMed.
+This document provides detailed information about the email reminder functionality in Pulse.
 
 ## Overview
 
-The email reminder feature allows users to manually generate and send reminder emails to suppliers regarding their outstanding orders. This functionality helps maintain communication with suppliers and track correspondence related to orders processed within the SupplyChain OneMed application.
+The email reminder feature allows users to manually generate and send reminder emails to suppliers regarding their outstanding orders. This functionality helps maintain communication with suppliers and track correspondence related to orders processed within the Pulse application.
 
 ## Email Template System
 
@@ -119,4 +119,5 @@ Common issues and their solutions:
 
 ## Related Features
 
-- [Order Tracking](order-tracking.md) - Provides the order data used for reminders.
+- [Excel Import](excel-import.md) - How order data enters the app in the first place.
+- [Database](database.md) - Where order data (`purchase_order` table) and email-sent tracking live.

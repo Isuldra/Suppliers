@@ -1,8 +1,8 @@
-# OneMed SupplyChain - User Guide
+# Pulse - User Guide
 
 ## 🇳🇴 Norsk (Norwegian)
 
-Denne brukerguiden beskriver hvordan du bruker OneMed SupplyChain for effektiv leverandørstyring og ordreoppfølging.
+Denne brukerguiden beskriver hvordan du bruker Pulse for effektiv leverandørstyring og ordreoppfølging.
 
 ### 🚀 Kom i gang
 
@@ -220,7 +220,7 @@ For teknisk support eller spørsmål:
 
 ## 🇸🇪 Svenska (Swedish)
 
-Denna användarguide beskriver hur du använder OneMed SupplyChain för effektiv leverantörshantering och orderuppföljning.
+Denna användarguide beskriver hur du använder Pulse för effektiv leverantörshantering och orderuppföljning.
 
 ### 🚀 Kom igång
 
@@ -438,7 +438,7 @@ För teknisk support eller frågor:
 
 ## 🇩🇰 Dansk (Danish)
 
-Denne brugerguide beskriver, hvordan du bruger OneMed SupplyChain til effektiv leverandørstyring og ordreopgøring.
+Denne brugerguide beskriver, hvordan du bruger Pulse til effektiv leverandørstyring og ordreopgøring.
 
 ### 🚀 Kom i gang
 
@@ -656,7 +656,7 @@ For teknisk support eller spørgsmål:
 
 ## 🇫🇮 Suomi (Finnish)
 
-Tämä käyttöopas kuvaa, kuinka käytät OneMed SupplyChainia tehokkaaseen toimittajien hallintaan ja tilausseurantaan.
+Tämä käyttöopas kuvaa, kuinka käytät Pulse-sovellusta tehokkaaseen toimittajien hallintaan ja tilausseurantaan.
 
 ### 🚀 Aloittaminen
 
@@ -874,7 +874,7 @@ Teknisestä tuesta tai kysymyksistä:
 
 ## 🇬🇧 English
 
-This user guide describes how to use OneMed SupplyChain for effective supplier management and order tracking.
+This user guide describes how to use Pulse for effective supplier management and order tracking.
 
 ### 🚀 Getting Started
 

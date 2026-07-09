@@ -18,7 +18,7 @@ For å automatisere GitHub Release-opprettelsen trenger vi en Personal Access To
 ### 2. Opprett ny token
 
 - Klikk "Generate new token (classic)"
-- Gi den et beskrivende navn: `OneMed SupplyChain Auto-Release`
+- Gi den et beskrivende navn: `Pulse Auto-Release`
 - Velg utløpsdato (anbefalt: 1 år)
 
 ### 3. Velg riktige permissions

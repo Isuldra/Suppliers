@@ -2,7 +2,7 @@
 
 ## Overview
 
-The OneMed SupplyChain application has a fully automated GitHub Release system that handles uploads of installers and update metadata.
+The Pulse application has a fully automated GitHub Release system that handles uploads of installers and update metadata.
 
 ## ⚡ Quick Start
 
@@ -39,9 +39,9 @@ npm run release:github
 **What it does**:
 
 - Creates a GitHub Release for the current version (from `package.json`)
-- Uploads NSIS installer (`OneMed SupplyChain-{version}-setup.exe`)
-- Uploads blockmap file (`OneMed SupplyChain-{version}-setup.exe.blockmap`)
-- Uploads portable executable (`OneMed SupplyChain-Portable.exe`)
+- Uploads NSIS installer (`Pulse-{version}-setup.exe`)
+- Uploads blockmap file (`Pulse-{version}-setup.exe.blockmap`)
+- Uploads portable executable (`Pulse-Portable.exe`)
 
 ### 2. GitHub Actions Workflow (`.github/workflows/build.yml`)
 
@@ -58,9 +58,9 @@ npm run release:github
 
 **Files uploaded**:
 
-- `OneMed SupplyChain-Portable.exe`
-- `OneMed SupplyChain-{version}-setup.zip`
-- `OneMed SupplyChain-{version}-setup.exe`
+- `Pulse-Portable.exe`
+- `Pulse-{version}-setup.zip`
+- `Pulse-{version}-setup.exe`
 - `latest.yml` (update metadata)
 - `app-update.yml` (NSIS update metadata)
 
@@ -130,7 +130,7 @@ If you want to test the release script locally (not required), you need a Person
 
 1. Go to: https://github.com/settings/tokens
 2. Click "Generate new token (classic)"
-3. Name: `OneMed SupplyChain Auto-Release`
+3. Name: `Pulse Auto-Release`
 4. Select scope: **`repo`** (full control)
 5. Generate and copy the token
 
@@ -167,12 +167,12 @@ npm run release:github
 
 All releases contain:
 
-1. **NSIS Installer** (`OneMed SupplyChain-{version}-setup.exe`)
+1. **NSIS Installer** (`Pulse-{version}-setup.exe`)
    - Full installer for Windows
    - Supports silent installation
    - Provides update capabilities
 
-2. **Portable Executable** (`OneMed SupplyChain-Portable.exe`)
+2. **Portable Executable** (`Pulse-Portable.exe`)
    - Single-file executable
    - No installation required
    - Simple distribution
@@ -198,7 +198,7 @@ https://github.com/Isuldra/Suppliers/releases/download/v{version}/{filename}
 Example:
 
 ```
-https://github.com/Isuldra/Suppliers/releases/download/v1.3.2/OneMed SupplyChain-1.3.2-setup.exe
+https://github.com/Isuldra/Suppliers/releases/download/v1.3.2/Pulse-1.3.2-setup.exe
 ```
 
 ## Integration with Auto-Update

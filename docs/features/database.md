@@ -1,421 +1,197 @@
-# Database - OneMed SupplyChain
+# Database - OneMed SupplyChain (Pulse)
 
-Denne dokumentasjonen beskriver database-strukturen og operasjonene i OneMed SupplyChain.
+Denne dokumentasjonen beskriver database-strukturen og operasjonene i Pulse, generert direkte fra
+`CREATE TABLE`-setningene i `src/services/databaseService.ts`.
 
-## 💾 Oversikt
+## Oversikt
 
-OneMed SupplyChain bruker SQLite som lokal database for å lagre ordredata, leverandørinformasjon og e-post historikk. Databasen er designet for å være enkel, rask og pålitelig for desktop-applikasjoner.
+Pulse bruker SQLite som lokal database for å lagre ordredata, leverandørinformasjon og
+planleggingsdata. Databasen er filbasert, krever ingen server, og er designet for å være enkel,
+rask og pålitelig for en desktop-applikasjon.
 
-## 🏗️ Database Arkitektur
-
-### Teknisk Stack
+## Teknisk Stack
 
 - **SQLite**: Lokal filbasert database
-- **better-sqlite3**: Node.js driver for SQLite
-- **Automatisk Backup**: Sikkerhetskopiering ved hver import
-- **Migrations**: Automatisk schema oppdateringer
+- **better-sqlite3**: Synkron Node.js-driver for SQLite
+- **WAL-modus**: `PRAGMA journal_mode = WAL` er aktivert for bedre samtidighet
+- **Automatisk backup**: Se [Backup og Recovery](#backup-og-recovery)
+- **Ingen kryptering**: Databasefilen er ikke kryptert
 
 ### Database Fil
 
 - **Filnavn**: `app.sqlite`
-- **Plassering**: `%APPDATA%/one-med-supplychain-app/` (Windows) eller `~/Library/Application Support/one-med-supplychain-app/` (macOS)
-- **Størrelse**: Typisk 1-10 MB avhengig av data
+- **Plassering**: `%APPDATA%/one-med-supplychain-app/` (Windows) eller
+  `~/Library/Application Support/one-med-supplychain-app/` (macOS) — mappenavnet kommer fra
+  `name`-feltet i `package.json`, ikke `productName`.
 
-## 📊 Tabellstruktur
+## Tabellstruktur
 
-### purchase_order
+Databasen har seks tabeller, alle opprettet i `DatabaseService`'s `initialize()`-metode:
 
-Hovedtabellen for ordredata importert fra Excel.
+### `orders`
 
 ```sql
-CREATE TABLE purchase_order (
+CREATE TABLE IF NOT EXISTS orders (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  nøkkel TEXT,                    -- Unik nøkkel for hver ordre
-  ordreNr TEXT,                   -- Ordrenummer
-  itemNo TEXT,                    -- Artikkelnummer
-  beskrivelse TEXT,               -- Produktbeskrivelse
-  dato TEXT,                      -- Ordredato
-  ftgnavn TEXT,                   -- Leverandørnavn (gammelt felt)
-  status TEXT,                    -- Ordrestatus
-  order_qty INTEGER,              -- Bestilt antall
-  received_qty INTEGER,           -- Levert antall
-  outstanding_qty INTEGER,        -- Restantall
-  eta_supplier TEXT,              -- Forventet leveringsdato
-  supplier_name TEXT,             -- Leverandørnavn (nytt felt)
-  warehouse TEXT,                 -- Lager
-  order_row_number TEXT,          -- Ordre radnummer
-  email_sent_at TEXT              -- Når e-post ble sendt
+  reference TEXT,
+  supplier TEXT NOT NULL,
+  orderNumber TEXT,
+  orderDate TEXT,
+  dueDate TEXT,
+  category TEXT,
+  description TEXT,
+  value REAL,
+  currency TEXT,
+  confirmed INTEGER DEFAULT 0,
+  createdAt TEXT DEFAULT CURRENT_TIMESTAMP,
+  updatedAt TEXT DEFAULT CURRENT_TIMESTAMP,
+  email_sent_at TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_supplier ON orders(supplier);
+CREATE INDEX IF NOT EXISTS idx_dueDate ON orders(dueDate);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_supplier_ordernum ON orders(supplier, orderNumber);
+```
+
+### `audit_log`
+
+Logger endringer (insert/update/delete) gjort av `DatabaseService`.
+
+```sql
+CREATE TABLE IF NOT EXISTS audit_log (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  action TEXT NOT NULL,
+  table_name TEXT NOT NULL,
+  record_id INTEGER,
+  old_value TEXT,
+  new_value TEXT,
+  timestamp TEXT DEFAULT CURRENT_TIMESTAMP,
+  user_id TEXT
 );
 ```
 
-### supplier_emails
+`user_id` er del av skjemaet, men populeres ikke av dagens kode.
 
-Tabell for leverandørinformasjon og e-postadresser.
+### `weekly_status`
+
+Ukentlig status per leverandør/dag, brukt av Excel-importflyten.
 
 ```sql
-CREATE TABLE supplier_emails (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  supplier_name TEXT UNIQUE,      -- Leverandørnavn
-  email_address TEXT,             -- E-postadresse
-  updated_at TEXT                 -- Sist oppdatert
+CREATE TABLE IF NOT EXISTS weekly_status (
+  leverandor TEXT,
+  dag         TEXT,
+  uke         TEXT,
+  status      TEXT,
+  email       TEXT,
+  UNIQUE(leverandor, dag, uke) ON CONFLICT REPLACE
+);
+CREATE INDEX IF NOT EXISTS idx_weekly_status_leverandor ON weekly_status(leverandor);
+CREATE INDEX IF NOT EXISTS idx_weekly_status_uke ON weekly_status(uke);
+```
+
+### `purchase_order`
+
+Hovedtabellen for ordredata importert fra Excel. Skjemaet har fått en rekke kolonner lagt til
+gjennom migrations (se `poColumns` i `databaseService.ts`); tabellen under viser sluttresultatet.
+
+```sql
+CREATE TABLE IF NOT EXISTS purchase_order (
+  nøkkel        TEXT PRIMARY KEY,
+  ordreNr       TEXT,
+  itemNo        TEXT,
+  beskrivelse   TEXT,
+  dato          TEXT,
+  ftgnavn       TEXT,
+  status        TEXT,
+  producer_item TEXT,
+  specification TEXT,
+  note          TEXT,
+  inventory_balance REAL DEFAULT 0,
+  order_qty     INTEGER DEFAULT 0,
+  received_qty  INTEGER DEFAULT 0,
+  purchaser     TEXT,
+  incoming_date TEXT,
+  eta_supplier  TEXT,
+  supplier_name TEXT,
+  warehouse     TEXT,
+  outstanding_qty INTEGER DEFAULT 0
+  -- additional columns added via migration: from_restliste, order_row_number,
+  -- company_code, besttyp, and others — see poColumns in databaseService.ts
 );
 ```
 
-## 🔍 Indekser
+### `supplier_emails`
 
-For optimal ytelse er følgende indekser opprettet:
+Leverandørnavn til e-postadresse-oppslag.
 
 ```sql
--- purchase_order indekser
-CREATE INDEX idx_purchase_order_supplier ON purchase_order(supplier_name);
-CREATE INDEX idx_purchase_order_outstanding ON purchase_order(outstanding_qty);
-CREATE INDEX idx_purchase_order_eta ON purchase_order(eta_supplier);
-
--- supplier_emails indekser
-CREATE INDEX idx_supplier_emails_name ON supplier_emails(supplier_name);
+CREATE TABLE IF NOT EXISTS supplier_emails (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  supplier_name TEXT NOT NULL UNIQUE,
+  email_address TEXT NOT NULL,
+  updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_supplier_emails_name ON supplier_emails(supplier_name);
 ```
 
-## 🔄 Database Operasjoner
+### `supplier_planning`
 
-### Import Operasjoner
+Hvilken planlegger som er ansvarlig for en leverandør på en gitt ukedag (ark 6 / "Leverandør" i
+Excel-importen).
 
-#### Initial Import
-
-```typescript
-// Kalles ved første oppstart
-async function importAlleArk(source: string | ArrayBuffer, db: Database): Promise<boolean> {
-  // 1. Ryd eksisterende data
-  db.prepare('DELETE FROM purchase_order').run();
-
-  // 2. Import BP ark data
-  const bpData = parseBPSheet(workbook);
-  for (const row of bpData) {
-    db.prepare(
-      `
-      INSERT INTO purchase_order (
-        nøkkel, ordreNr, itemNo, beskrivelse, dato, 
-        order_qty, received_qty, outstanding_qty, 
-        eta_supplier, supplier_name
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `
-    ).run(
-      row.nøkkel,
-      row.ordreNr,
-      row.itemNo,
-      row.beskrivelse,
-      row.dato,
-      row.order_qty,
-      row.received_qty,
-      row.outstanding_qty,
-      row.eta_supplier,
-      row.supplier_name
-    );
-  }
-
-  // 3. Import leverandør e-post
-  const supplierData = parseSupplierSheet(workbook);
-  for (const supplier of supplierData) {
-    db.prepare(
-      `
-      INSERT OR REPLACE INTO supplier_emails (supplier_name, email_address, updated_at)
-      VALUES (?, ?, ?)
-    `
-    ).run(supplier.name, supplier.email, new Date().toISOString());
-  }
-}
+```sql
+CREATE TABLE IF NOT EXISTS supplier_planning (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  supplier_name TEXT NOT NULL,
+  weekday TEXT NOT NULL,
+  planner_name TEXT NOT NULL,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(supplier_name, weekday, planner_name) ON CONFLICT REPLACE
+);
+CREATE INDEX IF NOT EXISTS idx_supplier_planning_supplier ON supplier_planning(supplier_name);
+CREATE INDEX IF NOT EXISTS idx_supplier_planning_weekday ON supplier_planning(weekday);
+CREATE INDEX IF NOT EXISTS idx_supplier_planning_planner ON supplier_planning(planner_name);
 ```
 
-#### Oppdatering av Eksisterende Data
+## Database Operasjoner
 
-```typescript
-// Kalles ved ny fil opplasting
-async function saveOrdersToDatabase(fileBuffer: ArrayBuffer): Promise<boolean> {
-  // 1. Ryd eksisterende ordre
-  db.prepare('DELETE FROM purchase_order').run();
+- **Prepared Statements**: All SQL i `DatabaseService` bruker `better-sqlite3` sine
+  prepared statements med parameterbinding — ingen strengkonkatenering av brukerdata.
+- **Transactions**: Batch-operasjoner (som `upsertOrders`) kjøres i transaksjoner.
+  `better-sqlite3` er synkron, så det er ikke behov for connection pooling.
+- **Audit Logging**: Insert/update/delete på `orders` logges til `audit_log` via
+  `DatabaseService`'s interne `logOperation`-metode.
+- **Migrations**: `initialize()` kjører `CREATE TABLE IF NOT EXISTS` for alle tabeller, og en enkel
+  kolonne-migrasjon for `purchase_order` (sjekker `PRAGMA table_info` og legger til manglende
+  kolonner via `ALTER TABLE`). Det finnes ingen versjonert migreringsmekanisme utover dette.
 
-  // 2. Import ny data
-  const success = await importAlleArk(fileBuffer, db);
+## Backup og Recovery
 
-  // 3. Opprett backup
-  if (success) {
-    await createBackup();
-  }
+- **Mekanisme**: `DatabaseService` har logikk (`performBackupIfNeeded`) som sjekker omtrent hver
+  time, men kun tar backup hvis det har gått 24 timer siden forrige.
+- **Plassering**: `backups`-undermappe i applikasjonens data-mappe.
+- **Retention**: Beholder et begrenset antall nyeste backup-filer (eldre slettes automatisk).
+- **Korrupsjon**: Hvis `app.sqlite` ikke kan åpnes, forsøker tjenesten å gi nytt navn til filen
+  (`app.sqlite.corrupt.{timestamp}`). Brukeren må da importere Excel-filen på nytt for å opprette en
+  ny database.
+- **Manuell gjenoppretting**: Ikke implementert i UI — må gjøres manuelt ved å kopiere en
+  backup-fil over `app.sqlite`.
 
-  return success;
-}
-```
+## Sikkerhet
 
-### Query Operasjoner
+- **Lokal lagring**: Alle data lagres lokalt på brukerens maskin. Applikasjonen synkroniserer ikke
+  ordre-/leverandørdata til noen sky-tjeneste.
+- **Supabase**: Brukes kun for å synkronisere en produktkatalog fra skyen
+  (`src/services/supabaseClient.ts`), med kun en anon-nøkkel — ikke for ordre- eller
+  leverandørdata, og ikke skrivbar fra klienten uten videre.
+- **SQL injection**: Unngås ved konsekvent bruk av prepared statements.
+- **Ingen database-kryptering** er implementert per i dag.
 
-#### Hent Leverandører med Åpne Ordre
+## Relatert
 
-```typescript
-function getSuppliersWithOutstandingOrders(): string[] {
-  return db
-    .prepare(
-      `
-    SELECT DISTINCT supplier_name 
-    FROM purchase_order 
-    WHERE (outstanding_qty > 0 OR (order_qty - received_qty) > 0)
-    AND eta_supplier IS NOT NULL 
-    AND eta_supplier != ''
-    ORDER BY supplier_name
-  `
-    )
-    .all()
-    .map((row) => row.supplier_name);
-}
-```
-
-#### Hent Utestående Ordre for Leverandør
-
-```typescript
-function getOutstandingOrders(supplier: string): Order[] {
-  return db
-    .prepare(
-      `
-    SELECT 
-      supplier_name as supplier,
-      ordreNr as poNumber,
-      itemNo as itemNo,
-      outstanding_qty as outstandingQty
-    FROM purchase_order 
-    WHERE supplier_name = ? 
-    AND (outstanding_qty > 0 OR (order_qty - received_qty) > 0)
-    ORDER BY ordreNr, itemNo
-  `
-    )
-    .all(supplier);
-}
-```
-
-#### Hent Alle Leverandører
-
-```typescript
-function getAllSuppliers(): string[] {
-  return db
-    .prepare(
-      `
-    SELECT DISTINCT supplier_name 
-    FROM purchase_order 
-    WHERE supplier_name IS NOT NULL 
-    AND supplier_name != ''
-    ORDER BY supplier_name
-  `
-    )
-    .all()
-    .map((row) => row.supplier_name);
-}
-```
-
-### E-post Tracking
-
-#### Registrer Sendt E-post
-
-```typescript
-function recordEmailSent(supplier: string, orderIds: string[]): void {
-  const timestamp = new Date().toISOString();
-
-  db.prepare(
-    `
-    UPDATE purchase_order 
-    SET email_sent_at = ? 
-    WHERE supplier_name = ? AND nøkkel IN (${orderIds.map(() => '?').join(',')})
-  `
-  ).run(timestamp, supplier, ...orderIds);
-}
-```
-
-## 🔒 Sikkerhet og Backup
-
-### Automatisk Backup
-
-```typescript
-async function createBackup(): Promise<void> {
-  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-  const backupPath = path.join(backupDir, `supplier-reminder-backup-${timestamp}.db`);
-
-  // Kopier database fil
-  await fs.copyFile(dbPath, backupPath);
-
-  // Ryd gamle backups (behold siste 5)
-  await cleanupOldBackups();
-}
-```
-
-### Backup Strategi
-
-- **Frekvens**: Automatisk backup ved hver import
-- **Retention**: Beholder siste 5 backups
-- **Plassering**: `backups/` mappe i app data directory
-- **Størrelse**: Typisk 1-10 MB per backup
-
-### Data Sikkerhet
-
-- **Lokal lagring**: Alle data lagres lokalt
-- **Ingen cloud sync**: Ingen ekstern datalagring
-- **Kryptering**: SQLite med encryption (valgfritt)
-- **Tilgangskontroll**: Kun applikasjonen har tilgang
-
-## 📊 Statistikk og Rapportering
-
-### Dashboard Statistikk
-
-```typescript
-function getDashboardStats(): DashboardStats {
-  const stats = db
-    .prepare(
-      `
-    SELECT 
-      COUNT(DISTINCT supplier_name) as totalSuppliers,
-      COUNT(DISTINCT CASE WHEN outstanding_qty > 0 THEN supplier_name END) as suppliersWithOrders,
-      COUNT(*) as totalOrders,
-      SUM(outstanding_qty) as totalOutstanding
-    FROM purchase_order
-  `
-    )
-    .get();
-
-  return {
-    totalSuppliers: stats.totalSuppliers,
-    suppliersWithOutstandingOrders: stats.suppliersWithOrders,
-    totalOutstandingOrders: stats.totalOrders,
-    totalOutstandingQuantity: stats.totalOutstanding,
-  };
-}
-```
-
-### Topp Leverandører
-
-```typescript
-function getTopSuppliers(limit: number = 5): SupplierStat[] {
-  return db
-    .prepare(
-      `
-    SELECT 
-      supplier_name as name,
-      COUNT(*) as outstandingOrders,
-      SUM(outstanding_qty) as outstandingQuantity
-    FROM purchase_order 
-    WHERE outstanding_qty > 0
-    GROUP BY supplier_name 
-    ORDER BY outstandingQuantity DESC 
-    LIMIT ?
-  `
-    )
-    .all(limit);
-}
-```
-
-### Ordrer per Ukedag
-
-```typescript
-function getOrdersByWeekday(): WeekdayStat[] {
-  return db
-    .prepare(
-      `
-    SELECT 
-      CASE 
-        WHEN strftime('%w', eta_supplier) = '1' THEN 'Mandag'
-        WHEN strftime('%w', eta_supplier) = '2' THEN 'Tirsdag'
-        WHEN strftime('%w', eta_supplier) = '3' THEN 'Onsdag'
-        WHEN strftime('%w', eta_supplier) = '4' THEN 'Torsdag'
-        WHEN strftime('%w', eta_supplier) = '5' THEN 'Fredag'
-        ELSE 'Ukjent'
-      END as weekday,
-      COUNT(*) as count
-    FROM purchase_order 
-    WHERE outstanding_qty > 0
-    GROUP BY weekday
-    ORDER BY count DESC
-  `
-    )
-    .all();
-}
-```
-
-## 🔧 Vedlikehold
-
-### Database Optimalisering
-
-```typescript
-function optimizeDatabase(): void {
-  // VACUUM for å rydde opp fragmentering
-  db.prepare('VACUUM').run();
-
-  // ANALYZE for å oppdatere statistikk
-  db.prepare('ANALYZE').run();
-}
-```
-
-### Schema Migrations
-
-```typescript
-function runMigrations(): void {
-  // Sjekk om nye kolonner trengs
-  const columns = db.prepare('PRAGMA table_info(purchase_order)').all();
-  const columnNames = columns.map((col) => col.name);
-
-  if (!columnNames.includes('email_sent_at')) {
-    db.prepare('ALTER TABLE purchase_order ADD COLUMN email_sent_at TEXT').run();
-  }
-}
-```
-
-## 🚨 Feilhåndtering
-
-### Database Feil
-
-```typescript
-function handleDatabaseError(error: Error): void {
-  console.error('Database error:', error);
-
-  // Logg feilen
-  logError('Database operation failed', error);
-
-  // Vis brukervennlig feilmelding
-  showError('Database operasjon feilet. Prøv å starte applikasjonen på nytt.');
-}
-```
-
-### Recovery
-
-```typescript
-async function recoverFromBackup(): Promise<boolean> {
-  try {
-    const latestBackup = await getLatestBackup();
-    if (latestBackup) {
-      await fs.copyFile(latestBackup, dbPath);
-      return true;
-    }
-  } catch (error) {
-    console.error('Recovery failed:', error);
-  }
-  return false;
-}
-```
-
-## 📈 Ytelse
-
-### Query Optimalisering
-
-- **Indekser**: På kritiske felter for rask søk
-- **Prepared Statements**: For å unngå SQL injection og øke ytelse
-- **Batch Operations**: For store datamengder
-- **Connection Pooling**: Enkelt med SQLite (én tilkobling)
-
-### Monitoring
-
-```typescript
-function logQueryPerformance(query: string, duration: number): void {
-  if (duration > 100) {
-    // Logg trege queries
-    console.warn(`Slow query (${duration}ms):`, query);
-  }
-}
-```
+- [Excel Import](excel-import.md) — hvordan data havner i `purchase_order` og `weekly_status`
+- [Email Setup](email-setup.md) — hvordan `supplier_emails`/leverandørdata brukes til utsending
 
 ---
 
-**Sist oppdatert**: Juli 2024  
-**Versjon**: Se package.json for gjeldende versjon
+**Sist verifisert mot kode**: juli 2026

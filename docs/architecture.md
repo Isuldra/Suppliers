@@ -1,318 +1,152 @@
-# Arkitektur - OneMed SupplyChain
+# Arkitektur - Pulse (OneMed SupplyChain)
 
-Denne dokumentasjonen beskriver arkitekturen til OneMed SupplyChain, en Electron-basert desktop-applikasjon for leverandørstyring.
+Denne dokumentasjonen beskriver arkitekturen til Pulse, en Electron-basert desktop-applikasjon for
+leverandørstyring, bygget for Windows.
 
-## 🏗️ Overordnet Arkitektur
+## Overordnet Arkitektur
 
-OneMed SupplyChain følger Electron's hovedprosess/renderer-prosess arkitektur med moderne React-komponenter og TypeScript.
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    OneMed SupplyChain                       │
-├─────────────────────────────────────────────────────────────┤
-│  Main Process (Node.js)           │  Renderer Process       │
-│  ┌─────────────────────────────┐  │  ┌─────────────────────┐ │
-│  │ • Database Management       │  │  │ • React Components  │ │
-│  │ • IPC Handlers              │  │  │ • UI State          │ │
-│  │ • File System Operations    │  │  │ • User Interactions │ │
-│  │ • Email Integration         │  │  │ • Progress Tracking │ │
-│  └─────────────────────────────┘  │  └─────────────────────┘ │
-│              │                    │              │            │
-│              └─── IPC Bridge ─────┼──────────────┘            │
-└─────────────────────────────────────────────────────────────┘
-```
-
-## 📁 Prosjektstruktur
+Pulse følger Electrons standard tre-prosess-modell: main-prosess, preload-script og
+renderer-prosess (React), koblet sammen via en typet IPC-bro.
 
 ```
-supplier-reminder-pro/
-├── src/
-│   ├── main/                    # Main process
-│   │   ├── index.ts            # Main entry point
-│   │   ├── database.ts         # Database service
-│   │   ├── importer.ts         # Excel import logic
-│   │   └── auto-updater.ts     # Auto-update functionality
-│   ├── renderer/               # Renderer process
-│   │   ├── App.tsx            # Main application component
-│   │   ├── components/        # React components
-│   │   │   ├── Dashboard.tsx  # Dashboard component
-│   │   │   ├── FileUpload.tsx # File upload component
-│   │   │   ├── EmailButton.tsx # Email functionality
-│   │   │   └── ...            # Other components
-│   │   ├── services/          # Business logic
-│   │   │   ├── emailService.ts # Email service
-│   │   │   └── database.ts    # Database API
-│   │   └── types/             # TypeScript definitions
-│   └── preload/               # Preload scripts
-│       └── index.ts           # IPC bridge setup
-├── docs/                      # Documentation
-├── resources/                 # App resources
-└── scripts/                   # Build scripts
+┌──────────────────────────────────────────────────────────────────┐
+│                              Pulse                                │
+├──────────────────────────────────────────────────────────────────┤
+│  Main Process (Node.js)        │  Preload          │  Renderer     │
+│  src/main/index.ts             │  src/preload/     │  (React)      │
+│  ┌───────────────────────────┐ │  index.ts         │ ┌───────────┐ │
+│  │ • DatabaseService (SQLite)│ │  contextBridge +  │ │ Komponenter│ │
+│  │ • Excel-import            │ │  channel-allowlist│ │ Services   │ │
+│  │ • Outlook/PowerShell mail │ │                   │ │ i18n       │ │
+│  │ • Auto-updater            │◄┼───IPC (invoke/send)┼►│           │ │
+│  └───────────────────────────┘ │                   │ └───────────┘ │
+└──────────────────────────────────────────────────────────────────┘
 ```
 
-## 🔄 Dataflyt
+## Byggeoppsett (viktig fallgruve)
 
-### 1. Excel Import Flyt
+`electron-vite` (konfigurert i `electron.vite.config.ts`) bygger tre separate bunter:
 
-```
-User Upload → FileUpload Component → Main Process → Database → UI Update
-     │              │                    │            │           │
-     │              │                    │            │           └── Progress Indicator
-     │              │                    │            └── Supplier List Update
-     │              │                    └── SQLite Storage
-     │              └── Validation & Parsing
-     └── Drag & Drop
-```
+| Prosess  | Kildeinngang              | Byggoutput               |
+| -------- | -------------------------- | ------------------------- |
+| main     | `src/main/index.ts`        | `dist/main/main.cjs`      |
+| preload  | `src/preload/index.ts`     | `dist/preload/index.cjs`  |
+| renderer | `src/renderer/` (Vite root)| `dist/renderer/`          |
 
-### 2. E-post Sending Flyt
+`package.json`'s `"main"` felt peker på `dist/main/main.cjs`, som igjen kommer fra
+`src/main/index.ts` — **ikke** noen fil som heter `main.ts`. Det har tidligere eksistert en
+`src/main/main.ts`, men den var død kode og er slettet.
 
-```
-User Action → EmailButton → EmailService → Main Process → Email Client
-     │            │              │              │              │
-     │            │              │              │              └── User Sends
-     │            │              │              └── System Integration
-     │            │              └── Template Rendering
-     │            └── Preview Modal
-     └── Supplier Selection
-```
-
-### 3. Dashboard Data Flyt
+## Prosjektstruktur (faktisk, verifisert mot `src/`)
 
 ```
-Dashboard Load → Database Queries → IPC → React State → UI Components
-      │               │              │        │            │
-      │               │              │        │            └── Charts & Cards
-      │               │              │        └── useState/useEffect
-      │               │              └── contextBridge
-      │               └── SQLite Queries
-      └── Route Change
+src/
+├── main/
+│   ├── index.ts              # Main-prosessens entry point (bygges til dist/main/main.cjs)
+│   ├── auto-updater.ts        # electron-updater-integrasjon
+│   ├── database.ts            # Eldre database-hjelpere brukt av main
+│   ├── databaseAdapter.js     # Adapter kopiert til dist/main ved bygg
+│   ├── importer.ts            # Excel-import (BP/Sjekkliste/Leverandør-ark)
+│   └── productCatalogImporter.ts
+├── preload/
+│   └── index.ts               # contextBridge + kanal-allowlist (validSendChannels/validReceiveChannels)
+├── renderer/                   # React-frontend (Vite root)
+│   ├── App.tsx
+│   ├── components/             # UI-komponenter, inkl. components/dashboard/
+│   ├── services/                # emailService.ts, languageDetectionService.ts, slackService.ts
+│   ├── locales/                  # no.json, en.json, se.json, da.json, fi.json (i18next)
+│   ├── i18n/                    # i18next-oppsett
+│   ├── context/, data/, styles/, types/, assets/
+├── services/                    # Delt mellom main og renderer
+│   ├── databaseService.ts        # Singleton SQLite-tjeneste (better-sqlite3)
+│   ├── supabaseClient.ts         # Supabase-klient (kun anon-nøkkel, kun produktkatalog)
+│   ├── productCatalogService.ts
+│   └── emailTemplates/           # Handlebars-maler
+├── config/
+├── generated/                    # Genererte filer (f.eks. kompilert e-postmal)
+├── types/
+└── utils/
 ```
 
-## 🧩 Komponentarkitektur
+`docs/`, `resources/` og `scripts/` ligger på repo-roten, ikke under `src/`.
 
-### Hovedkomponenter
+## Dataflyt
 
-#### App.tsx (Root Component)
-
-- **Ansvar**: Global state management, routing, layout
-- **State**: `AppState` interface med alle applikasjonstilstander
-- **Props**: Ingen - hovedkomponent
-
-#### MainApp Component
-
-- **Ansvar**: Hovedvisning med progress tracking
-- **Props**: `AppState` og callback funksjoner
-- **Features**: Progress indicator, keyboard shortcuts
-
-#### Dashboard Component
-
-- **Ansvar**: Statistikk og oversikt
-- **Props**: `AppState` og callback funksjoner
-- **Features**: Charts, overview cards, real-time data
-
-### Komponenthierarki
+### 1. Excel Import
 
 ```
-App (Router)
-├── MainApp
-│   ├── ProgressIndicator
-│   ├── FileUpload
-│   ├── WeekdaySelect
-│   ├── SupplierSelect
-│   ├── DataReview
-│   └── EmailButton
-└── Dashboard
-    ├── OverviewCards
-    ├── SupplierChart
-    └── WeekdayChart
+Bruker laster opp fil → FileUpload/BulkDataReview → IPC til main
+   → importer.ts parser BP/Sjekkliste/Leverandør-ark → DatabaseService skriver til SQLite
+   → UI oppdateres med leverandørliste/ordre
 ```
 
-## 💾 Datamodell
+### 2. E-post-sending
 
-### Database Schema
+Se [Email Setup](features/email-setup.md) for full beskrivelse. Kort oppsummert:
 
-#### purchase_order Table
-
-```sql
-CREATE TABLE purchase_order (
-  id INTEGER PRIMARY KEY,
-  nøkkel TEXT,                    -- Unique key
-  ordreNr TEXT,                   -- Purchase order number
-  itemNo TEXT,                    -- Item number
-  beskrivelse TEXT,               -- Description
-  dato TEXT,                      -- Date
-  ftgnavn TEXT,                   -- Supplier name
-  status TEXT,                    -- Order status
-  order_qty INTEGER,              -- Ordered quantity
-  received_qty INTEGER,           -- Received quantity
-  outstanding_qty INTEGER,        -- Outstanding quantity
-  eta_supplier TEXT,              -- Expected delivery date
-  supplier_name TEXT,             -- Supplier name (new field)
-  warehouse TEXT,                 -- Warehouse
-  order_row_number TEXT           -- Order row number
-);
+```
+Bruker velger leverandør/ordre → EmailButton/BulkEmailPreview → emailService.sendReminder()
+   → IPC (sendEmailViaEmlAndCOM → sendEmailAutomatically → sendEmail, med fallback i den rekkefølgen)
+   → main-prosessen skriver en .eml-fil og styrer Outlook via en PowerShell-child-process (COM automation)
 ```
 
-#### supplier_emails Table
+Det finnes **ingen SMTP-integrasjon** i produksjonskoden — sending skjer alltid via Outlook som
+allerede kjører og er logget inn på brukerens Windows-maskin.
 
-```sql
-CREATE TABLE supplier_emails (
-  id INTEGER PRIMARY KEY,
-  supplier_name TEXT UNIQUE,      -- Supplier name
-  email_address TEXT,             -- Email address
-  updated_at TEXT                 -- Last updated timestamp
-);
+### 3. Dashboard
+
+```
+Dashboard.tsx → IPC (get-dashboard-stats / get-top-suppliers / get-orders-by-week)
+   → DatabaseService (getDashboardStats/getTopSuppliersByOutstanding/getOrdersByWeek)
+   → React state → recharts-komponenter i components/dashboard/
 ```
 
-### TypeScript Interfaces
+## IPC (Inter-Process Communication)
 
-#### AppState
+All IPC går gjennom `src/preload/index.ts`, som eksponerer et begrenset `window.electron`-API via
+`contextBridge.exposeInMainWorld`. Kanaler må stå i en eksplisitt allowlist
+(`validSendChannels`/`validReceiveChannels`) før de slipper gjennom — renderer-koden har ingen
+direkte tilgang til `ipcRenderer` eller Node-APIer.
 
-```typescript
-interface AppState {
-  excelData?: ExcelData; // Parsed Excel data
-  selectedPlanner: string; // Selected planner
-  selectedWeekday: string; // Selected weekday
-  selectedSupplier: string; // Selected supplier
-  validationErrors: ValidationError[]; // Validation errors
-  isLoading: boolean; // Loading state
-  showDataReview: boolean; // Show data review
-  showEmailButton: boolean; // Show email button
-}
-```
+Eksempler på registrerte kanaler: `sendEmail`, `sendEmailAutomatically`, `sendEmailViaEmlAndCOM`,
+`db:insertOrUpdateOrder`, `db:getAllOrders`, `get-dashboard-stats`, `get-top-suppliers`,
+`get-orders-by-week`, `update:check`/`update:install` (auto-updater).
 
-#### ExcelData
+## Datalagring
 
-```typescript
-interface ExcelData {
-  bp: ExcelRow[]; // BP sheet data
-  suppliers: string[]; // Available suppliers
-  weekdays: string[]; // Available weekdays
-}
-```
+- **SQLite** via `better-sqlite3`, singleton `DatabaseService` — se
+  [Database](features/database.md) for fullt skjema (seks tabeller: `orders`, `audit_log`,
+  `weekly_status`, `purchase_order`, `supplier_emails`, `supplier_planning`).
+- **Supabase** (`src/services/supabaseClient.ts`) brukes utelukkende til å synkronisere en
+  produktkatalog fra skyen, med en anon-nøkkel. Ordre- og leverandørdata forlater aldri
+  brukerens maskin via Supabase.
 
-## 🔌 IPC (Inter-Process Communication)
+## Sikkerhet
 
-### Main Process Handlers
+- **Context Isolation**: aktivert; `nodeIntegration` er av i renderer.
+- **Preload-allowlist**: all IPC valideres mot en eksplisitt kanal-liste (se over).
+- **Prepared statements**: all SQL i `DatabaseService` bruker parameterbinding, ikke
+  strengkonkatenering.
+- **Untrusted input**: data fra brukerens Excel-fil regnes som utrusted og skal aldri
+  interpoleres direkte inn i PowerShell-kommandoer eller SQL-strenger.
 
-```typescript
-// Database operations
-ipcMain.handle('saveOrdersToDatabase', handleSaveOrders);
-ipcMain.handle('getSuppliers', handleGetSuppliers);
-ipcMain.handle('getOutstandingOrders', handleGetOutstandingOrders);
-ipcMain.handle('getSuppliersWithOutstandingOrders', handleGetSuppliersWithOutstandingOrders);
+## Teknisk Stack
 
-// Email operations
-ipcMain.handle('sendEmail', handleSendEmail);
-ipcMain.handle('recordEmailSent', handleRecordEmailSent);
+- **Electron 36** + **electron-vite** for bygg
+- **React 19** + **TypeScript**
+- **Tailwind CSS**
+- **better-sqlite3** (SQLite)
+- **i18next** / **react-i18next** (5 språk: no, en, se, da, fi)
+- **Supabase JS SDK** (produktkatalog-sync)
+- **electron-updater** (auto-oppdateringer via manuelt publiserte GitHub Releases)
+- **Vitest** for testing — prosjektet bruker **ikke** Jest eller Playwright
 
-// File operations
-ipcMain.handle('selectFile', handleSelectFile);
-```
+## Testing
 
-### Preload API
-
-```typescript
-// Exposed to renderer process
-contextBridge.exposeInMainWorld('electron', {
-  saveOrdersToDatabase: (fileBuffer: ArrayBuffer) => Promise<boolean>,
-  getSuppliers: () => Promise<string[]>,
-  getOutstandingOrders: (supplier: string) => Promise<Order[]>,
-  getSuppliersWithOutstandingOrders: () => Promise<string[]>,
-  sendEmail: (emailData: EmailData) => Promise<boolean>,
-  recordEmailSent: (data: EmailRecordData) => Promise<void>,
-  selectFile: () => Promise<string | null>,
-});
-```
-
-## 🎨 UI/UX Arkitektur
-
-### Design System
-
-- **Tailwind CSS**: Utility-first CSS framework
-- **Responsive Design**: Tilpasser seg skjermstørrelse
-- **Dark/Light Mode**: Automatisk tema basert på system
-- **Accessibility**: WCAG 2.1 AA compliance
-
-### Komponentprinsipper
-
-1. **Composition over Inheritance**: Bruker komposisjon for å bygge komplekse komponenter
-2. **Single Responsibility**: Hver komponent har ett ansvar
-3. **Props Down, Events Up**: Data flyter ned, events flyter opp
-4. **Controlled Components**: Alle input-komponenter er kontrollerte
-
-### State Management
-
-- **Local State**: `useState` for komponent-spesifikk state
-- **Global State**: `AppState` i hovedkomponenten
-- **Derived State**: `useMemo` for beregnede verdier
-- **Side Effects**: `useEffect` for API-kall og subscriptions
-
-## 🔒 Sikkerhet
-
-### Electron Security
-
-- **Context Isolation**: Enabled for sikker IPC
-- **Node Integration**: Disabled i renderer process
-- **Content Security Policy**: Restrictive CSP headers
-- **Preload Scripts**: Sikker API-eksponering
-
-### Data Security
-
-- **Local Storage**: Alle data lagres lokalt
-- **No Cloud Sync**: Ingen ekstern datalagring
-- **Encrypted Database**: SQLite med encryption (valgfritt)
-- **Backup Strategy**: Automatisk database backup
-
-## 🚀 Performance
-
-### Optimaliseringer
-
-- **Lazy Loading**: Komponenter lastes ved behov
-- **Memoization**: `useMemo` og `useCallback` for kostbare operasjoner
-- **Virtual Scrolling**: For store lister (planlagt)
-- **Database Indexing**: Optimaliserte SQLite-indekser
-
-### Monitoring
-
-- **Error Tracking**: Sentry integration (valgfritt)
-- **Performance Metrics**: React DevTools Profiler
-- **Memory Leaks**: Automatisk cleanup av event listeners
-- **Database Performance**: Query timing og optimization
-
-## 🔄 Oppdateringer
-
-### Auto-Update System
-
-- **Electron Updater**: Automatisk oppdateringer
-- **Delta Updates**: Kun endringer lastes ned
-- **Rollback**: Automatisk tilbakefall ved feil
-- **User Control**: Bruker kan deaktivere auto-updates
-
-### Version Management
-
-- **Semantic Versioning**: MAJOR.MINOR.PATCH
-- **Changelog**: Automatisk generert fra commits
-- **Migration Scripts**: Database schema updates
-- **Backward Compatibility**: API compatibility
-
-## 📊 Testing
-
-### Test Strategy
-
-- **Unit Tests**: Jest for komponenter og utilities
-- **Integration Tests**: Electron test for IPC
-- **E2E Tests**: Playwright for brukerflyt
-- **Database Tests**: SQLite in-memory testing
-
-### Test Coverage
-
-- **Components**: >90% coverage
-- **Services**: >95% coverage
-- **Utilities**: >98% coverage
-- **E2E**: Kritisk brukerflyt
+Testrammeverket er **Vitest**, konfigurert til å kjøre via `bun run test` /
+`bun run quality`. Det finnes ikke noe E2E-testoppsett (Playwright/Spectron) i dette repoet i dag;
+eventuelle tidligere referanser til Jest eller Playwright i denne dokumentasjonen var feil.
 
 ---
 
-**Sist oppdatert**: Juli 2024  
-**Versjon**: Se package.json for gjeldende versjon
+**Sist verifisert mot kode**: juli 2026
