@@ -1,3 +1,4 @@
+// TODO: Unfinished feature — not mounted anywhere. See docs/planning/.
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useWarehouseFilter, type WarehouseFilter } from '../context/WarehouseFilterContext';

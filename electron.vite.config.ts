@@ -20,8 +20,6 @@ export default defineConfig({
           // leave test patterns/external libs here if you like
           /\.test\./,
           // Add native modules to external
-          'odbc',
-          'sqlite3',
           'better-sqlite3',
           'electron-updater',
           'exceljs',
@@ -50,14 +48,6 @@ export default defineConfig({
                 src: path.resolve(__dirname, 'package.json'),
                 dest: path.resolve(__dirname, 'dist'),
               },
-              {
-                src: path.resolve(__dirname, 'src/services/databaseServiceAdapter.js'),
-                dest: path.resolve(__dirname, 'dist/services'),
-              },
-              {
-                src: path.resolve(__dirname, 'src/main/databaseAdapter.js'),
-                dest: path.resolve(__dirname, 'dist/main'),
-              },
             ],
             // keep folder structure flat
             flatten: true,
@@ -80,8 +70,6 @@ export default defineConfig({
         'codecov',
         'nyc',
         'tape',
-        'odbc',
-        'sqlite3',
         'better-sqlite3',
         'electron-updater',
       ],
@@ -94,12 +82,12 @@ export default defineConfig({
         input: {
           index: path.resolve(__dirname, 'src/preload/index.ts'),
         },
-        external: [/\.test\./, 'odbc', 'sqlite3', 'better-sqlite3', 'electron-updater'],
+        external: [/\.test\./, 'better-sqlite3', 'electron-updater'],
         plugins: [
           externalizeDepsPlugin(),
           // Fix: rollup-plugin-ignore expects string array
           // After looking at the source: https://github.com/jackmellis/rollup-plugin-ignore/blob/master/src/index.js
-          ignore(['mock-aws-s3', 'odbc', 'sqlite3', 'better-sqlite3']),
+          ignore(['mock-aws-s3', 'better-sqlite3']),
         ],
         output: {
           format: 'cjs',
@@ -113,7 +101,7 @@ export default defineConfig({
     build: {
       outDir: path.resolve(__dirname, 'dist/renderer'),
       rollupOptions: {
-        external: [/\.test\./, 'odbc', 'sqlite3', 'better-sqlite3', 'electron-updater'],
+        external: [/\.test\./, 'better-sqlite3', 'electron-updater'],
       },
     },
     server: {
