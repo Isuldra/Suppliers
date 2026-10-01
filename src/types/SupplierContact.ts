@@ -3,4 +3,6 @@ export interface SupplierContact {
   email: string;
   language: string;
   days: string[];
+  /** Company ID from the "Leverandør" sheet. */
+  number?: string;
 }

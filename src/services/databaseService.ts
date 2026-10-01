@@ -297,6 +297,19 @@ export class DatabaseService {
         }
       }
 
+      // --- Migration for supplier_emails table (company_id) ---
+      // Company ID from the "Leverandør" sheet, shown as Lev.nr also for suppliers without orders.
+      try {
+        this.db.exec(`ALTER TABLE supplier_emails ADD COLUMN company_id TEXT`);
+        log.info("Added column 'company_id' to 'supplier_emails' table.");
+      } catch (e: unknown) {
+        if (e instanceof Error && e.message.includes('duplicate column name: company_id')) {
+          log.info("Column 'company_id' already exists in 'supplier_emails' table.");
+        } else {
+          log.error("Failed to add 'company_id' to 'supplier_emails':", e);
+        }
+      }
+
       log.info('Database schema initialization checked/updated successfully');
 
       // Clean up any corrupted supplier data
@@ -1393,8 +1406,13 @@ export class DatabaseService {
   public getSupplierContacts(): SupplierContact[] {
     if (!this.db) throw new Error('Database not connected');
     const emails = this.db
-      .prepare('SELECT supplier_name, email_address, language FROM supplier_emails')
-      .all() as { supplier_name: string; email_address: string; language: string | null }[];
+      .prepare('SELECT supplier_name, email_address, language, company_id FROM supplier_emails')
+      .all() as {
+      supplier_name: string;
+      email_address: string;
+      language: string | null;
+      company_id: string | null;
+    }[];
     const contacts = new Map<string, SupplierContact>();
     for (const row of emails) {
       contacts.set(row.supplier_name, {
@@ -1402,6 +1420,7 @@ export class DatabaseService {
         email: row.email_address,
         language: row.language || '',
         days: [],
+        number: row.company_id || '',
       });
     }
     for (const row of this.getAllSupplierPlanning()) {

@@ -90,6 +90,37 @@ function getCellStringValue(cell: ExcelJS.Cell | undefined | null): string {
   return String(cell.value).trim();
 }
 
+const WEEKDAYS = ['Mandag', 'Tirsdag', 'Onsdag', 'Torsdag', 'Fredag'];
+
+/** Norwegian weekday for a Norwegian or English day name, or '' when it is not one. */
+export function normalizeWeekday(value: string): string {
+  const day = value
+    .toLowerCase()
+    .replace(/[^a-zæøå]/g, '')
+    .replace(/mandag|monday/, 'Mandag')
+    .replace(/tirsdag|tuesday/, 'Tirsdag')
+    .replace(/onsdag|wednesday/, 'Onsdag')
+    .replace(/torsdag|thursday/, 'Torsdag')
+    .replace(/fredag|friday/, 'Fredag');
+  return WEEKDAYS.includes(day) ? day : '';
+}
+
+/**
+ * One row of the "Leverandør" sheet: A supplier, B Company ID, C language, D reminder day,
+ * E email.
+ */
+export function readSupplierSheetRow(row: Pick<ExcelJS.Row, 'getCell'>) {
+  const text = (column: number) => getCellStringValue(row.getCell(column)).trim();
+  const email = text(5);
+  return {
+    name: text(1),
+    companyId: text(2),
+    language: text(3),
+    weekday: text(4),
+    email: email.includes('@') ? email : '',
+  };
+}
+
 /**
  * Get a worksheet by exact name match
  */
@@ -200,6 +231,17 @@ export async function importAlleArk(
     ) VALUES (
       @supplier_name, @email_address, @language, @updated_at
     )`
+  );
+  // Leverandør rows keep an address already read from Sjekkliste when their own cell is empty.
+  const supplierContactUpsert = db.prepare(
+    `INSERT INTO supplier_emails (supplier_name, email_address, language, company_id, updated_at)
+     VALUES (@supplier_name, @email_address, @language, @company_id, @updated_at)
+     ON CONFLICT(supplier_name) DO UPDATE SET
+       email_address = CASE WHEN excluded.email_address != '' THEN excluded.email_address
+                            ELSE supplier_emails.email_address END,
+       language = COALESCE(excluded.language, supplier_emails.language),
+       company_id = COALESCE(excluded.company_id, supplier_emails.company_id),
+       updated_at = excluded.updated_at`
   );
 
   // Declare counters outside transaction scope for later use
@@ -440,6 +482,17 @@ export async function importAlleArk(
       }`
     );
 
+    // The supplier register reflects the imported file, so suppliers from earlier files
+    // (for example another country's list) do not linger.
+    try {
+      if (wb.getWorksheet('Sjekkliste Leverandører') || wb.getWorksheet('Leverandør')) {
+        const cleared = db.prepare('DELETE FROM supplier_emails').run();
+        log.info(`Cleared ${cleared.changes} supplier contacts before importing the file's own`);
+      }
+    } catch (clearError) {
+      log.error('Error clearing supplier contacts:', clearError);
+    }
+
     // Import supplier emails from "Sjekkliste Leverandører" sheet if it exists
     try {
       const sjekkliste = wb.getWorksheet('Sjekkliste Leverandører');
@@ -610,48 +663,37 @@ export async function importAlleArk(
           // Process rows starting from row 2 (row 1 is headers)
           // Structure: Column A = Supplier name, Column B = Company ID, Column C = Language, Column D = Weekday, Column E = Email
           for (let r = 2; r <= leverandorSheet.rowCount; r++) {
-            const row = leverandorSheet.getRow(r);
+            const {
+              name: supplierName,
+              companyId,
+              language,
+              weekday,
+              email,
+            } = readSupplierSheetRow(leverandorSheet.getRow(r));
 
-            const supplierName = getCellStringValue(row.getCell(1)).trim(); // Column A
-            const language = getCellStringValue(row.getCell(3)).trim(); // Column C
-            const weekday = getCellStringValue(row.getCell(4)).trim(); // Column D
-            const email = getCellStringValue(row.getCell(5)).trim(); // Column E (was incorrectly reading from F/6)
+            if (!supplierName) continue;
 
-            // Skip rows with no meaningful data
-            if (!supplierName || !weekday || supplierName === '' || weekday === '') {
-              continue;
+            // Every listed supplier keeps its contact details, also without a reminder day.
+            try {
+              supplierContactUpsert.run({
+                supplier_name: supplierName,
+                email_address: email,
+                language: language || null,
+                company_id: companyId || null,
+                updated_at: new Date().toISOString(),
+              });
+            } catch (contactError) {
+              log.warn(`Failed to store contact for ${supplierName}:`, contactError);
             }
 
-            // Normalize weekday names to match the expected format
-            const normalizedWeekday = weekday
-              .toLowerCase()
-              .replace(/[^a-zæøå]/g, '')
-              .replace(/mandag|monday/, 'Mandag')
-              .replace(/tirsdag|tuesday/, 'Tirsdag')
-              .replace(/onsdag|wednesday/, 'Onsdag')
-              .replace(/torsdag|thursday/, 'Torsdag')
-              .replace(/fredag|friday/, 'Fredag');
+            if (!weekday) continue;
+            const normalizedWeekday = normalizeWeekday(weekday);
 
-            // Only process if we have a valid weekday
-            if (['Mandag', 'Tirsdag', 'Onsdag', 'Torsdag', 'Fredag'].includes(normalizedWeekday)) {
+            if (normalizedWeekday) {
               try {
                 // Insert supplier planning
                 planningInsert.run(supplierName, normalizedWeekday, 'Innkjøper');
                 planningCount++;
-
-                // Also insert/update supplier email with language if available
-                if (email && email.includes('@')) {
-                  try {
-                    supplierEmailInsert.run({
-                      supplier_name: supplierName,
-                      email_address: email,
-                      language: language || null, // Store language for email template selection
-                      updated_at: new Date().toISOString(),
-                    });
-                  } catch (emailError) {
-                    log.warn(`Failed to insert email for ${supplierName}:`, emailError);
-                  }
-                }
 
                 if (planningCount <= 10) {
                   log.info(

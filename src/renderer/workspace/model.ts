@@ -157,7 +157,7 @@ export function buildSuppliers(
   for (const contact of contacts)
     result.set(contact.name, {
       ...contact,
-      number: '',
+      number: contact.number || '',
       language: languageOf(contact.language),
       lines: [],
     });

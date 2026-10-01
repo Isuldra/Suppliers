@@ -35,6 +35,19 @@ describe('Pulse workspace selections', () => {
   it('does not collide when two suppliers reuse order keys', () => {
     expect(lineId(line)).not.toBe(lineId({ ...line, supplier: 'Another Medical' }));
   });
+  it('shows the Company ID for a supplier without orders and prefers it over the order number', () => {
+    const contact = { email: 'a@example.com', language: 'Norsk', days: ['Mandag'] };
+    const suppliers = buildSuppliers(
+      [{ ...line, internalSupplierNumber: '111' }],
+      [
+        { ...contact, name: 'No Orders AS', number: '4960178' },
+        { ...contact, name: 'Example Medical', number: '4960080' },
+      ],
+      {}
+    );
+    expect(suppliers.find((item) => item.name === 'No Orders AS')?.number).toBe('4960178');
+    expect(suppliers.find((item) => item.name === 'Example Medical')?.number).toBe('4960080');
+  });
   it('retains contacts without orders and removes completed order lines', () => {
     const suppliers = buildSuppliers(
       [line, { ...line, key: '2', outstandingQty: 0 }],
