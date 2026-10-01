@@ -70,6 +70,10 @@ const FileUpload: React.FC<FileUploadProps> = ({ onDataParsed, onValidationError
       (info: { version: string }) => {
         setDownloadProgress(null);
         setIsCheckingUpdates(false); // Ensure spinner is stopped
+        if (safetyTimeoutRef.current) {
+          clearTimeout(safetyTimeoutRef.current);
+          safetyTimeoutRef.current = null;
+        }
         setUpdateStatus({
           type: 'success',
           message: `Oppdatering ${info.version} er lastet ned og klar for installasjon!`,
@@ -78,9 +82,23 @@ const FileUpload: React.FC<FileUploadProps> = ({ onDataParsed, onValidationError
       }
     );
 
+    const unsubscribeError = window.electron.onUpdateError((error) => {
+      setDownloadProgress(null);
+      setIsCheckingUpdates(false);
+      if (safetyTimeoutRef.current) {
+        clearTimeout(safetyTimeoutRef.current);
+        safetyTimeoutRef.current = null;
+      }
+      setUpdateStatus({
+        type: 'error',
+        message: error.message || 'Nedlasting av oppdateringen mislyktes. Prøv igjen.',
+      });
+    });
+
     return () => {
       unsubscribeProgress();
       unsubscribeDownloaded();
+      unsubscribeError();
 
       // Clear any pending safety timeout
       if (safetyTimeoutRef.current) {

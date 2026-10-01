@@ -113,11 +113,17 @@ const EmailPreviewModal: React.FC<EmailPreviewModalProps> = ({
       onClick={onCancel}
     >
       <div
-        className="bg-white/60 backdrop-blur-2xl rounded-3xl border border-white/50 shadow-2xl w-full max-w-7xl max-h-[90vh] min-w-0 overflow-hidden flex flex-col"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="email-preview-title"
+        className="bg-white/60 backdrop-blur-2xl rounded-3xl border border-white/50 shadow-2xl w-full max-w-7xl max-h-[90vh] min-w-0 overflow-y-auto flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="p-4 sm:p-6 border-b flex flex-wrap justify-between items-start gap-3 flex-shrink-0">
-          <h2 className="text-xl font-bold text-neutral min-w-0 break-words">
+          <h2
+            id="email-preview-title"
+            className="text-xl font-bold text-neutral min-w-0 break-words"
+          >
             Forhåndsvisning av e-post
           </h2>
           <div className="flex min-w-0 max-w-full items-start gap-3">
@@ -159,7 +165,7 @@ const EmailPreviewModal: React.FC<EmailPreviewModalProps> = ({
           </div>
         </div>
 
-        <div className="p-4 sm:p-6 border-b flex-shrink-0 max-h-[40vh] overflow-y-auto [overflow-wrap:anywhere]">
+        <div className="p-4 sm:p-6 border-b flex-shrink-0 [overflow-wrap:anywhere]">
           <div className="mb-4">
             <div className="flex items-start justify-between gap-3 mb-2">
               <span className="shrink-0 font-medium">Til:</span>
@@ -225,7 +231,7 @@ const EmailPreviewModal: React.FC<EmailPreviewModalProps> = ({
           </div>
         </div>
 
-        <div className="overflow-auto flex-1 p-6 bg-neutral-light">
+        <div className="overflow-x-auto flex-shrink-0 p-6 bg-neutral-light">
           <div
             className="bg-neutral-white p-6 border rounded-md shadow-sm"
             dangerouslySetInnerHTML={{ __html: previewHtml }}

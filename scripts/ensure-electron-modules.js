@@ -10,9 +10,11 @@ import { execSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { bunEnvironment } from './bun-environment.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const childEnvironment = bunEnvironment();
 
 console.log('🔧 Ensuring native modules are properly built for Electron...');
 
@@ -22,6 +24,7 @@ try {
   if (!fs.existsSync(betterSqlite3Path)) {
     console.log('📦 Installing better-sqlite3...');
     execSync('bun install better-sqlite3', {
+      env: childEnvironment,
       stdio: 'inherit',
       cwd: path.join(__dirname, '..'),
     });
@@ -30,6 +33,7 @@ try {
   // Rebuild for Electron
   console.log('🔨 Rebuilding native modules for Electron...');
   execSync('bunx electron-rebuild -f -w better-sqlite3', {
+    env: childEnvironment,
     stdio: 'inherit',
     cwd: path.join(__dirname, '..'),
   });
