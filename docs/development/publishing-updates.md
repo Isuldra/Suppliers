@@ -10,9 +10,20 @@ Se [versjonering](VERSIONING.md), [signering](CODE-SIGNING.md) og [utviklingsopp
 
 ## GitHub Actions
 
+### Forutsetning: `RELEASE_PAT`
+
+Repoets ruleset hindrer `GITHUB_TOKEN` i å opprette brancher. Workflowen pusher derfor metadata-branchen og åpner PR-en med repo-secreten `RELEASE_PAT`. Kontroller før release:
+
+- Secreten finnes under _Settings → Secrets and variables → Actions_ (`gh secret list`).
+- Tokenet gjelder dette repoet og har _Contents: Read and write_ og _Pull requests: Read and write_ (fine-grained), eller `repo` (classic).
+- Tokenets eier har lov til å opprette `release/cloudflare-*`-brancher etter repoets ruleset.
+- Tokenet er ikke utløpt.
+
+Workflowen stopper før bygging hvis secreten mangler. Manglende rettigheter eller et utløpt token oppdages først når metadata-branchen pushes, etter at GitHub-filene er lastet opp.
+
 Start `Release Workflow` i Actions med versjonen, eller push en `vX.Y.Z`-tag fra lokal Git. Workflowen:
 
-1. Kontrollerer at versjonen stemmer med `package.json` i valgt commit, og at en eventuell eksisterende tag peker til samme commit. Installerer fra låsefilen uten å endre pakkeversjonen.
+1. Kontrollerer at `RELEASE_PAT` er satt, at versjonen stemmer med `package.json` i valgt commit, og at en eventuell eksisterende tag peker til samme commit. Installerer fra låsefilen uten å endre pakkeversjonen.
 2. Kjører kvalitetssjekk, bygger appen og kontrollerer SQLite under Electron.
 3. Pakker Windows-filene.
 4. Genererer metadata fra installasjonsprogrammet og portable-filen.

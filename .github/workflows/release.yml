@@ -44,7 +44,12 @@ jobs:
         shell: pwsh
         env:
           REQUESTED_VERSION: ${{ inputs.version }}
+          HAS_RELEASE_PAT: ${{ secrets.RELEASE_PAT != '' }}
         run: |
+          # Fail before building; the metadata PR needs RELEASE_PAT after the assets are uploaded.
+          if ($env:HAS_RELEASE_PAT -ne 'true') {
+            throw 'RELEASE_PAT is not set. See docs/development/publishing-updates.md.'
+          }
           $version = if ($env:GITHUB_EVENT_NAME -eq 'push') { $env:GITHUB_REF_NAME -replace '^v', '' } else { $env:REQUESTED_VERSION }
           if ($version -notmatch '^\d+\.\d+\.\d+$') {
             throw "Use a stable X.Y.Z version without a leading v."
