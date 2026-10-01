@@ -99,6 +99,7 @@ interface ElectronAPI {
   checkForUpdatesWithResult: () => Promise<{
     success: boolean;
     updateAvailable: boolean;
+    manualDownload?: boolean;
     version?: string | null;
     error?: string | null;
   }>;
@@ -443,7 +444,7 @@ contextBridge.exposeInMainWorld('electron', {
     return await ipcRenderer.invoke('update:check');
   },
   checkForUpdatesWithResult: async () => {
-    return await ipcRenderer.invoke('check-for-updates');
+    return await ipcRenderer.invoke('update:check');
   },
   onUpdateAvailable: (callback: (info: unknown) => void) => {
     const subscription = (_event: Electron.IpcRendererEvent, info: unknown) => callback(info);

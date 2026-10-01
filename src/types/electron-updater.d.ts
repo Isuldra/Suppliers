@@ -43,15 +43,16 @@ declare module 'electron-updater' {
     logger: BasicLogger; // Use the defined logger type
     autoDownload: boolean;
     autoInstallOnAppQuit: boolean;
+    disableDifferentialDownload: boolean;
 
     // Methods
     setFeedURL(options: FeedURLOptions | string): void;
     checkForUpdates(): Promise<{
       updateInfo: UpdateInfo;
-      downloadPromise: Promise<string[] | Error>; // More specific type
+      downloadPromise?: Promise<string[]> | null;
       versionInfo: Record<string, unknown>; // Use Record<string, unknown>
-      updateAvailable: boolean;
-    }>;
+      isUpdateAvailable: boolean;
+    } | null>;
     downloadUpdate(): Promise<string[]>;
     quitAndInstall(isSilent?: boolean, isForceRunAfter?: boolean): void;
     on(event: string, _callback: (...args: unknown[]) => void): this;

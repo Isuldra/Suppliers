@@ -96,6 +96,7 @@ interface ElectronAPI {
   checkForUpdatesWithResult: () => Promise<{
     success: boolean;
     updateAvailable: boolean;
+    manualDownload?: boolean;
     version?: string | null;
     error?: string | null;
   }>;

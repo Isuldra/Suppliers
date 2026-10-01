@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
   readFileSync: vi.fn(),
   unlinkSync: vi.fn(),
   writeFileSync: vi.fn(),
+  send: vi.fn(),
 }));
 
 vi.mock('electron', () => ({
@@ -17,7 +18,7 @@ vi.mock('electron', () => ({
     getPath: () => 'C:/Users/test/AppData/Pulse',
     getVersion: () => '1.5.3',
   },
-  BrowserWindow: { getAllWindows: () => [] },
+  BrowserWindow: { getAllWindows: () => [{ webContents: { send: mocks.send } }] },
   dialog: { showMessageBox: mocks.showMessageBox },
   shell: {},
 }));
@@ -45,11 +46,18 @@ vi.mock('fs', () => ({
   },
 }));
 
-import { setupAutoUpdater } from '../src/main/auto-updater';
+import {
+  setupAutoUpdater,
+  checkForUpdatesManually,
+  installDownloadedUpdate,
+} from '../src/main/auto-updater';
+import { autoUpdater } from 'electron-updater';
 
 describe('installed app update recovery', () => {
   beforeEach(() => {
     vi.useFakeTimers();
+    vi.stubEnv('PORTABLE_EXECUTABLE_FILE', '');
+    vi.stubEnv('PORTABLE_EXECUTABLE_DIR', '');
     vi.clearAllMocks();
     mocks.handlers.clear();
     mocks.readFileSync.mockReturnValue(JSON.stringify({ version: '1.6.0' }));
@@ -60,6 +68,7 @@ describe('installed app update recovery', () => {
   afterEach(() => {
     vi.clearAllTimers();
     vi.useRealTimers();
+    vi.unstubAllEnvs();
   });
 
   it('rechecks a past download without offering installation or scheduling a second startup check', async () => {
@@ -69,6 +78,61 @@ describe('installed app update recovery', () => {
     expect(mocks.showMessageBox).not.toHaveBeenCalled();
     expect(mocks.quitAndInstall).not.toHaveBeenCalled();
     await vi.advanceTimersByTimeAsync(7000);
+    expect(mocks.checkForUpdates).toHaveBeenCalledOnce();
+  });
+
+  it('does not report an update when the feed returns metadata for the current version', async () => {
+    mocks.checkForUpdates.mockResolvedValue({
+      isUpdateAvailable: false,
+      updateInfo: { version: '1.5.3' },
+    });
+    expect(await checkForUpdatesManually()).toMatchObject({
+      success: true,
+      updateAvailable: false,
+      version: '1.5.3',
+    });
+    mocks.checkForUpdates.mockResolvedValue({
+      isUpdateAvailable: true,
+      updateInfo: { version: '1.6.0' },
+    });
+    expect(await checkForUpdatesManually()).toMatchObject({
+      success: true,
+      updateAvailable: true,
+      version: '1.6.0',
+    });
+  });
+
+  it('rejects installation before a validated download and accepts it afterwards', () => {
+    mocks.showMessageBox.mockResolvedValue({ response: 1 });
+    setupAutoUpdater();
+    expect(() => installDownloadedUpdate()).toThrow('Ingen nedlastet oppdatering');
+    expect(mocks.quitAndInstall).not.toHaveBeenCalled();
+    mocks.handlers.get('update-downloaded')?.({ version: '1.6.0' });
+    installDownloadedUpdate();
+    expect(mocks.quitAndInstall).toHaveBeenCalledWith(false, true);
+    expect(mocks.send).toHaveBeenCalledWith(
+      'update:downloaded',
+      expect.objectContaining({ version: '1.6.0' })
+    );
+  });
+
+  it('sends available notifications on the channel used by the preload API', () => {
+    setupAutoUpdater();
+    mocks.handlers.get('update-available')?.({ version: '1.9.0' });
+    expect(mocks.send).toHaveBeenCalledWith(
+      'update:available',
+      expect.objectContaining({ version: '1.9.0' })
+    );
+    expect(autoUpdater.disableDifferentialDownload).toBe(true);
+  });
+
+  it('recognizes a renamed portable EXE and never downloads the NSIS installer for it', async () => {
+    vi.stubEnv('PORTABLE_EXECUTABLE_FILE', 'D:/Tools/Renamed.exe');
+    setupAutoUpdater();
+    expect(autoUpdater.autoDownload).toBe(false);
+    expect(autoUpdater.autoInstallOnAppQuit).toBe(false);
+    expect(mocks.handlers.has('update-downloaded')).toBe(false);
+    await vi.advanceTimersByTimeAsync(10000);
     expect(mocks.checkForUpdates).toHaveBeenCalledOnce();
   });
 

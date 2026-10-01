@@ -13,13 +13,12 @@ import path from 'path';
 const log = require('electron-log/main'); // Required for CJS interop in Electron main process
 import { databaseService } from '../services/databaseService';
 import { setupDatabaseHandlers } from './database';
-import { checkForUpdatesManually } from './auto-updater';
+import { checkForUpdatesManually, setupAutoUpdater, installDownloadedUpdate } from './auto-updater';
 import fs from 'fs';
 import os from 'os';
 import * as Database from 'better-sqlite3'; // Import better-sqlite3
 import { importAlleArk } from './importer'; // Import the Excel importer
 import child_process, { spawn } from 'child_process'; // Added for send-logs-to-support
-import { autoUpdater } from 'electron-updater'; // Added for update:install
 import type { ExcelData } from '../renderer/types/ExcelData';
 
 /**
@@ -336,6 +335,7 @@ app.whenReady().then(async () => {
     // 4. Load the renderer URL after everything is set up
     log.info('Loading renderer URL...');
     loadWindowURL(mainWindow);
+    setupAutoUpdater();
 
     // --- Added: Create Menu with "Open Log File" only ---
     try {
@@ -1319,6 +1319,7 @@ ipcMain.handle('update:check', async () => {
     log.error('Error checking for updates:', error);
     return {
       updateAvailable: false,
+      success: false,
       error: error instanceof Error ? error.message : 'Unknown error',
     };
   }
@@ -1327,10 +1328,7 @@ ipcMain.handle('update:check', async () => {
 // Add IPC handler for installing updates
 ipcMain.handle('update:install', async () => {
   try {
-    // This will only work if an update has been downloaded
-    // Use the imported autoUpdater
-    // const { autoUpdater } = require("electron-updater"); // Removed
-    autoUpdater.quitAndInstall(false, true);
+    installDownloadedUpdate();
     return { success: true };
   } catch (error) {
     log.error('Error installing update:', error);

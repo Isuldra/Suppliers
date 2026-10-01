@@ -101,9 +101,15 @@ const FileUpload: React.FC<FileUploadProps> = ({ onDataParsed, onValidationError
         if (result.updateAvailable) {
           setUpdateStatus({
             type: 'success',
-            message: `Ny versjon ${result.version} er tilgjengelig! Oppdateringen lastes ned automatisk.`,
+            message: result.manualDownload
+              ? `Ny versjon ${result.version} er tilgjengelig! Last ned Pulse-Portable.exe fra GitHub Releases.`
+              : `Ny versjon ${result.version} er tilgjengelig! Oppdateringen lastes ned automatisk.`,
           });
           toast.success(`Ny versjon ${result.version} er tilgjengelig!`);
+          if (result.manualDownload) {
+            setIsCheckingUpdates(false);
+            return;
+          }
           // Don't stop spinner yet - let progress tracking handle it
           // setIsCheckingUpdates(false) will be called when download starts or completes
 
