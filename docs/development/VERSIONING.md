@@ -1,360 +1,45 @@
-# Version Management System
+# Versjonering
 
-This document describes the production-ready version management system for the Pulse application.
+Appversjonen ligger i `package.json`. Release-tags bruker normalt `vX.Y.Z`. Navn på installasjonsfiler og oppdateringsmetadata må bruke samme versjon.
 
-## Features
+## Lese status
 
-### Core Capabilities
-
-- **Semver Validation**: Uses the `semver` library for robust version validation instead of regex
-- **Annotated Tags**: Creates annotated git tags (standard for CI/CD) with `-a` flag
-- **Repository Root Discovery**: Works from any subdirectory using `git rev-parse --show-toplevel`
-- **Pre-flight Checks**: Validates git identity, detached HEAD, and clean working directory
-- **Auto-push Support**: `--push` flag automatically pushes commits and tags with `--follow-tags`
-- **Configurable Tag Prefix**: Set via `TAG_PREFIX` environment variable (default: "v")
-- **CI-Friendly Logging**: No emojis, structured logging with stdout/stderr separation
-- **Verbose Mode**: `--verbose` flag for detailed debugging output
-- **Dry-run Support**: `--dry-run` flag to preview changes without making them
-
-### Version Management Commands
-
-- **Sync**: Synchronize package.json with latest git tag
-- **Bump**: Create new version with semantic versioning
-- **Info**: Display current version information
-- **Help**: Show usage information
-
-## Installation
-
-The version management system is already configured in this project. The required dependencies are:
-
-```json
-{
-  "devDependencies": {
-    "execa": "^9.5.2",
-    "semver": "^7.6.3"
-  }
-}
+```powershell
+bun run version:info
+bun run version:help
 ```
 
-Install dependencies:
+`bun run version:sync` henter versjon fra nærmeste tilgjengelige Git-tag og skriver den til `package.json`. Kommandoen krever rent arbeidstre, Git-identitet og en branch. Hvis versjonen endres, committer den `package.json`.
 
-```bash
-npm install
+## Øke versjon
+
+`scripts/sync-version.js` bruker npm sin versjonskommando. Skriptet krever Git-identitet, en branch og rent arbeidstre.
+
+| Kommando                     | Endring       |
+| ---------------------------- | ------------- |
+| `bun run version:bump`       | Patch         |
+| `bun run version:bump:minor` | Minor         |
+| `bun run version:bump:major` | Major         |
+| `bun run version:bump:push`  | Patch og push |
+
+Bump skriver `package.json`, committer den filen og lager en annotert tag. Det er ikke bare en filredigering.
+
+For å se hva en minor-økning ville gjøre:
+
+```powershell
+node scripts/sync-version.js bump minor --dry-run
 ```
 
-## Usage
+For en minor-økning med push brukes det underliggende skriptet:
 
-### Basic Commands
-
-#### Show Version Information
-
-```bash
-npm run version:info
+```powershell
+node scripts/sync-version.js bump minor --push
 ```
 
-#### Sync Package.json with Git Tags
+`--push` pusher branch og tags gjennom `--follow-tags`. En `v*`-tag kan utløse release-workflowen, så dette inngår i publisering. `TAG_PREFIX` kan overstyre tagprefikset.
 
-```bash
-npm run version:sync
-```
+## Velge releaseversjon
 
-#### Create New Version
+Bruk patch for feilrettinger, minor for funksjonalitet og major når kompatibilitetsbrudd krever det. Metadata-skriptet for dagens oppdateringsfeed forventer en stabil `X.Y.Z`-versjon; ikke anta at støtte for prerelease i versjonsskriptet betyr at hele publiseringsflyten støtter den.
 
-```bash
-# Patch version (1.0.0 -> 1.0.1)
-npm run version:bump
-
-# Minor version (1.0.0 -> 1.1.0)
-npm run version:bump:minor
-
-# Major version (1.0.0 -> 2.0.0)
-npm run version:bump:major
-
-# Bump and auto-push
-npm run version:bump:push
-```
-
-#### Show Help
-
-```bash
-npm run version:help
-```
-
-### Advanced Usage
-
-#### Direct Script Usage
-
-```bash
-# Sync with latest git tag
-node scripts/sync-version.js sync
-
-# Create patch version with dry-run
-node scripts/sync-version.js bump patch --dry-run
-
-# Create minor version with verbose output
-node scripts/sync-version.js bump minor --verbose
-
-# Create major version and auto-push
-node scripts/sync-version.js bump major --push
-
-# Show version information
-node scripts/sync-version.js info
-```
-
-#### Environment Variables
-
-```bash
-# Use custom tag prefix
-TAG_PREFIX="" node scripts/sync-version.js bump patch
-
-# Use custom tag prefix for sync
-TAG_PREFIX="release-" node scripts/sync-version.js sync
-```
-
-## Version Types
-
-| Type         | Description           | Example           |
-| ------------ | --------------------- | ----------------- |
-| `patch`      | Bug fixes             | 1.0.0 → 1.0.1     |
-| `minor`      | New features          | 1.0.0 → 1.1.0     |
-| `major`      | Breaking changes      | 1.0.0 → 2.0.0     |
-| `prepatch`   | Pre-release patch     | 1.0.0 → 1.0.1-0   |
-| `preminor`   | Pre-release minor     | 1.0.0 → 1.1.0-0   |
-| `premajor`   | Pre-release major     | 1.0.0 → 2.0.0-0   |
-| `prerelease` | Increment pre-release | 1.0.0-0 → 1.0.0-1 |
-
-## CI/CD Integration
-
-### GitHub Actions - Manual Version Management
-
-The project includes a comprehensive GitHub Actions workflow for manual version management:
-
-#### 🏷️ Version Management Workflow
-
-**File:** `.github/workflows/version-management.yml`
-
-**Features:**
-
-- **Manual Trigger**: `workflow_dispatch` for full control
-- **Version Type Selection**: Choose patch/minor/major/pre-release
-- **Auto-push Option**: Automatically push changes and tags
-- **Custom Tag Prefix**: Configurable tag prefix (default: "v")
-- **GitHub Release**: Automatically creates GitHub releases
-- **Build Integration**: Triggers build workflow after version creation
-
-#### How to Use
-
-1. **Go to GitHub Actions tab**
-2. **Select "🏷️ Version Management" workflow**
-3. **Click "Run workflow"**
-4. **Configure options:**
-   - **Version Type**: patch, minor, major, prepatch, preminor, premajor, prerelease
-   - **Auto Push**: Automatically push changes and tags
-   - **Tag Prefix**: Custom prefix (default: "v")
-
-#### Workflow Configuration
-
-```yaml
-on:
-  workflow_dispatch:
-    inputs:
-      version_type:
-        description: 'Version type to create'
-        required: true
-        default: 'patch'
-        type: choice
-        options:
-          - patch
-          - minor
-          - major
-          - prepatch
-          - preminor
-          - premajor
-          - prerelease
-      push_changes:
-        description: 'Automatically push changes and tags'
-        required: true
-        default: true
-        type: boolean
-      tag_prefix:
-        description: 'Git tag prefix (default: v)'
-        required: false
-        default: 'v'
-        type: string
-```
-
-#### Build Integration
-
-The build workflow automatically triggers after version management:
-
-```yaml
-on:
-  push:
-    branches: [main]
-    tags: ['v*'] # Trigger on version tags
-  workflow_run:
-    workflows: ['🏷️ Version Management']
-    types: [completed]
-```
-
-### GitLab CI
-
-```yaml
-version_management:
-  stage: version
-  script:
-    - git config user.name "GitLab CI"
-    - git config user.email "ci@gitlab.com"
-    - npm ci
-    - npm run version:bump:minor
-    - git push origin main --follow-tags
-  only:
-    - main
-  when: manual
-```
-
-## Pre-flight Checks
-
-The system performs several checks before creating new versions:
-
-### Git Identity Check
-
-Ensures git user.name and user.email are configured:
-
-```bash
-git config user.name "Your Name"
-git config user.email "you@example.com"
-```
-
-### Detached HEAD Check
-
-Prevents versioning in detached HEAD state:
-
-```bash
-# Checkout a branch first
-git checkout main
-```
-
-### Working Directory Check
-
-Ensures working directory is clean:
-
-```bash
-# Commit or stash changes
-git add .
-git commit -m "Your changes"
-# OR
-git stash
-```
-
-## Troubleshooting
-
-### Common Issues
-
-#### "Not in a git repository"
-
-- Ensure you're in a git repository
-- Run `git init` if needed
-
-#### "git user.email is not configured"
-
-```bash
-git config user.email "you@example.com"
-```
-
-#### "Detached HEAD state detected"
-
-```bash
-git checkout main
-```
-
-#### "Working directory is not clean"
-
-```bash
-git add .
-git commit -m "Your changes"
-```
-
-#### "No git tags found"
-
-- Create an initial tag: `git tag -a v1.0.0 -m "Initial release"`
-- Or use `npm run version:bump` to create the first version
-
-### Debug Mode
-
-Use `--verbose` flag for detailed output:
-
-```bash
-node scripts/sync-version.js info --verbose
-node scripts/sync-version.js sync --verbose
-```
-
-### Dry Run
-
-Test commands without making changes:
-
-```bash
-node scripts/sync-version.js bump patch --dry-run
-node scripts/sync-version.js sync --dry-run
-```
-
-## Best Practices
-
-### Version Management
-
-1. **Use semantic versioning**: Follow semver.org guidelines
-2. **Create annotated tags**: Use `-a` flag for proper git tags
-3. **Sync regularly**: Run `npm run version:sync` before major releases
-4. **Test with dry-run**: Always test with `--dry-run` first
-5. **Use CI/CD**: Automate version management in your pipeline
-
-### Git Workflow
-
-1. **Clean working directory**: Commit or stash changes before versioning
-2. **Proper branch**: Don't version from detached HEAD
-3. **Push tags**: Use `--follow-tags` when pushing
-4. **Review changes**: Check what will be committed before pushing
-
-### CI/CD Integration
-
-1. **Configure git identity**: Set user.name and user.email in CI
-2. **Use environment variables**: Configure TAG_PREFIX for your workflow
-3. **Test thoroughly**: Use dry-run in CI before actual versioning
-4. **Monitor logs**: Use verbose mode for debugging CI issues
-
-## Examples
-
-### Complete Release Workflow
-
-```bash
-# 1. Check current status
-npm run version:info
-
-# 2. Sync with latest tag (if needed)
-npm run version:sync
-
-# 3. Create new version
-npm run version:bump:minor
-
-# 4. Push changes
-git push origin main --follow-tags
-```
-
-### Pre-release Workflow
-
-```bash
-# Create pre-release version
-node scripts/sync-version.js bump prerelease
-
-# Create specific pre-release
-node scripts/sync-version.js bump prepatch
-```
-
-### Custom Tag Prefix
-
-```bash
-# Use custom prefix
-TAG_PREFIX="release-" node scripts/sync-version.js bump patch
-```
-
-This will create tags like `release-1.0.1` instead of `v1.0.1`.
+Kontroller alltid resultatet mot `package.json` og ønsket Git-tag. En eksisterende tag skal ikke flyttes til et annet bygg for å rette en publisert release.

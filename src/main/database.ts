@@ -6,14 +6,7 @@ const log = require('electron-log/main');
 
 // Database interface for IPC communication
 export function setupDatabaseHandlers() {
-  // Initialize database
-  try {
-    // Database is automatically initialized when the singleton is accessed
-    console.log('Database service initialized');
-  } catch (error) {
-    console.error('Failed to initialize database:', error);
-  }
-
+  ipcMain.handle('db:getSupplierContacts', () => databaseService.getSupplierContacts());
   // Handle insert or update of a single order
   ipcMain.handle('db:insertOrUpdateOrder', async (_event, order: ExcelRow) => {
     try {
@@ -174,24 +167,4 @@ export function setupDatabaseHandlers() {
       };
     }
   });
-}
-
-// Clean up database when app is closing
-export function closeDatabaseConnection() {
-  try {
-    // Clear all timeouts and intervals if needed
-
-    // Close the database connection
-    databaseService.close();
-    console.log('Database connection closed successfully');
-
-    // Return true to indicate successful closure
-    return true;
-  } catch (error) {
-    console.error('Error closing database connection:', error);
-
-    // Even with an error, return true so the app can continue shutting down
-    // Better to have a slightly messy shutdown than getting stuck
-    return true;
-  }
 }

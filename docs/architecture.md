@@ -1,146 +1,59 @@
-# Arkitektur - Pulse (OneMed SupplyChain)
+# Arkitektur
 
-Denne dokumentasjonen beskriver arkitekturen til Pulse, en Electron-basert desktop-applikasjon for
-leverandørstyring, bygget for Windows.
+Pulse er en Electron-app med React-renderer, TypeScript og SQLite. Bygget bruker electron-vite. Windows-pakken bruker electron-builder.
 
-## Overordnet Arkitektur
+## Prosessene
 
-Pulse følger Electrons standard tre-prosess-modell: main-prosess, preload-script og
-renderer-prosess (React), koblet sammen via en typet IPC-bro.
+| Del      | Inngang                           | Ansvar                                                         |
+| -------- | --------------------------------- | -------------------------------------------------------------- |
+| Main     | `src/main/index.ts`               | Vinduer, IPC, database, Excel-import, Outlook og oppdateringer |
+| Preload  | `src/preload/index.ts`            | Eksponere navngitte metoder på `window.electron`               |
+| Renderer | `src/renderer/App.tsx`            | Arbeidsflate og dashboard                                      |
+| Database | `src/services/databaseService.ts` | Skjema og SQL-spørringer                                       |
 
-```
-┌──────────────────────────────────────────────────────────────────┐
-│                              Pulse                                │
-├──────────────────────────────────────────────────────────────────┤
-│  Main Process (Node.js)        │  Preload          │  Renderer     │
-│  src/main/index.ts             │  src/preload/     │  (React)      │
-│  ┌───────────────────────────┐ │  index.ts         │ ┌───────────┐ │
-│  │ • DatabaseService (SQLite)│ │  contextBridge +  │ │ Komponenter│ │
-│  │ • Excel-import            │ │  channel-allowlist│ │ Services   │ │
-│  │ • Outlook/PowerShell mail │ │                   │ │ i18n       │ │
-│  │ • Auto-updater            │◄┼───IPC (invoke/send)┼►│           │ │
-│  └───────────────────────────┘ │                   │ └───────────┘ │
-└──────────────────────────────────────────────────────────────────┘
-```
+`App.tsx` bruker HashRouter. `/dashboard` åpner dashboardet; øvrige ruter åpner arbeidsflaten.
 
-## Byggeoppsett (viktig fallgruve)
-
-`electron-vite` (konfigurert i `electron.vite.config.ts`) bygger tre separate bunter:
-
-| Prosess  | Kildeinngang              | Byggoutput               |
-| -------- | -------------------------- | ------------------------- |
-| main     | `src/main/index.ts`        | `dist/main/main.cjs`      |
-| preload  | `src/preload/index.ts`     | `dist/preload/index.cjs`  |
-| renderer | `src/renderer/` (Vite root)| `dist/renderer/`          |
-
-`package.json`'s `"main"` felt peker på `dist/main/main.cjs`, som igjen kommer fra
-`src/main/index.ts` — **ikke** noen fil som heter `main.ts`. Det har tidligere eksistert en
-`src/main/main.ts`, men den var død kode og er slettet.
-
-## Prosjektstruktur (faktisk, verifisert mot `src/`)
-
-```
-src/
-├── main/
-│   ├── index.ts              # Main-prosessens entry point (bygges til dist/main/main.cjs)
-│   ├── auto-updater.ts        # electron-updater-integrasjon
-│   ├── database.ts            # Eldre database-hjelpere brukt av main
-│   ├── databaseAdapter.js     # Adapter kopiert til dist/main ved bygg
-│   ├── importer.ts            # Excel-import (BP/Sjekkliste/Leverandør-ark)
-│   └── productCatalogImporter.ts
-├── preload/
-│   └── index.ts               # contextBridge + kanal-allowlist (validSendChannels/validReceiveChannels)
-├── renderer/                   # React-frontend (Vite root)
-│   ├── App.tsx
-│   ├── components/             # UI-komponenter, inkl. components/dashboard/
-│   ├── services/                # emailService.ts, languageDetectionService.ts
-│   ├── locales/                  # no.json, en.json, se.json, da.json, fi.json (i18next)
-│   ├── i18n/                    # i18next-oppsett
-│   ├── context/, data/, styles/, types/, assets/
-├── services/                    # Delt mellom main og renderer
-│   ├── databaseService.ts        # Singleton SQLite-tjeneste (better-sqlite3)
-│   └── emailTemplates/           # Handlebars-maler
-├── config/
-├── generated/                    # Genererte filer (f.eks. kompilert e-postmal)
-├── types/
-└── utils/
-```
-
-`docs/`, `resources/` og `scripts/` ligger på repo-roten, ikke under `src/`.
+Byggets innganger og utdata ligger i `electron.vite.config.ts`: main bygges til `dist/main/main.cjs`, preload til `dist/preload/index.cjs` og renderer til `dist/renderer`.
 
 ## Dataflyt
 
-### 1. Excel Import
+```text
+Excel-fil
+  -> renderer validerer filen
+  -> preload / IPC
+  -> main importerer til SQLite
+  -> arbeidsflate og dashboard leser gjennom IPC
 
-```
-Bruker laster opp fil → FileUpload/BulkDataReview → IPC til main
-   → importer.ts parser BP/Sjekkliste/Leverandør-ark → DatabaseService skriver til SQLite
-   → UI oppdateres med leverandørliste/ordre
-```
-
-### 2. E-post-sending
-
-Se [Email Setup](features/email-setup.md) for full beskrivelse. Kort oppsummert:
-
-```
-Bruker velger leverandør/ordre → EmailButton/BulkEmailPreview → emailService.sendReminder()
-   → IPC (sendEmailViaEmlAndCOM → sendEmailAutomatically → sendEmail, med fallback i den rekkefølgen)
-   → main-prosessen skriver en .eml-fil og styrer Outlook via en PowerShell-child-process (COM automation)
+Valgte leverandører og linjer
+  -> gjennomgang og HTML i renderer
+  -> main lager EML og sender via Outlook COM
+  -> renderer lagrer lokal sendingshistorikk
 ```
 
-Det finnes **ingen SMTP-integrasjon** i produksjonskoden — sending skjer alltid via Outlook som
-allerede kjører og er logget inn på brukerens Windows-maskin.
+Importen erstatter ordresnapshotet. Kontaktark og planlegging behandles separat. Se [Excel-import](features/excel-import.md).
 
-### 3. Dashboard
+SQLite ligger i Electron sin `userData`-mappe. Arbeidsflatens kontaktendringer, utelatelser og historikk ligger i localStorage. Sending og historikklagring er separate operasjoner; køen stopper dersom lagringen etter bekreftet sending feiler. Se [lagring](features/database.md) og [sendeflyt](features/email-reminders.md).
 
-```
-Dashboard.tsx → IPC (get-dashboard-stats / get-top-suppliers / get-orders-by-week)
-   → DatabaseService (getDashboardStats/getTopSuppliersByOutstanding/getOrdersByWeek)
-   → React state → recharts-komponenter i components/dashboard/
-```
+## Arbeidsflaten
 
-## IPC (Inter-Process Communication)
+`src/renderer/workspace/` inneholder:
 
-All IPC går gjennom `src/preload/index.ts`, som eksponerer et begrenset `window.electron`-API via
-`contextBridge.exposeInMainWorld`. Kanaler må stå i en eksplisitt allowlist
-(`validSendChannels`/`validReceiveChannels`) før de slipper gjennom — renderer-koden har ingen
-direkte tilgang til `ipcRenderer` eller Node-APIer.
+- `Workspace.tsx`: data, valg, import og navigasjon.
+- `model.ts`: leverandørmodell, linjeidentitet, ukestatus og lokal lagring.
+- `OrderTable.tsx` og `SupplierRegister.tsx`: ordre- og kontaktvisning.
+- `Review.tsx`: gjennomgang, sekvensiell sending og lagringsretry.
+- `reminder.ts`: språk, emne og HTML.
 
-Eksempler på registrerte kanaler: `sendEmail`, `sendEmailAutomatically`, `sendEmailViaEmlAndCOM`,
-`db:insertOrUpdateOrder`, `db:getAllOrders`, `get-dashboard-stats`, `get-top-suppliers`,
-`get-orders-by-week`, `update:check`/`update:install` (auto-updater).
+Renderer og main deler mottakervalidering i `src/utils/emailRecipients.ts`. Dataverdier escapes når purringens HTML bygges.
 
-## Datalagring
+## Prosessgrense
 
-- **SQLite** via `better-sqlite3`, singleton `DatabaseService` — se
-  [Database](features/database.md) for fullt skjema (seks tabeller: `orders`, `audit_log`,
-  `weekly_status`, `purchase_order`, `supplier_emails`, `supplier_planning`).
+BrowserWindow bruker `contextIsolation: true` og `nodeIntegration: false`. Renderer kommuniserer gjennom preload. Generiske `send`- og `on`-metoder har kanallister; navngitte API-metoder bruker sine egne IPC-kanaler.
 
-## Sikkerhet
+Main bruker SQL-parametre og PowerShell-literalhjelpere. Validering varierer mellom IPC-metodene. CSP settes for utviklingsserveren og det pakkede rendererinnholdet.
 
-- **Context Isolation**: aktivert; `nodeIntegration` er av i renderer.
-- **Preload-allowlist**: all IPC valideres mot en eksplisitt kanal-liste (se over).
-- **Prepared statements**: all SQL i `DatabaseService` bruker parameterbinding, ikke
-  strengkonkatenering.
-- **Untrusted input**: data fra brukerens Excel-fil regnes som utrusted og skal aldri
-  interpoleres direkte inn i PowerShell-kommandoer eller SQL-strenger.
+## Oppdateringer
 
-## Teknisk Stack
+Installerutgaven bruker electron-updater med en generisk Cloudflare-feed. Feedens `latest.yml` peker til filer i GitHub Releases. Portable-utgaven sjekker samme versjonsfeed, men krever manuell utskifting av programfilen.
 
-- **Electron 36** + **electron-vite** for bygg
-- **React 19** + **TypeScript**
-- **Tailwind CSS**
-- **better-sqlite3** (SQLite)
-- **i18next** / **react-i18next** (5 språk: no, en, se, da, fi)
-- **electron-updater** (auto-oppdateringer via manuelt publiserte GitHub Releases)
-- **Vitest** for testing — prosjektet bruker **ikke** Jest eller Playwright
-
-## Testing
-
-Testrammeverket er **Vitest**, konfigurert til å kjøre via `bun run test` /
-`bun run quality`. Det finnes ikke noe E2E-testoppsett (Playwright/Spectron) i dette repoet i dag;
-eventuelle tidligere referanser til Jest eller Playwright i denne dokumentasjonen var feil.
-
----
-
-**Sist verifisert mot kode**: juli 2026
+`docs/updates/` er publisert webinnhold. Se [publiseringsflyten](development/publishing-updates.md) før filene endres.

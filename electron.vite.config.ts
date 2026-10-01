@@ -2,7 +2,6 @@ import { defineConfig, externalizeDepsPlugin } from 'electron-vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import ignore from 'rollup-plugin-ignore';
 import copy from 'rollup-plugin-copy';
 import commonjs from '@rollup/plugin-commonjs';
 
@@ -57,9 +56,7 @@ export default defineConfig({
           main: path.resolve(__dirname, 'src/main/index.ts'),
         },
         external: [
-          // leave test patterns/external libs here if you like
           /\.test\./,
-          // Add native modules to external
           'better-sqlite3',
           'electron-updater',
           'electron-log/main',
@@ -69,17 +66,11 @@ export default defineConfig({
           'path',
         ],
         plugins: [
-          // Add the externalize dependencies plugin
           externalizeDepsPlugin({
             exclude: ['electron-log'],
           }),
-          // Configure CommonJS plugin to handle dynamic requires
           commonjs({
-            dynamicRequireTargets: [
-              // Add the paths for native modules
-              'node_modules/better-sqlite3/**/*.node',
-              'node_modules/sqlite3/**/*.node',
-            ],
+            dynamicRequireTargets: ['node_modules/better-sqlite3/**/*.node'],
             exclude: ['electron-log'],
           }),
           // copy root package.json into dist
@@ -103,17 +94,7 @@ export default defineConfig({
     },
     optimizeDeps: {
       // Exclude native modules from optimization
-      exclude: [
-        'mock-aws-s3',
-        'nock',
-        'aws-sdk',
-        '@mapbox/cloudfriend',
-        'codecov',
-        'nyc',
-        'tape',
-        'better-sqlite3',
-        'electron-updater',
-      ],
+      exclude: ['better-sqlite3', 'electron-updater'],
     },
   },
   preload: {
@@ -124,12 +105,7 @@ export default defineConfig({
           index: path.resolve(__dirname, 'src/preload/index.ts'),
         },
         external: [/\.test\./, 'better-sqlite3', 'electron-updater'],
-        plugins: [
-          externalizeDepsPlugin(),
-          // Fix: rollup-plugin-ignore expects string array
-          // After looking at the source: https://github.com/jackmellis/rollup-plugin-ignore/blob/master/src/index.js
-          ignore(['mock-aws-s3', 'better-sqlite3']),
-        ],
+        plugins: [externalizeDepsPlugin()],
         output: {
           format: 'cjs',
           entryFileNames: '[name].cjs',

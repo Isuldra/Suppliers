@@ -1,127 +1,31 @@
-# Pulse - Deployment Guide
+# Stille installasjon på Windows
 
-This document provides instructions for deploying Pulse silently via PowerShell or batch scripts, which is especially useful for enterprise environments.
+NSIS-pakken installeres per bruker. Kjør installasjonen i brukerens sesjon; en opphøyet eller annen konto kan gi installasjon i feil profil.
 
-## Building the Windows Installer
+Bygg med `bun run dist:nsis`. Filen ligger som `release/Pulse-X.Y.Z-setup.exe`.
 
-To build the Windows installer package, run:
+## Installere
 
-```bash
-npm run dist:win
-```
-
-This will create an NSIS installer in the `release` directory, named
-`Pulse-{version}-setup.exe` (e.g. `Pulse-1.5.3-setup.exe`), per the `artifactName` configured in
-`package.json`'s `build.win` section.
-
-## Silent Installation Options
-
-The installer supports the following silent installation options:
-
-- `/S` - Silent installation (required for unattended install)
-- `/D=<path>` - Installation directory (must be the last parameter)
-
-## Deployment Methods
-
-### Method 1: Direct Command Line
-
-You can deploy silently directly from the command line:
+Fra repoets rot:
 
 ```powershell
-# PowerShell
-Start-Process -Wait -FilePath "Pulse-1.5.3-setup.exe" -ArgumentList "/S /D=C:\Program Files\Pulse"
+.\resources\silent-install.ps1 -InstallerPath '.\release\Pulse-X.Y.Z-setup.exe'
 ```
 
-```batch
-REM Command Prompt/Batch
-"Pulse-1.5.3-setup.exe" /S /D="C:\Program Files\Pulse"
+Valgfri `-InstallDir` overstyrer standardmappen under `%LOCALAPPDATA%\Programs\Pulse`. Skriptet starter NSIS med `/S` og venter på exit-koden. `/D=` legges sist, slik NSIS forventer.
+
+Batch-filen videresender de samme PowerShell-argumentene:
+
+```bat
+resources\silent-install.bat -InstallerPath ".\release\Pulse-X.Y.Z-setup.exe"
 ```
 
-### Method 2: Using the Provided PowerShell Script
+Skriptet ber ikke om administratorrettigheter og avinstallerer ikke en eksisterende utgave først. Installerens egen oppgraderingsflyt håndterer oppdatering.
 
-We provide a PowerShell script (`silent-install.ps1`) that handles common deployment scenarios:
+## Kontroll og avinstallasjon
 
-```powershell
-# Basic installation with defaults
-.\silent-install.ps1
+Kontroller versjonen i appen eller brukerens Windows-innstillinger for installerte programmer. Avinstaller derfra.
 
-# Install to a custom directory
-.\silent-install.ps1 -InstallerPath "C:\Path\To\Installer.exe" -InstallDir "D:\Custom\Path"
+Brukerdata beholdes av NSIS-konfigurasjonen. Bevar både SQLite og appprofilen før eventuell manuell flytting; [sendingshistorikken ligger separat](../docs/features/database.md).
 
-# Force reinstallation (uninstalls first if already installed)
-.\silent-install.ps1 -Force
-
-# Install without waiting for completion
-.\silent-install.ps1 -NoWait
-
-# Uninstall the application
-.\silent-install.ps1 -Uninstall
-```
-
-### Method 3: Using the Batch Wrapper
-
-For environments where PowerShell execution might be restricted, use the batch wrapper:
-
-```batch
-REM Basic installation
-silent-install.bat
-
-REM Custom installation
-silent-install.bat -installer "C:\Path\To\Installer.exe" -dir "D:\Custom\Path" -force
-
-REM Uninstall
-silent-install.bat -uninstall
-```
-
-## Group Policy Deployment
-
-For domain environments, you can deploy using Group Policy:
-
-1. Place the installer on a network share accessible to target computers
-2. Create a Group Policy Object (GPO)
-3. Add a Startup/Logon script that runs the silent installation
-
-Example GPO script:
-
-```powershell
-# Check if already installed
-if (-not (Test-Path "C:\Program Files\Pulse\Pulse.exe")) {
-    # Install silently
-    Start-Process -Wait -FilePath "\\server\share\Pulse-1.5.3-setup.exe" -ArgumentList "/S"
-}
-```
-
-## Checking Installation Status
-
-To verify installation status via PowerShell:
-
-```powershell
-Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* |
-    Where-Object { $_.DisplayName -eq "Pulse" } |
-    Select-Object DisplayName, DisplayVersion, InstallLocation
-```
-
-## Uninstallation
-
-Silent uninstallation can be performed with:
-
-```powershell
-# Find uninstaller
-$uninstaller = (Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* |
-    Where-Object { $_.DisplayName -eq "Pulse" }).UninstallString
-
-# Run uninstaller silently
-if ($uninstaller) {
-    $uninstaller = $uninstaller + " /S"
-    Start-Process -Wait -FilePath "cmd.exe" -ArgumentList "/c $uninstaller"
-}
-```
-
-## Troubleshooting
-
-If you encounter issues with silent installation:
-
-1. Check installation logs in `%TEMP%\Pulse-Install-Log.txt`
-2. Verify the system meets the minimum requirements
-3. Ensure the user has administrator privileges
-4. Check if antivirus is blocking the installation
+Se [distribusjonsguiden](../docs/distribution/DISTRIBUTION.md) for forskjellen mellom installer, portable og MSI.

@@ -1,215 +1,53 @@
-# Brukerguide - Pulse
+# Brukerveiledning
 
-Denne brukerguiden beskriver hvordan du bruker Pulse for effektiv leverandørstyring og ordreoppfølging.
+Arbeidsflaten viser leverandører med utestående innkjøpslinjer fra siste Excel-import. Leverandørregisteret inneholder også kontakter uten aktive linjer.
 
-## 🚀 Kom i gang
+## Velge arbeid
 
-### Første oppstart
+Velg en ukedag for leverandører med den purredagen, `Ingen` for leverandører uten purredag eller `Alle` for hele listen. Søk snevrer inn den viste leverandørlisten.
 
-1. **Start applikasjonen** - Du vil bli bedt om å velge en Excel-fil for første import
-2. **Velg Excel-fil** - Velg filen med ordredata (se [Excel Import](features/excel-import.md) for detaljer)
-3. **Vent på import** - Applikasjonen importerer og validerer dataene
-4. **Du er klar!** - Applikasjonen er nå klar til bruk
+For danske data kan du velge lager 80, 87 eller alle. `Ta med ICT-ordrer` styrer om ordretypen 70 inkluderes. Disse valgene påvirker hvilke linjer som er tilgjengelige for purring.
 
-### Hovedgrensesnitt
+Klikk en leverandør for å se ordrene. Avkryssingen ved leverandørnavnet velger leverandøren til gjennomgang; å åpne detaljene alene velger den ikke.
 
-Applikasjonen har to hovedvisninger:
+## Kontrollere linjer
 
-- **Hovedside**: For ordrebehandling og e-post sending
-- **Dashboard**: For oversikt og statistikk
+Ordrene grupperes etter innkjøpsordre. Kontroller artikkel, restmengde, leveringsdato, lagerbeholdning og kommentarer mot kildedataene.
 
-## 📊 Dashboard
+Bruk linje- eller ordreavkryssing for å utelate avklarte linjer. Valget lagres med årsaken `Avklart skriftlig`. En ny import beholder valget bare når den samme linjens innhold er uendret.
 
-Dashboard gir deg en komplett oversikt over leverandørstatus og ordre.
+Filteret for ventende linjer viser linjer med negativ tilgjengelig lagerbeholdning. Det er separat fra leverandørvalget `Avvent denne uken`.
 
-### Oversiktkort
+## Ukestatus
 
-Fire hovedkort viser viktig informasjon:
+- `Avvent denne uken` utsetter leverandøren til neste ISO-uke. `Ta med igjen` opphever utsettelsen.
+- `Purret denne uken` betyr at Outlook bekreftet sending og historikken ble lagret. Leverandøren blir tilgjengelig igjen i neste ISO-uke.
+- Historikkindikatoren viser de siste fem ukene med handlinger registrert på denne PC-en.
 
-- **Totalt leverandører**: Antall leverandører i systemet
-- **Leverandører med åpne ordre**: Antall leverandører som har utestående ordre
-- **Totalt åpne ordre**: Antall ordre som venter på levering
-- **Totalt restantall**: Sum av alle utestående enheter
+Historikken er lokal og deles ikke mellom PC-er. Sending fra en annen maskin eller direkte i Outlook blir ikke registrert her.
 
-### Grafer og Statistikk
+## Gjennomgang og sending
 
-- **Topp 5 leverandører**: Viser leverandører med høyest restantall
-- **Ordrer per ukedag**: Fordeling av ordre på ukedager
+Kryss av aktuelle leverandører og åpne gjennomgangen. Hver leverandør har sin egen mottaker, sitt eget språk og sin egen e-post med de inkluderte linjene.
 
-### Navigasjon
+Mottakerfeltet støtter én eller flere rene e-postadresser, skilt med komma eller semikolon:
 
-- Klikk **"Tilbake til hovedside"** for å gå tilbake til ordrebehandling
+```text
+innkjop@example.com; ordre@example.com
+```
 
-## 📁 Excel Import og Ordrebehandling
+Navn foran adressen, som `Kontakt <ordre@example.com>`, støttes ikke. Et ugyldig mottakerfelt må rettes før sending.
 
-### Steg 1: Last opp fil
+Du kan endre mottaker og språk for den aktuelle gjennomgangen eller hoppe over en leverandør. Varige kontaktendringer gjøres i [leverandørregisteret](features/supplier-register.md).
 
-1. **Dra og slipp** Excel-filen i det markerte området, eller klikk for å velge fil
-2. **Validering** - Applikasjonen sjekker filformat og innhold
-3. **Suksess** - Du ser bekreftelse på at filen er lastet opp
+Sendekøen går gjennom leverandørene én om gangen. En transportfeil stopper køen. Kontroller Outlooks Sendte elementer før ny sending ved uklare feil.
 
-### Progress Indikator
+Hvis sendingen er bekreftet, men lagringen mislykkes, stopper køen med en egen melding. Behold Pulse åpen og prøv å lagre historikken igjen. Denne handlingen sender ikke e-posten på nytt. Å lukke appen før lagringen lykkes kan gjøre leverandøren tilgjengelig igjen etter omstart.
 
-Etter filopplasting vises en progress indikator som viser hvor du er i prosessen:
+## Import og lokal lagring
 
-- ✅ **Last opp fil** - Fullført
-- 🔄 **Velg ukedag** - Aktivt steg
-- ⏳ **Velg leverandør** - Kommende
-- ⏳ **Gjennomgå data** - Kommende
-- ⏳ **Send e-post** - Kommende
+En ny import erstatter ordresnapshotet og nullstiller lokale kontaktendringer. Den sletter ikke sendingshistorikken. Leverandørvalg i en pågående arbeidsøkt nullstilles når dataene lastes på nytt.
 
-### Steg 2: Velg ukedag
+Databasen og arbeidsflatens lokale historikk lagres separat. En SQLite-sikkerhetskopi alene gjenoppretter ikke historikk eller lokale kontaktvalg. Se [lagring](features/database.md).
 
-1. **Velg ukedag** fra listen (Mandag-Fredag)
-2. **Automatisk oppdatering** - Leverandørlisten oppdateres umiddelbart
-3. **Filtrering** - Kun leverandører med åpne ordre vises
-
-### Steg 3: Velg leverandør
-
-1. **Søk** etter leverandør i søkefeltet (valgfritt)
-2. **Velg leverandør** fra listen
-3. **Automatisk overgang** - Du går direkte til datagjennomgang
-
-### Steg 4: Gjennomgå data
-
-1. **Se ordre** for valgt leverandør
-2. **Kontroller detaljer** som ordrenummer, antall, beskrivelse
-3. **Klikk "Neste"** for å gå til e-post
-
-### Steg 5: Send e-post
-
-1. **Forhåndsvis** e-posten ved å klikke "Forbered e-post"
-2. **Kontroller innhold** i preview-modalen
-3. **Send** e-posten via din e-postklient
-
-## ⌨️ Hurtigtaster
-
-Bruk hurtigtaster for raskere navigasjon:
-
-| Tast           | Funksjon                    |
-| -------------- | --------------------------- |
-| `Ctrl/Cmd + R` | Start applikasjonen på nytt |
-| `Ctrl/Cmd + ?` | Vis hurtigtaster hjelp      |
-| `Escape`       | Gå tilbake ett steg         |
-| `Enter`        | Bekreft valg                |
-| `Tab`          | Naviger mellom felter       |
-
-### Hurtigtaster hjelp
-
-Klikk på ⌨️-ikonet i header for å se alle tilgjengelige hurtigtaster.
-
-## 📧 E-post System
-
-### E-post Templates
-
-Applikasjonen bruker forhåndsdefinerte maler:
-
-- **Norsk mal**: Standard norsk e-post
-- **Engelsk mal**: For internasjonale leverandører
-
-### Sending av e-post
-
-1. **Automatisk generering** - E-post innhold genereres basert på valgt leverandør og ordre
-2. **Preview** - Se e-posten før sending
-3. **E-postklient** - E-posten åpnes i din standard e-postklient
-4. **Manuell sending** - Du sender e-posten fra din e-postklient
-
-### E-post Tracking
-
-- **Database oppdatering** - Når e-post sendes, oppdateres databasen
-- **Historikk** - Se tidligere sendte e-poster i loggene
-
-## 🔍 Søk og Filtrering
-
-### Leverandør Søk
-
-- **Realtid søk** - Skriv for å filtrere leverandører
-- **Case-insensitive** - Søk fungerer uansett store/små bokstaver
-- **Delvis matching** - Søk matcher deler av leverandørnavn
-
-### Filtrering
-
-- **Ukedag filtrering** - Kun leverandører for valgt ukedag vises
-- **Åpne ordre** - Kun leverandører med utestående ordre vises
-- **Automatisk oppdatering** - Lister oppdateres når du endrer valg
-
-## 📊 Data og Statistikk
-
-### Ordre Oversikt
-
-- **Ordrenummer** - Unikt ID for hver ordre
-- **Artikkelnummer** - Produkt ID
-- **Beskrivelse** - Produktbeskrivelse
-- **Bestilt antall** - Opprinnelig bestilt mengde
-- **Levert antall** - Hvor mye som er levert
-- **Restantall** - Utestående mengde
-
-### Leverandør Informasjon
-
-- **Navn** - Leverandørnavn
-- **E-post** - Kontaktinformasjon
-- **Ukedag** - Hvilken dag leverandøren skal purres
-- **Status** - Gjeldende status
-
-## 🔧 Innstillinger og Konfigurasjon
-
-### Database
-
-- **Automatisk backup** - Database sikkerhetskopieres automatisk
-- **Lokal lagring** - Alle data lagres lokalt på din maskin
-- **Import/Export** - Data kan importeres fra Excel
-
-### E-post Innstillinger
-
-- **Standard e-postklient** - Bruker din systemets standard e-postklient
-- **Template språk** - Automatisk valg basert på leverandør
-- **Manuell overskriving** - Du kan endre språk i preview
-
-## 🆘 Feilsøking
-
-### Vanlige problemer
-
-**Excel-fil kan ikke lastes opp:**
-
-- Sjekk at filen er i `.xlsx` format
-- Kontroller at filen inneholder riktige ark (BP, Sjekkliste Leverandører)
-- Prøv å lagre filen på nytt i Excel
-
-**Ingen leverandører vises:**
-
-- Sjekk at du har valgt riktig ukedag
-- Kontroller at leverandørene har åpne ordre
-- Prøv å laste opp Excel-filen på nytt
-
-**E-post kan ikke sendes:**
-
-- Sjekk at du har en standard e-postklient installert
-- Kontroller at leverandøren har en gyldig e-postadresse
-- Prøv å sende manuelt fra e-postklienten
-
-### Logg og Debugging
-
-- **Loggvisning** - Tilgjengelig via meny
-- **Konsoll** - Teknisk informasjon i utviklermodus
-- **Database** - Lokal SQLite-fil for avansert debugging
-
-## 📞 Support
-
-### Hjelp og Support
-
-- **Innebygd hjelp** - Bruk hurtigtaster hjelp (⌨️)
-- **Teknisk support** - Kontakt utviklingsteamet
-- **Dokumentasjon** - Se andre dokumentasjonsfiler
-
-### Kontakt
-
-For teknisk support eller spørsmål:
-
-- Kontakt utviklingsteamet
-- Sjekk loggfilene for feilmeldinger
-- Dokumenter problemet med skjermbilder
-
----
-
-**Sist oppdatert**: Juli 2024  
-**Versjon**: Se package.json for gjeldende versjon
+[Dashboardet](features/dashboard.md) viser statistikk over de importerte linjene. Tallene er ikke en direkte oppkobling mot ERP.

@@ -1,194 +1,53 @@
-# Database - OneMed SupplyChain (Pulse)
+# Lagring og sikkerhetskopier
 
-Denne dokumentasjonen beskriver database-strukturen og operasjonene i Pulse, generert direkte fra
-`CREATE TABLE`-setningene i `src/services/databaseService.ts`.
+Pulse lagrer importerte data i SQLite og arbeidsflatens kontaktvalg og historikk i rendererens lokale lagring. De to lagrene har forskjellige gjenopprettingsbehov.
 
-## Oversikt
+## SQLite
 
-Pulse bruker SQLite som lokal database for å lagre ordredata, leverandørinformasjon og
-planleggingsdata. Databasen er filbasert, krever ingen server, og er designet for å være enkel,
-rask og pålitelig for en desktop-applikasjon.
+Main-prosessen åpner `app.sqlite` under Electron-mappen `app.getPath('userData')`. På Windows er standardplasseringen under `%APPDATA%\one-med-supplychain-app`; oppstartsloggen viser den faktiske banen.
 
-## Teknisk Stack
+`src/services/databaseService.ts` oppretter tabeller og legger til manglende kolonner. Det finnes ikke et separat rammeverk med nummererte migreringer. Databasen bruker WAL, `synchronous = NORMAL` og aktiverte foreign keys.
 
-- **SQLite**: Lokal filbasert database
-- **better-sqlite3**: Synkron Node.js-driver for SQLite
-- **WAL-modus**: `PRAGMA journal_mode = WAL` er aktivert for bedre samtidighet
-- **Automatisk backup**: Se [Backup og Recovery](#backup-og-recovery)
-- **Ingen kryptering**: Databasefilen er ikke kryptert
+| Tabell              | Bruk                                                   |
+| ------------------- | ------------------------------------------------------ |
+| `purchase_order`    | Gjeldende BP-import med produkt-, lager- og datofelter |
+| `supplier_emails`   | Importerte leverandørkontakter og språk                |
+| `supplier_planning` | Leverandør, purredag og planlegger                     |
+| `orders`            | Eldre ordre-API, blant annet `email_sent_at`           |
+| `audit_log`         | Endringer gjennom det eldre ordre-API-et               |
+| `weekly_status`     | Eldre import- og ukestatus                             |
 
-### Database Fil
+`orders.email_sent_at` og `weekly_status` er ikke sendingshistorikken som dagens arbeidsflate bruker. `audit_log` er heller ikke en full revisjonslogg over arbeidsflatehandlinger.
 
-- **Filnavn**: `app.sqlite`
-- **Plassering**: `%APPDATA%/one-med-supplychain-app/` (Windows) eller
-  `~/Library/Application Support/one-med-supplychain-app/` (macOS) — mappenavnet kommer fra
-  `name`-feltet i `package.json`, ikke `productName`.
+En ny BP-import erstatter `purchase_order`. Feltet `nøkkel` er en sammensatt, serialisert radidentitet. SQL-spørringene og importoppsettet i kode er den fullstendige skjemareferansen.
 
-## Tabellstruktur
+## Arbeidsflatens lokale lagring
 
-Databasen har seks tabeller, alle opprettet i `DatabaseService`'s `initialize()`-metode:
+Nøkkelen `pulse-workspace-v1` inneholder:
 
-### `orders`
+| Felt                     | Innhold                                                     |
+| ------------------------ | ----------------------------------------------------------- |
+| `contacts`               | Lokale overstyringer av e-post, språk og purredager         |
+| `excluded`               | Utelatte linjer med fingeravtrykk og årsak                  |
+| `history`                | Leverandør, tidspunkt, sendt/avvent-status og antall linjer |
+| `fileName`, `importedAt` | Siste import vist i arbeidsflaten                           |
 
-```sql
-CREATE TABLE IF NOT EXISTS orders (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  reference TEXT,
-  supplier TEXT NOT NULL,
-  orderNumber TEXT,
-  orderDate TEXT,
-  dueDate TEXT,
-  category TEXT,
-  description TEXT,
-  value REAL,
-  currency TEXT,
-  confirmed INTEGER DEFAULT 0,
-  createdAt TEXT DEFAULT CURRENT_TIMESTAMP,
-  updatedAt TEXT DEFAULT CURRENT_TIMESTAMP,
-  email_sent_at TEXT
-);
-CREATE INDEX IF NOT EXISTS idx_supplier ON orders(supplier);
-CREATE INDEX IF NOT EXISTS idx_dueDate ON orders(dueDate);
-CREATE UNIQUE INDEX IF NOT EXISTS idx_supplier_ordernum ON orders(supplier, orderNumber);
-```
+Dette lagres gjennom `src/renderer/workspace/model.ts`. Historikken hindrer ny purring av samme leverandør i samme ISO-uke. Den deles ikke mellom maskiner.
 
-### `audit_log`
+En vellykket import tømmer `contacts`, men beholder historikken. Et utelatelsesvalg brukes bare når linjens fingeravtrykk fortsatt stemmer.
 
-Logger endringer (insert/update/delete) gjort av `DatabaseService`.
+## Automatiske databasekopier
 
-```sql
-CREATE TABLE IF NOT EXISTS audit_log (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  action TEXT NOT NULL,
-  table_name TEXT NOT NULL,
-  record_id INTEGER,
-  old_value TEXT,
-  new_value TEXT,
-  timestamp TEXT DEFAULT CURRENT_TIMESTAMP,
-  user_id TEXT
-);
-```
+Main-prosessen kontrollerer periodisk om det er tid for en databasekopi. Importeren forsøker også å lage en kopi etter import, og venter på at backup-operasjonen er ferdig før den melder suksess. Kopiene ligger i `backups` under appens datamappe.
 
-`user_id` er del av skjemaet, men populeres ikke av dagens kode.
+Det finnes to oppryddingsrutiner: den periodiske rutinen beholder opptil sju kopier, mens importens rutine beholder opptil fem `.db`-kopier. De deler mappe, så sju kopier er ikke en garanti. Kontroller at en kopi faktisk ble opprettet når den er nødvendig.
 
-### `weekly_status`
+SQLite-kopiene inneholder ikke rendererens lokale lagring.
 
-Ukentlig status per leverandør/dag, brukt av Excel-importflyten.
+## Manuell sikring og gjenoppretting
 
-```sql
-CREATE TABLE IF NOT EXISTS weekly_status (
-  leverandor TEXT,
-  dag         TEXT,
-  uke         TEXT,
-  status      TEXT,
-  email       TEXT,
-  UNIQUE(leverandor, dag, uke) ON CONFLICT REPLACE
-);
-CREATE INDEX IF NOT EXISTS idx_weekly_status_leverandor ON weekly_status(leverandor);
-CREATE INDEX IF NOT EXISTS idx_weekly_status_uke ON weekly_status(uke);
-```
+Lukk Pulse før du tar en manuell kopi av hele datamappen. Behold originalen til resultatet er kontrollert. Ved en hel mappekopi bør eventuelle WAL- og SHM-filer følge med; kopiering av bare en åpen `app.sqlite` kan utelate nyere endringer.
 
-### `purchase_order`
+En SQLite-backup kan gjenopprette ordresnapshot og importerte kontakter. Den gjenoppretter ikke lokale kontaktvalg eller sendingshistorikk. For full gjenoppretting må også appprofilen med rendererens lokale lagring bevares.
 
-Hovedtabellen for ordredata importert fra Excel. Skjemaet har fått en rekke kolonner lagt til
-gjennom migrations (se `poColumns` i `databaseService.ts`); tabellen under viser sluttresultatet.
-
-```sql
-CREATE TABLE IF NOT EXISTS purchase_order (
-  nøkkel        TEXT PRIMARY KEY,
-  ordreNr       TEXT,
-  itemNo        TEXT,
-  beskrivelse   TEXT,
-  dato          TEXT,
-  ftgnavn       TEXT,
-  status        TEXT,
-  producer_item TEXT,
-  specification TEXT,
-  note          TEXT,
-  inventory_balance REAL DEFAULT 0,
-  order_qty     INTEGER DEFAULT 0,
-  received_qty  INTEGER DEFAULT 0,
-  purchaser     TEXT,
-  incoming_date TEXT,
-  eta_supplier  TEXT,
-  supplier_name TEXT,
-  warehouse     TEXT,
-  outstanding_qty INTEGER DEFAULT 0
-  -- additional columns added via migration: from_restliste, order_row_number,
-  -- company_code, besttyp, and others — see poColumns in databaseService.ts
-);
-```
-
-### `supplier_emails`
-
-Leverandørnavn til e-postadresse-oppslag.
-
-```sql
-CREATE TABLE IF NOT EXISTS supplier_emails (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  supplier_name TEXT NOT NULL UNIQUE,
-  email_address TEXT NOT NULL,
-  updated_at TEXT DEFAULT CURRENT_TIMESTAMP
-);
-CREATE INDEX IF NOT EXISTS idx_supplier_emails_name ON supplier_emails(supplier_name);
-```
-
-### `supplier_planning`
-
-Hvilken planlegger som er ansvarlig for en leverandør på en gitt ukedag (ark 6 / "Leverandør" i
-Excel-importen).
-
-```sql
-CREATE TABLE IF NOT EXISTS supplier_planning (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  supplier_name TEXT NOT NULL,
-  weekday TEXT NOT NULL,
-  planner_name TEXT NOT NULL,
-  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-  updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
-  UNIQUE(supplier_name, weekday, planner_name) ON CONFLICT REPLACE
-);
-CREATE INDEX IF NOT EXISTS idx_supplier_planning_supplier ON supplier_planning(supplier_name);
-CREATE INDEX IF NOT EXISTS idx_supplier_planning_weekday ON supplier_planning(weekday);
-CREATE INDEX IF NOT EXISTS idx_supplier_planning_planner ON supplier_planning(planner_name);
-```
-
-## Database Operasjoner
-
-- **Prepared Statements**: All SQL i `DatabaseService` bruker `better-sqlite3` sine
-  prepared statements med parameterbinding — ingen strengkonkatenering av brukerdata.
-- **Transactions**: Batch-operasjoner (som `upsertOrders`) kjøres i transaksjoner.
-  `better-sqlite3` er synkron, så det er ikke behov for connection pooling.
-- **Audit Logging**: Insert/update/delete på `orders` logges til `audit_log` via
-  `DatabaseService`'s interne `logOperation`-metode.
-- **Migrations**: `initialize()` kjører `CREATE TABLE IF NOT EXISTS` for alle tabeller, og en enkel
-  kolonne-migrasjon for `purchase_order` (sjekker `PRAGMA table_info` og legger til manglende
-  kolonner via `ALTER TABLE`). Det finnes ingen versjonert migreringsmekanisme utover dette.
-
-## Backup og Recovery
-
-- **Mekanisme**: `DatabaseService` har logikk (`performBackupIfNeeded`) som sjekker omtrent hver
-  time, men kun tar backup hvis det har gått 24 timer siden forrige.
-- **Plassering**: `backups`-undermappe i applikasjonens data-mappe.
-- **Retention**: Beholder et begrenset antall nyeste backup-filer (eldre slettes automatisk).
-- **Korrupsjon**: Hvis `app.sqlite` ikke kan åpnes, forsøker tjenesten å gi nytt navn til filen
-  (`app.sqlite.corrupt.{timestamp}`). Brukeren må da importere Excel-filen på nytt for å opprette en
-  ny database.
-- **Manuell gjenoppretting**: Ikke implementert i UI — må gjøres manuelt ved å kopiere en
-  backup-fil over `app.sqlite`.
-
-## Sikkerhet
-
-- **Lokal lagring**: Alle data lagres lokalt på brukerens maskin. Applikasjonen synkroniserer ikke
-  ordre-/leverandørdata til noen sky-tjeneste.
-- **SQL injection**: Unngås ved konsekvent bruk av prepared statements.
-- **Ingen database-kryptering** er implementert per i dag.
-
-## Relatert
-
-- [Excel Import](excel-import.md) — hvordan data havner i `purchase_order` og `weekly_status`
-- [Email Setup](email-setup.md) — hvordan `supplier_emails`/leverandørdata brukes til utsending
-
----
-
-**Sist verifisert mot kode**: juli 2026
+Importer kan sette en ugyldig database til side som `app.sqlite.corrupt.<tidspunkt>` før ny database opprettes. Ta vare på denne filen ved feilsøking. Ikke slett datamappen som et generelt første tiltak; det kan fjerne historikken som forebygger doble purringer.

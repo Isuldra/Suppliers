@@ -1,183 +1,90 @@
-# Excel Import - Pulse
+# Excel-import
 
-Denne dokumentasjonen beskriver Excel import funksjonaliteten i Pulse.
+Importen leser `.xlsx`-filer. Renderer bruker SheetJS til validering og forhåndslesing; main-prosessen bruker ExcelJS til å skrive dataene til SQLite.
 
-## 📋 Oversikt
+## BP: innkjøpslinjer
 
-Excel import er en kjernefunksjon som lar brukere laste opp ordre- og leverandørstatusdata fra spesifikke Excel-regneark. Denne funksjonaliteten muliggjør hovedarbeidsflyten for å laste data inn i Pulse for gjennomgang og generering av e-post påminnelser.
+`BP` er det eneste obligatoriske arket. Overskriftene ligger på rad 5 og dataene begynner på rad 6. I pakket app kontrollerer filvelgeren også at arket har forventet minimumsstørrelse; utviklingsmodus har enklere validering.
 
-## 📁 Støttede Filformater
+Importer søker etter ERP-overskriftene først. Hvis de mangler, brukes posisjoner fra norsk eller dansk kolonneoppsett.
 
-Applikasjonen støtter for øyeblikket kun import av data fra:
+| Overskrift      | Betydning                    | Norsk reservekolonne | Dansk reservekolonne |
+| --------------- | ---------------------------- | -------------------- | -------------------- |
+| `foretagkod`    | Firmakode                    | A                    | A                    |
+| `bestnr`        | Innkjøpsordre                | C                    | B                    |
+| `ftgnr`         | Leverandørnummer             | D                    | C                    |
+| `lagstalle`     | Lager                        | E                    | D                    |
+| `besttyp`       | Ordretype                    | F                    | E                    |
+| `artnr`         | Internt artikkelnummer       | H                    | G                    |
+| `artnrlev`      | Leverandørens artikkelnummer | I                    | H                    |
+| `bestberlevdat` | Beregnet leveringsdato       | J                    | I                    |
+| `bestlovlevdat` | Lovet leveringsdato          | K                    | J                    |
+| `orpradtext`    | Kommentar                    | L                    | K                    |
+| `bestant`       | Bestilt mengde               | M                    | L                    |
+| `bestlevant`    | Mottatt mengde               | N                    | M                    |
+| `bestrestant`   | Restmengde                   | O                    | N                    |
+| `ftgnamn`       | Leverandørnavn               | P                    | O                    |
+| `bestradnr`     | Ordrelinjenummer             | Q                    | P                    |
 
-- **.xlsx** (Excel 2007 og nyere) filer via drag-and-drop grensesnittet
+Oppsettet ligger i `src/config/columnMappings.ts`. Norske data bruker firmakode 40, danske data 80. Landoppsettet oppdages fra filnavn og innhold. Behold ERP-overskriftene hvis eksporten har ekstra kolonner; da kan importen finne feltene uten å stole på reserveposisjonene.
 
-_(Støtte for `.xls` eller `.csv` er ikke aktivert i grensesnittet.)_
+Firmakode 87 holdes utenfor ordrespørringene. Lager 87 er et annet felt og kan være et gyldig dansk lager. Ordretype 70 kan inkluderes gjennom ICT-valget i arbeidsflaten.
 
-## 📊 Påkrevde Ark og Felter
+## Valgfrie støtteark
 
-Excel import forventer spesifikke ark og felter å være tilstede i den opplastede `.xlsx` filen:
+### ITEM: produkttekst
 
-### Påkrevde Ark
+Overskrifter på rad 5, data fra rad 6:
 
-Applikasjonen validerer tilstedeværelsen av følgende ark:
+- `foretagkod`
+- `artnr`
+- `artbeskr`
+- `artbeskrspec` hvis spesifikasjon finnes
 
-1. **BP**: Hovedarket som inneholder ordreinformasjonen som brukes i hele applikasjonen
-2. **Sjekkliste Leverandører**: Inneholder leverandørinformasjon og e-postadresser
+Oppslag gjøres på firmakode og internt artikkelnummer. Dette gir produkttekst utover leverandørens artikkelnummer i BP.
 
-### Behandlede Ark og Data Bruk
+### ARS: tilgjengelig lagerbeholdning
 
-- **BP**: Data fra dette arket parses og brukes i hovedarbeidsflyten (Data Review, E-post). Den lagres i `purchase_order` tabellen i databasen.
-  - **Nøkkelfelter**: Parseren mapper kolonner til interne felter med fleksible headernavn:
-    - `nøkkel` fra 'Nøkkel'/'Key'/'ID'/'A'
-    - `ordreNr` fra 'PO'/'Purchase Order'/'C'
-    - `itemNo` fra 'Item No.'/'Artikkelnummer'/'H'
-    - `beskrivelse` fra 'Beskrivelse'/'Description'/'I'
-    - `order_qty` fra 'OrdQtyPO'/'Bestilt antall'/'M'
-    - `received_qty` fra 'Delivered'/'Levert'/'N'
-    - `outstanding_qty` fra 'Outstanding'/'Restantall'/'O'
-    - `supplier_name` fra 'Supplier'/'Leverandør'/'P'
-    - `eta_supplier` fra 'ETA'/'Expected Date'/'J' eller 'K'
+Overskrifter på rad 5, data fra rad 6:
 
-- **Sjekkliste Leverandører**: Behandles under initial database opprettelse. Data (leverandør, dag, uke, status, e-post) ekstraheres og lagres i `supplier_emails` tabellen.
+- `foretagkod`
+- `artnr`
+- `lagstalle`
+- `lagsaldo`
+- `lagresant`
 
-## 🔄 Import Prosess
+Tilgjengelig beholdning beregnes som `lagsaldo - lagresant` for samme firma, lager og artikkel. Manglende eller ugyldige tall behandles som ukjent beholdning. Importen henter ikke en annen lagersaldo som reserve.
 
-Import prosessen følger disse stegene i applikasjonen:
+### Leverandør: kontakt og purredag
 
-### Steg 1: Fil Opplasting
+Overskrifter på rad 1, data fra rad 2:
 
-1. **Fil Valg** (`FileUpload.tsx`): Bruker drar eller velger en `.xlsx` fil
-2. **Parsing & Validering** (`FileUpload.tsx`):
-   - Applikasjonen parser `.xlsx` filen ved hjelp av `exceljs` biblioteket
-   - Den validerer filformatet (`.xlsx` kun)
-   - Den validerer tilstedeværelsen av `BP` og `Sjekkliste Leverandører` ark
-   - Den validerer tilstedeværelsen av nøkkelkolonne-headere i `BP` ved hjelp av fleksibel matching
-   - Hvis initial validering feiler, vises feil via toast-meldinger
+| Kolonne | Innhold                 |
+| ------- | ----------------------- |
+| A       | Leverandørnavn          |
+| B       | Firmafelt fra eksporten |
+| C       | Språk                   |
+| D       | Purredag                |
+| E       | E-postadresse           |
 
-### Steg 2: Progress Tracking
+Importen normaliserer norske og engelske ukedager. Rader må ha leverandørnavn og en gjenkjent purredag for å bli brukt til planlegging. Språk og e-post importeres fra gyldige kontaktrader.
 
-3. **Progress Indikator**: Hvis parsing og initial validering lykkes, vises en progress indikator som viser hvor brukeren er i prosessen
-4. **Automatisk Overgang**: Parsed data (primært fra `BP`) sendes til neste steg (Ukedag Valg, Leverandør Valg)
+Når arket finnes, erstattes leverandørplanleggingen. Når det mangler, beholdes tidligere planlegging. Danske leverandører får i tillegg oppføring for arbeidsdagene gjennom importens Danmark-oppsett.
 
-### Steg 3: Data Behandling
+### Sjekkliste Leverandører: e-postkontakt
 
-5. **Data Review** (`DataReview.tsx`): Bruker gjennomgår den filtrerte ordredataen fra `BP` for den valgte leverandøren
-6. **E-post Forberedelse** (`EmailButton.tsx`): Bruker fortsetter til å forberede en e-post påminnelse basert på gjennomgått data
+Dette arket er valgfritt. Importen leser fra rad 5, finner leverandørnavn i A og søker etter e-post i H–O. Gyldige kontaktopplysninger fra `Leverandør`-arket kan deretter overstyre disse.
 
-### Steg 4: Database Lagring
+## Hva en ny import endrer
 
-- **Initial Import**: Hvis databasefilen (`app.sqlite`) ikke eksisterer når applikasjonen starter, kalles `importAlleArk` funksjonen, som parser den valgte Excel-filen og fyller `supplier_emails` og `purchase_order` tabellene
-- **Etterfølgende Imports**: `FileUpload.tsx` komponenten kaller `window.electron.saveOrdersToDatabase` etter vellykket parsing for å oppdatere `purchase_order` tabellen
+Innkjøpslinjene i `purchase_order` erstattes i én transaksjon. Linjer som ikke finnes i den nye filen, forsvinner fra ordresnapshotet. Radnøkkelen skiller firma, lager, leverandør, ordre, artikkel og ordrelinje.
 
-## ✅ Valideringsregler
+Kontaktark behandles separat. Kontaktfeil kan derfor forekomme selv om BP-importen lykkes. Tidligere e-postkontakter slettes ikke samlet ved hver import.
 
-Applikasjonen utfører følgende valideringer primært innenfor `FileUpload.tsx` komponenten under parsing:
+Arbeidsflaten nullstiller lokale kontaktendringer etter vellykket import. Utelatte linjer beholdes bare når identitet og innhold stemmer. Lokal sendingshistorikk beholdes.
 
-1. **Fil Format**: Sjekker om den droppede filen er `.xlsx`
-2. **Påkrevde Ark**: Sjekker for eksistensen av `BP` og `Sjekkliste Leverandører` ark
-3. **Kolonne Headere**: Sjekker for tilstedeværelsen av essensielle kolonne-headere (`nøkkel`, `supplier_name`, `ordreNr`) i `BP` ved hjelp av alternative navn
-4. **Data Kvalitet**: Validerer at kritiske felter ikke er tomme
+## Når resultatet ser feil ut
 
-## ❌ Feilhåndtering
+Kontroller ark, overskriftsrad og landoppsett først. Ved feil produkttekst eller saldo må du kontrollere nøklene i ITEM og ARS. Sammenlign den aktuelle BP-raden med visningen i Pulse, og les importfeilen i apploggen.
 
-Når parsing eller initial valideringsfeil oppstår:
-
-1. Feilmeldinger vises ved hjelp av toast-meldinger
-2. Detaljerte konsollogger kan gi mer informasjon for debugging
-3. Fremheving av problematiske data innenfor filen eller tillatelse av delvise imports støttes **ikke** for øyeblikket
-
-## 📝 Bruk Eksempel
-
-```typescript
-// Eksempel på fil opplasting i FileUpload komponenten
-const onDrop = useCallback((acceptedFiles: File[]) => {
-  const file = acceptedFiles[0];
-  if (file && file.name.endsWith('.xlsx')) {
-    const reader = new FileReader();
-    reader.onload = async (e) => {
-      const buffer = e.target?.result as ArrayBuffer;
-      try {
-        const success = await window.electron.saveOrdersToDatabase(buffer);
-        if (success) {
-          onDataParsed(parsedData);
-        }
-      } catch (error) {
-        console.error('Import failed:', error);
-      }
-    };
-    reader.readAsArrayBuffer(file);
-  }
-}, []);
-```
-
-## 💡 Beste Praksis
-
-1. **Bruk `.xlsx` Format**: Sørg for at filen din er lagret i `.xlsx` formatet
-2. **Korrekte Ark**: Verifiser at filen inneholder ark med nøyaktig navn `BP` og `Sjekkliste Leverandører`
-3. **Konsistente Headere**: Bruk tydelige og konsistente headere i `BP` som matcher en av de forventede alternativene (f.eks. 'Leverandør' eller 'Supplier')
-4. **Manuell Oppdatering**: **Kritisk, sørg for at dataene innenfor Excel-filen er oppdatert før opplasting.** Applikasjonen leser filen som den er og kobler ikke til eksterne kilder for å oppdatere den
-5. **Backup**: Behold sikkerhetskopier av dine originale Excel-filer
-
-## 🔧 Feilsøking
-
-Vanlige problemer og deres løsninger:
-
-### Fil Gjenkjennes Ikke
-
-- **Løsning**: Sørg for at du laster opp en `.xlsx` fil
-- **Sjekk**: Filnavn og filtype
-
-### Manglende Ark Feil
-
-- **Løsning**: Sjekk at ark med navn `BP` og `Sjekkliste Leverandører` eksisterer i arbeidsboken
-- **Sjekk**: Arknavn må være nøyaktig som forventet
-
-### Kolonne Ikke Funnet Feil
-
-- **Løsning**: Verifiser at essensielle kolonne-headere (Leverandør, PO Number, Nøkkel/ID) er tilstede i `BP`
-- **Sjekk**: Header-navn og kolonneplassering
-
-### Parsing Feil
-
-- **Løsning**: Filen kan være korrupt, passordbeskyttet, eller ha en uvanlig intern struktur
-- **Sjekk**: Prøv å lagre filen på nytt i Excel
-
-### Database Feil
-
-- **Løsning**: Sjekk at applikasjonen har skrivetillatelse til databasemappen
-- **Sjekk**: Diskplass og tillatelser
-
-## 🔗 Relaterte Funksjoner
-
-- [Brukerguide](../user-guide.md) - Detaljert brukerguide for alle funksjoner
-- [Database](database.md) - Beskriver hvor importerte data lagres
-- [Arkitektur](../architecture.md) - Teknisk arkitektur og dataflyt
-
-## 📊 Data Struktur
-
-### BP Ark Struktur
-
-| Kolonne | Beskrivelse    | Eksempel           |
-| ------- | -------------- | ------------------ |
-| A       | Nøkkel/ID      | "PO123-ITEM456"    |
-| C       | Ordrenummer    | "PO123"            |
-| H       | Artikkelnummer | "ITEM456"          |
-| I       | Beskrivelse    | "Medisinsk utstyr" |
-| J/K     | ETA Dato       | "2024-01-15"       |
-| M       | Bestilt Antall | 100                |
-| N       | Levert Antall  | 50                 |
-| O       | Restantall     | 50                 |
-| P       | Leverandør     | "OneMed AS"        |
-
-### Sjekkliste Leverandører Ark Struktur
-
-| Kolonne | Beskrivelse    | Eksempel          |
-| ------- | -------------- | ----------------- |
-| A       | Leverandørnavn | "OneMed AS"       |
-| J       | E-postadresse  | "ordre@onemed.no" |
-
----
-
-**Sist oppdatert**: Juli 2024  
-**Versjon**: Se package.json for gjeldende versjon
+Ikke endre `columnMappings.ts` for én feilformatert eksport før du har avklart om filen eller ERP-formatet faktisk har endret seg.

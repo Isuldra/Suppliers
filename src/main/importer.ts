@@ -1,7 +1,8 @@
 import ExcelJS, { Worksheet } from 'exceljs';
+import { workbookDetails } from './workbookDetails';
 import Database from 'better-sqlite3';
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const log = require('electron-log'); // Added for logging
+const log = require('electron-log');
 import { parse as parseDateFns, isValid } from 'date-fns'; // Import date-fns functions
 import * as XLSX from 'xlsx';
 import { join } from 'path';
@@ -14,6 +15,7 @@ import {
   logColumnMapping,
   COLUMN_MAPPINGS,
   preScanForCountry,
+  resolveHeaderMapping,
 } from '../config/columnMappings';
 
 // Supported date formats for parsing
@@ -141,7 +143,7 @@ function cleanupOldTempFiles(): void {
 export async function importAlleArk(
   source: string | ArrayBuffer,
   db: Database.Database,
-  originalFileName?: string // Added optional fileName parameter
+  originalFileName?: string
 ): Promise<boolean> {
   // Clean up old temp files before starting new import
   cleanupOldTempFiles();
@@ -181,11 +183,13 @@ export async function importAlleArk(
     `INSERT OR REPLACE INTO purchase_order (
       nøkkel, ordreNr, itemNo, beskrivelse, dato, ftgnavn,
       status, producer_item, specification, note, inventory_balance, order_qty, received_qty, purchaser,
-      incoming_date, eta_supplier, supplier_name, warehouse, outstanding_qty, order_row_number, company_code, besttyp
+      incoming_date, eta_supplier, supplier_name, warehouse, outstanding_qty, order_row_number, company_code, besttyp,
+      product_description, product_specification
     ) VALUES (
       @nøkkel, @ordreNr, @itemNo, @beskrivelse, @dato, @ftgnavn,
       @status, @producer_item, @specification, @note, @inventory_balance, @order_qty, @received_qty, @purchaser,
-      @incoming_date, @eta_supplier, @supplier_name, @warehouse, @outstanding_qty, @order_row_number, @company_code, @besttyp
+      @incoming_date, @eta_supplier, @supplier_name, @warehouse, @outstanding_qty, @order_row_number, @company_code, @besttyp,
+      @product_description, @product_specification
     )`
   );
 
@@ -201,6 +205,7 @@ export async function importAlleArk(
   // Declare counters outside transaction scope for later use
   let processedCount = 0;
   let duplicateCount = 0;
+  const details = workbookDetails(wb);
 
   const tx = db.transaction(() => {
     // Clear existing purchase order data before importing new data
@@ -234,6 +239,11 @@ export async function importAlleArk(
         log.info('📋 PRE-SCAN: No country detected from data, using filename-based mapping');
       }
     }
+
+    const headers = Array.from({ length: bpSheet.columnCount }, (_, index) =>
+      getCellStringValue(bpSheet.getRow(startRow - 1).getCell(index + 1))
+    );
+    columnMapping = resolveHeaderMapping(columnMapping, headers);
 
     for (let r = startRow; r <= bpSheet.rowCount; r++) {
       const row = bpSheet.getRow(r);
@@ -338,7 +348,15 @@ export async function importAlleArk(
         );
       }
 
-      const uniqueKey = `${poNumber}-${oneMedArticleNo}`;
+      const uniqueKey = JSON.stringify([
+        companyCode,
+        warehouse,
+        supplierName,
+        poNumber,
+        oneMedArticleNo,
+        orderRowNumber || String(r),
+      ]);
+      const product = details.product(companyCode, oneMedArticleNo);
 
       // Check for duplicates and log them
       if (seenKeys.has(uniqueKey)) {
@@ -369,7 +387,9 @@ export async function importAlleArk(
         producer_item: supplierArticleNo,
         specification: erpComment, // Column L (orpradtext/ERP Comment) stored in specification field for email templates
         note: erpComment,
-        inventory_balance: 0,
+        inventory_balance: details.available(companyCode, warehouse, oneMedArticleNo) ?? null,
+        product_description: product?.description || null,
+        product_specification: product?.specification || null,
         order_qty: orderedQty,
         received_qty: deliveredQty,
         purchaser: internalSupplierNumber,
@@ -655,7 +675,7 @@ export async function importAlleArk(
 
         planningTx();
       } else {
-        log.info('Leverandør sheet not found - using existing supplyPlanners.json data');
+        log.info('Leverandør sheet not found - preserving existing supplier planning');
       }
     } catch (planningError) {
       log.error('Error processing supplier planning:', planningError);
@@ -684,14 +704,14 @@ export async function importAlleArk(
         `supplier-reminder-backup-${new Date().toISOString().replace(/[.:]/g, '-')}.db`
       );
       // better-sqlite3 backup API
-      db.backup(backupFile);
+      await db.backup(backupFile);
       log.info(`Database backed up to: ${backupFile}`);
 
       // Show notification
       if (Notification.isSupported()) {
         new Notification({
           title: 'Database Backup',
-          body: 'Backup completed successfully ✅',
+          body: 'Database backup completed.',
         }).show();
       }
 

@@ -1,24 +1,5 @@
-# Distribution Documentation
+# Distribusjon
 
-This directory contains documentation related to building, packaging, and distributing Pulse (formerly SupplyChain OneMed).
+[Velge pakke og installere](DISTRIBUTION.md), [bruke portable-utgaven](PORTABLE.md) og [feilsøke på Windows](WINDOWS-TROUBLESHOOTING.md).
 
-## Distribution Files
-
-- [Distribution Options](DISTRIBUTION-OPTIONS.md) - Comprehensive information about distribution formats (NSIS, MSI, Portable)
-- [Distribution Guide](DISTRIBUTION.md) - Guide for building the application on Windows
-- [Portable Guide](PORTABLE.md) - Specific information about the portable version
-
-## Installation & Troubleshooting
-
-- [Windows Troubleshooting](WINDOWS-TROUBLESHOOTING.md) - **NEW!** Comprehensive guide for solving Windows installation issues
-  - Program not found after installation
-  - Missing Start Menu shortcuts
-  - Installation errors and solutions
-  - Manual troubleshooting steps
-
-## Related Documentation
-
-- [Publishing Updates](../development/publishing-updates.md) - Guide for publishing updates
-- [Auto-Update Workflow](../development/auto-update-workflow.md) - How the Cloudflare Pages update
-  system works
-- [Getting Started](../getting-started.md) - End-user quick start guide
+For vedlikeholdere: [publisere oppdateringer](../development/publishing-updates.md) og [kontrollere signering](../development/CODE-SIGNING.md).

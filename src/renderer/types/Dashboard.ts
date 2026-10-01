@@ -10,9 +10,9 @@ export interface DashboardStats {
   overdueOrders: number;
   nextFollowUpDate: Date | null;
   averageDelayDays: number; // Gjennomsnittlig forsinkelse (dager)
-  criticallyDelayedOrders: number; // Antall ordre forsinket >30 dager
-  onTimeDeliveryRate: number; // Prosent ordre levert i tide (0-100)
-  oldestOutstandingOrderDate: Date | null; // Eldste utestående ordre dato
+  criticallyDelayedOrders: number; // Antall linjer mer enn 30 dager etter ETA
+  onTimeDeliveryRate: number; // Andel åpne linjer med ETA som ikke er forfalt (0–100)
+  oldestOutstandingOrderDate: Date | null; // Tidligste ETA for åpne linjer
 
   // Metadata
   lastUpdated: Date;
@@ -28,15 +28,7 @@ export interface SupplierStat {
   value?: number;
   oldestOrderDate?: Date;
   averageDelayDays?: number; // Gjennomsnittlig forsinkelse per leverandør
-  onTimeDeliveryRate?: number; // Leverandørens on-time delivery % (0-100)
-}
-
-// Planner statistics for pie chart
-export interface PlannerStat {
-  planner: string;
-  orderCount: number;
-  outstandingQty: number;
-  percentage: number;
+  onTimeDeliveryRate?: number; // Andel åpne linjer innen leveringsfrist (0–100)
 }
 
 // Week statistics for timeline chart
@@ -48,11 +40,4 @@ export interface WeekStat {
   overdueCount: number;
   dateRange: string;
   isCurrentWeek: boolean;
-}
-
-// Filter interface for dashboard filtering
-export interface DashboardFilter {
-  type: 'planner' | 'supplier' | 'week';
-  value: string;
-  label?: string;
 }

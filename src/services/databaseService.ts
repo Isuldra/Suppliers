@@ -8,6 +8,7 @@ import path from 'path';
 import fs from 'fs';
 import { app } from 'electron';
 import { ExcelRow } from '../types/ExcelRow';
+import type { SupplierContact } from '../types/SupplierContact';
 import type { DashboardStats, SupplierStat, WeekStat } from '../renderer/types/Dashboard';
 import { getISOWeek, getISOWeekYear, getISOWeekMonday } from '../utils/dateUtils';
 // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -154,12 +155,12 @@ export class DatabaseService {
           confirmed INTEGER DEFAULT 0,
           createdAt TEXT DEFAULT CURRENT_TIMESTAMP,
           updatedAt TEXT DEFAULT CURRENT_TIMESTAMP,
-          email_sent_at TEXT -- Added email sent tracking
+          email_sent_at TEXT
         );
 
         CREATE INDEX IF NOT EXISTS idx_supplier ON orders(supplier);
         CREATE INDEX IF NOT EXISTS idx_dueDate ON orders(dueDate);
-        CREATE UNIQUE INDEX IF NOT EXISTS idx_supplier_ordernum ON orders(supplier, orderNumber); -- Added uniqueness constraint
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_supplier_ordernum ON orders(supplier, orderNumber);
 
         -- Add audit log table
         CREATE TABLE IF NOT EXISTS audit_log (
@@ -253,6 +254,8 @@ export class DatabaseService {
         { name: 'order_row_number', type: 'TEXT' },
         { name: 'company_code', type: 'TEXT' },
         { name: 'besttyp', type: 'INTEGER' },
+        { name: 'product_description', type: 'TEXT' },
+        { name: 'product_specification', type: 'TEXT' },
       ];
 
       for (const col of poColumns) {
@@ -597,7 +600,9 @@ export class DatabaseService {
           COALESCE(outstanding_qty, (order_qty - COALESCE(received_qty, 0))) AS outstandingQty,
           purchaser,
           warehouse,
-          order_row_number AS orderRowNumber
+          order_row_number AS orderRowNumber,
+          product_description AS productDescription,
+          product_specification AS productSpecification
         FROM purchase_order
         ${whereClause}
         ORDER BY date(eta_supplier) ASC, ordreNr ASC, itemNo ASC
@@ -622,6 +627,8 @@ export class DatabaseService {
         purchaser: string | null;
         warehouse: string | null;
         orderRowNumber: string | null;
+        productDescription?: string;
+        productSpecification?: string;
       }>;
 
       this.queryCounter++;
@@ -635,8 +642,10 @@ export class DatabaseService {
             status: row.status || '',
             itemNo: row.itemNo || '',
             supplier: row.supplier,
-            description: row.description || '',
-            supplierArticleNo: row.description || row.producerItemNo || '', // Map from beskrivelse or producer_item
+            description: row.productDescription || row.description || '',
+            productSpecification: row.productSpecification || '',
+            internalSupplierNumber: row.purchaser || '',
+            supplierArticleNo: row.producerItemNo || row.description || '',
             specification: row.specification || '', // Column L (orpradtext) - FIXED: Now mapping specification field explicitly
             orderQty: row.orderQty || 0,
             receivedQty: row.receivedQty || 0,
@@ -644,6 +653,12 @@ export class DatabaseService {
             reference: '', // Not available in purchase_order table
             orderDate: undefined, // Not available in purchase_order table
             dueDate: row.dueDate ? new Date(row.dueDate) : undefined,
+            supplierETA: row.supplierETA ? new Date(row.supplierETA) : undefined,
+            inventoryBalance: row.inventoryBalance,
+            warehouse: row.warehouse || '',
+            note: row.note || '',
+            purchaser: row.purchaser || '',
+            producerItemNo: row.producerItemNo || '',
             category: '', // Not available in purchase_order table
             value: row.orderQty || 0, // Use orderQty as value
             currency: '', // Not available in purchase_order table
@@ -1224,8 +1239,7 @@ export class DatabaseService {
         LIMIT 1
       `);
       const row = stmt.get(supplierName, supplierName, supplierName, supplierName) as
-        | { warehouse: string; count: number }
-        | undefined;
+        { warehouse: string; count: number } | undefined;
 
       log.info(
         `🔍 DatabaseService.getSupplierCountry: Looking for "${supplierName}", found warehouse: ${row?.warehouse || 'null'}`
@@ -1376,6 +1390,33 @@ export class DatabaseService {
   }
 
   // Supplier planning methods for ark 6 (Leverandør) data
+  public getSupplierContacts(): SupplierContact[] {
+    if (!this.db) throw new Error('Database not connected');
+    const emails = this.db
+      .prepare('SELECT supplier_name, email_address, language FROM supplier_emails')
+      .all() as { supplier_name: string; email_address: string; language: string | null }[];
+    const contacts = new Map<string, SupplierContact>();
+    for (const row of emails) {
+      contacts.set(row.supplier_name, {
+        name: row.supplier_name,
+        email: row.email_address,
+        language: row.language || '',
+        days: [],
+      });
+    }
+    for (const row of this.getAllSupplierPlanning()) {
+      const contact = contacts.get(row.supplier_name) || {
+        name: row.supplier_name,
+        email: '',
+        language: '',
+        days: [],
+      };
+      if (!contact.days.includes(row.weekday)) contact.days.push(row.weekday);
+      contacts.set(row.supplier_name, contact);
+    }
+    return [...contacts.values()];
+  }
+
   public clearSupplierPlanning(): void {
     if (!this.db) {
       log.warn('clearSupplierPlanning called but DB is not connected.');

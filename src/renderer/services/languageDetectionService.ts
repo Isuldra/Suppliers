@@ -42,10 +42,6 @@ const mapSystemLanguageToAppLanguage = (systemLang: string): string => {
 };
 
 /**
- * Detects the appropriate language for the app
- * Priority: User manually selected language > system language > default (no)
- */
-/**
  * Resets language selection to follow system language
  */
 export const resetLanguageToSystem = async (): Promise<string> => {
@@ -56,7 +52,7 @@ export const resetLanguageToSystem = async (): Promise<string> => {
 
 /**
  * Detects the appropriate language for the app
- * Priority: User manually selected language > system language > default (no)
+ * Uses an explicit preference first, then the system language.
  */
 export const detectAppLanguage = async (): Promise<string> => {
   try {
@@ -92,6 +88,6 @@ export const detectAppLanguage = async (): Promise<string> => {
     return mappedLang;
   } catch (error) {
     console.error('Error detecting system language:', error);
-    return 'no'; // Default to Norwegian for Norwegian users
+    return 'no';
   }
 };

@@ -1,52 +1,40 @@
-name: 🏗️ Build Electron App for Windows
+name: Build Electron App for Windows
 
-# Only allocate a runner after a PR is merged into main.
 on:
   pull_request:
     branches: [main]
     types: [closed]
 
+permissions:
+  contents: read
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-env:
-  BUN_VERSION: "1.3.14"
-  SHARP_IGNORE_GLOBAL_LIBVIPS: "1"
-
 jobs:
   build:
     if: github.repository == 'Isuldra/Suppliers' && github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'main'
-    name: Build for ${{ matrix.os }}
-    runs-on: ${{ matrix.os }}
+    runs-on: windows-latest
     timeout-minutes: 30
-    permissions:
-      contents: read
-    strategy:
-      matrix:
-        os: [windows-latest]
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.merge_commit_sha }}
           persist-credentials: false
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
+      - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: ${{ env.BUN_VERSION }}
-
-      - name: Cache Bun dependencies
-        uses: actions/cache@v4
+          bun-version: '1.3.14'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/cache@v4
         with:
           path: ~/.bun/install/cache
           key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lock') }}
           restore-keys: |
             ${{ runner.os }}-bun-
-
-      - name: Cache electron-builder dependencies
-        uses: actions/cache@v4
+      - uses: actions/cache@v4
         with:
           path: |
             ~\AppData\Local\electron\Cache
@@ -54,86 +42,24 @@ jobs:
           key: ${{ runner.os }}-electron-builder-${{ hashFiles('**/bun.lock') }}
           restore-keys: |
             ${{ runner.os }}-electron-builder-
-
-      - name: Install dependencies
-        run: bun install --frozen-lockfile
-
-      - name: Build Application
-        shell: pwsh
-        run: |
-          Write-Host "Building application..."
-          bun run dist
-
-      - name: Exclude build directories from Windows Defender
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          Write-Host "Attempting to add Windows Defender exclusions (safe guard)..."
-
-          # Check if the Defender cmdlet exists
-          $defenderCmd = Get-Command Add-MpPreference -ErrorAction SilentlyContinue
-          if (-not $defenderCmd) {
-            Write-Host "Add-MpPreference cmdlet not available. Skipping Defender exclusions."
-            exit 0
-          }
-
-          # Check Defender service state
-          $winDefend = Get-Service -Name WinDefend -ErrorAction SilentlyContinue
-          if (-not $winDefend -or $winDefend.Status -ne 'Running') {
-            Write-Host "Windows Defender service not running or not present. Skipping Defender exclusions."
-            exit 0
-          }
-
-          # Add exclusions, but do not fail the job if they error
-          try {
-            Add-MpPreference -ExclusionPath "${{ github.workspace }}\dist" -ErrorAction Stop
-            Add-MpPreference -ExclusionPath "${{ github.workspace }}\node_modules" -ErrorAction Stop
-            Add-MpPreference -ExclusionPath "${{ github.workspace }}\release" -ErrorAction Stop
-            Write-Host "Windows Defender exclusions added."
-          } catch {
-            Write-Warning "Failed to add Windows Defender exclusions: $_. Exception will be ignored and build will continue."
-          }
-
-      # NOTE: Release publishing (GitHub Release + Cloudflare metadata) is handled
-      # exclusively by release.yml on tag push. build.yml only builds and uploads
-      # CI artifacts after a merge to main; it must not publish a release.
-
-      - name: List ASAR Contents on Failure
-        if: failure()
-        shell: pwsh
-        run: |
-          Write-Host "--- Attempting to list ASAR contents ---"
-          $asarPath = Get-ChildItem -Path release -Recurse -Filter app.asar | Select-Object -First 1
-          if ($asarPath) {
-            bunx asar list $asarPath.FullName
-          } else {
-            Write-Host "app.asar not found."
-          }
-          Write-Host "--- End ASAR contents list ---"
-
-      - name: Upload Portable Executable
-        if: >
-          !startsWith(github.ref, 'refs/tags/')
-        uses: actions/upload-artifact@v4
+      - run: bun install --frozen-lockfile
+      - name: Package Windows
+        run: bun run dist:win
+      - uses: actions/upload-artifact@v4
         with:
-          name: SupplyChain-Portable-Windows
-          path: release/*Portable.exe
+          name: Pulse-Portable-Windows
+          path: release/Pulse-Portable.exe
+          if-no-files-found: error
           retention-days: 3
-
-      - name: Upload Zip Archive
-        if: >
-          !startsWith(github.ref, 'refs/tags/')
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
-          name: SupplyChain-Zip-Windows
+          name: Pulse-Zip-Windows
           path: release/*.zip
+          if-no-files-found: error
           retention-days: 3
-
-      - name: Upload NSIS Installer
-        if: >
-          !startsWith(github.ref, 'refs/tags/')
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
-          name: SupplyChain-NSIS-Windows
-          path: release/*.exe
+          name: Pulse-NSIS-Windows
+          path: release/*-setup.exe
+          if-no-files-found: error
           retention-days: 3

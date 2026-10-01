@@ -1,6 +1,8 @@
 node_modules/
 dist/
 release/
+.cache/
+out/
 coverage/
 .github/
 *.min.js
@@ -8,4 +10,6 @@ package-lock.json
 docs/updates/
 backup/
 *.log
+/src/renderer/data/supplierData.json
+/src/renderer/data/supplyPlanners.json
 

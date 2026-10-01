@@ -1,50 +1,36 @@
-# Native Module Troubleshooting Guide
+# Native moduler
 
-## Problem: better-sqlite3 Node.js Version Mismatch
+`better-sqlite3` inneholder en native modul som må passe både maskinens arkitektur og Electron-versjonen. Systemets Node.js og Electron kan ha forskjellige ABI-er.
 
-### Symptoms:
+Typiske symptomer er feil om `NODE_MODULE_VERSION`, `better_sqlite3.node` eller feil arkitektur ved oppstart.
 
-- Error: "The module was compiled against a different Node.js version using NODE_MODULE_VERSION 127. This version of Node.js requires NODE_MODULE_VERSION 135"
-- App crashes on startup with database initialization errors
+## Utvikling
 
-### Root Cause:
+Fra repoets rot:
 
-Native modules like `better-sqlite3` are compiled for specific Node.js versions. Electron uses its own Node.js version which may differ from the system Node.js version.
-
-### Solutions:
-
-#### 1. Automatic Fix (Recommended)
-
-```bash
-npm run dev  # This now includes automatic module verification
+```powershell
+bun install --frozen-lockfile
+bun run dev
 ```
 
-#### 2. Manual Fix
+`dev` kjører `scripts/ensure-electron-modules.js`. Skriptet bruker `electron-rebuild` for å bygge SQLite-modulen mot prosjektets Electron.
 
-```bash
-# Remove and reinstall the problematic module
-rm -rf node_modules/better-sqlite3
-npm install better-sqlite3
+For å kjøre dette steget alene:
 
-# Rebuild for Electron
-npx electron-rebuild -f -w better-sqlite3
+```powershell
+node scripts/ensure-electron-modules.js
 ```
 
-#### 3. Nuclear Option (If above fails)
+Kontroller den første feilen i utskriften hvis rebuild feiler. En kompileringsfeil kan kreve Windows-byggverktøy; en feil om at Bun ikke finnes krever kontroll av PATH. Ikke endre Electron-versjonen bare for å matche en gammel modulfil.
 
-```bash
-# Complete clean reinstall
-rm -rf node_modules package-lock.json
-npm install
-npx electron-rebuild
+## Pakket app
+
+Windows-målene i `package.json` er x64. Bygg på Windows med avhengighetene fra `bun.lock` og pakk på nytt:
+
+```powershell
+bun run dist:clean
 ```
 
-### Prevention:
+Test den nye pakken ved å starte appen og importere en fil. En vellykket renderer-build alene viser ikke at SQLite-modulen kan lastes.
 
-- Always use `npm run dev` instead of direct electron-vite commands
-- The `ensure-electron-modules.js` script now runs automatically before dev
-- Never manually rebuild native modules without specifying Electron target
-
-### Verification:
-
-Check that the app starts without database errors and can load Excel files successfully.
+Behold låsefilen og brukerdataene under feilsøking. Databasen trenger ikke slettes for å løse en ABI-feil.
