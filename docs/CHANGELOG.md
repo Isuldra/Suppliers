@@ -8,6 +8,7 @@ Dette er en kort oversikt over endringer i repoet. En pakkeversjon eller Git-tag
 - E-posten til leverandøren har fått Pulse-utseende på alle språk, med linjene gruppert per PO og antall dager forsinket under bekreftet ETA.
 - «Velg alle» og «Fjern alle» tar med eller tar ut alle linjene filteret viser. Linjer som alt er tatt ut, beholder grunnen.
 - E-postspråket kan endres rett ved leverandørnavnet på Purring.
+- Leverandører viser bare leverandørene i filen som ble importert sist, med Lev.nr fra arket «Leverandør», også uten åpne ordrer. Leverandører fra tidligere filer blir ikke liggende igjen.
 - Arbeidsflaten er oversatt til dansk, svensk, finsk og engelsk, og språkvelgeren er tilbake øverst.
 
 ## Version 1.5.4: Ny arbeidsflate
