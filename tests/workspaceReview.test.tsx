@@ -1,7 +1,8 @@
 import React, { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import Review from '../src/renderer/workspace/Review';
+import { initNorwegian } from './i18nTestSetup';
 import type { Reminder } from '../src/renderer/workspace/reminder';
 
 let root: Root;
@@ -15,6 +16,7 @@ const items: Reminder[] = ['First', 'Second'].map((supplier) => ({
   language: 'no',
   lines: [{ key: '1', supplier, poNumber: '500', orderQty: 20, receivedQty: 5 }],
 }));
+beforeAll(initNorwegian);
 beforeEach(() => {
   vi.clearAllMocks();
   onSent.mockReset().mockReturnValue(true);
@@ -48,7 +50,7 @@ async function render(initial = items) {
 }
 function sendButton() {
   return [...container.querySelectorAll('button')].find((button) =>
-    /^Send \d+ purringer$/.test(button.textContent || '')
+    /^Send \d+ purring(er)?$/.test(button.textContent || '')
   )!;
 }
 

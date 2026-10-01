@@ -86,7 +86,7 @@ export const MAIL_TEXT = {
     sign: 'Ystävällisin terveisin',
     team: 'Hankinta, OneMed',
     lineCount: (count: number) => (count === 1 ? '1 tilausrivi' : `${count} tilausriviä`),
-    late: (days: number) => (days === 1 ? '1 päivä myöhässä' : `${days} päivää myöhässä`),
+    late: (days: number) => (days === 1 ? '1 päivän myöhässä' : `${days} päivää myöhässä`),
     headers: [
       'PO-numero',
       'Rivi',

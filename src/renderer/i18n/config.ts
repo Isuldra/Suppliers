@@ -2,31 +2,7 @@ import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import LanguageDetector from 'i18next-browser-languagedetector';
 import { detectAppLanguage } from '../services/languageDetectionService';
-
-// Import translation files
-import noTranslation from '../locales/no.json';
-import seTranslation from '../locales/se.json';
-import daTranslation from '../locales/da.json';
-import fiTranslation from '../locales/fi.json';
-import enTranslation from '../locales/en.json';
-
-const resources = {
-  no: {
-    translation: noTranslation,
-  },
-  se: {
-    translation: seTranslation,
-  },
-  da: {
-    translation: daTranslation,
-  },
-  fi: {
-    translation: fiTranslation,
-  },
-  en: {
-    translation: enTranslation,
-  },
-};
+import { resources } from './resources';
 
 /**
  * Initialize i18n with system language detection

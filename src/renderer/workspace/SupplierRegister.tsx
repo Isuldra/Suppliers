@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   DAYS,
   LANGUAGES,
@@ -23,6 +24,7 @@ function ContactForm({
   onClose: () => void;
   history: HistoryEntry[];
 }) {
+  const { t } = useTranslation();
   const [draft, setDraft] = useState<ContactEdit>({
     email: supplier.email,
     language: supplier.language,
@@ -35,24 +37,25 @@ function ContactForm({
         <div className="pulse-grow">
           <h2>{supplier.name}</h2>
           <p>
-            {supplier.number && `Lev.nr ${supplier.number} · `}
-            {supplier.lines.length} åpne ordrelinjer
+            {supplier.number &&
+              `${t('workspace.detail.supplierNo', { number: supplier.number })} · `}
+            {t('workspace.register.openLines', { count: supplier.lines.length })}
           </p>
         </div>
-        <button className="pulse-icon-button" aria-label="Lukk leverandør" onClick={onClose}>
+        <button
+          className="pulse-icon-button"
+          aria-label={t('workspace.register.close')}
+          onClick={onClose}
+        >
           ×
         </button>
       </div>
-      {!supplier.email && (
-        <p className="pulse-notice">
-          Legg til e-post og purredag for å ta leverandøren med i ukeplanen.
-        </p>
-      )}
+      {!supplier.email && <p className="pulse-notice">{t('workspace.register.addEmail')}</p>}
       <form
         onSubmit={(event) => {
           event.preventDefault();
           if (draft.email && !validRecipients(draft.email)) {
-            setError('Skriv en gyldig e-postadresse. Flere adresser skilles med semikolon.');
+            setError(t('workspace.register.invalidEmail'));
             return;
           }
           setError('');
@@ -63,15 +66,15 @@ function ContactForm({
         }}
       >
         <label className="pulse-field">
-          E-postadresse
+          {t('workspace.register.email')}
           <input
             value={draft.email}
             onChange={(event) => setDraft({ ...draft, email: event.target.value })}
-            placeholder="ordre@leverandor.no"
+            placeholder={t('workspace.register.emailPlaceholder')}
           />
         </label>
         <fieldset>
-          <legend>Språk i e-post</legend>
+          <legend>{t('workspace.register.emailLanguage')}</legend>
           <div className="pulse-chips">
             {Object.entries(LANGUAGES).map(([value, label]) => (
               <button
@@ -86,7 +89,7 @@ function ContactForm({
           </div>
         </fieldset>
         <fieldset>
-          <legend>Purredag</legend>
+          <legend>{t('workspace.register.remindDay')}</legend>
           <div className="pulse-chips">
             {DAYS.map((value) => (
               <button
@@ -102,14 +105,12 @@ function ContactForm({
                   })
                 }
               >
-                {value.slice(0, 3)}
+                {t(`workspace.daysShort.${value}`)}
               </button>
             ))}
           </div>
         </fieldset>
-        <p className="pulse-muted">
-          Lagres på denne PC-en og overstyrer leverandørarket til neste import i Pulse.
-        </p>
+        <p className="pulse-muted">{t('workspace.register.savedLocally')}</p>
         {error && (
           <p role="alert" className="pulse-danger">
             {error}
@@ -117,24 +118,26 @@ function ContactForm({
         )}
         <div className="pulse-flex">
           <button className="pulse-primary" type="submit">
-            Lagre
+            {t('workspace.register.save')}
           </button>
           <button type="submit" value="remind" disabled={!supplier.lines.length}>
-            Purre nå
+            {t('workspace.register.remindNow')}
           </button>
         </div>
       </form>
       <div className="pulse-register-history">
-        <h3>Purrestatus</h3>
+        <h3>{t('workspace.register.status')}</h3>
         <History name={supplier.name} entries={history} labels />
-        <p className="pulse-muted">Handlinger registrert i Pulse på denne PC-en.</p>
+        <p className="pulse-muted">{t('workspace.register.historyNote')}</p>
         {history
           .filter((entry) => entry.supplier === supplier.name)
           .slice(0, 10)
           .map((entry, index) => (
             <p key={index}>
               {formatDate(new Date(entry.at))} ·{' '}
-              {entry.status === 'sent' ? `Purret · ${entry.count} linjer` : 'Avvent'}
+              {entry.status === 'sent'
+                ? t('workspace.register.historySent', { count: entry.count })
+                : t('workspace.register.historyDeferred')}
             </p>
           ))}
       </div>
@@ -154,6 +157,7 @@ export default function SupplierRegister({
   onSave: (name: string, edit: ContactEdit) => void;
   onRemind: (name: string) => void;
 }) {
+  const { t } = useTranslation();
   const [search, setSearch] = useState('');
   const [day, setDay] = useState('Alle');
   const [focus, setFocus] = useState(initialFocus);
@@ -169,19 +173,25 @@ export default function SupplierRegister({
     <>
       <div className="pulse-register-tools">
         <input
-          aria-label="Søk i leverandørregister"
-          placeholder="Navn, lev.nr eller e-post"
+          aria-label={t('workspace.register.search')}
+          placeholder={t('workspace.register.searchPlaceholder')}
           value={search}
           onChange={(event) => setSearch(event.target.value)}
         />
         <div className="pulse-tabs">
           {['Alle', ...DAYS, 'Ingen'].map((value) => (
             <button key={value} aria-pressed={day === value} onClick={() => setDay(value)}>
-              {value === 'Ingen' ? 'Uten dag' : value === 'Alle' ? value : value.slice(0, 3)}
+              {value === 'Ingen'
+                ? t('workspace.register.noDay')
+                : value === 'Alle'
+                  ? t('workspace.filters.all')
+                  : t(`workspace.daysShort.${value}`)}
             </button>
           ))}
         </div>
-        <span className="pulse-muted">{visible.length} leverandører</span>
+        <span className="pulse-muted">
+          {t('workspace.register.count', { count: visible.length })}
+        </span>
       </div>
       <div className={`pulse-register ${supplier ? 'has-detail' : ''}`}>
         <div className="pulse-register-list">
@@ -189,13 +199,13 @@ export default function SupplierRegister({
             <table className="pulse-table">
               <thead>
                 <tr>
-                  <th>Leverandør</th>
-                  <th>Lev.nr</th>
-                  <th>E-post</th>
-                  <th>Språk</th>
-                  <th>Purredag</th>
-                  <th className="number">Åpne linjer</th>
-                  <th>Siste uker</th>
+                  <th>{t('workspace.register.colSupplier')}</th>
+                  <th>{t('workspace.register.colNumber')}</th>
+                  <th>{t('workspace.register.colEmail')}</th>
+                  <th>{t('workspace.register.colLanguage')}</th>
+                  <th>{t('workspace.register.colDay')}</th>
+                  <th className="number">{t('workspace.register.colOpenLines')}</th>
+                  <th>{t('workspace.register.colRecentWeeks')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -208,10 +218,13 @@ export default function SupplierRegister({
                     </td>
                     <td>{item.number || '—'}</td>
                     <td className={!item.email ? 'pulse-danger' : ''}>
-                      {item.email || 'Mangler e-post'}
+                      {item.email || t('workspace.register.missingEmail')}
                     </td>
                     <td>{LANGUAGES[item.language]}</td>
-                    <td>{item.days.join(', ') || 'Ikke satt'}</td>
+                    <td>
+                      {item.days.map((value) => t(`workspace.days.${value}`)).join(', ') ||
+                        t('workspace.register.notSet')}
+                    </td>
                     <td className="number">{item.lines.length}</td>
                     <td>
                       <History name={item.name} entries={history} />
@@ -221,7 +234,7 @@ export default function SupplierRegister({
               </tbody>
             </table>
           </div>
-          {!visible.length && <p className="pulse-empty">Ingen leverandører passer søket.</p>}
+          {!visible.length && <p className="pulse-empty">{t('workspace.register.noMatch')}</p>}
         </div>
         {supplier && (
           <ContactForm

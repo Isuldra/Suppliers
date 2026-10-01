@@ -1,5 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
+import { useTranslation } from 'react-i18next';
+import { dateLocale } from '../i18n/resources';
 import {
   PaperAirplaneIcon,
   RectangleStackIcon,
@@ -42,6 +44,7 @@ import logo from '../assets/onemed-logo.png';
 import './workspace.css';
 
 export default function Workspace() {
+  const { t, i18n } = useTranslation();
   const [memory, setMemory] = useState(readMemory);
   const memoryRef = useRef(memory);
   const [rows, setRows] = useState<ExcelRow[]>([]);
@@ -65,20 +68,21 @@ export default function Workspace() {
   const { warehouseFilter, setWarehouseFilter, showWarehouseFilter, refreshCountryDetection } =
     useWarehouseFilter();
   const request = useRef(0);
-  const persist = useCallback((update: (prev: WorkspaceMemory) => WorkspaceMemory) => {
-    const next = update(memoryRef.current);
-    memoryRef.current = next;
-    setMemory(next);
-    try {
-      saveMemory(next);
-      return true;
-    } catch {
-      toast.error('Kunne ikke lagre valgene på denne PC-en. Behold Pulse åpen.', {
-        id: 'workspace-storage',
-      });
-      return false;
-    }
-  }, []);
+  const persist = useCallback(
+    (update: (prev: WorkspaceMemory) => WorkspaceMemory) => {
+      const next = update(memoryRef.current);
+      memoryRef.current = next;
+      setMemory(next);
+      try {
+        saveMemory(next);
+        return true;
+      } catch {
+        toast.error(t('workspace.toast.storageFailed'), { id: 'workspace-storage' });
+        return false;
+      }
+    },
+    [t]
+  );
   const load = useCallback(async () => {
     const id = ++request.current;
     setLoading(true);
@@ -107,16 +111,16 @@ export default function Workspace() {
   }, [load]);
   useEffect(() => {
     const unsubscribe = window.electron.onUpdateError((error) =>
-      toast.error(error.message || 'Oppdatering mislyktes.', { id: 'update' })
+      toast.error(error.message || t('workspace.toast.updateFailed'), { id: 'update' })
     );
     const downloaded = window.electron.onUpdateDownloaded((info) =>
-      toast.success(`Pulse ${info.version} er klar for installasjon.`, { id: 'update' })
+      toast.success(t('workspace.toast.updateReady', { version: info.version }), { id: 'update' })
     );
     return () => {
       unsubscribe();
       downloaded();
     };
-  }, []);
+  }, [t]);
   const filteredRows = useMemo(
     () =>
       rows.filter(
@@ -197,7 +201,7 @@ export default function Workspace() {
   }
   function saveContact(name: string, edit: ContactEdit) {
     if (persist((prev) => ({ ...prev, contacts: { ...prev.contacts, [name]: edit } }))) {
-      toast.success('Leverandøren er lagret.');
+      toast.success(t('workspace.toast.supplierSaved'));
     }
   }
   async function imported(_data: ExcelData, fileName?: string) {
@@ -252,7 +256,7 @@ export default function Workspace() {
   }
   return (
     <div className="pulse-shell">
-      <nav className="pulse-rail" aria-label="Hovedmeny">
+      <nav className="pulse-rail" aria-label={t('workspace.nav.mainMenu')}>
         <div className="pulse-wordmark">Pulse</div>
         <button
           disabled={sending}
@@ -263,7 +267,7 @@ export default function Workspace() {
           }}
         >
           <PaperAirplaneIcon />
-          <span>Purring</span>
+          <span>{t('workspace.nav.remind')}</span>
         </button>
         <button
           disabled={sending}
@@ -273,23 +277,22 @@ export default function Workspace() {
           }}
         >
           <RectangleStackIcon />
-          <span>Leverandører</span>
+          <span>{t('workspace.nav.suppliers')}</span>
         </button>
         <a
           href="#/dashboard"
-          aria-label="Dashboard"
           onClick={(event) => {
             if (sending) event.preventDefault();
           }}
         >
           <ChartBarIcon />
-          <span>Oversikt</span>
+          <span>{t('workspace.nav.overview')}</span>
         </a>
         <div className="pulse-grow" />
         <button
           disabled={sending}
-          title="Innstillinger"
-          aria-label="Innstillinger"
+          title={t('workspace.nav.settings')}
+          aria-label={t('workspace.nav.settings')}
           onClick={() => setSettings(true)}
         >
           <AdjustmentsHorizontalIcon />
@@ -299,25 +302,33 @@ export default function Workspace() {
         <header className="pulse-header">
           <div className="pulse-title">
             <span>
-              {screen === 'work' ? `PURRING · UKE ${getISOWeek(new Date())}` : 'REGISTER'}
+              {screen === 'work'
+                ? t('workspace.header.remindWeek', { week: getISOWeek(new Date()) })
+                : t('workspace.header.register')}
             </span>
             <h1>
               {screen === 'register'
-                ? 'Leverandører'
+                ? t('workspace.nav.suppliers')
                 : review
-                  ? 'Send purringer'
+                  ? t('workspace.header.sendReminders')
                   : day === 'Alle'
-                    ? 'Alle leverandører'
+                    ? t('workspace.header.allSuppliers')
                     : day === 'Ingen'
-                      ? 'Uten purredag'
-                      : day}
+                      ? t('workspace.header.noDay')
+                      : t(`workspace.days.${day}`)}
             </h1>
           </div>
           {screen === 'work' && !review && (
-            <div className="pulse-tabs pulse-days" aria-label="Purredag">
+            <div className="pulse-tabs pulse-days" aria-label={t('workspace.header.dayTabs')}>
               {[...DAYS, 'Ingen', 'Alle'].map((value) => (
                 <button aria-pressed={day === value} key={value} onClick={() => selectDay(value)}>
-                  <span>{value === 'Alle' || value === 'Ingen' ? value : value.slice(0, 3)}</span>
+                  <span>
+                    {value === 'Alle'
+                      ? t('workspace.filters.all')
+                      : value === 'Ingen'
+                        ? t('workspace.filters.none')
+                        : t(`workspace.daysShort.${value}`)}
+                  </span>
                   <small>
                     {
                       suppliers.filter(
@@ -330,34 +341,57 @@ export default function Workspace() {
             </div>
           )}
           <div className="pulse-grow" />
+          <select
+            className="pulse-ui-language"
+            aria-label={t('workspace.header.uiLanguage')}
+            title={t('workspace.header.uiLanguage')}
+            disabled={sending}
+            value={i18n.resolvedLanguage || i18n.language}
+            onChange={(event) => {
+              void i18n.changeLanguage(event.target.value);
+              // Keeps the choice instead of the system language on the next start.
+              localStorage.setItem('userSelectedLanguage', 'true');
+            }}
+          >
+            {Object.entries(LANGUAGES).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </select>
           <button
             disabled={sending}
             className="pulse-file"
-            title={memory.fileName || 'Importer innkjøpsliste'}
+            title={memory.fileName || t('workspace.state.importList')}
             onClick={() => setUpload(true)}
           >
             <i />
             <span>
-              {memory.fileName || 'Innkjøpsliste'}
+              {memory.fileName || t('workspace.header.purchaseList')}
               <small>
                 {memory.importedAt
-                  ? `Importert ${new Date(memory.importedAt).toLocaleString('nb-NO', { dateStyle: 'short', timeStyle: 'short' })}`
-                  : 'Lagrede data'}
+                  ? t('workspace.header.imported', {
+                      date: new Date(memory.importedAt).toLocaleString(
+                        dateLocale(i18n.resolvedLanguage || i18n.language),
+                        { dateStyle: 'short', timeStyle: 'short' }
+                      ),
+                    })
+                  : t('workspace.header.savedData')}
               </small>
             </span>
-            <strong>Bytt fil</strong>
+            <strong>{t('workspace.header.changeFile')}</strong>
           </button>
           <img className="pulse-logo" src={logo} alt="OneMed" />
         </header>
         {loading ? (
           <div className="pulse-empty" role="status">
-            Leser innkjøpslisten …
+            {t('workspace.state.loading')}
           </div>
         ) : loadError ? (
           <div className="pulse-empty" role="alert">
-            <h2>Kunne ikke laste inn data</h2>
+            <h2>{t('workspace.state.loadError')}</h2>
             <p>{loadError}</p>
-            <button onClick={() => void load()}>Prøv igjen</button>
+            <button onClick={() => void load()}>{t('workspace.state.retry')}</button>
           </div>
         ) : review ? (
           <Review
@@ -404,7 +438,7 @@ export default function Workspace() {
             {showWarehouseFilter && (
               <div className="pulse-country-tools">
                 <label>
-                  Lagersted{' '}
+                  {t('workspace.country.warehouse')}{' '}
                   <select
                     value={warehouseFilter}
                     onChange={(event) => {
@@ -414,7 +448,7 @@ export default function Workspace() {
                   >
                     <option value="80">L80</option>
                     <option value="87">L87</option>
-                    <option value="all">Alle</option>
+                    <option value="all">{t('workspace.country.all')}</option>
                   </select>
                 </label>
                 <label>
@@ -422,25 +456,24 @@ export default function Workspace() {
                     checked={includeICTOrders}
                     onChange={(event) => setIncludeICTOrders(event.target.checked)}
                   />{' '}
-                  Ta med ICT-ordrer
+                  {t('workspace.country.includeICT')}
                 </label>
               </div>
             )}
             {day === 'Ingen' && (
               <div className="pulse-notice pulse-flex">
-                <span className="pulse-grow">
-                  Disse leverandørene mangler purredag. Legg til dag og e-post i
-                  leverandørregisteret.
-                </span>
-                <button onClick={() => setScreen('register')}>Ordne i Leverandører</button>
+                <span className="pulse-grow">{t('workspace.notice.noDay')}</span>
+                <button onClick={() => setScreen('register')}>
+                  {t('workspace.notice.fixInRegister')}
+                </button>
               </div>
             )}
             {!suppliers.some((supplier) => supplier.lines.length) ? (
               <div className="pulse-empty">
-                <h2>En god start på purredagen</h2>
-                <p>Importer innkjøpslisten for å se åpne ordre og sende purringer.</p>
+                <h2>{t('workspace.state.emptyTitle')}</h2>
+                <p>{t('workspace.state.emptyText')}</p>
                 <button className="pulse-primary" onClick={() => setUpload(true)}>
-                  Importer innkjøpsliste
+                  {t('workspace.state.importList')}
                 </button>
               </div>
             ) : (
@@ -448,8 +481,8 @@ export default function Workspace() {
                 <aside className="pulse-suppliers">
                   <div className="pulse-list-header">
                     <input
-                      aria-label="Søk leverandør"
-                      placeholder="Søk leverandør"
+                      aria-label={t('workspace.list.search')}
+                      placeholder={t('workspace.list.search')}
                       value={search}
                       onChange={(event) => setSearch(event.target.value)}
                     />
@@ -472,9 +505,11 @@ export default function Workspace() {
                             })
                           }
                         />{' '}
-                        Velg alle
+                        {t('workspace.list.selectAll')}
                       </label>
-                      <small>{selectedSuppliers.length} valgt</small>
+                      <small>
+                        {t('workspace.list.selected', { count: selectedSuppliers.length })}
+                      </small>
                     </div>
                   </div>
                   <div className="pulse-supplier-scroll">
@@ -488,7 +523,9 @@ export default function Workspace() {
                           className={`pulse-supplier-row ${active?.name === supplier.name ? 'active' : ''}`}
                         >
                           <Check
-                            aria-label={`Velg ${supplier.name}`}
+                            aria-label={t('workspace.list.selectSupplier', {
+                              name: supplier.name,
+                            })}
                             checked={selected.has(supplier.name) && ready(supplier)}
                             disabled={!ready(supplier)}
                             onChange={() => toggleSupplier(supplier.name)}
@@ -504,26 +541,26 @@ export default function Workspace() {
                               <History name={supplier.name} entries={memory.history} />
                             </div>
                             <span>
-                              {supplier.lines.length} åpne linjer
-                              {wait > 0 && <em>{wait} kunder venter</em>}
+                              {t('workspace.list.openLines', { count: supplier.lines.length })}
+                              {wait > 0 && <em>{t('workspace.list.waiting', { count: wait })}</em>}
                             </span>
                             <small className={status === 'deferred' ? 'pulse-warning' : ''}>
                               {status === 'sent'
-                                ? '✓ Purret denne uken'
+                                ? t('workspace.list.sentThisWeek')
                                 : status === 'deferred'
-                                  ? 'Avvent denne uken'
+                                  ? t('workspace.list.deferredThisWeek')
                                   : !supplier.email
-                                    ? 'Mangler e-post'
+                                    ? t('workspace.list.missingEmail')
                                     : late
-                                      ? `Eldste linje ${late} dager forsinket`
-                                      : 'Ingen forsinkede linjer'}
+                                      ? t('workspace.list.oldestLate', { count: late })
+                                      : t('workspace.list.noneLate')}
                             </small>
                           </button>
                         </div>
                       );
                     })}
                     {!visible.length && (
-                      <p className="pulse-empty">Ingen leverandører i dette utvalget.</p>
+                      <p className="pulse-empty">{t('workspace.state.noSuppliers')}</p>
                     )}
                   </div>
                 </aside>
@@ -535,14 +572,18 @@ export default function Workspace() {
                           <div className="pulse-grow">
                             <h2>{active.name}</h2>
                             <div className="pulse-supplier-meta">
-                              {active.number && <span>Lev.nr {active.number}</span>}
+                              {active.number && (
+                                <span>
+                                  {t('workspace.detail.supplierNo', { number: active.number })}
+                                </span>
+                              )}
                               <span className={!active.email ? 'pulse-danger' : ''}>
-                                {active.email || 'Mangler e-post'}
+                                {active.email || t('workspace.list.missingEmail')}
                               </span>
                               <select
                                 className="pulse-inline-select"
-                                aria-label="Språk i e-post"
-                                title="Språk i e-post"
+                                aria-label={t('workspace.detail.emailLanguage')}
+                                title={t('workspace.detail.emailLanguage')}
                                 value={active.language}
                                 onChange={(event) =>
                                   saveContact(active.name, {
@@ -562,7 +603,7 @@ export default function Workspace() {
                                 className="pulse-text-button"
                                 onClick={() => openRegister(active.name)}
                               >
-                                Rediger leverandør
+                                {t('workspace.detail.editSupplier')}
                               </button>
                             </div>
                           </div>
@@ -572,23 +613,19 @@ export default function Workspace() {
                             onClick={() => defer(active)}
                           >
                             {currentStatus(active.name, memory.history) === 'deferred'
-                              ? 'Ta med igjen'
-                              : 'Avvent denne uken'}
+                              ? t('workspace.detail.undefer')
+                              : t('workspace.detail.defer')}
                           </button>
                         </div>
                         <div className="pulse-flex pulse-wrap">
                           <div className="pulse-tabs">
-                            {[
-                              ['all', 'Alle'],
-                              ['waiting', 'Kunder venter'],
-                              ['excluded', 'Tatt ut'],
-                            ].map(([value, label]) => (
+                            {['all', 'waiting', 'excluded'].map((value) => (
                               <button
                                 key={value}
                                 aria-pressed={filter === value}
                                 onClick={() => setFilter(value)}
                               >
-                                {label}
+                                {t(`workspace.filters.${value}`)}
                               </button>
                             ))}
                           </div>
@@ -596,17 +633,15 @@ export default function Workspace() {
                             disabled={!shown.some((line) => excludedReason(line, memory.excluded))}
                             onClick={() => setIncluded(shown, true)}
                           >
-                            Velg alle
+                            {t('workspace.detail.selectAll')}
                           </button>
                           <button
                             disabled={!shown.some((line) => !excludedReason(line, memory.excluded))}
                             onClick={() => setIncluded(shown, false)}
                           >
-                            Fjern alle
+                            {t('workspace.detail.clearAll')}
                           </button>
-                          <span className="pulse-muted">
-                            Ta ut en linje eller en hel PO med avkrysningsboksen.
-                          </span>
+                          <span className="pulse-muted">{t('workspace.detail.hint')}</span>
                         </div>
                       </div>
                       <div className="pulse-order-area">
@@ -625,40 +660,43 @@ export default function Workspace() {
                             }))
                           }
                         />
-                        <p className="pulse-muted">
-                          Uttak huskes med grunn til linjen endres i en ny import. Negativ
-                          disponibel saldo betyr at kunder venter.
-                        </p>
+                        <p className="pulse-muted">{t('workspace.detail.footnote')}</p>
                       </div>
                     </>
                   ) : (
-                    <div className="pulse-empty">Velg en annen dag eller endre søket.</div>
+                    <div className="pulse-empty">{t('workspace.state.pickAnother')}</div>
                   )}
                 </section>
               </div>
             )}
             <footer className="pulse-footer">
               <div>
-                <strong>{selectedSuppliers.length} leverandører valgt</strong>
-                <small>{selectedLines} ordrelinjer med i purringen</small>
+                <strong>
+                  {t('workspace.footer.suppliersSelected', { count: selectedSuppliers.length })}
+                </strong>
+                <small>{t('workspace.footer.linesIncluded', { count: selectedLines })}</small>
               </div>
               <div className="pulse-grow" />
               <button disabled={!selectedSuppliers.length} onClick={() => beginReview()}>
-                Se gjennom først
+                {t('workspace.footer.reviewFirst')}
               </button>
               <button
                 className="pulse-primary"
                 disabled={!selectedSuppliers.length}
                 onClick={() => beginReview(true)}
               >
-                Send {selectedSuppliers.length} purringer →
+                {t('workspace.footer.send', { count: selectedSuppliers.length })}
               </button>
             </footer>
           </>
         )}
       </main>
       {upload && (
-        <Modal title="Importer innkjøpsliste" busy={importing} onClose={() => setUpload(false)}>
+        <Modal
+          title={t('workspace.state.importList')}
+          busy={importing}
+          onClose={() => setUpload(false)}
+        >
           <FileUpload
             onDataParsed={imported}
             onValidationErrors={setValidationErrors}

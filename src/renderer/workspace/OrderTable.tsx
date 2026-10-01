@@ -1,4 +1,5 @@
 import React, { Fragment } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { ExcelRow } from '../types/ExcelData';
 import { Check } from './Primitives';
 import {
@@ -13,12 +14,14 @@ import {
   type WorkspaceMemory,
 } from './model';
 
+// Saved exclusions store the Norwegian reason; only the label is translated.
 export const REASONS = [
   'Avklart skriftlig',
   'Leverandør har svart',
   'Krediteres / kanselleres',
   'Annet',
 ];
+const REASON_KEYS = ['clarified', 'replied', 'cancelled', 'other'];
 export default function OrderTable({
   lines,
   excluded,
@@ -32,6 +35,7 @@ export default function OrderTable({
   onToggle: (lines: ExcelRow[]) => void;
   onReason: (line: ExcelRow, reason: string) => void;
 }) {
+  const { t } = useTranslation();
   const visible = filterLines(lines, filter, excluded);
   const groups = new Map<string, ExcelRow[]>();
   visible.forEach((line) =>
@@ -39,7 +43,7 @@ export default function OrderTable({
   );
   const included = (group: ExcelRow[]) =>
     group.filter((line) => !excludedReason(line, excluded)).length;
-  if (!visible.length) return <div className="pulse-empty">Ingen linjer i dette utvalget.</div>;
+  if (!visible.length) return <div className="pulse-empty">{t('workspace.table.empty')}</div>;
   return (
     <div className="pulse-table-scroll">
       <table className="pulse-table pulse-orders">
@@ -47,22 +51,22 @@ export default function OrderTable({
           <tr>
             <th>
               <Check
-                aria-label="Velg alle synlige ordrelinjer"
+                aria-label={t('workspace.table.selectVisible')}
                 checked={included(visible) === visible.length}
                 partial={included(visible) > 0 && included(visible) < visible.length}
                 onChange={() => onToggle(visible)}
               />
             </th>
-            <th>Vare</th>
-            <th>Rad</th>
-            <th>ETA</th>
-            <th>Status</th>
-            <th>Lev. art.nr</th>
-            <th>OneMed nr</th>
-            <th>Kommentar</th>
-            <th className="number">Rest</th>
-            <th className="number" title="Disponibel saldo – negativ betyr at kunder venter">
-              Disp.
+            <th>{t('workspace.table.item')}</th>
+            <th>{t('workspace.table.row')}</th>
+            <th>{t('workspace.table.eta')}</th>
+            <th>{t('workspace.table.status')}</th>
+            <th>{t('workspace.table.supplierArticle')}</th>
+            <th>{t('workspace.table.onemedNumber')}</th>
+            <th>{t('workspace.table.comment')}</th>
+            <th className="number">{t('workspace.table.rest')}</th>
+            <th className="number" title={t('workspace.table.availableTitle')}>
+              {t('workspace.table.available')}
             </th>
           </tr>
         </thead>
@@ -72,16 +76,21 @@ export default function OrderTable({
               <tr className="pulse-po">
                 <td>
                   <Check
-                    aria-label={`Velg PO ${po}`}
+                    aria-label={t('workspace.table.selectPo', { po })}
                     checked={included(group) === group.length}
                     partial={included(group) > 0 && included(group) < group.length}
                     onChange={() => onToggle(group)}
                   />
                 </td>
                 <td colSpan={9}>
-                  <strong>PO {po || 'uten nummer'}</strong>
+                  <strong>
+                    {t('workspace.table.po', { po: po || t('workspace.table.noPo') })}
+                  </strong>
                   <span>
-                    {group.length} linjer · {included(group)} med i purringen
+                    {t('workspace.table.poSummary', {
+                      count: group.length,
+                      included: included(group),
+                    })}
                   </span>
                 </td>
               </tr>
@@ -92,19 +101,29 @@ export default function OrderTable({
                   <tr key={lineId(line)} className={reason ? 'pulse-excluded' : ''}>
                     <td>
                       <Check
-                        aria-label={`Ta med ${line.itemNo || line.description}, PO ${po}, rad ${line.orderRowNumber || ''}`}
+                        aria-label={t('workspace.table.includeLine', {
+                          item: line.itemNo || line.description,
+                          po,
+                          row: line.orderRowNumber || '',
+                        })}
                         checked={!reason}
                         onChange={() => onToggle([line])}
                       />
                     </td>
                     <td className="pulse-item">
-                      <strong>{line.description || line.itemNo || 'Uten beskrivelse'}</strong>
+                      <strong>
+                        {line.description || line.itemNo || t('workspace.table.noDescription')}
+                      </strong>
                       <small>{line.productSpecification || line.specification}</small>
                     </td>
                     <td>{line.orderRowNumber || '—'}</td>
                     <td className="nowrap">
                       {formatDate(eta(line))}
-                      {late > 0 && <small className="pulse-danger">{late} d forsinket</small>}
+                      {late > 0 && (
+                        <small className="pulse-danger">
+                          {t('workspace.table.daysLate', { count: late })}
+                        </small>
+                      )}
                     </td>
                     <td>{String(line.status || '—')}</td>
                     <td>{String(line.supplierArticleNo || line.producerItemNo || '—')}</td>
@@ -112,12 +131,14 @@ export default function OrderTable({
                     <td>
                       {reason ? (
                         <select
-                          aria-label={`Grunn for å ta ut ${line.itemNo}`}
+                          aria-label={t('workspace.table.reasonFor', { item: line.itemNo })}
                           value={reason}
                           onChange={(event) => onReason(line, event.target.value)}
                         >
-                          {REASONS.map((value) => (
-                            <option key={value}>{value}</option>
+                          {REASONS.map((value, index) => (
+                            <option key={value} value={value}>
+                              {t(`workspace.reasons.${REASON_KEYS[index]}`)}
+                            </option>
                           ))}
                         </select>
                       ) : (
