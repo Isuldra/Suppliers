@@ -36,8 +36,6 @@ declare module 'electron-updater' {
     channel?: string;
     serverType?: string;
   }
-
-  // Define the interface for the AppUpdater class (simplified)
   export interface AppUpdater {
     // Properties
     logger: BasicLogger; // Use the defined logger type

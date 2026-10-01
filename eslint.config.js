@@ -6,7 +6,7 @@ import prettierConfig from 'eslint-config-prettier';
 
 export default [
   { files: ['**/*.{js,mjs,cjs,ts,jsx,tsx}'] },
-  { languageOptions: { globals: { ...globals.browser, ...globals.node } } }, // Added node globals for main process
+  { languageOptions: { globals: { ...globals.browser, ...globals.node } } },
   pluginJs.configs.recommended,
   ...tseslint.configs.recommended,
   {
@@ -20,11 +20,7 @@ export default [
     },
   },
   {
-    // Add custom rules or overrides here if needed
     rules: {
-      // Example: Disable a specific rule
-      // "react/react-in-jsx-scope": "off"
-      // Example: Add a TypeScript-specific rule
       '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
       'no-undef': 'off', // Often conflicts with TypeScript global types
     },
@@ -35,6 +31,9 @@ export default [
       'dist/',
       'release/',
       'node_modules/',
+      '.cache/',
+      'out/',
+      'coverage/',
       '.vite/',
       '*.config.js',
       '*.config.cjs',

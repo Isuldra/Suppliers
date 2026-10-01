@@ -1,6 +1,7 @@
 import type { ExcelRow } from '../types/ExcelData';
 import type { SupplierContact } from '../../types/SupplierContact';
 import { getISOWeek, getISOWeekYear } from '../../utils/dateUtils';
+import { parseEmailRecipients } from '../../utils/emailRecipients';
 
 export const DAYS = ['Mandag', 'Tirsdag', 'Onsdag', 'Torsdag', 'Fredag'];
 export const LANGUAGES = { no: 'Norsk', da: 'Dansk', se: 'Svenska', fi: 'Suomi', en: 'English' };
@@ -132,11 +133,7 @@ export function currentStatus(name: string, history: HistoryEntry[]) {
   )?.status;
 }
 export function validRecipients(value: string) {
-  const addresses = value.split(/[;,]/).map((address) => address.trim());
-  return (
-    addresses.length > 0 &&
-    addresses.every((address) => /^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(address))
-  );
+  return parseEmailRecipients(value) !== null;
 }
 export function buildSuppliers(
   rows: ExcelRow[],

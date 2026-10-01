@@ -1,186 +1,38 @@
-# Distribution Guide for Pulse
+# Windows-distribusjon
 
-This document provides instructions for building and deploying the application with automatic updates.
+Pulse bygges for Windows x64. E-postsending krever Outlook med COM-støtte og riktige postkasserettigheter.
 
-## Auto-Update System
+## Velge pakke
 
-The application uses Cloudflare Pages for automatic updates. Users receive update notifications automatically when new versions are available.
+| Pakke                   | Bruk                                        | Oppdatering                           |
+| ----------------------- | ------------------------------------------- | ------------------------------------- |
+| `Pulse-X.Y.Z-setup.exe` | Vanlig brukerinstallasjon med snarveier     | Automatisk nedlasting gjennom updater |
+| `Pulse-Portable.exe`    | Starte uten installasjonsveiviser           | Manuell utskifting av programfilen    |
+| ZIP                     | Utpakket programmappe                       | Manuell distribusjon                  |
+| `Pulse-X.Y.Z-Setup.msi` | Separat byggemål for administrert utrulling | Avhenger av utrullingsoppsettet       |
 
-### How Auto-Updates Work
+Standardbygget lager NSIS, portable og ZIP. MSI bygges separat med `bun run dist:msi`; det er ikke et standard-asset i release-skriptet.
 
-1. **User Experience**: Users see an update notification in the app when a new version is available
-2. **Update Process**: Users click "Update" and the app downloads and installs the new version automatically
-3. **No GitHub Interaction**: Users never need to visit GitHub or download files manually
-4. **Fast Delivery**: Updates are served via Cloudflare's global CDN for fast downloads
+Last ned fra [Pulse-siden](https://suppliers-anx.pages.dev/) eller [GitHub Releases](https://github.com/Isuldra/Suppliers/releases).
 
-## Release Workflow
+## Installere
 
-### For New Releases
+NSIS-installasjonen er konfigurert per bruker, uten automatisk elevasjon, og lar brukeren velge mappe. Den oppretter snarveier på skrivebordet og i Start-menyen.
 
-1. **Update Version**:
+Dette beskriver installerinnstillingene. Maskinens policy kan fortsatt kreve godkjenning fra IT. Bruk godkjent distribusjonskanal dersom Windows eller organisasjonens sikkerhetsverktøy blokkerer appen.
 
-   ```bash
-   # Bump version (patch, minor, or major)
-   npm run version:bump patch
-   # or
-   npm run version:bump minor
-   # or
-   npm run version:bump major
-   ```
+## Brukerdata
 
-2. **Build and Deploy**:
+Data ligger i Electron sin `userData`-mappe, separat fra programfilene. Standard Windows-plassering er under `%APPDATA%\one-med-supplychain-app`; faktisk bane logges ved oppstart.
 
-   ```bash
-   # Clean build with proper version handling
-   npm run dist:clean
+SQLite inneholder innkjøpsdata og importerte kontakter. Rendererens lokale lagring inneholder arbeidsflatens sendingshistorikk og lokale valg. Se [lagring og sikkerhetskopier](../features/database.md).
 
-   # Prepare for Cloudflare deployment
-   npm run release:prepare
-   ```
+NSIS er konfigurert til å beholde appdata ved avinstallering. Ikke fjern profilmappen uten å avklare konsekvensene for sendingshistorikken.
 
-3. **Deploy to Cloudflare**:
+## Oppdatering
 
-   ```bash
-   # Commit and push changes
-   git add docs/updates/
-   git commit -m "Release v1.2.2"
-   git push origin main
-   ```
+Installerutgaven sjekker Cloudflare-feeden og laster ned tilgjengelig oppdatering. Installering skjer gjennom updaterens flyt når appen avsluttes eller brukeren velger det.
 
-4. **Automatic Deployment**: Cloudflare Pages automatically deploys within 1-2 minutes
+Portable-utgaven varsler om ny versjon og åpner nedlasting. Lukk appen før programfilen erstattes. Data blir på samme PC; de ligger ikke automatisk ved siden av EXE-filen.
 
-### One-Command Release
-
-For a complete release in one command:
-
-```bash
-npm run release:full
-```
-
-This will:
-
-- Build the application with proper version handling
-- Prepare files for Cloudflare deployment
-- Show you the next steps for deployment
-
-## Building the Application
-
-### Prerequisites
-
-1. Install Node.js and npm
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-
-### Build Commands
-
-- **Standard Build**: `npm run dist`
-- **Clean Build** (recommended): `npm run dist:clean`
-- **Portable Only**: `npm run dist:portable`
-- **NSIS Installer Only**: `npm run dist:nsis`
-
-### Build Output
-
-Files are created in the `release/` directory:
-
-- **NSIS Installer**: `Pulse-[version]-setup.exe`
-- **Portable**: `Pulse-Portable.exe`
-- **Blockmap**: `Pulse-[version]-setup.exe.blockmap`
-
-## Deployment Architecture
-
-```
-GitHub Repository
-       ↓ (git push)
-Cloudflare Pages
-       ↓ (serves files)
-User Applications
-       ↓ (check for updates)
-https://suppliers-anx.pages.dev/latest.yml
-```
-
-### File Structure in Cloudflare
-
-```
-docs/updates/
-├── latest.yml                              # Auto-update metadata
-├── Pulse-1.2.2-setup.exe      # NSIS installer
-├── Pulse-1.2.2-setup.exe.blockmap
-├── Pulse-Portable.exe         # Portable version
-├── index.html                               # Manual download page
-└── _redirects                               # Cloudflare routing rules
-```
-
-## Version Management
-
-### Version Sync
-
-The project uses a sophisticated version management system:
-
-```bash
-# Sync package.json with latest git tag
-npm run version:sync
-
-# Show current version info
-npm run version:info
-
-# Get help with version commands
-npm run version:help
-```
-
-### Version Bumping
-
-```bash
-# Patch version (1.2.2 → 1.3.1)
-npm run version:bump
-
-# Minor version (1.2.2 → 1.3.0)
-npm run version:bump minor
-
-# Major version (1.2.2 → 2.0.0)
-npm run version:bump major
-
-# With automatic push
-npm run version:bump --push
-```
-
-## Troubleshooting
-
-### Build Issues
-
-- **Version not updating**: Use `npm run dist:clean` to clear cache and rebuild
-- **Native dependencies**: Ensure you're building on the target platform
-- **Cache issues**: Run `node scripts/clean-build-cache.js` to clear all caches
-
-### Auto-Update Issues
-
-- **Users not seeing updates**: Check that `latest.yml` is accessible at `https://suppliers-anx.pages.dev/latest.yml`
-- **Update fails**: Verify file checksums in `latest.yml` match the actual files
-- **Wrong version**: Ensure the version in `package.json` matches the git tag
-
-### Deployment Issues
-
-- **Files not deployed**: Check Cloudflare Pages build logs
-- **Wrong files**: Verify `docs/updates/` directory contains the correct files
-- **Version mismatch**: Ensure the version in `latest.yml` matches the installer filename
-
-## Manual Distribution
-
-For manual distribution (without auto-updates):
-
-- **Installer**: Users run `Pulse-[version]-setup.exe` directly
-- **Portable**: Users run `Pulse-Portable.exe` without installation
-- **Data Location**: Application data stored in `%LOCALAPPDATA%\one-med-supplychain-app`
-
-## Benefits of Auto-Update System
-
-✅ **Zero GitHub interaction for end users** - They only see the update dialog in the app
-
-✅ **Fast CDN delivery** - Cloudflare's global network serves updates quickly
-
-✅ **Simple deployment** - Just git push to deploy
-
-✅ **Version control** - All releases tracked in git history
-
-✅ **Automated** - One command to build and prepare deployment
+Se [publisering](../development/publishing-updates.md) for hvordan installasjonsfil, GitHub-release og metadata skal stemme.

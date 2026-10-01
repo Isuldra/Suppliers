@@ -1,298 +1,40 @@
 # Pulse
 
-Pulse is a desktop application for managing supplier workflows and data. It's built with Electron, React, and TypeScript, and follows OneMed's design system.
+Pulse er en Windows-app for å importere innkjøpslinjer fra Excel, kontrollere restordrer og sende leverandørpurringer gjennom Outlook. Appen bygger på Electron, React, TypeScript og SQLite.
 
-## End-User Documentation
+## Bruke appen
 
-**For users of the application:**
+Last ned fra [Pulse-siden](https://suppliers-anx.pages.dev/) eller [GitHub Releases](https://github.com/Isuldra/Suppliers/releases).
 
-- **[Multi-language User Guide](docs/user-guide-multilang.md)** - Complete user manual in Norwegian, Swedish, Danish, Finnish, and English
-- **[Getting Started Guide](docs/getting-started.md)** - Quick start guide for new users
+- [Kom i gang](docs/getting-started.md)
+- [Brukerveiledning](docs/user-guide.md)
+- [Veiledning på fem språk](docs/user-guide-multilang.md)
+- [All dokumentasjon](docs/README.md)
 
----
+Importen krever en `.xlsx`-fil med arket `BP`. E-postsending krever Outlook med COM-støtte og rettigheter til avsenderpostkassen. Arbeidsdata og sendingshistorikk lagres lokalt.
 
-## Getting Started (Developers)
+## Utvikle
 
-The `developer` branch uses the redesigned Pulse workspace: weekday tabs, a
-supplier list and PO-level order review, followed by a per-supplier email queue.
-The supplier register lets users override recipients, email language and reminder
-days locally until the next import. Excluded lines retain their reasons while the
-imported line is unchanged. Reminder history is recorded locally after Outlook
-confirms sending; the UI does not invent history for earlier weeks.
-Re-import the purchasing workbook after upgrading to populate product descriptions
-from `ITEM` and available stock (`lagsaldo - lagresant`) from `ARS`. Missing stock
-is shown as unknown. These joins respect the company and warehouse in the export.
+CI bruker Node.js 22 og Bun 1.3.14. Fra repoets rot:
 
-The Cloudflare download page lives in `docs/updates`. Its release version, date and
-download link hooks remain compatible with `release:prepare`. `deploy:cloudflare`
-now checks the static files without overwriting the design or update metadata.
-The original design archive's business data and uploaded documents are not part
-of the repository.
-
-1. Clone the repo
-2. Install dependencies: `bun install` (bun is the canonical package manager; `bun.lock` is committed and CI runs `bun install --frozen-lockfile`)
-3. Start the dev server: `bun run dev`
-4. Build: `bun run build`
-
-> For complete setup instructions, see [Development Setup](docs/development/setup.md)
-
-### Local business data
-
-Supplier contacts, planner assignments and `resources/Produktkatalog.xlsx` are
-local files excluded from Git. Dependency installation creates missing
-`src/renderer/data/supplierData.json` and `supplyPlanners.json` from fictional
-`.example.json` files without overwriting existing data. If install scripts were
-disabled, run `bun run data:prepare` before type checking or building.
-
-Fresh clones use example data; import your own workbook or restore your local
-JSON files to use real supplier information. Do not commit those files. Local
-JSON data is bundled into the app when building, so use the fictional examples
-for publicly distributed builds. `.gitignore` does not remove older Git history.
-
----
-
-## How to Run
-
-### Development Mode
-
-```bash
-bun run dev                # Start with hot reload
-bun run dev:no-warnings    # Start without Node warnings
+```powershell
+bun install --frozen-lockfile
+bun run dev
 ```
 
-### Production Build
+`bun.lock` er låsefilen. Kontakter og planlegging importeres fra Excel til SQLite. Eldre lokale JSON-filer og produktkatalogen holdes utenfor Git.
 
-```bash
-bun run build              # Build the app
-bun run dist               # Create distributable packages (Windows)
-bun run dist:portable      # Create portable executable
-bun run dist:nsis          # Create NSIS installer
+```powershell
+bun run quality
+bun run build
 ```
 
-### Testing
+Se [utviklingsoppsett](docs/development/setup.md) og [arkitektur](docs/architecture.md) for innganger, lagring og bygg.
 
-```bash
-bun run test               # Run tests
-bun run test:watch         # Run tests in watch mode
-bun run test:coverage      # Run with coverage report
-```
+## Distribuere
 
----
+`bun run dist:clean` lager Windows-pakker lokalt. Den publiserer ikke en release.
 
-## Documentation Overview
+Publisering krever både programfiler i GitHub Releases og oppdateringsmetadata på Cloudflare. Følg [publiseringsguiden](docs/development/publishing-updates.md).
 
-| Area                                                            | Description                                                              |
-| --------------------------------------------------------------- | ------------------------------------------------------------------------ |
-| [Distribution Guide](docs/distribution/DISTRIBUTION.md)         | How to build and distribute the app (NSIS, MSI, portable — Windows only) |
-| [CI/CD Pipeline](docs/development/ci-cd-pipeline.md)            | GitHub Actions build setup                                               |
-| [Manual Update Process](docs/development/publishing-updates.md) | How to publish app updates manually                                      |
-| [Security Policy](SECURITY.md)                                  | Security policy and vulnerability reporting                              |
-
----
-
-## Testing
-
-The project uses Vitest for testing with comprehensive quality gates.
-
-### Running Tests
-
-- `bun run test` - Run all tests
-- `bun run test:watch` - Watch mode for development
-- `bun run test:coverage` - Generate coverage reports
-
-### Quality Checks
-
-Before committing, always run quality checks:
-
-- `bun run quality` - Full quality gate (format, lint, typecheck, test)
-- `bun run quality:fast` - Quick check without tests
-- `bun run quality:fix` - Auto-fix formatting and linting issues
-
-The quality gates enforce:
-
-1. **Prettier formatting** - Code style consistency
-2. **ESLint linting** - Code quality and best practices
-3. **TypeScript type checking** - Type safety
-4. **Vitest tests** - Functional correctness
-
----
-
-## Technologies
-
-- Electron
-- React + TypeScript
-- Tailwind CSS
-- SQLite (via `better-sqlite3`)
-- electron-updater
-- GitHub Actions CI/CD
-
----
-
-## Project Structure
-
-```
-Suppliers/
-├── .github/              # GitHub Actions workflows
-│   └── workflows/        # CI/CD pipeline definitions
-│       ├── quality.yml   # Quality checks (lint, format, typecheck, test)
-│       ├── build.yml     # Build workflow
-│       └── ...
-├── docs/                 # All documentation
-│   ├── development/      # Developer guides
-│   ├── distribution/     # Distribution & deployment guides
-│   ├── features/         # Feature documentation
-│   └── planning/         # Future plans & roadmaps
-├── resources/            # Static assets
-│   ├── icon-*.png        # Application icons (various sizes)
-│   ├── installer.nsh     # NSIS installer configuration
-│   └── Produktkatalog.xlsx # Optional local catalog (ignored by Git)
-├── scripts/              # Build & deployment scripts
-│   ├── build-*.js        # Build automation scripts
-│   ├── generate-*.js     # Release metadata generators
-│   └── README.md         # Scripts documentation
-├── src/
-│   ├── main/             # Electron main process
-│   │   ├── index.ts      # Main entry point (builds to dist/main/main.cjs)
-│   │   ├── database.ts   # Database handlers
-│   │   └── importer.ts   # Excel import logic
-│   ├── preload/          # Preload scripts (context bridge)
-│   │   └── index.ts      # IPC API exposure, with an explicit channel allowlist
-│   ├── renderer/         # React frontend
-│   │   ├── components/   # React components
-│   │   │   └── dashboard/ # Dashboard-specific components
-│   │   ├── locales/      # Translations (no, en, se, da, fi)
-│   │   ├── services/     # Frontend services (incl. emailService.ts)
-│   │   └── App.tsx       # Main React app
-│   ├── services/         # Shared services (main + renderer)
-│   │   ├── databaseService.ts
-│   │   └── emailTemplates/ # Handlebars templates
-│   ├── types/            # TypeScript type definitions
-│   └── utils/            # Utility functions
-└── tests/                # Test files and setup
-    └── setup.ts          # Vitest configuration
-```
-
-**Note:** the package manager is **bun**, not npm — `bun.lock` is canonical and CI runs
-`bun install --frozen-lockfile`. Package.json scripts still work via `bun run <script>`.
-
----
-
-## Dev Tools & Scripts
-
-| Script                  | Description                   |
-| ----------------------- | ----------------------------- |
-| `bun run dev`           | Start development server      |
-| `bun run build`         | Build renderer + Electron app |
-| `bun run lint`          | Lint codebase                 |
-| `bun run format`        | Format code with Prettier     |
-| `bun run format:check`  | Check code formatting         |
-| `bun run typecheck`     | Type check TypeScript files   |
-| `bun run test`          | Run tests                     |
-| `bun run test:coverage` | Run tests with coverage       |
-| `bun run dist`          | Build production artifacts    |
-
-### Quality Gates
-
-The project uses standardized quality gates for code validation:
-
-| Command                | Description                                                                     |
-| ---------------------- | ------------------------------------------------------------------------------- |
-| `bun run quality`      | **Canonical command** - Runs all quality checks (format, lint, typecheck, test) |
-| `bun run quality:fix`  | Auto-fix formatting and linting issues, then typecheck                          |
-| `bun run quality:fast` | Quick validation without tests (format, lint, typecheck)                        |
-| `bun run ci:check`     | Alias for `quality` - use in CI/CD pipelines                                    |
-
-**Technology Stack:**
-
-- **JS/TS**: Prettier + ESLint + TypeScript typecheck
-- **Testing**: Vitest
-
-**Usage:**
-
-- Before committing: Run `bun run quality` to ensure all checks pass
-- For quick feedback: Use `bun run quality:fast` (skips tests)
-- To auto-fix issues: Use `bun run quality:fix` (fixes formatting and linting)
-
-**CI/CD Integration:**
-
-The quality checks run automatically on GitHub Actions:
-
-- **Trigger:** Pull requests and pushes to `main`
-- **Workflow:** `.github/workflows/quality.yml`
-- **Steps:** Checkout → Cache → Install → Run `bun run quality`
-
----
-
-## Security Practices
-
-- Context Isolation & Node Integration disabled
-- CSP enforced via headers
-- Secure external link handling with `shell.openExternal()`
-- Prepared SQL statements and audit logging
-
-> For security policy and vulnerability reporting, see [SECURITY.md](SECURITY.md)
-
----
-
-## Releases & Updates
-
-Pulse uses `electron-updater` with **manual GitHub Releases**.
-
-- CI builds artifacts (EXE, portable, latest.yml)
-- Maintainers publish updates manually
-- App checks for updates on startup
-
-See: [Publishing Updates](docs/development/publishing-updates.md)
-
----
-
-## Contributing
-
-### Code Quality Standards
-
-All code must pass quality gates before merging:
-
-1. **Prettier formatting** - Consistent code style
-2. **ESLint linting** - Code quality and best practices
-3. **TypeScript type checking** - Type safety
-4. **Test coverage** - Functional correctness
-
-Run `bun run quality` before committing.
-
-### Git Workflow
-
-1. Create feature branch from `main`
-2. Make changes in small, focused commits
-3. Run quality checks: `bun run quality`
-4. Push and create Pull Request
-5. CI/CD will run quality checks automatically
-6. Wait for approval and merge
-
-### Commit Message Format
-
-Follow conventional commits:
-
-- `feat: Add new feature`
-- `fix: Bug fix`
-- `docs: Documentation update`
-- `refactor: Code refactoring`
-- `test: Add or update tests`
-- `chore: Maintenance tasks`
-
-### Code Style
-
-- Use TypeScript for all new code
-- Follow existing naming conventions
-- Add JSDoc comments for public APIs
-- Keep components small and focused
-- Prefer functional components with hooks
-
----
-
-## License
-
-This project is licensed under the ISC License - see the [LICENSE](LICENSE) file for details.
-
-## Maintainers & Contact
-
-This project is maintained by the OneMed team. Please refer to internal documentation or reach out via standard channels.
+[Endringshistorikk](docs/CHANGELOG.md) og [åpne forbedringer](docs/planning/planned-features.md).

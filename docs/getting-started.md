@@ -1,229 +1,32 @@
-# Kom i gang - Pulse (OneMed SupplyChain)
+# Kom i gang
 
-Velkommen til Pulse! Denne guiden hjelper deg med å komme i gang med applikasjonen.
+Pulse trenger Windows og en Excel-eksport av innkjøpslinjene. Sending krever Outlook med COM-støtte, en konfigurert e-postprofil og rettigheter til avsenderpostkassen.
 
-## 🚀 Første Oppstart
+## Installere
 
-### 1. Start Applikasjonen
+Last ned installasjonsprogrammet eller portable-utgaven fra [nedlastingssiden](https://suppliers-anx.pages.dev/). Installerutgaven legger inn snarveier og støtter automatisk oppdatering. Portable-utgaven startes direkte og erstattes manuelt ved oppdatering.
 
-1. **Finn applikasjonen** på din datamaskin
-2. **Dobbeltklikk** på Pulse-ikonet
-3. **Vent** mens applikasjonen starter opp
+Begge utgavene lagrer arbeidsdata på PC-en. Dataene følger ikke automatisk med en portable-fil som flyttes til en annen maskin. Se [distribusjon](distribution/DISTRIBUTION.md).
 
-### 2. Første Import
+## Første import
 
-Ved første oppstart vil applikasjonen be deg om å velge en Excel-fil:
+1. Åpne Pulse og velg import av innkjøpsliste.
+2. Velg en `.xlsx`-fil med arket `BP`. Overskriftene skal ligge på rad 5 og dataene begynne på rad 6.
+3. Kontroller eventuelle valideringsfeil før du fortsetter.
+4. Åpne leverandørregisteret og kontroller e-postadresse, e-postspråk og purredager.
 
-1. **Klikk "Velg fil"** eller dra Excel-filen til applikasjonen
-2. **Velg din Excel-fil** med ordredata
-3. **Vent** mens applikasjonen importerer dataene
-4. **Du er klar!** Applikasjonen er nå klar til bruk
+En ny import erstatter innkjøpslinjene i databasen. Lokale kontaktendringer i arbeidsflaten nullstilles ved vellykket import. Sendingshistorikk og valg om å utelate uendrede linjer beholdes. Se [Excel-formatet](features/excel-import.md).
 
-> **Merk**: Se [Excel Import](features/excel-import.md) for detaljer om filformat og struktur.
+## Første purring
 
-## 🎯 Hovedarbeidsflyt
+1. Velg ukedag eller `Alle`, og åpne en leverandør.
+2. Kontroller restlinjene. Fjern linjer som allerede er avklart.
+3. Kryss av leverandørene som skal purres, og åpne gjennomgangen.
+4. Kontroller mottakere, språk og forhåndsvisning for hver leverandør.
+5. Send først når innholdet er kontrollert.
 
-### Steg 1: Last opp Excel-fil
+Pulse sender én e-post per leverandør. Ingen e-post sendes bare ved import eller ved å åpne forhåndsvisningen.
 
-1. **Klikk «Bytt fil»** og dra Excel-filen i det markerte området
-2. **Eller klikk** for å velge fil fra datamaskinen
-3. **Vent** på validering og import
+Hvis Outlook melder en feil, stopper køen. Kontroller Sendte elementer før du prøver igjen dersom det er uklart om meldingen ble sendt. Hvis Pulse melder at sendt historikk ikke kunne lagres, behold appen åpen og bruk knappen for å prøve lagringen igjen.
 
-### Steg 2: Velg ukedag
-
-1. **Velg ukedag** fra listen (Mandag-Fredag)
-2. **Se leverandørlisten** oppdateres automatisk
-3. **Kun leverandører med åpne ordre** vises
-
-### Steg 3: Velg leverandør
-
-1. **Søk** etter leverandør (valgfritt)
-2. **Klikk leverandørnavnet** for å se ordrene til høyre
-3. **Kryss av leverandørene** som skal få purring, eller bruk «Velg alle»
-
-### Steg 4: Gjennomgå data
-
-1. **Se ordre** for valgt leverandør
-2. **Kontroller detaljer** som ordrenummer, antall, beskrivelse
-3. **Ta ut linjer eller hele PO-er** med avkrysningsboksene, og velg begrunnelse
-4. **Bruk «Avvent denne uken»** for leverandører som ikke skal purres nå
-
-### Steg 5: Send e-post
-
-1. **Klikk «Se gjennom først»** for å kontrollere hver e-post
-2. **Kontroller mottaker, språk og ordrelinjer**. Du kan hoppe over en leverandør
-3. **Klikk «Send»** for å sende via Outlook. Status oppdateres når sendingen er bekreftet
-4. Ved feil stopper køen. Kontroller Sendt-mappen i Outlook før du prøver igjen
-
-### Leverandørregister
-
-Åpne **Leverandører** i venstremenyen for å endre e-post, språk eller purredager.
-Endringene lagres på denne PC-en til neste import i Pulse. «Purre nå» lagrer
-endringene og åpner leverandøren i arbeidsflaten. Ukehistorikken viser handlinger
-registrert i Pulse på denne PC-en.
-
-## 📊 Dashboard
-
-### Tilgang til Dashboard
-
-1. **Klikk «Oversikt»** i venstremenyen
-2. **Se oversikt** over alle leverandører og ordre
-3. **Analyser data** med grafer og statistikk
-
-### Dashboard Funksjoner
-
-- **Oversiktkort**: Totalt antall leverandører, åpne ordre, restantall
-- **Topp leverandører**: Leverandører med høyest restantall
-- **Ordrer per ukedag**: Fordeling av ordre på ukedager
-- **Navigasjon**: Enkel tilbake til hovedside
-
-## ⌨️ Hurtigtaster
-
-Bruk hurtigtaster for raskere arbeid:
-
-| Tast        | Funksjon                    |
-| ----------- | --------------------------- |
-| `Escape`    | Lukk åpen dialog            |
-| `Mellomrom` | Endre valgt avkrysningsboks |
-| `Tab`       | Naviger mellom felter       |
-
-## 📁 Excel-fil Krav
-
-### Filformat
-
-- **Format**: `.xlsx` (Excel 2007 og nyere)
-- **Ikke støttet**: `.xls` eller `.csv`
-
-### Påkrevde Ark
-
-1. **BP**: Hovedarket med ordredata
-2. **Sjekkliste Leverandører**: Leverandørinformasjon og e-post
-
-### Kolonne Headere
-
-BP-arket må inneholde:
-
-| Kolonne | Beskrivelse    | Eksempel           |
-| ------- | -------------- | ------------------ |
-| A       | Nøkkel/ID      | "PO123-ITEM456"    |
-| C       | Ordrenummer    | "PO123"            |
-| H       | Artikkelnummer | "ITEM456"          |
-| I       | Beskrivelse    | "Medisinsk utstyr" |
-| J/K     | ETA Dato       | "2024-01-15"       |
-| M       | Bestilt Antall | 100                |
-| N       | Levert Antall  | 50                 |
-| O       | Restantall     | 50                 |
-| P       | Leverandør     | "OneMed AS"        |
-
-## 📧 E-post System
-
-### E-post Templates
-
-Applikasjonen velger automatisk riktig språkmal basert på leverandørens land. Det finnes maler for
-5 språk: norsk, engelsk, svensk, dansk og finsk (se [E-post Templates](features/email-templates.md)).
-
-### Sending av E-post
-
-1. **Automatisk generering** basert på valgt leverandør og ordre, med riktig språk og avsender
-2. **Preview** før sending
-3. **Sending skjer via Outlook** på din Windows-maskin (COM-automasjon) — se
-   [Email Setup](features/email-setup.md) for detaljer
-4. Hvis automatisk sending feiler, åpnes e-posten i Outlook for manuell sending
-
-### E-post Tracking
-
-- **Database oppdatering** når e-post sendes
-- **Historikk** i loggene
-
-## 🔍 Søk og Filtrering
-
-### Leverandør Søk
-
-- **Realtid søk** - Skriv for å filtrere
-- **Case-insensitive** - Uansett store/små bokstaver
-- **Delvis matching** - Matcher deler av navn
-
-### Filtrering
-
-- **Ukedag filtrering** - Kun leverandører for valgt dag
-- **Åpne ordre** - Kun leverandører med utestående ordre
-- **Automatisk oppdatering** - Lister oppdateres når du endrer valg
-
-## 🔧 Innstillinger
-
-### Database
-
-- **Automatisk backup** ved hver import
-- **Lokal lagring** på din datamaskin
-- **Ingen cloud sync** - Alle data er lokale
-
-### E-post Innstillinger
-
-- **Standard e-postklient** - Bruker din systemets klient
-- **Template språk** - Automatisk valg
-- **Manuell overskriving** - Endre språk i preview
-
-## 🆘 Feilsøking
-
-### Vanlige Problemer
-
-**Excel-fil kan ikke lastes opp:**
-
-- Sjekk at filen er i `.xlsx` format
-- Kontroller at filen inneholder riktige ark
-- Prøv å lagre filen på nytt i Excel
-
-**Ingen leverandører vises:**
-
-- Sjekk at du har valgt riktig ukedag
-- Kontroller at leverandørene har åpne ordre
-- Prøv å laste opp Excel-filen på nytt
-
-**E-post kan ikke sendes:**
-
-- Sjekk at du har en standard e-postklient
-- Kontroller at leverandøren har gyldig e-post
-- Prøv å sende manuelt fra e-postklienten
-
-### Logg og Debugging
-
-- **Loggvisning** - Tilgjengelig via meny
-- **Konsoll** - Teknisk informasjon i utviklermodus
-- **Database** - Lokal SQLite-fil for avansert debugging
-
-## 📚 Neste Steg
-
-### Lær Mer
-
-- **[Brukerguide](user-guide.md)**: Detaljert brukerguide
-- **[E-post Setup](features/email-setup.md)**: Hvordan e-post faktisk sendes
-- **[Excel Import](features/excel-import.md)**: Import av data
-
-### Tips og Triks
-
-1. **Bruk hurtigtaster** for raskere arbeid
-2. **Søk etter leverandører** for å finne dem raskt
-3. **Sjekk dashboard** for oversikt
-4. **Forhåndsvis e-post** før sending
-5. **Hold Excel-filen oppdatert** for nøyaktige data
-
-## 📞 Support
-
-### Hjelp og Support
-
-- **Innebygd hjelp** - Bruk hurtigtaster hjelp (⌨️)
-- **Teknisk support** - Kontakt utviklingsteamet
-- **Dokumentasjon** - Se andre dokumentasjonsfiler
-
-### Kontakt
-
-For teknisk support eller spørsmål:
-
-- Kontakt utviklingsteamet
-- Sjekk loggfilene for feilmeldinger
-- Dokumenter problemet med skjermbilder
-
----
-
-**Sist oppdatert**: juli 2026  
-**Versjon**: Se package.json for gjeldende versjon
+Se [brukerveiledningen](user-guide.md) for ukestatus, utelatte linjer og flere mottakere.

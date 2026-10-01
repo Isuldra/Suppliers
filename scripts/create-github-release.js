@@ -1,197 +1,82 @@
-#!/usr/bin/env node
-
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import fs from 'node:fs';
+import path from 'node:path';
+import { execFileSync } from 'node:child_process';
+import { pathToFileURL } from 'node:url';
 import { Octokit } from '@octokit/rest';
+import { projectRoot, readReleaseArtifacts } from './release-artifacts.js';
+import { parseChangelogVersion } from './parse-changelog.js';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// Get project root directory
-const projectRoot = path.resolve(__dirname, '..');
-const releaseDir = path.join(projectRoot, 'release');
-
-// Read package.json to get current version
-const packageJsonPath = path.join(projectRoot, 'package.json');
-const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
-const version = packageJson.version;
-
-console.log(`Building GitHub Release v${version}...`);
-
-// Initialize GitHub API client
-const octokit = new Octokit({
-  auth: process.env.GITHUB_TOKEN,
-});
-
-const owner = 'Isuldra';
-const repo = 'Suppliers';
-const tagName = `v${version}`;
-
-async function createRelease() {
+export async function publishRelease({
+  root = projectRoot,
+  client = new Octokit({ auth: process.env.GITHUB_TOKEN }),
+  targetCommit = process.env.RELEASE_COMMIT,
+} = {}) {
+  // Validate every required file and its metadata before changing GitHub.
+  const { version, assets } = readReleaseArtifacts(root);
+  const params = { owner: 'Isuldra', repo: 'Suppliers' };
+  let release;
   try {
-    let release;
-
-    // Check if release already exists
-    try {
-      const existingRelease = await octokit.rest.repos.getReleaseByTag({
-        owner,
-        repo,
-        tag: tagName,
-      });
-
-      console.log(`Warning: Release ${tagName} already exists!`);
-      console.log(`   URL: ${existingRelease.data.html_url}`);
-      release = existingRelease.data;
-    } catch (error) {
-      if (error.status !== 404) {
-        throw error;
-      }
-      // Release doesn't exist, create it
-      console.log(`Creating release ${tagName}...`);
-      const newRelease = await octokit.rest.repos.createRelease({
-        owner,
-        repo,
-        tag_name: tagName,
-        name: `Pulse v${version}`,
-        body: `## Pulse v${version}
-
-### Changes
-- Auto-update system improvements
-- Bug fixes and performance enhancements
-
-### Downloads
-- **Windows Installer**: Pulse-${version}-setup.exe
-- **Portable Version**: Pulse-Portable.exe
-
-### Installation
-1. Download the appropriate file for your system
-2. Run the installer or portable executable
-3. The app will automatically check for future updates
-
----
-*This release was created automatically by the build system.*`,
+    release = (await client.rest.repos.getReleaseByTag({ ...params, tag: 'v' + version })).data;
+  } catch (error) {
+    if (error.status !== 404) throw error;
+    const entry = await parseChangelogVersion(version, root);
+    release = (
+      await client.rest.repos.createRelease({
+        ...params,
+        tag_name: 'v' + version,
+        target_commitish: targetCommit,
+        name: 'Pulse v' + version,
+        body: entry?.fullContent || `Pulse v${version}\n\nSee docs/CHANGELOG.md for changes.`,
         draft: false,
         prerelease: false,
+      })
+    ).data;
+  }
+
+  const existing = await client.paginate(client.rest.repos.listReleaseAssets, {
+    ...params,
+    release_id: release.id,
+    per_page: 100,
+  });
+  const managedNames = new Set(assets.map((asset) => asset.name));
+  managedNames.add(`Pulse-${version}-setup.exe.blockmap`);
+  for (const asset of existing) {
+    if (managedNames.has(asset.name))
+      await client.rest.repos.deleteReleaseAsset({
+        ...params,
+        asset_id: asset.id,
       });
-      release = newRelease.data;
-      console.log(`Success: Release created: ${release.html_url}`);
-    }
-
-    // Upload assets
-    const assetsToUpload = [
-      {
-        name: `Pulse-${version}-setup.exe`,
-        path: path.join(releaseDir, `Pulse-${version}-setup.exe`),
-        contentType: 'application/octet-stream',
+  }
+  for (const asset of assets) {
+    const data = fs.readFileSync(asset.path);
+    await client.rest.repos.uploadReleaseAsset({
+      ...params,
+      release_id: release.id,
+      name: asset.name,
+      data,
+      headers: {
+        'content-type': asset.name.endsWith('.yml') ? 'text/yaml' : 'application/octet-stream',
+        'content-length': data.length,
       },
-      {
-        name: `Pulse-${version}-setup.exe.blockmap`,
-        path: path.join(releaseDir, `Pulse-${version}-setup.exe.blockmap`),
-        contentType: 'application/octet-stream',
-      },
-      {
-        name: 'Pulse-Portable.exe',
-        path: path.join(releaseDir, 'Pulse-Portable.exe'),
-        contentType: 'application/octet-stream',
-      },
-      {
-        name: 'latest.yml',
-        path: path.join(projectRoot, 'docs', 'updates', 'latest.yml'),
-        contentType: 'text/yaml',
-      },
-    ];
+    });
+  }
+  console.log(`Uploaded ${assets.length} assets for Pulse ${version}: ${release.html_url}`);
+  return release;
+}
 
-    // Get existing assets and delete them to allow re-upload
-    console.log('\nChecking for existing assets...');
-    try {
-      const existingAssets = await octokit.rest.repos.listReleaseAssets({
-        owner,
-        repo,
-        release_id: release.id,
-      });
-
-      for (const existingAsset of existingAssets.data) {
-        console.log(`   Deleting existing asset: ${existingAsset.name}...`);
-        try {
-          await octokit.rest.repos.deleteReleaseAsset({
-            owner,
-            repo,
-            asset_id: existingAsset.id,
-          });
-          console.log(`   ✓ Deleted: ${existingAsset.name}`);
-        } catch (deleteError) {
-          console.log(`   Warning: Could not delete ${existingAsset.name}:`, deleteError.message);
-        }
-      }
-    } catch (error) {
-      console.log('   Note: Could not list existing assets:', error.message);
-    }
-
-    console.log('\nUploading assets...');
-
-    for (const asset of assetsToUpload) {
-      if (!fs.existsSync(asset.path)) {
-        console.log(`Warning: File not found: ${asset.name}`);
-        continue;
-      }
-
-      const fileBuffer = fs.readFileSync(asset.path);
-      const fileSize = fileBuffer.length;
-
-      console.log(`   Uploading ${asset.name} (${Math.round(fileSize / 1024 / 1024)} MB)...`);
-
-      try {
-        await octokit.rest.repos.uploadReleaseAsset({
-          owner,
-          repo,
-          release_id: release.id,
-          name: asset.name,
-          data: fileBuffer,
-          headers: {
-            'content-type': asset.contentType,
-            'content-length': fileSize,
-          },
-        });
-        console.log(`   ✓ Success: ${asset.name} uploaded successfully`);
-      } catch (error) {
-        console.log(`   ✗ Error: Failed to upload ${asset.name}:`, error.message);
-      }
-    }
-
-    console.log(`\nGitHub Release v${version} is ready!`);
-    console.log(`   URL: ${release.html_url}`);
-    console.log(`\nNext steps:`);
-    console.log(`1. Auto-update will now work correctly`);
-    console.log(`2. Users can download from: ${release.html_url}`);
-    console.log(`3. Cloudflare Pages serves latest.yml with GitHub URLs`);
+if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
+  try {
+    if (!process.env.GITHUB_TOKEN)
+      throw new Error('GITHUB_TOKEN is required for release publishing.');
+    const targetCommit =
+      process.env.RELEASE_COMMIT ||
+      execFileSync('git', ['rev-parse', 'HEAD'], {
+        cwd: projectRoot,
+        encoding: 'utf8',
+      }).trim();
+    await publishRelease({ targetCommit });
   } catch (error) {
-    console.error('Error creating GitHub release:', error.message);
-
-    if (error.status === 401) {
-      console.error('\nNote: Authentication failed. Please set GITHUB_TOKEN environment variable:');
-      console.error('   export GITHUB_TOKEN=your_github_token');
-      console.error('   Or create a Personal Access Token at: https://github.com/settings/tokens');
-    } else if (error.status === 403) {
-      console.error('\nNote: Permission denied. Please check your token permissions:');
-      console.error('   - repo (full control)');
-      console.error('   - write:packages');
-    }
-
-    process.exit(1);
+    console.error('Release publishing failed:', error.message);
+    process.exitCode = 1;
   }
 }
-
-// Check for GitHub token
-if (!process.env.GITHUB_TOKEN) {
-  console.error('Error: GITHUB_TOKEN environment variable is required');
-  console.error('\nNote: To create a GitHub token:');
-  console.error('1. Go to: https://github.com/settings/tokens');
-  console.error("2. Click 'Generate new token (classic)'");
-  console.error("3. Select scopes: 'repo' (full control)");
-  console.error('4. Copy the token and set it:');
-  console.error('   export GITHUB_TOKEN=your_token_here');
-  process.exit(1);
-}
-
-createRelease();

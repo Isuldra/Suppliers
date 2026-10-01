@@ -139,6 +139,10 @@ async function syncVersionWithGitTag() {
     const repoRoot = await getRepoRoot();
     const packageJsonPath = path.join(repoRoot, 'package.json');
 
+    await checkGitIdentity();
+    await checkNotDetachedHead();
+    await checkWorkingDirectoryClean();
+
     // Get the latest tag
     const { stdout: latestTag } = await execGit(
       ['describe', '--tags', '--abbrev=0'],
@@ -188,22 +192,12 @@ async function syncVersionWithGitTag() {
       log(`[DRY-RUN] Would update package.json version to ${version}`, 'warning');
     }
 
-    // Commit the version change
-    try {
-      await execGit(['add', 'package.json'], 'stage package.json');
-      await execGit(
-        ['commit', '-m', `chore: sync package.json version to ${version}`],
-        'commit version sync'
-      );
-      log('Committed version sync to git', 'success');
-    } catch (error) {
-      if (error.message.includes('nothing to commit')) {
-        verbose('No changes to commit');
-      } else {
-        log('Could not commit version sync (this is normal if no changes were made)', 'warning');
-      }
-    }
-
+    await execGit(['add', 'package.json'], 'stage package.json');
+    await execGit(
+      ['commit', '-m', `chore: sync package.json version to ${version}`],
+      'commit version sync'
+    );
+    log(isDryRun ? '[DRY-RUN] Would commit version sync' : 'Committed version sync', 'success');
     return true;
   } catch (error) {
     if (error.message.includes('No names found')) {
@@ -258,11 +252,13 @@ async function createNewVersion(versionType = 'patch') {
 
     if (isDryRun) {
       log(`[DRY-RUN] Would bump version from ${currentVersion} (type: ${versionType})`, 'warning');
-      return null;
+      return true;
     }
 
     // Update version using npm version
-    const { stdout } = await execa('npm', ['version', versionType, '--no-git-tag-version']);
+    const { stdout } = await execa('npm', ['version', versionType, '--no-git-tag-version'], {
+      cwd: repoRoot,
+    });
 
     // Parse npm output (handles "v1.2.3" or "1.2.3" with newlines)
     const cleanVersion = stdout.trim().replace(/^v/, '');
@@ -341,7 +337,7 @@ async function showVersionInfo() {
 
     log(`Tag prefix: ${TAG_PREFIX}`, 'info');
   } catch (error) {
-    log(`Error reading version info: ${error.message}`, 'error');
+    throw new Error(`Error reading version info: ${error.message}`);
   }
 }
 
@@ -351,12 +347,12 @@ async function showVersionInfo() {
 async function main() {
   switch (command) {
     case 'sync':
-      await syncVersionWithGitTag();
+      if (!(await syncVersionWithGitTag())) process.exitCode = 1;
       break;
 
     case 'bump': {
       const versionType = commandArgs[1] || 'patch';
-      await createNewVersion(versionType);
+      if (!(await createNewVersion(versionType))) process.exitCode = 1;
       break;
     }
 
@@ -364,8 +360,8 @@ async function main() {
       await showVersionInfo();
       break;
 
+    case undefined:
     case 'help':
-    default:
       console.log(`
 Version Sync Script
 
@@ -404,6 +400,8 @@ Version Types:
   prerelease - Increment pre-release (1.0.0-0 -> 1.0.0-1)
       `);
       break;
+    default:
+      throw new Error(`Unknown command: ${command}`);
   }
 }
 

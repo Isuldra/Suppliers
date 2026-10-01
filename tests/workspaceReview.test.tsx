@@ -8,6 +8,7 @@ let root: Root;
 let container: HTMLDivElement;
 const transport = vi.fn();
 const onSent = vi.fn();
+const onBusy = vi.fn();
 const items: Reminder[] = ['First', 'Second'].map((supplier) => ({
   supplier,
   recipient: `${supplier}@example.com`,
@@ -16,6 +17,8 @@ const items: Reminder[] = ['First', 'Second'].map((supplier) => ({
 }));
 beforeEach(() => {
   vi.clearAllMocks();
+  onSent.mockReset().mockReturnValue(true);
+  transport.mockReset();
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
   vi.stubGlobal('electron', {
     getSupplierCountry: async () => ({ success: true, data: 'NO' }),
@@ -38,7 +41,7 @@ async function render(initial = items) {
         quickConfirm={false}
         onBack={vi.fn()}
         onSent={onSent}
-        onBusy={vi.fn()}
+        onBusy={onBusy}
       />
     )
   );
@@ -50,6 +53,66 @@ function sendButton() {
 }
 
 describe('Review before Outlook sending', () => {
+  it.each(['first@example.com; second@example.com', 'first@example.com, second@example.com'])(
+    'sends a recipient list in one transport attempt: %s',
+    async (recipient) => {
+      transport.mockResolvedValue({ success: true });
+      await render([{ ...items[0], recipient }]);
+      await act(async () => sendButton().click());
+      expect(transport).toHaveBeenCalledOnce();
+      expect(transport.mock.calls[0][0].to).toBe('first@example.com;second@example.com');
+      expect(onSent).toHaveBeenCalledOnce();
+    }
+  );
+  it.each(['false', 'throw', 'reject'])(
+    'stops on a history save failure (%s) and retries saving without resending',
+    async (failure) => {
+      transport.mockResolvedValue({ success: true });
+      onSent.mockImplementationOnce(() => {
+        if (failure === 'throw') throw new Error('Storage unavailable');
+        if (failure === 'reject') return Promise.reject(new Error('Storage unavailable'));
+        return false;
+      });
+      await render();
+      await act(async () => sendButton().click());
+      expect(transport).toHaveBeenCalledOnce();
+      expect(sendButton()).toBeDisabled();
+      expect(container).toHaveTextContent('historikken kunne ikke lagres');
+      expect(container.querySelector('[aria-label="Mottaker"]')).toBeDisabled();
+      expect(onBusy).toHaveBeenLastCalledWith(true);
+      const retry = [...container.querySelectorAll('button')].find((button) =>
+        button.textContent?.includes('Prøv å lagre historikken igjen')
+      )!;
+      onSent.mockReturnValueOnce(false);
+      await act(async () => retry.click());
+      expect(sendButton()).toBeDisabled();
+      expect(transport).toHaveBeenCalledOnce();
+      await act(async () => retry.click());
+      expect(onSent).toHaveBeenLastCalledWith(items[0]);
+      expect(transport).toHaveBeenCalledOnce();
+      expect(onBusy).toHaveBeenLastCalledWith(false);
+      expect(sendButton()).toBeEnabled();
+      await act(async () => sendButton().click());
+      expect(transport).toHaveBeenCalledTimes(2);
+      expect(transport.mock.calls[1][0].to).toBe('Second@example.com');
+      expect(container).toHaveTextContent('2 av 2 purringer sendt');
+    }
+  );
+  it('waits for history persistence before sending the next reminder', async () => {
+    let saved!: (success: boolean) => void;
+    transport.mockResolvedValue({ success: true });
+    onSent.mockImplementationOnce(
+      () =>
+        new Promise<boolean>((resolve) => {
+          saved = resolve;
+        })
+    );
+    await render();
+    await act(async () => sendButton().click());
+    expect(transport).toHaveBeenCalledOnce();
+    await act(async () => saved(true));
+    expect(transport).toHaveBeenCalledTimes(2);
+  });
   it('never sends without an explicit click and disables sending for missing recipients', async () => {
     await render([{ ...items[0], recipient: '' }]);
     expect(transport).not.toHaveBeenCalled();

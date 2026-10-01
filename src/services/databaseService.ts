@@ -155,12 +155,12 @@ export class DatabaseService {
           confirmed INTEGER DEFAULT 0,
           createdAt TEXT DEFAULT CURRENT_TIMESTAMP,
           updatedAt TEXT DEFAULT CURRENT_TIMESTAMP,
-          email_sent_at TEXT -- Added email sent tracking
+          email_sent_at TEXT
         );
 
         CREATE INDEX IF NOT EXISTS idx_supplier ON orders(supplier);
         CREATE INDEX IF NOT EXISTS idx_dueDate ON orders(dueDate);
-        CREATE UNIQUE INDEX IF NOT EXISTS idx_supplier_ordernum ON orders(supplier, orderNumber); -- Added uniqueness constraint
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_supplier_ordernum ON orders(supplier, orderNumber);
 
         -- Add audit log table
         CREATE TABLE IF NOT EXISTS audit_log (

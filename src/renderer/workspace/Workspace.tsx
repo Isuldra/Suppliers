@@ -365,15 +365,19 @@ export default function Workspace() {
             onSent={(reminder) =>
               persist((prev) => ({
                 ...prev,
-                history: [
-                  {
-                    supplier: reminder.supplier,
-                    at: new Date().toISOString(),
-                    status: 'sent',
-                    count: reminder.lines.length,
-                  },
-                  ...prev.history,
-                ],
+                // A save-only retry must keep the original send time and entry.
+                history:
+                  currentStatus(reminder.supplier, prev.history) === 'sent'
+                    ? prev.history
+                    : [
+                        {
+                          supplier: reminder.supplier,
+                          at: new Date().toISOString(),
+                          status: 'sent',
+                          count: reminder.lines.length,
+                        },
+                        ...prev.history,
+                      ],
               }))
             }
           />

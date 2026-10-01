@@ -3,169 +3,125 @@ name: Release Workflow
 on:
   push:
     tags:
-      - "v*"
+      - 'v*'
   workflow_dispatch:
     inputs:
       version:
-        description: "Version to release (e.g., 1.3.5)"
+        description: 'Stable version to release, without v (e.g. 1.5.3)'
         required: true
         type: string
 
 env:
-  BUN_VERSION: "1.3.14"
+  BUN_VERSION: '1.3.14'
+
+concurrency:
+  group: release
+  cancel-in-progress: false
 
 jobs:
   release:
     runs-on: windows-latest
     permissions:
       contents: write
-
+      pull-requests: write
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
           fetch-depth: 0
 
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
+      - uses: oven-sh/setup-bun@v2
         with:
           bun-version: ${{ env.BUN_VERSION }}
 
-      - name: Setup Node.js (for npm version command)
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
-          node-version: "22"
+          node-version: '22'
 
-      - name: Install dependencies
-        shell: pwsh
-        run: bun install --frozen-lockfile
-
-      - name: Set version from tag or input
+      - name: Validate version
         id: version
         shell: pwsh
+        env:
+          REQUESTED_VERSION: ${{ inputs.version }}
         run: |
-          if ("${{ github.event_name }}" -eq "push") {
-            $VERSION = "${{ github.ref }}".Replace("refs/tags/v", "")
-          } else {
-            $VERSION = "${{ github.event.inputs.version }}"
+          $version = if ($env:GITHUB_EVENT_NAME -eq 'push') { $env:GITHUB_REF_NAME -replace '^v', '' } else { $env:REQUESTED_VERSION }
+          if ($version -notmatch '^\d+\.\d+\.\d+$') {
+            throw "Use a stable X.Y.Z version without a leading v."
           }
-          echo "version=$VERSION" >> $env:GITHUB_OUTPUT
-          Write-Host "Setting version to: $VERSION"
+          "version=$version" >> $env:GITHUB_OUTPUT
 
-      - name: Update package.json version
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Set package version
         shell: pwsh
+        env:
+          RELEASE_VERSION: ${{ steps.version.outputs.version }}
         run: |
-          $currentVersion = (Get-Content package.json | ConvertFrom-Json).version
-          $targetVersion = "${{ steps.version.outputs.version }}"
+          npm version $env:RELEASE_VERSION --no-git-tag-version --allow-same-version
 
-          if ($currentVersion -ne $targetVersion) {
-            npm version $targetVersion --no-git-tag-version
-            Write-Host "Updated package.json from $currentVersion to $targetVersion"
-          } else {
-            Write-Host "Package.json already at version $targetVersion, skipping update"
-          }
-
-      - name: Build renderer
-        shell: pwsh
-        run: bun run build
-
-      - name: Verify dist directory exists
-        shell: pwsh
+      - name: Build and check
         run: |
-          if (Test-Path "dist") {
-            Write-Host "✅ dist/ directory exists"
-            Get-ChildItem dist -Recurse | Select-Object -First 20
-          } else {
-            Write-Host "❌ dist/ directory does NOT exist after build!"
-            Write-Host "Current directory contents:"
-            Get-ChildItem
-            exit 1
-          }
+          bun run quality
+          bun run build
+          node scripts/ensure-electron-modules.js
+          bun run test-sqlite
 
-      - name: Package application
-        shell: pwsh
+      - name: Package Windows
         run: bun run dist:clean -- --skip-vite-build
 
-      - name: Prepare Cloudflare metadata
-        shell: pwsh
+      - name: Prepare update metadata
         run: bun run release:prepare
 
-      - name: Create GitHub Release
-        shell: pwsh
+      - name: Publish GitHub assets
         run: bun run release:github
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_COMMIT: ${{ github.sha }}
 
-      - name: Create Cloudflare metadata branch
-        id: cloudflare_metadata
-        shell: pwsh
-        continue-on-error: true
-        run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
-
-          # Checkout main branch (we're in detached HEAD from the tag)
-          git fetch origin develop
-          git checkout develop
-          git pull origin develop
-
-          $version="${{ steps.version.outputs.version }}"
-          $baseBranch="develop"
-          $branchName="release/cloudflare-v$version"
-
-          # Ensure branch name is unique (append timestamp if branch already exists)
-          if (git ls-remote --exit-code origin $branchName) {
-            $timestamp = Get-Date -Format "yyyyMMddHHmmss"
-            $branchName = "$branchName-$timestamp"
-            Write-Host "Branch already exists. Using $branchName instead."
-          }
-
-          git checkout -b $branchName origin/$baseBranch
-
-          # Add the metadata files
-          git add docs/updates/latest.yml
-          git add docs/updates/latest.json
-          git add docs/updates/index.html
-          git add docs/updates/_redirects
-
-          # Check if there are any changes to commit
-          if (git diff-index --quiet HEAD) {
-            Write-Host "No changes in Cloudflare metadata to commit."
-          } else {
-            git commit -m "chore(release): Update Cloudflare metadata for v${{ steps.version.outputs.version }}"
-            git push origin $branchName
-            Write-Host "Successfully pushed Cloudflare metadata updates to $branchName"
-            Write-Host "Open a PR: https://github.com/Isuldra/Suppliers/compare/$branchName?expand=1"
-            Add-Content -Path $env:GITHUB_OUTPUT -Value "branchName=$branchName"
-          }
-
-      - name: Open PR for Cloudflare metadata
-        if: steps.cloudflare_metadata.outputs.branchName
+      - name: Open metadata PR to production branch
         shell: pwsh
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_VERSION: ${{ steps.version.outputs.version }}
         run: |
-          $branch = "${{ steps.cloudflare_metadata.outputs.branchName }}"
-          $title = "chore(release): Cloudflare metadata for v${{ steps.version.outputs.version }}"
-          $bodyLine1 = "Automatisk oppdatering av Cloudflare-filer for v${{ steps.version.outputs.version }}."
-          $bodyLine2 = "- docs/updates/latest.yml / latest.json"
-          $bodyLine3 = "- docs/updates/index.html"
-          $bodyLine4 = "Denne PR-en ble åpnet av release-workflowen."
-          $body = "$bodyLine1`n$bodyLine2`n$bodyLine3`n$bodyLine4"
-          try {
-            gh pr create --base develop --head $branch --title "$title" --body "$body"
-            Write-Host "Pull request created for $branch"
-          } catch {
-            $errorMsg = $_.Exception.Message
-            Write-Host "Could not create PR automatically: $errorMsg"
-            $compareUrl = "https://github.com/Isuldra/Suppliers/compare/$branch"
-            Write-Host "Manually open: $compareUrl"
+          $ErrorActionPreference = 'Stop'
+          $files = @('latest.yml', 'latest.json', 'index.html', '_redirects')
+          $staging = Join-Path $env:RUNNER_TEMP "pulse-metadata-$env:GITHUB_RUN_ID"
+          New-Item -ItemType Directory -Path $staging -Force | Out-Null
+          foreach ($file in $files) {
+            Copy-Item -LiteralPath "docs/updates/$file" -Destination (Join-Path $staging $file)
           }
 
-      - name: Verify Cloudflare deployment
-        shell: pwsh
-        run: |
-          Write-Host "Cloudflare Pages will automatically deploy the updated metadata files"
-          Write-Host "Check deployment status at: https://suppliers-anx.pages.dev/"
-          Write-Host "Auto-update URL: https://suppliers-anx.pages.dev/latest.yml"
+          git restore -- package.json docs/updates
+          if ($LASTEXITCODE -ne 0) { throw 'Could not restore generated files before branch switch.' }
+          git fetch origin main
+          if ($LASTEXITCODE -ne 0) { throw 'Could not fetch production branch.' }
+          $branch = "release/cloudflare-v$env:RELEASE_VERSION-$env:GITHUB_RUN_ID"
+          git switch -c $branch origin/main
+          if ($LASTEXITCODE -ne 0) { throw 'Could not create metadata branch.' }
+
+          foreach ($file in $files) {
+            Copy-Item -LiteralPath (Join-Path $staging $file) -Destination "docs/updates/$file"
+          }
+          git add -- docs/updates/latest.yml docs/updates/latest.json docs/updates/index.html docs/updates/_redirects
+          git diff --cached --quiet
+          if ($LASTEXITCODE -eq 0) {
+            'Update metadata already matches main.' >> $env:GITHUB_STEP_SUMMARY
+            exit 0
+          }
+          git config user.name 'GitHub Actions'
+          git config user.email 'actions@github.com'
+          git commit -m "chore(release): update metadata for v$env:RELEASE_VERSION"
+          if ($LASTEXITCODE -ne 0) { throw 'Could not commit metadata.' }
+          git push origin $branch
+          if ($LASTEXITCODE -ne 0) { throw 'Could not push metadata branch.' }
+
+          $body = Join-Path $staging 'pr-body.txt'
+          @(
+            "Update the download page and updater metadata for Pulse v$env:RELEASE_VERSION."
+            ""
+            "GitHub assets have been uploaded. Merging this PR publishes metadata through the Pages configuration on main."
+          ) | Set-Content -LiteralPath $body -Encoding utf8
+          gh pr create --base main --head $branch --title "chore(release): Pulse v$env:RELEASE_VERSION metadata" --body-file $body
+          if ($LASTEXITCODE -ne 0) { throw 'Assets are uploaded, but the metadata PR must be opened manually.' }
+          'GitHub assets uploaded. Merge the metadata PR and verify the Cloudflare deployment.' >> $env:GITHUB_STEP_SUMMARY

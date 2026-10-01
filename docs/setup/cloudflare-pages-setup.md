@@ -1,40 +1,37 @@
-# Cloudflare Pages: static update hosting
+# Cloudflare Pages
 
-The existing `suppliers-anx.pages.dev` project serves update metadata for installed
-Pulse clients. Electron installers are built on Windows; Cloudflare only needs
-to publish the committed static files in `docs/updates`.
+Cloudflare Pages serverer nedlastingssiden og oppdateringsmetadata fra `docs/updates/`. Programfilene ligger i GitHub Releases.
 
-## Account settings to apply
+Appens oppdateringsfeed er `https://suppliers-anx.pages.dev/`. Publiserte klienter trenger at dette endepunktet fortsatt gir gyldig metadata.
 
-In **Workers & Pages > suppliers-anx > Settings > Builds & deployments**, use:
+## Git-integrert oppsett
 
-| Setting                          | Value                       |
-| -------------------------------- | --------------------------- |
-| Production branch                | `main`                      |
-| Automatic production deployments | Enabled                     |
-| Preview branch deployments       | **None**                    |
-| Framework preset                 | None                        |
-| Root directory                   | Repository root             |
-| Build command                    | `exit 0`                    |
-| Build output directory           | `docs/updates`              |
-| Environment variable             | `SKIP_DEPENDENCY_INSTALL=1` |
+Bruk følgende oppsett når Pages-prosjektet kobles til repoet:
 
-Save both production and preview controls. This disables branch/PR preview builds
-and publishes static files without installing npm/Bun dependencies or building
-Electron. These account settings must be changed in the Cloudflare dashboard;
-committing this document does not apply them.
+| Felt                         | Verdi                       |
+| ---------------------------- | --------------------------- |
+| Produksjonsbranch            | `main`                      |
+| Automatisk produksjonsdeploy | Aktivert                    |
+| Preview-branches             | Ingen                       |
+| Framework                    | Ingen                       |
+| Rotmappe                     | Repoets rot                 |
+| Byggekommando                | `exit 0`                    |
+| Output-mappe                 | `docs/updates`              |
+| Miljøvariabel                | `SKIP_DEPENDENCY_INSTALL=1` |
 
-The existing `npm run deploy:cloudflare` helper generates a placeholder download
-page; it does not actually deploy. Replace that command in Cloudflare with
-`exit 0` before retiring the helper. Metadata must be generated from the release's
-Windows build using `bun run release:prepare`, not during a Cloudflare build.
+Kontroller faktisk konfigurasjon i Pages-prosjektets innstillinger. Pages serverer filene direkte, uten Electron-bygg eller appavhengigheter.
 
-Keep the existing update URL available to installed clients. Verify
-`https://suppliers-anx.pages.dev/latest.yml` after a metadata deployment. Publish
-matching GitHub Release assets before merging new metadata into `main`.
+## Innhold
 
-## Official references
+`index.html` er nedlastingssiden. `latest.yml` er feeden for appens versjonssjekk. `latest.json` inneholder generert nedlastingsmetadata. `_headers`, `_redirects`, `404.html` og logoen følger med som statisk innhold.
 
-- [Branch deployment controls](https://developers.cloudflare.com/pages/configuration/branch-build-controls/)
-- [Static HTML](https://developers.cloudflare.com/pages/framework-guides/deploy-anything/)
-- [Skip dependency installation](https://developers.cloudflare.com/pages/configuration/build-image/#skip-dependency-install)
+`bun run release:prepare` genererer versjonsmetadata fra det lokale Windows-bygget. `bun run deploy:cloudflare` kontrollerer lokale filer; den utfører ingen deploy.
+
+## Publiseringsrekkefølge
+
+1. Bygg og kontroller programfilene.
+2. Last dem opp til riktig GitHub-release.
+3. Få generert metadata inn i Pages sin produksjonsbranch.
+4. Kontroller Pages-deployen, feeden og nedlastingslenkene.
+
+Release-workflowen lager en metadata-PR mot `main`. Merge den først når GitHub-filene er kontrollert, og verifiser deretter Pages-deployen. Se [publiseringsguiden](../development/publishing-updates.md).

@@ -1,6 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { EmailData, EmailService } from '../services/emailService';
+import { LANGUAGES, validRecipients, type Language } from '../workspace/model';
+import { reminderSubject } from '../workspace/reminder';
+
+interface EmailData {
+  supplier: string;
+  recipientEmail?: string;
+  language?: Language;
+}
 
 interface EmailPreviewModalProps {
   emailData: EmailData;
@@ -19,44 +26,92 @@ const EmailPreviewModal: React.FC<EmailPreviewModalProps> = ({
   onChangeLanguage,
   onChangeRecipient,
 }) => {
-  const emailService = new EmailService();
   const [recipientEmail, setRecipientEmail] = useState<string | null>(null);
   const [isLoadingEmail, setIsLoadingEmail] = useState(true);
   const [isEditingEmail, setIsEditingEmail] = useState(false);
   const [editableEmail, setEditableEmail] = useState('');
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const closeRef = useRef<HTMLButtonElement>(null);
 
-  // Load supplier email when component mounts or supplier changes
   useEffect(() => {
+    const dialog = dialogRef.current!;
+    const previousFocus = document.activeElement;
+    const focusDialog = () => (closeRef.current || dialog).focus();
+    const containFocus = (event: FocusEvent) => {
+      if (!dialog.contains(event.target as Node)) focusDialog();
+    };
+    const trapTab = (event: KeyboardEvent) => {
+      if (event.key !== 'Tab') return;
+      const controls = [
+        ...dialog.querySelectorAll<HTMLElement>(
+          'button, input, select, textarea, a[href], [tabindex], [contenteditable="true"]'
+        ),
+      ].filter((element) => {
+        const style = getComputedStyle(element);
+        return (
+          element.tabIndex >= 0 &&
+          !element.matches(':disabled') &&
+          !element.closest('[hidden], [inert]') &&
+          style.display !== 'none' &&
+          style.visibility !== 'hidden'
+        );
+      });
+      const first = controls[0];
+      const last = controls[controls.length - 1];
+      if (!first) {
+        event.preventDefault();
+        dialog.focus();
+      } else if (!dialog.contains(document.activeElement) || document.activeElement === dialog) {
+        event.preventDefault();
+        (event.shiftKey ? last : first).focus();
+      } else if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    focusDialog();
+    document.addEventListener('focusin', containFocus);
+    document.addEventListener('keydown', trapTab);
+    return () => {
+      document.removeEventListener('focusin', containFocus);
+      document.removeEventListener('keydown', trapTab);
+      if (previousFocus instanceof HTMLElement && previousFocus.isConnected) previousFocus.focus();
+    };
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    setIsEditingEmail(false);
     const loadSupplierEmail = async () => {
       setIsLoadingEmail(true);
       try {
-        // Use manually overridden email if provided
         if (emailData.recipientEmail) {
           setRecipientEmail(emailData.recipientEmail);
           setEditableEmail(emailData.recipientEmail);
         } else {
-          // Try to get email from the new structured data first
-          const supplierInfo = emailService.getSupplierInfo(emailData.supplier);
-          if (supplierInfo) {
-            setRecipientEmail(supplierInfo.epost);
-            setEditableEmail(supplierInfo.epost);
-          } else {
-            // Fallback to database lookup
-            const email = await emailService.getSupplierEmail(emailData.supplier);
-            setRecipientEmail(email);
-            setEditableEmail(email || '');
-          }
+          const result = await window.electron.getSupplierEmail(emailData.supplier);
+          if (!active) return;
+          if (!result.success) throw new Error(result.error || 'Could not load supplier email');
+          setRecipientEmail(result.data || null);
+          setEditableEmail(result.data || '');
         }
       } catch (error) {
+        if (!active) return;
         console.error('Error loading supplier email:', error);
         setRecipientEmail(null);
         setEditableEmail('');
       } finally {
-        setIsLoadingEmail(false);
+        if (active) setIsLoadingEmail(false);
       }
     };
 
     loadSupplierEmail();
+    return () => {
+      active = false;
+    };
   }, [emailData.supplier, emailData.recipientEmail]);
 
   const handleEmailEdit = () => {
@@ -64,7 +119,7 @@ const EmailPreviewModal: React.FC<EmailPreviewModalProps> = ({
   };
 
   const handleEmailSave = () => {
-    if (editableEmail.trim() && editableEmail.includes('@')) {
+    if (validRecipients(editableEmail)) {
       const trimmedEmail = editableEmail.trim();
       setRecipientEmail(trimmedEmail);
       onChangeRecipient(trimmedEmail);
@@ -77,26 +132,13 @@ const EmailPreviewModal: React.FC<EmailPreviewModalProps> = ({
     setIsEditingEmail(false);
   };
 
-  // Get subject based on language
-  const getSubjectByLanguage = (lang: string): string => {
-    const subjects: Record<string, string> = {
-      no: `Purring på manglende leveranser - ${emailData.supplier}`,
-      en: `Reminder for Outstanding Orders - ${emailData.supplier}`,
-      da: `Påmindelse om udestående leveringer - ${emailData.supplier}`,
-      se: `Påminnelse om utestående leveranser - ${emailData.supplier}`,
-      fi: `Muistutus avoimista toimituksista - ${emailData.supplier}`,
-    };
-    return subjects[lang] || subjects.no;
-  };
-
-  // Language button configuration
-  const languageButtons: { code: 'no' | 'en' | 'se' | 'da' | 'fi'; label: string }[] = [
-    { code: 'no', label: 'Norsk' },
-    { code: 'da', label: 'Dansk' },
-    { code: 'se', label: 'Svenska' },
-    { code: 'fi', label: 'Suomi' },
-    { code: 'en', label: 'English' },
-  ];
+  const subject = reminderSubject({
+    supplier: emailData.supplier,
+    recipient: recipientEmail || '',
+    language: emailData.language || 'no',
+    lines: [],
+  });
+  const languageButtons = Object.entries(LANGUAGES) as [Language, string][];
 
   const modalContent = (
     <div
@@ -113,11 +155,20 @@ const EmailPreviewModal: React.FC<EmailPreviewModalProps> = ({
       onClick={onCancel}
     >
       <div
+        ref={dialogRef}
+        tabIndex={-1}
         role="dialog"
         aria-modal="true"
         aria-labelledby="email-preview-title"
         className="bg-white/60 backdrop-blur-2xl rounded-3xl border border-white/50 shadow-2xl w-full max-w-7xl max-h-[90vh] min-w-0 overflow-y-auto flex flex-col"
         onClick={(e) => e.stopPropagation()}
+        onKeyDown={(event) => {
+          if (event.key === 'Escape') {
+            event.preventDefault();
+            event.stopPropagation();
+            onCancel();
+          }
+        }}
       >
         <div className="p-4 sm:p-6 border-b flex flex-wrap justify-between items-start gap-3 flex-shrink-0">
           <h2
@@ -128,21 +179,22 @@ const EmailPreviewModal: React.FC<EmailPreviewModalProps> = ({
           </h2>
           <div className="flex min-w-0 max-w-full items-start gap-3">
             <div className="flex min-w-0 flex-wrap gap-1">
-              {languageButtons.map((lang) => (
+              {languageButtons.map(([code, label]) => (
                 <button
-                  key={lang.code}
+                  key={code}
                   className={`px-3 py-1 rounded-sm transition-default text-sm ${
-                    emailData.language === lang.code
+                    emailData.language === code
                       ? 'bg-primary text-neutral-white'
                       : 'bg-neutral-light text-neutral hover:bg-neutral-200'
                   }`}
-                  onClick={() => onChangeLanguage(lang.code)}
+                  onClick={() => onChangeLanguage(code)}
                 >
-                  {lang.label}
+                  {label}
                 </button>
               ))}
             </div>
             <button
+              ref={closeRef}
               onClick={onCancel}
               className="text-neutral-secondary hover:text-neutral transition-colors p-2 shrink-0 hover:bg-neutral-light rounded-full"
               aria-label="Lukk vindu"
@@ -188,7 +240,7 @@ const EmailPreviewModal: React.FC<EmailPreviewModalProps> = ({
                   className="px-3 py-2 text-sm bg-primary text-white rounded hover:bg-primary-dark transition-colors"
                   title="Rediger e-postadresse"
                 >
-                  ✏️ Rediger
+                  Rediger
                 </button>
               </div>
             )}
@@ -196,7 +248,7 @@ const EmailPreviewModal: React.FC<EmailPreviewModalProps> = ({
             {!isLoadingEmail && isEditingEmail && (
               <div className="flex flex-wrap items-center gap-2">
                 <input
-                  type="email"
+                  type="text"
                   value={editableEmail}
                   onChange={(e) => setEditableEmail(e.target.value)}
                   className="w-full min-w-0 sm:flex-1 px-3 py-2 border border-neutral-light rounded focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
@@ -205,7 +257,7 @@ const EmailPreviewModal: React.FC<EmailPreviewModalProps> = ({
                 />
                 <button
                   onClick={handleEmailSave}
-                  disabled={!editableEmail.trim() || !editableEmail.includes('@')}
+                  disabled={!validRecipients(editableEmail)}
                   className="px-3 py-2 text-sm bg-green-600 text-white rounded hover:bg-green-700 disabled:bg-neutral-secondary disabled:cursor-not-allowed transition-colors"
                 >
                   ✓ Lagre
@@ -221,13 +273,12 @@ const EmailPreviewModal: React.FC<EmailPreviewModalProps> = ({
 
             {!isLoadingEmail && !recipientEmail && !isEditingEmail && (
               <div className="text-accent text-sm">
-                ⚠️ Ingen e-postadresse funnet. Klikk &quot;Rediger&quot; for å legge til manuelt.
+                Ingen e-postadresse funnet. Klikk &quot;Rediger&quot; for å legge til manuelt.
               </div>
             )}
           </div>
           <div>
-            <span className="font-medium">Emne:</span>{' '}
-            {getSubjectByLanguage(emailData.language || 'no')}
+            <span className="font-medium">Emne:</span> {subject}
           </div>
         </div>
 
@@ -247,12 +298,12 @@ const EmailPreviewModal: React.FC<EmailPreviewModalProps> = ({
           </button>
           <button
             className={`btn px-4 py-2 font-medium ease-in-out ${
-              !isLoadingEmail && recipientEmail
+              !isLoadingEmail && validRecipients(recipientEmail || '')
                 ? 'bg-primary text-neutral-white hover:bg-primary-dark'
                 : 'bg-neutral-secondary text-neutral-light cursor-not-allowed'
             }`}
             onClick={onSend}
-            disabled={isLoadingEmail || !recipientEmail}
+            disabled={isLoadingEmail || !validRecipients(recipientEmail || '')}
           >
             {isLoadingEmail ? 'Laster...' : 'Send e-post'}
           </button>

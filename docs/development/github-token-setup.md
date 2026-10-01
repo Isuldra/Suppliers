@@ -1,103 +1,29 @@
-# GitHub Token Setup for Auto-Release
+# GitHub-tilgang for publisering
 
-## Hvorfor trenger vi en GitHub Token?
+Appen trenger ingen GitHub-token for normal bruk eller e-postsending. Token brukes bare av vedlikeholderen når en release publiseres lokalt.
 
-For å automatisere GitHub Release-opprettelsen trenger vi en Personal Access Token som gir scriptet tilgang til å:
+## Lokal release
 
-- Opprette releases
-- Laste opp filer (assets)
-- Håndtere repository-metadata
+`scripts/create-github-release.js` leser `GITHUB_TOKEN` fra prosessmiljøet og skriver til `Isuldra/Suppliers`.
 
-## Slik setter du opp GitHub Token:
+Bruk en token med tilgang til det aktuelle repoet og tillatelse til å skrive releaseinnhold. Legg den inn gjennom et egnet hemmelighetslager eller i den aktuelle terminalsesjonen. Ikke skriv tokenverdien i dokumentasjon, scripts, committer eller feillogger.
 
-### 1. Gå til GitHub Settings
-
-- Gå til: https://github.com/settings/tokens
-- Eller: GitHub → Settings → Developer settings → Personal access tokens → Tokens (classic)
-
-### 2. Opprett ny token
-
-- Klikk "Generate new token (classic)"
-- Gi den et beskrivende navn: `Pulse Auto-Release`
-- Velg utløpsdato (anbefalt: 1 år)
-
-### 3. Velg riktige permissions
-
-Sjekk av disse boksene:
-
-- ✅ **repo** (Full control of private repositories)
-  - ✅ repo:status
-  - ✅ repo_deployment
-  - ✅ public_repo
-  - ✅ repo:invite
-  - ✅ security_events
-
-### 4. Generer og kopier token
-
-- Klikk "Generate token"
-- **VIKTIG:** Kopier tokenet med en gang (du ser det bare én gang!)
-- Det ser ut som: `ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`
-
-### 5. Sett token som miljøvariabel
-
-**På Mac/Linux:**
-
-```bash
-export GITHUB_TOKEN=ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-```
-
-**For å gjøre det permanent:**
-
-```bash
-echo 'export GITHUB_TOKEN=ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx' >> ~/.zshrc
-source ~/.zshrc
-```
-
-**På Windows (PowerShell):**
+Kontroller at variabelen finnes uten å skrive ut verdien:
 
 ```powershell
-$env:GITHUB_TOKEN="ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+Test-Path Env:GITHUB_TOKEN
 ```
 
-### 6. Test at det fungerer
+Deretter kan en kontrollert release publiseres med `bun run release:github`. Kommandoen kan slette eksisterende assets ved ny kjøring; se [publiseringsguiden](publishing-updates.md) først.
 
-```bash
-npm run release:github
-```
+## GitHub Actions
 
-## Sikkerhet
+Release-workflowen bruker GitHubs innebygde `GITHUB_TOKEN` med `contents: write`. Den krever ikke en lokalt lagret personlig token for dette steget.
 
-- **Ikke commit token til Git!**
-- Token er allerede ekskludert i `.gitignore`
-- Hvis token lekker, gå tilbake til GitHub og "Revoke" den gamle
-- Opprett en ny token med samme permissions
+PR-oppretting kan være begrenset av repoets Actions-innstillinger og workflowens tillatelser. At GitHub-assets ble lastet opp, beviser ikke at metadata-PR-en ble opprettet.
 
-## Automatisk workflow
+En tag pushet med innebygd workflow-token utløser normalt ikke en ny tag-workflow. Se [GitHubs beskrivelse](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/trigger-a-workflow) og [CI-guiden](ci-cd-pipeline.md).
 
-Etter at token er satt opp, kan du kjøre:
+## Ved tilgangsfeil
 
-```bash
-# Fullstendig release (anbefalt)
-npm run release:full
-
-# Eller steg for steg:
-npm run release:prepare  # Generer latest.yml
-npm run release:github   # Opprett GitHub Release
-```
-
-## Feilsøking
-
-**"Authentication failed"**
-
-- Sjekk at `GITHUB_TOKEN` er satt: `echo $GITHUB_TOKEN`
-- Verifiser at token ikke har utløpt
-
-**"Permission denied"**
-
-- Sjekk at token har "repo" permission
-- Verifiser at du har write-tilgang til repository
-
-**"Release already exists"**
-
-- Scriptet håndterer dette automatisk
-- Det vil ikke opprette duplikater
+Kontroller repo, tokenutløp, nødvendige tillatelser og eventuell organisasjonsgodkjenning. Les feilen fra GitHub uten å dele hemmeligheten. Dokumentasjonen kan ikke avgjøre om din PC eller GitHub-konto allerede er konfigurert.

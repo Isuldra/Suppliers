@@ -1,134 +1,71 @@
-# Publishing Updates
+# Publisere en oppdatering
 
-This guide explains how to publish updates for Pulse using the automated CI/CD pipeline.
+En release består av Windows-programfiler i GitHub Releases og oppdateringsmetadata på Cloudflare Pages. Publiser programfilene før metadataene som peker til dem.
 
-## Overview
+## Før publisering
 
-Pulse uses [electron-updater](https://www.electron.build/auto-update) to handle automatic updates. The CI pipeline automatically builds the application artifacts and publishes them to GitHub Releases when a version tag is pushed.
+Bruk en stabil `X.Y.Z`-versjon og en konkret endringsbeskrivelse i [changeloggen](../CHANGELOG.md). Kontroller tester, bygg, signatur og at pakken starter og importerer en representativ fil. Test Outlook-sending med en kontrollert mottaker.
 
-### Key Features
+Se [versjonering](VERSIONING.md), [signering](CODE-SIGNING.md) og [utviklingsoppsett](setup.md).
 
-- **Automated Publishing**: No manual uploads needed - just push a version tag
-- **Portable Auto-Updates**: Portable versions now receive automatic update notifications
-- **Simplified Workflow**: Single `npm run dist` command handles all builds
-- **Latest.yml Generation**: Automatically generates update metadata for portable versions
+## GitHub Actions
 
-## Prerequisites
+Start `Release Workflow` i Actions med versjonen, eller push en `vX.Y.Z`-tag fra lokal Git. Workflowen:
 
-Before publishing an update, ensure you have:
+1. Installerer fra låsefilen og setter pakkeversjonen.
+2. Kjører kvalitetssjekk, bygger appen og kontrollerer SQLite under Electron.
+3. Pakker Windows-filene.
+4. Genererer metadata fra installasjonsprogrammet og portable-filen.
+5. Oppretter eller oppdaterer GitHub-releasen med endringsbeskrivelsen og filene.
+6. Lager en metadata-PR mot `main`.
 
-1. **GitHub Access**: Write access to the GitHub repository where releases are hosted.
-2. **Version Control**: All changes for the release are committed and pushed to the main branch.
-3. **Clean Working Directory**: No uncommitted changes locally.
-4. **Node.js 22**: The CI/CD pipeline uses Node.js 22 to avoid EBADENGINE warnings with modern dependencies.
+Alle stegene må lykkes. En feil ved PR-oppretting kan skje etter at GitHub-filene er publisert. Merge metadata-PR-en og kontroller Pages-deployen før oppdateringen regnes som tilgjengelig for klientene.
 
-## Automated Publishing Process
+## Lokal publisering
 
-The publishing process is now fully automated through GitHub Actions. Follow these steps:
+Fra repoets rot på Windows:
 
-### 1. Update Version Number
-
-Decide on the new version number following [semantic versioning](https://semver.org/) principles:
-
-- **MAJOR** version for incompatible API changes (`1.0.0` → `2.0.0`)
-- **MINOR** version for added functionality in a backwards compatible manner (`1.0.0` → `1.1.0`)
-- **PATCH** version for backwards compatible bug fixes (`1.0.0` → `1.0.1`)
-
-Update the `version` field in `package.json`:
-
-```json
-{
-  "name": "one-med-supplychain-app",
-  "version": "1.5.3",
-  "description": "Pulse - Desktop application for managing supplier workflows and data"
-}
+```powershell
+bun run validate:version
+bun run quality
+bun run dist:clean
+bun run release:prepare
 ```
 
-### 2. Commit and Create Release Tag
+Versjonskontrollen krever at pakkeversjonen samsvarer med nærmeste tag, og at HEAD er committen taggen peker til. Bygg og metadata-generering publiserer ikke en release.
 
-Commit the version change and create a Git tag:
+Når filene er kontrollert og `GITHUB_TOKEN` er satt:
 
-```bash
-git add package.json
-git commit -m "Bump version to 1.1.8"
-git push origin main
-
-# Create and push the release tag
-git tag v1.1.8
-git push origin v1.1.8
+```powershell
+bun run release:github
 ```
 
-### 3. Automated Build and Release
+Skriptet kontrollerer begge programfiler og metadata før første GitHub-endring. Ved ny kjøring erstattes assets som skriptet håndterer: installer, portable, `latest.yml` og eventuell blockmap. Andre vedlegg beholdes. Opplastingsfeil gir feilkode; en delvis opplastet release må kontrolleres før metadata publiseres.
 
-Once you push the tag, GitHub Actions will automatically:
+Commit de genererte filene i `docs/updates/` og få dem inn i Pages sin produksjonsbranch når GitHub-filene er tilgjengelige. `bun run deploy:cloudflare` kontrollerer bare lokale webfiler.
 
-1. **Build the application** using `npm run dist`
-2. **Generate latest.yml** for portable auto-updates
-3. **Upload to GitHub Release** with all artifacts:
-   - Portable executable (`Pulse-Portable.exe`)
-   - ZIP archive
-   - `latest.yml` (update metadata)
+## Filer og metadata
 
-The entire process is automated - no manual intervention required!
+| Fil                             | Rolle                                                 |
+| ------------------------------- | ----------------------------------------------------- |
+| `release/Pulse-X.Y.Z-setup.exe` | NSIS-installasjonsprogram                             |
+| `release/Pulse-Portable.exe`    | Portable-programfil                                   |
+| `release/*.blockmap`            | Eventuell blokkmetadata                               |
+| `docs/updates/latest.yml`       | Versjon, SHA-512, størrelse og GitHub-URL for updater |
+| `docs/updates/latest.json`      | Metadata for portable-nedlasting                      |
+| `docs/updates/index.html`       | Nedlastingsside                                       |
 
-### 4. Verify the Release
+`release:prepare` krever begge programfilene, regner hash og størrelse fra dem og skriver metadata. Programfilene kopieres ikke til Cloudflare.
 
-After the automated release is complete:
+Begge appvariantene sjekker `latest.yml`. Portable-utgaven varsler og krever manuell utskifting; `latest.json` er nedlastingsmetadata.
 
-1. **Check GitHub Releases**: Navigate to the GitHub Releases page and verify the new release appears
-2. **Verify Assets**: Confirm all files are uploaded:
-   - `Pulse-Portable.exe`
-   - `Pulse-1.1.8-setup.zip`
-   - `latest.yml`
-3. **Test Auto-Update**: Install a previous version and test the auto-update functionality
+## Kontroll etter publisering
 
-## Testing Auto-Update Locally
+```powershell
+bun run validate:release
+bun run validate:release -- --published
+```
 
-To test the auto-update functionality:
+Første kommando kontrollerer lokale hashes og metadata samt GitHub-assetsenes navn, størrelse og URL. `--published` kontrollerer også at de to publiserte Cloudflare-feedene samsvarer med lokale filer. Avvik gir feilkode. Kontrollen laster ikke ned og hasher programfilene fra GitHub.
 
-1. **Install an older version** of the application
-2. **Open the application** and go to the menu
-3. **Click "Sjekk for oppdateringer"** (Check for Updates)
-4. **Verify** that the new version is detected and can be downloaded
-
-## Troubleshooting Auto-Updates
-
-### Portable Version Issues
-
-If portable users don't receive update notifications:
-
-1. **Check latest.yml**: Verify the file exists in the GitHub release
-2. **Verify file format**: The latest.yml should contain correct SHA512 hash and file size
-3. **Check GitHub access**: Ensure users can access GitHub.com
-4. **Review logs**: Check the application logs for update-related errors
-5. **Verify Node.js version**: Ensure CI/CD uses Node.js 22 (check GitHub Actions logs for EBADENGINE warnings)
-
-### Common Issues
-
-#### Users Not Receiving Updates
-
-- **Version Check**: Ensure the `version` in the released `package.json` is higher than the user's current version
-- **GitHub Release**: Verify the release is published (not a draft) on GitHub
-- **Assets**: Confirm the correct artifact files (installer, `latest.yml`) are present in the GitHub release
-- **Firewall/Network**: Ensure users can reach GitHub.com to check for updates
-
-## Advanced Configuration Notes
-
-- **Release Channels:** The current setup supports stable releases. For beta/alpha channels, additional configuration would be needed.
-- **Staged Rollouts:** The current setup publishes immediately to all users. For staged rollouts, consider using GitHub release drafts or separate repositories.
-
-## Best Practices
-
-1. **Maintain a Changelog**: Essential for release notes.
-2. **Test Before Release**: Thoroughly test the application before creating a release tag.
-3. **Communicate Updates**: Inform users about new releases.
-4. **Versioning Strategy**: Stick to semantic versioning.
-5. **Monitor CI/CD**: Watch the GitHub Actions workflow to ensure successful builds.
-6. **Rollback Plan**: Know how to handle issues if a release has problems.
-
-## Reference
-
-- [Electron Builder Documentation](https://www.electron.build/)
-- [Electron Updater Documentation](https://www.electron.build/auto-update)
-- [GitHub Releases API](https://docs.github.com/en/rest/releases)
-- [Semantic Versioning](https://semver.org/)
+Åpne nedlastingssiden, prøv lenkene og test oppdatering fra eldre installer- og portable-utgaver. Installerutgaven laster ned automatisk; portable-filen erstattes manuelt med appen lukket.

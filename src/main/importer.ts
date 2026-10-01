@@ -2,7 +2,7 @@ import ExcelJS, { Worksheet } from 'exceljs';
 import { workbookDetails } from './workbookDetails';
 import Database from 'better-sqlite3';
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const log = require('electron-log'); // Added for logging
+const log = require('electron-log');
 import { parse as parseDateFns, isValid } from 'date-fns'; // Import date-fns functions
 import * as XLSX from 'xlsx';
 import { join } from 'path';
@@ -143,7 +143,7 @@ function cleanupOldTempFiles(): void {
 export async function importAlleArk(
   source: string | ArrayBuffer,
   db: Database.Database,
-  originalFileName?: string // Added optional fileName parameter
+  originalFileName?: string
 ): Promise<boolean> {
   // Clean up old temp files before starting new import
   cleanupOldTempFiles();
@@ -675,7 +675,7 @@ export async function importAlleArk(
 
         planningTx();
       } else {
-        log.info('Leverandør sheet not found - using existing supplyPlanners.json data');
+        log.info('Leverandør sheet not found - preserving existing supplier planning');
       }
     } catch (planningError) {
       log.error('Error processing supplier planning:', planningError);
@@ -704,14 +704,14 @@ export async function importAlleArk(
         `supplier-reminder-backup-${new Date().toISOString().replace(/[.:]/g, '-')}.db`
       );
       // better-sqlite3 backup API
-      db.backup(backupFile);
+      await db.backup(backupFile);
       log.info(`Database backed up to: ${backupFile}`);
 
       // Show notification
       if (Notification.isSupported()) {
         new Notification({
           title: 'Database Backup',
-          body: 'Backup completed successfully ✅',
+          body: 'Database backup completed.',
         }).show();
       }
 

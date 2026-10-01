@@ -3,7 +3,10 @@ import { LANGUAGES, validRecipients, type Language } from './model';
 import { reminderHtml, reminderSubject, sendReminder, type Reminder } from './reminder';
 import { Modal } from './Primitives';
 
-type Status = { state: 'sending' | 'sent' | 'error' | 'skipped'; message?: string };
+type Status = {
+  state: 'sending' | 'sent' | 'sent-unsaved' | 'error' | 'skipped';
+  message?: string;
+};
 export default function Review({
   initial,
   quickConfirm,
@@ -14,7 +17,7 @@ export default function Review({
   initial: Reminder[];
   quickConfirm: boolean;
   onBack: () => void;
-  onSent: (reminder: Reminder) => void;
+  onSent: (reminder: Reminder) => boolean | Promise<boolean>;
   onBusy: (busy: boolean) => void;
 }) {
   const [items, setItems] = useState(initial);
@@ -27,21 +30,49 @@ export default function Review({
   const html = useMemo(() => reminderHtml(current), [current]);
   const status = statuses[current.supplier];
   const pending = items.filter(
-    (item) => !['sent', 'skipped'].includes(statuses[item.supplier]?.state)
+    (item) => !['sent', 'sent-unsaved', 'skipped'].includes(statuses[item.supplier]?.state)
   );
-  const sentCount = Object.values(statuses).filter((item) => item.state === 'sent').length;
+  const unsaved = items.find((item) => statuses[item.supplier]?.state === 'sent-unsaved');
+  const sentCount = Object.values(statuses).filter((item) =>
+    ['sent', 'sent-unsaved'].includes(item.state)
+  ).length;
   const valid = pending.every((item) => validRecipients(item.recipient));
-  const editable = !busy && status?.state !== 'sent';
+  const editable = !busy && !['sent', 'sent-unsaved'].includes(status?.state || '');
   const update = (changes: Partial<Reminder>) =>
     setItems((prev) =>
       prev.map((item, index) => (index === focus ? { ...item, ...changes } : item))
     );
+  async function saveSent(item: Reminder) {
+    let saved = false;
+    try {
+      saved = await onSent(item);
+    } catch {
+      // Outlook already confirmed sending. A history failure must never resend it.
+    }
+    setStatuses((prev) => ({
+      ...prev,
+      [item.supplier]: { state: saved ? 'sent' : 'sent-unsaved' },
+    }));
+    return saved;
+  }
+  async function retrySave() {
+    if (lock.current || !unsaved) return;
+    lock.current = true;
+    setBusy(true);
+    try {
+      onBusy(!(await saveSent(unsaved)));
+    } finally {
+      lock.current = false;
+      setBusy(false);
+    }
+  }
   async function send() {
-    if (lock.current || !valid || !pending.length) return;
+    if (lock.current || unsaved || !valid || !pending.length) return;
     lock.current = true;
     setBusy(true);
     onBusy(true);
     setConfirm(false);
+    let historySaved = true;
     try {
       for (const item of pending) {
         setFocus(items.indexOf(item));
@@ -58,19 +89,19 @@ export default function Review({
           }));
           break;
         }
-        setStatuses((prev) => ({ ...prev, [item.supplier]: { state: 'sent' } }));
-        onSent(item);
+        historySaved = await saveSent(item);
+        if (!historySaved) break;
       }
     } finally {
       lock.current = false;
       setBusy(false);
-      onBusy(false);
+      onBusy(!historySaved);
     }
   }
   return (
     <>
       <div className="pulse-review-heading">
-        <button disabled={busy} onClick={onBack}>
+        <button disabled={busy || Boolean(unsaved)} onClick={onBack}>
           ← Tilbake til utvalget
         </button>
         <div>
@@ -97,6 +128,7 @@ export default function Review({
                   {{
                     sending: 'Sender …',
                     sent: '✓ Sendt',
+                    'sent-unsaved': 'Sendt · historikk ikke lagret',
                     error: 'Sending feilet',
                     skipped: 'Hoppet over',
                   }[statuses[item.supplier]?.state] ||
@@ -170,6 +202,15 @@ export default function Review({
           />
         </section>
       </div>
+      {unsaved && (
+        <div role="alert" className="pulse-notice pulse-error">
+          E-posten til {unsaved.supplier} er sendt, men historikken kunne ikke lagres. Køen er
+          stoppet. Behold Pulse åpen og prøv å lagre igjen før du avslutter.
+          <button disabled={busy} onClick={() => void retrySave()}>
+            Prøv å lagre historikken igjen
+          </button>
+        </div>
+      )}
       <footer className="pulse-footer">
         <div>
           <strong aria-live="polite">
@@ -185,11 +226,15 @@ export default function Review({
         </div>
         <div className="pulse-grow" />
         {pending.length ? (
-          <button className="pulse-primary" disabled={busy || !valid} onClick={() => void send()}>
+          <button
+            className="pulse-primary"
+            disabled={busy || Boolean(unsaved) || !valid}
+            onClick={() => void send()}
+          >
             {busy ? 'Sender …' : `Send ${pending.length} purringer`}
           </button>
         ) : (
-          <button className="pulse-primary" onClick={onBack}>
+          <button className="pulse-primary" disabled={busy || Boolean(unsaved)} onClick={onBack}>
             Tilbake til purring
           </button>
         )}
