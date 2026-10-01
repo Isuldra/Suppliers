@@ -1,8 +1,8 @@
-version: 1.5.2
+version: 1.5.4
 files:
-  - url: https://github.com/Isuldra/Suppliers/releases/download/v1.5.2/Pulse-1.5.2-setup.exe
-    sha512: NXNgUcnNb/h0BB5hmeUmHgdYB/RJtW9KVxS3X5fuHPsN9SpZmpXBBIc3MA9t9FE+QSk3nFEzJAajYllm4sWp+w==
-    size: 91713593
-path: Pulse-1.5.2-setup.exe
-sha512: NXNgUcnNb/h0BB5hmeUmHgdYB/RJtW9KVxS3X5fuHPsN9SpZmpXBBIc3MA9t9FE+QSk3nFEzJAajYllm4sWp+w==
-releaseDate: '2026-01-05T14:15:38.235Z'
+  - url: https://github.com/Isuldra/Suppliers/releases/download/v1.5.4/Pulse-1.5.4-setup.exe
+    sha512: p4/Yw/WAkBsX13yMZgU9pm1Mrv8yrMV8GAahoziN/+9On3WP4dxs/j7JZj2T8qhDl8j2k9vAd0Ork2EKjvNK9Q==
+    size: 98018140
+path: Pulse-1.5.4-setup.exe
+sha512: p4/Yw/WAkBsX13yMZgU9pm1Mrv8yrMV8GAahoziN/+9On3WP4dxs/j7JZj2T8qhDl8j2k9vAd0Ork2EKjvNK9Q==
+releaseDate: '2026-10-01T20:34:14.273Z'
