@@ -25,7 +25,7 @@ Ved første oppstart vil applikasjonen be deg om å velge en Excel-fil:
 
 ### Steg 1: Last opp Excel-fil
 
-1. **Dra og slipp** Excel-filen i det markerte området
+1. **Klikk «Bytt fil»** og dra Excel-filen i det markerte området
 2. **Eller klikk** for å velge fil fra datamaskinen
 3. **Vent** på validering og import
 
@@ -38,26 +38,35 @@ Ved første oppstart vil applikasjonen be deg om å velge en Excel-fil:
 ### Steg 3: Velg leverandør
 
 1. **Søk** etter leverandør (valgfritt)
-2. **Velg leverandør** fra listen
-3. **Gå automatisk** til datagjennomgang
+2. **Klikk leverandørnavnet** for å se ordrene til høyre
+3. **Kryss av leverandørene** som skal få purring, eller bruk «Velg alle»
 
 ### Steg 4: Gjennomgå data
 
 1. **Se ordre** for valgt leverandør
 2. **Kontroller detaljer** som ordrenummer, antall, beskrivelse
-3. **Klikk "Neste"** for å gå til e-post
+3. **Ta ut linjer eller hele PO-er** med avkrysningsboksene, og velg begrunnelse
+4. **Bruk «Avvent denne uken»** for leverandører som ikke skal purres nå
 
 ### Steg 5: Send e-post
 
-1. **Forhåndsvis** e-posten ved å klikke "Forbered e-post"
-2. **Kontroller innhold** i preview-modalen
-3. **Send** e-posten via din e-postklient
+1. **Klikk «Se gjennom først»** for å kontrollere hver e-post
+2. **Kontroller mottaker, språk og ordrelinjer**. Du kan hoppe over en leverandør
+3. **Klikk «Send»** for å sende via Outlook. Status oppdateres når sendingen er bekreftet
+4. Ved feil stopper køen. Kontroller Sendt-mappen i Outlook før du prøver igjen
+
+### Leverandørregister
+
+Åpne **Leverandører** i venstremenyen for å endre e-post, språk eller purredager.
+Endringene lagres på denne PC-en til neste import i Pulse. «Purre nå» lagrer
+endringene og åpner leverandøren i arbeidsflaten. Ukehistorikken viser handlinger
+registrert i Pulse på denne PC-en.
 
 ## 📊 Dashboard
 
 ### Tilgang til Dashboard
 
-1. **Klikk "Dashboard"** i header
+1. **Klikk «Oversikt»** i venstremenyen
 2. **Se oversikt** over alle leverandører og ordre
 3. **Analyser data** med grafer og statistikk
 
@@ -72,19 +81,11 @@ Ved første oppstart vil applikasjonen be deg om å velge en Excel-fil:
 
 Bruk hurtigtaster for raskere arbeid:
 
-| Tast           | Funksjon                    |
-| -------------- | --------------------------- |
-| `Ctrl/Cmd + R` | Start applikasjonen på nytt |
-| `Ctrl/Cmd + ?` | Vis hurtigtaster hjelp      |
-| `Escape`       | Gå tilbake ett steg         |
-| `Enter`        | Bekreft valg                |
-| `Tab`          | Naviger mellom felter       |
-
-### Hurtigtaster Hjelp
-
-1. **Klikk ⌨️-ikonet** i header
-2. **Se alle tilgjengelige** hurtigtaster
-3. **Lukk** med Escape eller klikk utenfor
+| Tast        | Funksjon                    |
+| ----------- | --------------------------- |
+| `Escape`    | Lukk åpen dialog            |
+| `Mellomrom` | Endre valgt avkrysningsboks |
+| `Tab`       | Naviger mellom felter       |
 
 ## 📁 Excel-fil Krav
 

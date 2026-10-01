@@ -11,17 +11,26 @@ import {
   ColumnMapping,
   detectCountryFromWarehouse,
   COLUMN_MAPPINGS,
+  resolveHeaderMapping,
 } from '../../config/columnMappings';
 
 interface FileUploadProps {
-  onDataParsed: (data: ExcelData) => void;
+  onDataParsed: (data: ExcelData, fileName?: string) => void;
   onValidationErrors: (errors: ValidationError[]) => void;
+  onBusyChange?: (busy: boolean) => void;
 }
 
-const FileUpload: React.FC<FileUploadProps> = ({ onDataParsed, onValidationErrors }) => {
+const FileUpload: React.FC<FileUploadProps> = ({
+  onDataParsed,
+  onValidationErrors,
+  onBusyChange,
+}) => {
   const { t } = useTranslation();
   const [isLoading, setIsLoading] = useState(false);
   const [isValidating, setIsValidating] = useState(false);
+  useEffect(() => {
+    onBusyChange?.(isLoading || isValidating);
+  }, [isLoading, isValidating, onBusyChange]);
   const [progress, setProgress] = useState(0);
   const [processingStage, setProcessingStage] = useState('');
   const [helpMenuOpen, setHelpMenuOpen] = useState(false);
@@ -418,6 +427,12 @@ const FileUpload: React.FC<FileUploadProps> = ({ onDataParsed, onValidationError
               // Data starts from configured row (convert 1-based to 0-based index)
               const range = XLSX.utils.decode_range(sheet['!ref'] || 'A1');
               const startRow = mapping.startRow - 1; // Convert to 0-based index
+              mapping = resolveHeaderMapping(
+                mapping,
+                Array.from({ length: range.e.c + 1 }, (_, col) =>
+                  String(sheet[XLSX.utils.encode_cell({ r: startRow - 1, c: col })]?.v ?? '')
+                )
+              );
 
               console.log(
                 `Parsing ${mapping.sheetName} sheet (${mapping.id}) from row ${startRow + 1} to ${range.e.r + 1}`
@@ -469,7 +484,14 @@ const FileUpload: React.FC<FileUploadProps> = ({ onDataParsed, onValidationError
                 }
 
                 // Create a unique key using PO number and OneMed article number
-                const keyCandidate = `${poNumber}-${oneMedArticleNo}`;
+                const keyCandidate = JSON.stringify([
+                  String(row[mapping.companyCode] || ''),
+                  warehouse,
+                  supplierName,
+                  poNumber,
+                  oneMedArticleNo,
+                  orderRowNumber || String(startRow + index + 1),
+                ]);
                 const key =
                   keyCandidate.trim() !== '-' && keyCandidate.trim() !== ''
                     ? keyCandidate
@@ -744,10 +766,10 @@ const FileUpload: React.FC<FileUploadProps> = ({ onDataParsed, onValidationError
 
             if (!dbResult.success) {
               console.warn('Database save warning:', dbResult.error);
-              // Continue even if database save fails - it's not critical for the app to function
               toast.error(
                 dbResult.error || t('fileUpload.errors.validationSuccessButDatabaseFailed')
               );
+              return;
             } else {
               console.log('Database import/save successful.');
               // We might not need a specific count here anymore if the importer handles it
@@ -772,13 +794,13 @@ const FileUpload: React.FC<FileUploadProps> = ({ onDataParsed, onValidationError
             }
           } catch {
             console.error('Database error:');
-            // Continue even if database save fails
             toast.error(t('fileUpload.errors.dataValidatedButNotSaved'));
+            return;
           }
 
           console.log('Processing complete, calling onDataParsed');
           // Always call onDataParsed when data is successfully parsed
-          onDataParsed(parsedData);
+          onDataParsed(parsedData, file.name);
         } catch (error) {
           console.error('Validation error:', error);
           toast.error('Feil ved validering mot database');

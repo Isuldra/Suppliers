@@ -14,6 +14,7 @@ export interface ExcelRow {
   date?: Date; // Keep date as optional if needed for other logic
   // New fields for BP sheet structure
   internalSupplierNumber?: string; // Column D - Internal supplier number
+  productSpecification?: string;
   warehouse?: string; // Column E - Warehouse (Gardermoen is L 40)
   supplierArticleNo?: string; // Column I - Supplier article number
   selected?: boolean; // Track selection state for email sending

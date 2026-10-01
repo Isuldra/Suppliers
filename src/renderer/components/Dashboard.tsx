@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { ExcelData, ValidationError } from '../types/ExcelData';
+
 import LanguageSelector from './LanguageSelector';
 import SettingsModal from './SettingsModal';
 import { KPICard } from './dashboard/KPICard';
@@ -18,43 +18,7 @@ import {
   PresentationChartBarIcon,
 } from '@heroicons/react/24/outline';
 
-interface AppState {
-  excelData?: ExcelData;
-  selectedPlanner: string;
-  selectedWeekday: string;
-  selectedSupplier: string;
-  validationErrors: ValidationError[];
-  isLoading: boolean;
-  showDataReview: boolean;
-  showEmailButton: boolean;
-  // Bulk mode state
-  isBulkMode: boolean;
-  selectedSuppliers: string[];
-  bulkEmailData: Map<string, unknown>; // Per supplier email data
-  bulkSelectedOrders: Map<string, Set<string>>; // Per supplier selected orders
-  bulkSupplierEmails: Map<string, string>; // Per supplier custom emails
-}
-
-interface DashboardProps {
-  appState: AppState;
-  onDataParsed: (data: ExcelData) => void;
-  onValidationErrors: (errors: ValidationError[]) => void;
-  onWeekdaySelected: (weekday: string) => void;
-  onSupplierSelected: (supplier: string) => void;
-  onReviewComplete: () => void;
-  onResetApp: () => void;
-  // Bulk mode handlers
-  onToggleBulkMode: () => void;
-  onSuppliersSelected: (suppliers: string[]) => void;
-  onBulkOrdersSelected: (supplier: string, orders: Set<string>) => void;
-  onBulkSupplierEmailChange: (supplier: string, email: string) => void;
-  onBulkComplete: () => void;
-  onBulkDataReviewNext: (selectedOrders: Map<string, Set<string>>) => void;
-  onBulkDataReviewBack: () => void;
-  onBulkEmailPreviewBack: () => void;
-}
-
-const Dashboard: React.FC<DashboardProps> = ({ appState: _appState }) => {
+const Dashboard: React.FC = () => {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [topSuppliers, setTopSuppliers] = useState<SupplierStat[]>([]);
   const [weeklyData, setWeeklyData] = useState<WeekStat[]>([]);

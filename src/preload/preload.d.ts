@@ -87,6 +87,7 @@ interface ElectronAPI {
   insertOrUpdateOrders: (orders: ExcelRow[]) => Promise<number[]>;
   getOrdersBySupplier: (supplier: string) => Promise<ExcelRow[]>;
   getAllOrders: (includeICTOrders?: boolean) => Promise<ExcelRow[]>;
+  getSupplierContacts: () => Promise<import('../types/SupplierContact').SupplierContact[]>;
   getOrdersDueWithinDays: (days: number) => Promise<ExcelRow[]>;
   markOrderAsConfirmed: (supplier: string, orderNumber: string | null) => Promise<boolean>;
   deleteOrder: (supplier: string, orderNumber: string | null) => Promise<boolean>;

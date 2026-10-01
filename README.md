@@ -13,6 +13,22 @@ Pulse is a desktop application for managing supplier workflows and data. It's bu
 
 ## Getting Started (Developers)
 
+The `developer` branch uses the redesigned Pulse workspace: weekday tabs, a
+supplier list and PO-level order review, followed by a per-supplier email queue.
+The supplier register lets users override recipients, email language and reminder
+days locally until the next import. Excluded lines retain their reasons while the
+imported line is unchanged. Reminder history is recorded locally after Outlook
+confirms sending; the UI does not invent history for earlier weeks.
+Re-import the purchasing workbook after upgrading to populate product descriptions
+from `ITEM` and available stock (`lagsaldo - lagresant`) from `ARS`. Missing stock
+is shown as unknown. These joins respect the company and warehouse in the export.
+
+The Cloudflare download page lives in `docs/updates`. Its release version, date and
+download link hooks remain compatible with `release:prepare`. `deploy:cloudflare`
+now checks the static files without overwriting the design or update metadata.
+The original design archive's business data and uploaded documents are not part
+of the repository.
+
 1. Clone the repo
 2. Install dependencies: `bun install` (bun is the canonical package manager; `bun.lock` is committed and CI runs `bun install --frozen-lockfile`)
 3. Start the dev server: `bun run dev`

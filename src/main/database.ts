@@ -6,6 +6,7 @@ const log = require('electron-log/main');
 
 // Database interface for IPC communication
 export function setupDatabaseHandlers() {
+  ipcMain.handle('db:getSupplierContacts', () => databaseService.getSupplierContacts());
   // Initialize database
   try {
     // Database is automatically initialized when the singleton is accessed

@@ -19,6 +19,9 @@ export interface ExcelRow {
   inventoryBalance?: number; // Beholdning (Hovedliste Column N)
   orderQty: number; // Ordre antall (Hovedliste Column O)
   purchaser?: string; // Kjøper (Hovedliste Column P)
+  warehouse?: string;
+  internalSupplierNumber?: string;
+  productSpecification?: string;
   orderRowNumber?: string; // Bestradnr / Order Row Number (Column Q)
 
   // Added fields / Calculated fields

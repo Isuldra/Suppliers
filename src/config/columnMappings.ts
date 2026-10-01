@@ -44,6 +44,35 @@ export function getExcelJSIndex(zeroBasedIndex: number): number {
   return zeroBasedIndex + 1;
 }
 
+/** Prefer explicit ERP headers; some exports include a leading Nøkkel column. */
+export function resolveHeaderMapping(mapping: ColumnMapping, headers: string[]): ColumnMapping {
+  const normalized = headers.map((value) => value.trim().toLowerCase());
+  const columns: Partial<Record<keyof ColumnMapping, string>> = {
+    companyCode: 'foretagkod',
+    poNumber: 'bestnr',
+    internalSupplier: 'ftgnr',
+    warehouse: 'lagstalle',
+    oneMedArticle: 'artnr',
+    supplierArticle: 'artnrlev',
+    etaDate1: 'bestberlevdat',
+    etaDate2: 'bestlovlevdat',
+    erpComment: 'orpradtext',
+    orderedQty: 'bestant',
+    deliveredQty: 'bestlevant',
+    outstandingQty: 'bestrestant',
+    supplierName: 'ftgnamn',
+    orderRowNumber: 'bestradnr',
+    besttyp: 'besttyp',
+  };
+  const overrides = Object.fromEntries(
+    Object.entries(columns).flatMap(([key, header]) => {
+      const index = normalized.indexOf(header);
+      return index >= 0 ? [[key, index]] : [];
+    })
+  );
+  return { ...mapping, ...overrides };
+}
+
 /**
  * Get column letter from 0-based index (e.g., 0 -> 'A', 25 -> 'Z', 26 -> 'AA')
  * Uses standard bijective base-26 pattern (A=1, Z=26, AA=27)
