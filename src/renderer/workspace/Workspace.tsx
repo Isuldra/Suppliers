@@ -21,6 +21,7 @@ import {
   onDay,
   currentStatus,
   excludedReason,
+  filterLines,
   lineId,
   fingerprint,
   waiting,
@@ -29,6 +30,7 @@ import {
   type WorkspaceMemory,
   type Supplier,
   type ContactEdit,
+  type Language,
 } from './model';
 import type { Reminder } from './reminder';
 import type { ExcelRow, ExcelData, ValidationError } from '../types/ExcelData';
@@ -136,6 +138,7 @@ export default function Workspace() {
     supplier.name.toLowerCase().includes(search.toLowerCase())
   );
   const active = visible.find((supplier) => supplier.name === focus) || visible[0];
+  const shown = active ? filterLines(active.lines, filter, memory.excluded) : [];
   const included = (supplier: Supplier) =>
     supplier.lines.filter((line) => !excludedReason(line, memory.excluded));
   const ready = (supplier: Supplier) =>
@@ -165,17 +168,20 @@ export default function Workspace() {
       return next;
     });
   }
-  function toggleLines(lines: ExcelRow[]) {
-    const takeOut = lines.some((line) => !excludedReason(line, memory.excluded));
+  // Lines already taken out keep the reason chosen for them.
+  function setIncluded(lines: ExcelRow[], include: boolean) {
     persist((prev) => {
       const excluded = { ...prev.excluded };
       for (const line of lines) {
-        if (takeOut)
+        if (include) delete excluded[lineId(line)];
+        else if (!excludedReason(line, prev.excluded))
           excluded[lineId(line)] = { fingerprint: fingerprint(line), reason: 'Avklart skriftlig' };
-        else delete excluded[lineId(line)];
       }
       return { ...prev, excluded };
     });
+  }
+  function toggleLines(lines: ExcelRow[]) {
+    setIncluded(lines, !lines.some((line) => !excludedReason(line, memory.excluded)));
   }
   function beginReview(quick = false) {
     if (!selectedSuppliers.length) return;
@@ -533,7 +539,25 @@ export default function Workspace() {
                               <span className={!active.email ? 'pulse-danger' : ''}>
                                 {active.email || 'Mangler e-post'}
                               </span>
-                              <span>{LANGUAGES[active.language]}</span>
+                              <select
+                                className="pulse-inline-select"
+                                aria-label="Språk i e-post"
+                                title="Språk i e-post"
+                                value={active.language}
+                                onChange={(event) =>
+                                  saveContact(active.name, {
+                                    email: active.email,
+                                    language: event.target.value as Language,
+                                    days: active.days,
+                                  })
+                                }
+                              >
+                                {Object.entries(LANGUAGES).map(([value, label]) => (
+                                  <option key={value} value={value}>
+                                    {label}
+                                  </option>
+                                ))}
+                              </select>
                               <button
                                 className="pulse-text-button"
                                 onClick={() => openRegister(active.name)}
@@ -568,6 +592,18 @@ export default function Workspace() {
                               </button>
                             ))}
                           </div>
+                          <button
+                            disabled={!shown.some((line) => excludedReason(line, memory.excluded))}
+                            onClick={() => setIncluded(shown, true)}
+                          >
+                            Velg alle
+                          </button>
+                          <button
+                            disabled={!shown.some((line) => !excludedReason(line, memory.excluded))}
+                            onClick={() => setIncluded(shown, false)}
+                          >
+                            Fjern alle
+                          </button>
                           <span className="pulse-muted">
                             Ta ut en linje eller en hel PO med avkrysningsboksen.
                           </span>

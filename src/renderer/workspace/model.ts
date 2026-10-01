@@ -109,6 +109,19 @@ export function outstanding(line: ExcelRow) {
 export function waiting(line: ExcelRow) {
   return line.inventoryBalance != null && Number(line.inventoryBalance) < 0;
 }
+export function filterLines(
+  lines: ExcelRow[],
+  filter: string,
+  excluded: WorkspaceMemory['excluded']
+) {
+  return lines.filter((line) =>
+    filter === 'waiting'
+      ? waiting(line)
+      : filter === 'excluded'
+        ? Boolean(excludedReason(line, excluded))
+        : true
+  );
+}
 export function eta(line: ExcelRow): Date | undefined {
   const value = line.supplierETA || line.dueDate;
   if (!value) return undefined;

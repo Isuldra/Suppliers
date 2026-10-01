@@ -456,6 +456,19 @@
   margin-top: 6px;
   overflow-wrap: anywhere;
 }
+.pulse-shell .pulse-supplier-meta .pulse-inline-select {
+  min-height: 0;
+  padding: 1px 4px;
+  border-color: transparent;
+  background: transparent;
+  color: #61615f;
+  font-size: 13px;
+  cursor: pointer;
+}
+.pulse-shell .pulse-supplier-meta .pulse-inline-select:hover {
+  border-color: #d9d3cc;
+  background: #fff;
+}
 .pulse-order-area {
   padding: 0 24px 24px;
   overflow: auto;

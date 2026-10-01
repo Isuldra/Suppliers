@@ -9,6 +9,7 @@ import {
   outstanding,
   waiting,
   excludedReason,
+  filterLines,
   type WorkspaceMemory,
 } from './model';
 
@@ -31,13 +32,7 @@ export default function OrderTable({
   onToggle: (lines: ExcelRow[]) => void;
   onReason: (line: ExcelRow, reason: string) => void;
 }) {
-  const visible = lines.filter((line) =>
-    filter === 'waiting'
-      ? waiting(line)
-      : filter === 'excluded'
-        ? Boolean(excludedReason(line, excluded))
-        : true
-  );
+  const visible = filterLines(lines, filter, excluded);
   const groups = new Map<string, ExcelRow[]>();
   visible.forEach((line) =>
     groups.set(line.poNumber, [...(groups.get(line.poNumber) || []), line])

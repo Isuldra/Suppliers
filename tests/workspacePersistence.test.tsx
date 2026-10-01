@@ -2,7 +2,8 @@ import React, { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import Workspace from '../src/renderer/workspace/Workspace';
-import { DAYS, readMemory } from '../src/renderer/workspace/model';
+import { DAYS, fingerprint, lineId, readMemory, saveMemory } from '../src/renderer/workspace/model';
+import type { ExcelRow } from '../src/renderer/types/ExcelData';
 
 vi.mock('../src/renderer/components/FileUpload', () => ({ default: () => null }));
 vi.mock('../src/renderer/components/SettingsModal', () => ({ default: () => null }));
@@ -108,6 +109,30 @@ async function allDays() {
       .click()
   );
 }
+it('takes out every visible line without overwriting chosen reasons, and brings them all back', async () => {
+  const rows = ['1', '2'].map(
+    (key) => ({ key, supplier: 'First', poNumber: '500', orderQty: 20, receivedQty: 5 }) as ExcelRow
+  );
+  window.electron.getAllOrders = async () => rows;
+  saveMemory({
+    ...readMemory(),
+    excluded: {
+      [lineId(rows[0])]: { fingerprint: fingerprint(rows[0]), reason: 'Leverandør har svart' },
+    },
+  });
+  await act(async () => root.render(<Workspace />));
+  await allDays();
+  await act(async () => button('Fjern alle').click());
+  expect(
+    Object.values(readMemory().excluded)
+      .map((entry) => entry.reason)
+      .sort()
+  ).toEqual(['Avklart skriftlig', 'Leverandør har svart']);
+  expect(button('Fjern alle')).toBeDisabled();
+  await act(async () => button('Velg alle').click());
+  expect(readMemory().excluded).toEqual({});
+  expect(button('Velg alle')).toBeDisabled();
+});
 it('recovers from local-storage failure without resending or duplicating history, including after remount', async () => {
   await act(async () => root.render(<Workspace />));
   // Include all suppliers regardless of the current reminder day.
