@@ -123,6 +123,23 @@ describe('release preparation and publication', () => {
     ).toBe(false);
   });
 
+  it('uses the changelog heading when the entry has no bullets', () => {
+    fs.writeFileSync(
+      path.join(root, 'docs/CHANGELOG.md'),
+      '# Changes\n\n## Version 2.0.0: Faster import\n\n## Version 1.0.0: Old\n\n- Old bullet.\n'
+    );
+    prepareRelease(root, new Date('2026-10-01T12:00:00Z'));
+    const index = fs.readFileSync(path.join(root, 'docs/updates/index.html'), 'utf8');
+    expect(index).toContain('class="news release-note">Faster import<');
+  });
+
+  it('requires a changelog entry before rewriting the download page', () => {
+    fs.writeFileSync(path.join(root, 'docs/CHANGELOG.md'), '# Changes\n\n## Version 1.0.0: Old\n');
+    const before = fs.readFileSync(path.join(root, 'docs/updates/index.html'), 'utf8');
+    expect(() => prepareRelease(root)).toThrow('no entry for 2.0.0');
+    expect(fs.readFileSync(path.join(root, 'docs/updates/index.html'), 'utf8')).toBe(before);
+  });
+
   it('rejects missing files before making any GitHub call', async () => {
     fs.unlinkSync(path.join(root, 'release/Pulse-Portable.exe'));
     const api = client();

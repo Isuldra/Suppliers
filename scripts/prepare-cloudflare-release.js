@@ -3,18 +3,21 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { projectRoot, readReleaseFiles } from './release-artifacts.js';
 
+// The first bullet, or the heading for entries made by create-changelog-entry.js.
 function readReleaseNote(root, version) {
   const changelog = path.join(root, 'docs/CHANGELOG.md');
-  if (!fs.existsSync(changelog)) return null;
-  const section = fs
-    .readFileSync(changelog, 'utf8')
-    .split(/^## Version /m)
-    .find((value) => value.startsWith(version + ':'));
-  const note = section
-    ?.match(/^- (.+)$/m)?.[1]
-    .replace(/`/g, '')
-    .trim();
-  return note ? note.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') : null;
+  const section = fs.existsSync(changelog)
+    ? fs
+        .readFileSync(changelog, 'utf8')
+        .split(/^## Version /m)
+        .find((value) => value.startsWith(version + ':'))
+    : undefined;
+  if (!section) {
+    throw new Error(`docs/CHANGELOG.md has no entry for ${version}. Add one before release.`);
+  }
+  const title = section.slice(version.length + 1).split('\n')[0];
+  const note = (section.match(/^- (.+)$/m)?.[1] ?? title).replace(/`/g, '').trim();
+  return note.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
 export function prepareRelease(root = projectRoot, date = new Date()) {
@@ -49,13 +52,11 @@ releaseDate: '${releaseDate}'
     timeZone: 'Europe/Oslo',
   });
   const releaseNote = readReleaseNote(root, version);
-  if (releaseNote) {
-    index = index.replace(
+  index = index
+    .replace(
       /(class="[^"]*\brelease-note\b[^"]*">)[^<]*</,
       (_, opening) => `${opening}${releaseNote}<`
-    );
-  }
-  index = index
+    )
     .replace(/class="release-version">v[\d.]+</g, `class="release-version">v${version}<`)
     .replace(/class="release-date">[^<]+</g, `class="release-date">${displayDate}<`)
     .replace(/Release v[\d.]+ er klar/g, `Release v${version} er klar`)
