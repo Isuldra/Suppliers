@@ -1,0 +1,15 @@
+{
+  "oversikt": "Fictional example data. Import your own supplier workbook.",
+  "totaltAntall": 1,
+  "språkfordeling": { "NO": 1 },
+  "leverandører": [
+    {
+      "leverandør": "Example Supplier",
+      "companyId": 0,
+      "epost": "supplier@example.invalid",
+      "språk": "Norsk",
+      "språkKode": "NO",
+      "purredag": "Mandag"
+    }
+  ]
+}

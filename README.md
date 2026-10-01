@@ -20,6 +20,19 @@ Pulse is a desktop application for managing supplier workflows and data. It's bu
 
 > For complete setup instructions, see [Development Setup](docs/development/setup.md)
 
+### Local business data
+
+Supplier contacts, planner assignments and `resources/Produktkatalog.xlsx` are
+local files excluded from Git. Dependency installation creates missing
+`src/renderer/data/supplierData.json` and `supplyPlanners.json` from fictional
+`.example.json` files without overwriting existing data. If install scripts were
+disabled, run `bun run data:prepare` before type checking or building.
+
+Fresh clones use example data; import your own workbook or restore your local
+JSON files to use real supplier information. Do not commit those files. Local
+JSON data is bundled into the app when building, so use the fictional examples
+for publicly distributed builds. `.gitignore` does not remove older Git history.
+
 ---
 
 ## How to Run
@@ -52,12 +65,12 @@ bun run test:coverage      # Run with coverage report
 
 ## Documentation Overview
 
-| Area                                                            | Description                                               |
-| --------------------------------------------------------------- | --------------------------------------------------------- |
+| Area                                                            | Description                                                              |
+| --------------------------------------------------------------- | ------------------------------------------------------------------------ |
 | [Distribution Guide](docs/distribution/DISTRIBUTION.md)         | How to build and distribute the app (NSIS, MSI, portable — Windows only) |
-| [CI/CD Pipeline](docs/development/ci-cd-pipeline.md)            | GitHub Actions build setup                                |
-| [Manual Update Process](docs/development/publishing-updates.md) | How to publish app updates manually                       |
-| [Security Policy](SECURITY.md)                                  | Security policy and vulnerability reporting               |
+| [CI/CD Pipeline](docs/development/ci-cd-pipeline.md)            | GitHub Actions build setup                                               |
+| [Manual Update Process](docs/development/publishing-updates.md) | How to publish app updates manually                                      |
+| [Security Policy](SECURITY.md)                                  | Security policy and vulnerability reporting                              |
 
 ---
 
@@ -116,7 +129,7 @@ Suppliers/
 ├── resources/            # Static assets
 │   ├── icon-*.png        # Application icons (various sizes)
 │   ├── installer.nsh     # NSIS installer configuration
-│   └── Produktkatalog.xlsx # Example Excel template
+│   └── Produktkatalog.xlsx # Optional local catalog (ignored by Git)
 ├── scripts/              # Build & deployment scripts
 │   ├── build-*.js        # Build automation scripts
 │   ├── generate-*.js     # Release metadata generators

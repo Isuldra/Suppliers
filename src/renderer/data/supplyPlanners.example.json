@@ -1,0 +1,14 @@
+{
+  "planners": [
+    {
+      "name": "Example Planner",
+      "weekdaySuppliers": {
+        "Mandag": ["Example Supplier"],
+        "Tirsdag": [],
+        "Onsdag": [],
+        "Torsdag": [],
+        "Fredag": []
+      }
+    }
+  ]
+}
