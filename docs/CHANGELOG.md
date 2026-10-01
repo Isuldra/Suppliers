@@ -2,6 +2,10 @@
 
 Dette er en kort oversikt over endringer i repoet. En pakkeversjon eller Git-tag bekrefter ikke alene at filer er publisert og testet. Tagdatoene er datoen på committen som taggen peker til.
 
+## Version 1.5.5: Sending via Outlook virker igjen
+
+- Purringer sendes igjen via Outlook. 1.5.4 lastet e-posten som `.eml`, som Outlook avviste med «Ugyldig bane eller URL-adresse».
+
 ## Version 1.5.4: Ny arbeidsflate
 
 - Ny arbeidsflate med leverandørregister, linjevalg, ukestatus og gjennomgang før sending.
