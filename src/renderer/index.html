@@ -8,13 +8,5 @@
   <body>
     <div id="root"></div>
     <script type="module" src="./index.tsx"></script>
-    <script>
-      window.addEventListener('error', (event) => {
-        console.error('Global error:', event.error);
-      });
-      window.addEventListener('unhandledrejection', (event) => {
-        console.error('Unhandled promise rejection:', event.reason);
-      });
-    </script>
   </body>
 </html>

@@ -1,7 +1,6 @@
 import { dialog } from 'electron';
 import { autoUpdater } from 'electron-updater';
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const log = require('electron-log/main');
+import log from 'electron-log/main';
 import type { UpdateInfo, ProgressInfo } from 'electron-updater';
 import { app, shell, BrowserWindow } from 'electron';
 import path from 'path';
@@ -27,10 +26,9 @@ let lastUpdateNotificationTime: number = 0;
 const UPDATE_NOTIFICATION_COOLDOWN = 24 * 60 * 60 * 1000; // 24 hours
 
 /**
- * electron-updater emits 'update-downloaded' only when a download completes in
- * the current session — never on a later start with the installer already
- * cached on disk. To notice an update that was downloaded but never installed,
- * record it ourselves and read the record back at startup.
+ * A marker records a past download, not an installer ready in this process.
+ * Recheck at startup so electron-updater validates its cache or downloads again
+ * before emitting 'update-downloaded' and offering installation.
  */
 interface PendingUpdateMarker {
   version: string;
@@ -403,20 +401,12 @@ export function setupAutoUpdater() {
     setupStandardUpdater();
   }
 
-  // Check for pending updates at startup (for installed versions only)
-  // This handles cases where user forced quit the app before installation completed
-  if (!isPortable) {
-    setTimeout(() => {
-      checkForPendingUpdate();
-    }, 3000);
-  }
-
-  // Start checking for updates after a delay
+  // A pending marker warrants an earlier check, never an immediate install.
+  const startupDelay = !isPortable && readPendingUpdateMarker() ? 3000 : 10000;
   setTimeout(() => {
-    autoUpdater
-      .checkForUpdates()
-      .catch((err: Error) => updateLogger.error('Feil ved sjekk for oppdateringer:', err));
-  }, 10000);
+    const check = isPortable ? autoUpdater.checkForUpdates() : checkForPendingUpdate();
+    check.catch((err: Error) => updateLogger.error('Feil ved sjekk for oppdateringer:', err));
+  }, startupDelay);
 
   // Check for updates every 6 hours to reduce spam
   const SIX_HOURS = 6 * 60 * 60 * 1000;
@@ -439,32 +429,16 @@ async function checkForPendingUpdate() {
   const pending = readPendingUpdateMarker();
   if (!pending) {
     updateLogger.info('No pending updates found at startup');
-    return;
-  }
-
-  // The marker outlives the restart that installs it, so its mere presence
-  // proves nothing. Compare against the version we are actually running.
-  if (pending.version === app.getVersion()) {
+  } else if (pending.version === app.getVersion()) {
     updateLogger.info(`Pending update ${pending.version} is already installed; clearing marker`);
     clearPendingUpdateMarker();
-    return;
+  } else {
+    updateLogger.info(`Revalidating pending update ${pending.version} before installation`);
   }
 
-  updateLogger.info(`Found pending update ${pending.version}, prompting user for installation...`);
-
-  const result = await dialog.showMessageBox({
-    type: 'question',
-    title: 'Uinstallert oppdatering funnet',
-    message: `Versjon ${pending.version} ble lastet ned, men ikke installert.`,
-    detail: 'Vil du installere oppdateringen nå? Applikasjonen vil starte på nytt.',
-    buttons: ['Installer nå', 'Senere'],
-    defaultId: 0,
-  });
-
-  if (result.response === 0) {
-    updateLogger.info('User chose to install pending update...');
-    autoUpdater.quitAndInstall(false, true);
-  }
+  // Only the standard update-downloaded handler may offer installation.
+  // checkForUpdates revalidates cached installers before that event is emitted.
+  return autoUpdater.checkForUpdates();
 }
 
 /**
@@ -486,6 +460,7 @@ function setupStandardUpdater() {
   // Ingen oppdateringer er tilgjengelige
   autoUpdater.on('update-not-available', ((info: UpdateInfo) => {
     updateLogger.info('Ingen nye oppdateringer tilgjengelig:', info);
+    clearPendingUpdateMarker();
   }) as (...args: unknown[]) => void);
 
   // Oppdatering funnet
