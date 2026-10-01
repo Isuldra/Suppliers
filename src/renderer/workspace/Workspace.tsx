@@ -362,22 +362,26 @@ export default function Workspace() {
               setReview(null);
               setSelected(new Set());
             }}
-            onSent={(reminder) =>
+            onSent={(reminder, sentAt) =>
               persist((prev) => ({
                 ...prev,
                 // A save-only retry must keep the original send time and entry.
-                history:
-                  currentStatus(reminder.supplier, prev.history) === 'sent'
-                    ? prev.history
-                    : [
-                        {
-                          supplier: reminder.supplier,
-                          at: new Date().toISOString(),
-                          status: 'sent',
-                          count: reminder.lines.length,
-                        },
-                        ...prev.history,
-                      ],
+                history: prev.history.some(
+                  (entry) =>
+                    entry.supplier === reminder.supplier &&
+                    entry.status === 'sent' &&
+                    entry.at === sentAt
+                )
+                  ? prev.history
+                  : [
+                      {
+                        supplier: reminder.supplier,
+                        at: sentAt,
+                        status: 'sent',
+                        count: reminder.lines.length,
+                      },
+                      ...prev.history,
+                    ],
               }))
             }
           />

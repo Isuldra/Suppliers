@@ -56,8 +56,45 @@ afterEach(async () => {
   await act(async () => root.unmount());
   container.remove();
   vi.restoreAllMocks();
+  vi.useRealTimers();
   localStorage.clear();
   vi.unstubAllGlobals();
+});
+
+it('retains the confirmed send time when saving is retried across an ISO week and year boundary', async () => {
+  vi.useFakeTimers({ toFake: ['Date'] });
+  const sentAt = new Date(2027, 0, 3, 23, 59, 0);
+  vi.setSystemTime(sentAt);
+  await act(async () => root.render(<Workspace />));
+  await allDays();
+  await act(async () =>
+    container.querySelector<HTMLInputElement>('[aria-label="Velg First"]')!.click()
+  );
+  await act(async () => button('Se gjennom først').click());
+  const save = vi.spyOn(Storage.prototype, 'setItem');
+  save.mockImplementationOnce(() => {
+    throw new Error('Quota exceeded');
+  });
+  await act(async () => button('Send 1 purringer').click());
+  const attemptedHistory = JSON.parse(save.mock.calls[0][1]).history;
+  expect(attemptedHistory[0].at).toBe(sentAt.toISOString());
+
+  vi.setSystemTime(new Date(2027, 0, 4, 0, 1, 0));
+  save.mockImplementationOnce(() => {
+    throw new Error('Still full');
+  });
+  await act(async () => button('Prøv å lagre historikken igjen').click());
+  await act(async () => button('Prøv å lagre historikken igjen').click());
+  expect(transport).toHaveBeenCalledOnce();
+  expect(readMemory().history).toEqual(attemptedHistory);
+  expect(readMemory().history).toHaveLength(1);
+
+  await act(async () => button('Tilbake til purring').click());
+  expect(container.querySelector('[aria-label="Velg First"]')).toBeEnabled();
+  await act(async () => root.render(null));
+  await act(async () => root.render(<Workspace />));
+  await allDays();
+  expect(container.querySelector('[aria-label="Velg First"]')).toBeEnabled();
 });
 function button(text: string) {
   return [...container.querySelectorAll('button')].find(

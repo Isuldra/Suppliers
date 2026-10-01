@@ -88,7 +88,7 @@ describe('Review before Outlook sending', () => {
       expect(sendButton()).toBeDisabled();
       expect(transport).toHaveBeenCalledOnce();
       await act(async () => retry.click());
-      expect(onSent).toHaveBeenLastCalledWith(items[0]);
+      expect(onSent).toHaveBeenLastCalledWith(items[0], onSent.mock.calls[0][1]);
       expect(transport).toHaveBeenCalledOnce();
       expect(onBusy).toHaveBeenLastCalledWith(false);
       expect(sendButton()).toBeEnabled();
@@ -137,7 +137,7 @@ describe('Review before Outlook sending', () => {
     await act(async () => complete({ success: true }));
     expect(transport).toHaveBeenCalledTimes(2);
     expect(onSent).toHaveBeenCalledTimes(1);
-    expect(onSent).toHaveBeenCalledWith(items[0]);
+    expect(onSent).toHaveBeenCalledWith(items[0], expect.any(String));
     expect(container).toHaveTextContent('Outlook unavailable');
     transport.mockResolvedValueOnce({ success: true });
     await act(async () => sendButton().click());

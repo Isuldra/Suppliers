@@ -41,6 +41,7 @@ afterEach(() => {
 });
 
 function client() {
+  let nextId = 100;
   return {
     rest: {
       repos: {
@@ -52,11 +53,43 @@ function client() {
           .mockResolvedValue({ data: { id: 5, html_url: 'https://example.invalid/release' } }),
         listReleaseAssets: vi.fn(),
         deleteReleaseAsset: vi.fn().mockResolvedValue({}),
-        uploadReleaseAsset: vi.fn().mockResolvedValue({}),
+        uploadReleaseAsset: vi.fn().mockImplementation(async () => ({ data: { id: nextId++ } })),
+        updateReleaseAsset: vi.fn().mockResolvedValue({}),
       },
     },
     paginate: vi.fn().mockResolvedValue([]),
   };
+}
+function liveRelease() {
+  const api = client();
+  const live = new Map(
+    [
+      'Pulse-2.0.0-setup.exe',
+      'Pulse-Portable.exe',
+      'latest.yml',
+      'Pulse-2.0.0-setup.exe.blockmap',
+      'release-notes.pdf',
+    ].map((name, index) => [index + 10, { name, data: Buffer.from('original ' + name) }])
+  );
+  const original = new Map(live);
+  api.paginate.mockResolvedValue([...live].map(([id, asset]) => ({ id, name: asset.name })));
+  let nextId = 100;
+  api.rest.repos.uploadReleaseAsset.mockImplementation(async ({ name, data }) => {
+    const id = nextId++;
+    live.set(id, { name, data });
+    return { data: { id } };
+  });
+  api.rest.repos.updateReleaseAsset.mockImplementation(async ({ asset_id, name }) => {
+    if ([...live].some(([id, asset]) => id !== asset_id && asset.name === name))
+      throw new Error('Duplicate asset name');
+    live.set(asset_id, { ...live.get(asset_id)!, name });
+    return {};
+  });
+  api.rest.repos.deleteReleaseAsset.mockImplementation(async ({ asset_id }) => {
+    live.delete(asset_id);
+    return {};
+  });
+  return { api, live, original };
 }
 function releaseResponse() {
   return {
@@ -119,11 +152,11 @@ describe('release preparation and publication', () => {
     expect(api.rest.repos.deleteReleaseAsset.mock.calls.map(([args]) => args.asset_id)).toEqual([
       10, 12,
     ]);
-    expect(api.rest.repos.uploadReleaseAsset.mock.calls.map(([args]) => args.name)).toEqual([
-      'Pulse-2.0.0-setup.exe',
-      'Pulse-Portable.exe',
-      'latest.yml',
-    ]);
+    expect(
+      api.rest.repos.updateReleaseAsset.mock.calls
+        .filter(([args]) => args.asset_id >= 100)
+        .map(([args]) => args.name)
+    ).toEqual(['Pulse-2.0.0-setup.exe', 'Pulse-Portable.exe', 'latest.yml']);
   });
 
   it('uses the actual changelog and the built commit when creating a release', async () => {
@@ -142,6 +175,67 @@ describe('release preparation and publication', () => {
     const api = client();
     api.rest.repos.uploadReleaseAsset.mockRejectedValue(new Error('upload failed'));
     await expect(publishRelease({ root, client: api })).rejects.toThrow('upload failed');
+  });
+
+  it.each([0, 1, 2])('keeps every live download if staging upload %s fails', async (failure) => {
+    const { api, live, original } = liveRelease();
+    const upload = api.rest.repos.uploadReleaseAsset.getMockImplementation()!;
+    let call = 0;
+    api.rest.repos.uploadReleaseAsset.mockImplementation(async (args) => {
+      if (call++ === failure) throw new Error('upload failed');
+      return upload(args);
+    });
+    await expect(publishRelease({ root, client: api })).rejects.toThrow('upload failed');
+    expect(live).toEqual(original);
+    expect(api.rest.repos.updateReleaseAsset).not.toHaveBeenCalled();
+    expect(
+      api.rest.repos.deleteReleaseAsset.mock.calls.every(([args]) => args.asset_id >= 100)
+    ).toBe(true);
+  });
+
+  it.each([0, 1, 2, 3, 4, 5])(
+    'restores original assets if name change %s fails',
+    async (failure) => {
+      const { api, live, original } = liveRelease();
+      const rename = api.rest.repos.updateReleaseAsset.getMockImplementation()!;
+      let call = 0;
+      api.rest.repos.updateReleaseAsset.mockImplementation(async (args) => {
+        if (call++ === failure) throw new Error('rename failed');
+        return rename(args);
+      });
+      await expect(publishRelease({ root, client: api })).rejects.toThrow('rename failed');
+      expect(live).toEqual(original);
+    }
+  );
+
+  it('keeps original bytes when rollback itself fails and reports recovery is required', async () => {
+    const { api, live, original } = liveRelease();
+    const rename = api.rest.repos.updateReleaseAsset.getMockImplementation()!;
+    api.rest.repos.updateReleaseAsset
+      .mockImplementationOnce(rename)
+      .mockRejectedValueOnce(new Error('rename failed'))
+      .mockRejectedValueOnce(new Error('restore failed'));
+    await expect(publishRelease({ root, client: api })).rejects.toThrow('manual recovery');
+    expect(live.get(10)?.data).toEqual(original.get(10)?.data);
+    expect(live.get(10)?.name).toContain('.backup-');
+  });
+
+  it('promotes all replacements before deleting originals and preserves unrelated attachments', async () => {
+    const { api, live, original } = liveRelease();
+    await publishRelease({ root, client: api });
+    for (const asset of readReleaseArtifacts(root).assets) {
+      expect([...live.values()].find((entry) => entry.name === asset.name)?.data).toEqual(
+        fs.readFileSync(asset.path)
+      );
+    }
+    expect(live.get(14)).toEqual(original.get(14));
+    expect(live.size).toBe(4);
+    expect(Math.max(...api.rest.repos.uploadReleaseAsset.mock.invocationCallOrder)).toBeLessThan(
+      Math.min(...api.rest.repos.updateReleaseAsset.mock.invocationCallOrder)
+    );
+    expect(Math.max(...api.rest.repos.updateReleaseAsset.mock.invocationCallOrder)).toBeLessThan(
+      Math.min(...api.rest.repos.deleteReleaseAsset.mock.invocationCallOrder)
+    );
   });
 });
 

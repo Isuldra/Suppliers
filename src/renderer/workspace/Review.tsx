@@ -6,6 +6,7 @@ import { Modal } from './Primitives';
 type Status = {
   state: 'sending' | 'sent' | 'sent-unsaved' | 'error' | 'skipped';
   message?: string;
+  sentAt?: string;
 };
 export default function Review({
   initial,
@@ -17,7 +18,7 @@ export default function Review({
   initial: Reminder[];
   quickConfirm: boolean;
   onBack: () => void;
-  onSent: (reminder: Reminder) => boolean | Promise<boolean>;
+  onSent: (reminder: Reminder, sentAt: string) => boolean | Promise<boolean>;
   onBusy: (busy: boolean) => void;
 }) {
   const [items, setItems] = useState(initial);
@@ -42,16 +43,16 @@ export default function Review({
     setItems((prev) =>
       prev.map((item, index) => (index === focus ? { ...item, ...changes } : item))
     );
-  async function saveSent(item: Reminder) {
+  async function saveSent(item: Reminder, sentAt: string) {
     let saved = false;
     try {
-      saved = await onSent(item);
+      saved = await onSent(item, sentAt);
     } catch {
       // Outlook already confirmed sending. A history failure must never resend it.
     }
     setStatuses((prev) => ({
       ...prev,
-      [item.supplier]: { state: saved ? 'sent' : 'sent-unsaved' },
+      [item.supplier]: { state: saved ? 'sent' : 'sent-unsaved', sentAt },
     }));
     return saved;
   }
@@ -60,7 +61,7 @@ export default function Review({
     lock.current = true;
     setBusy(true);
     try {
-      onBusy(!(await saveSent(unsaved)));
+      onBusy(!(await saveSent(unsaved, statuses[unsaved.supplier].sentAt!)));
     } finally {
       lock.current = false;
       setBusy(false);
@@ -89,7 +90,7 @@ export default function Review({
           }));
           break;
         }
-        historySaved = await saveSent(item);
+        historySaved = await saveSent(item, new Date().toISOString());
         if (!historySaved) break;
       }
     } finally {

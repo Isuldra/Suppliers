@@ -47,17 +47,12 @@ jobs:
           if ($version -notmatch '^\d+\.\d+\.\d+$') {
             throw "Use a stable X.Y.Z version without a leading v."
           }
+          node scripts/validate-release-source.js $version
+          if ($LASTEXITCODE -ne 0) { throw 'Release version does not match the tagged source.' }
           "version=$version" >> $env:GITHUB_OUTPUT
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
-
-      - name: Set package version
-        shell: pwsh
-        env:
-          RELEASE_VERSION: ${{ steps.version.outputs.version }}
-        run: |
-          npm version $env:RELEASE_VERSION --no-git-tag-version --allow-same-version
 
       - name: Build and check
         run: |

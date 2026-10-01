@@ -12,7 +12,7 @@ Se [versjonering](VERSIONING.md), [signering](CODE-SIGNING.md) og [utviklingsopp
 
 Start `Release Workflow` i Actions med versjonen, eller push en `vX.Y.Z`-tag fra lokal Git. Workflowen:
 
-1. Installerer fra låsefilen og setter pakkeversjonen.
+1. Kontrollerer at versjonen stemmer med `package.json` i valgt commit, og at en eventuell eksisterende tag peker til samme commit. Installerer fra låsefilen uten å endre pakkeversjonen.
 2. Kjører kvalitetssjekk, bygger appen og kontrollerer SQLite under Electron.
 3. Pakker Windows-filene.
 4. Genererer metadata fra installasjonsprogrammet og portable-filen.
@@ -40,7 +40,7 @@ Når filene er kontrollert og `GITHUB_TOKEN` er satt:
 bun run release:github
 ```
 
-Skriptet kontrollerer begge programfiler og metadata før første GitHub-endring. Ved ny kjøring erstattes assets som skriptet håndterer: installer, portable, `latest.yml` og eventuell blockmap. Andre vedlegg beholdes. Opplastingsfeil gir feilkode; en delvis opplastet release må kontrolleres før metadata publiseres.
+Skriptet kontrollerer begge programfiler og metadata før første GitHub-endring. Ved ny kjøring lastes installer, portable, `latest.yml` og eventuell blockmap først opp med midlertidige navn. De eksisterende filene beholdes til alle opplastinger er bekreftet. Deretter byttes navnene, og gamle filer slettes først når alle erstatningene har sine endelige navn. Ved feil i navnebyttet forsøker skriptet å gjenopprette de gamle navnene; mislykket gjenoppretting varsles og reservefilene beholdes for manuell gjenoppretting. Andre vedlegg beholdes. Kontroller releasen før metadata publiseres etter en feil.
 
 Commit de genererte filene i `docs/updates/` og få dem inn i Pages sin produksjonsbranch når GitHub-filene er tilgjengelige. `bun run deploy:cloudflare` kontrollerer bare lokale webfiler.
 
