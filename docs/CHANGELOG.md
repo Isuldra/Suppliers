@@ -2,9 +2,7 @@
 
 Dette er en kort oversikt over endringer i repoet. En pakkeversjon eller Git-tag bekrefter ikke alene at filer er publisert og testet. Tagdatoene er datoen på committen som taggen peker til.
 
-## Version 1.5.3: Nåværende arbeid
-
-`package.json` har versjon 1.5.3. Repoet har ikke en lokal `v1.5.3`-tag.
+## Version 1.5.3: Ny arbeidsflate
 
 - Ny arbeidsflate med leverandørregister, linjevalg, ukestatus og gjennomgang før sending.
 - Delt mottakervalidering for flere komma- eller semikolonseparerte adresser.

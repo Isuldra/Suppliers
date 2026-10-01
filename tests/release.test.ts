@@ -22,6 +22,8 @@ beforeEach(() => {
       '<a id="download-installer" href="old">Installer</a>',
       '<a id="download-portable" href="old">Portable</a>',
       '<span class="release-version">v1.0.0</span>',
+      '<strong class="release-date">01.01.2026</strong>',
+      '<p class="news release-note">Old note</p>',
     ].join('\n')
   );
   fs.writeFileSync(
@@ -114,6 +116,8 @@ describe('release preparation and publication', () => {
     expect(index).toContain(release.installer.url);
     expect(index).toContain(release.portable.url);
     expect(index).toContain('v2.0.0');
+    expect(index).toContain('class="release-date">01.10.2026<');
+    expect(index).toContain('class="news release-note">Keep the correct warehouse.<');
     expect(
       fs.readdirSync(path.join(root, 'docs/updates')).some((file) => file.endsWith('.exe'))
     ).toBe(false);
