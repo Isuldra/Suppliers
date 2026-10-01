@@ -1239,8 +1239,7 @@ export class DatabaseService {
         LIMIT 1
       `);
       const row = stmt.get(supplierName, supplierName, supplierName, supplierName) as
-        | { warehouse: string; count: number }
-        | undefined;
+        { warehouse: string; count: number } | undefined;
 
       log.info(
         `🔍 DatabaseService.getSupplierCountry: Looking for "${supplierName}", found warehouse: ${row?.warehouse || 'null'}`
