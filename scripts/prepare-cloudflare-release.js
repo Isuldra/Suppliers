@@ -3,6 +3,23 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { projectRoot, readReleaseFiles } from './release-artifacts.js';
 
+// The first bullet, or the heading for entries made by create-changelog-entry.js.
+function readReleaseNote(root, version) {
+  const changelog = path.join(root, 'docs/CHANGELOG.md');
+  const section = fs.existsSync(changelog)
+    ? fs
+        .readFileSync(changelog, 'utf8')
+        .split(/^## Version /m)
+        .find((value) => value.startsWith(version + ':'))
+    : undefined;
+  if (!section) {
+    throw new Error(`docs/CHANGELOG.md has no entry for ${version}. Add one before release.`);
+  }
+  const title = section.slice(version.length + 1).split('\n')[0];
+  const note = (section.match(/^- (.+)$/m)?.[1] ?? title).replace(/`/g, '').trim();
+  return note.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
 export function prepareRelease(root = projectRoot, date = new Date()) {
   const { version, installer, portable } = readReleaseFiles(root);
   const updates = path.join(root, 'docs/updates');
@@ -28,12 +45,20 @@ releaseDate: '${releaseDate}'
     files: [{ url: portable.url, sha512: portable.sha512, size: portable.size }],
     releaseDate,
   };
+  const displayDate = date.toLocaleDateString('nb-NO', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    timeZone: 'Europe/Oslo',
+  });
+  const releaseNote = readReleaseNote(root, version);
   index = index
-    .replace(/class="release-version">v[\d.]+</g, `class="release-version">v${version}<`)
     .replace(
-      /class="release-date">[^<]+</g,
-      `class="release-date">${date.toLocaleDateString('nb-NO')}<`
+      /(class="[^"]*\brelease-note\b[^"]*">)[^<]*</,
+      (_, opening) => `${opening}${releaseNote}<`
     )
+    .replace(/class="release-version">v[\d.]+</g, `class="release-version">v${version}<`)
+    .replace(/class="release-date">[^<]+</g, `class="release-date">${displayDate}<`)
     .replace(/Release v[\d.]+ er klar/g, `Release v${version} er klar`)
     .replace(/(id="download-installer"[^>]*href=")[^"]+(")/, `$1${installer.url}$2`)
     .replace(/(id="download-portable"[^>]*href=")[^"]+(")/, `$1${portable.url}$2`);

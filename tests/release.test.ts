@@ -22,6 +22,8 @@ beforeEach(() => {
       '<a id="download-installer" href="old">Installer</a>',
       '<a id="download-portable" href="old">Portable</a>',
       '<span class="release-version">v1.0.0</span>',
+      '<strong class="release-date">01.01.2026</strong>',
+      '<p class="news release-note">Old note</p>',
     ].join('\n')
   );
   fs.writeFileSync(
@@ -114,9 +116,28 @@ describe('release preparation and publication', () => {
     expect(index).toContain(release.installer.url);
     expect(index).toContain(release.portable.url);
     expect(index).toContain('v2.0.0');
+    expect(index).toContain('class="release-date">01.10.2026<');
+    expect(index).toContain('class="news release-note">Keep the correct warehouse.<');
     expect(
       fs.readdirSync(path.join(root, 'docs/updates')).some((file) => file.endsWith('.exe'))
     ).toBe(false);
+  });
+
+  it('uses the changelog heading when the entry has no bullets', () => {
+    fs.writeFileSync(
+      path.join(root, 'docs/CHANGELOG.md'),
+      '# Changes\n\n## Version 2.0.0: Faster import\n\n## Version 1.0.0: Old\n\n- Old bullet.\n'
+    );
+    prepareRelease(root, new Date('2026-10-01T12:00:00Z'));
+    const index = fs.readFileSync(path.join(root, 'docs/updates/index.html'), 'utf8');
+    expect(index).toContain('class="news release-note">Faster import<');
+  });
+
+  it('requires a changelog entry before rewriting the download page', () => {
+    fs.writeFileSync(path.join(root, 'docs/CHANGELOG.md'), '# Changes\n\n## Version 1.0.0: Old\n');
+    const before = fs.readFileSync(path.join(root, 'docs/updates/index.html'), 'utf8');
+    expect(() => prepareRelease(root)).toThrow('no entry for 2.0.0');
+    expect(fs.readFileSync(path.join(root, 'docs/updates/index.html'), 'utf8')).toBe(before);
   });
 
   it('rejects missing files before making any GitHub call', async () => {

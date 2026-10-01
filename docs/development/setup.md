@@ -4,7 +4,7 @@ Bruk Windows for å teste Outlook og bygge Windows-distribusjonen. Renderer og d
 
 ## Verktøy
 
-CI bruker Node.js 22 og Bun 1.3.14. Ha Node/npm, Bun og Git på PATH. Bun er pakkebehandleren; `bun.lock` er den delte låsefilen. Enkelte byggeskript bruker fortsatt npm og npx internt.
+CI bruker Node.js 22 og Bun 1.3.14. Bruk minst Node.js 22.12.0 lokalt, som kreves av Electron og rebuild-verktøyet. Ha Node/npm, Bun og Git på PATH. Bun er pakkebehandleren; `bun.lock` er den delte låsefilen. Enkelte byggeskript bruker fortsatt npm og npx internt.
 
 Fra repoets rot:
 
@@ -29,6 +29,8 @@ bun run test -- --run
 `bun run test` uten `--run` starter Vitest i interaktiv modus. `bun run quality` samler formatkontroll, lint, typekontroll og tester.
 
 Kjør kontroller som passer endringen. Ved endring av sendeflyt skal testene bruke mock av Outlook-transporten.
+
+Ved avhengighetsoppdateringer kjøres også `bun audit --audit-level=moderate`. Oppdater `bun.lock` sammen med `package.json`; terskelen skal ikke senkes for å få CI til å passere. `uuid` er overstyrt til 11.1.1 fordi ExcelJS ellers installerer en sårbar 8.x-versjon. 11.1.1 beholder CommonJS-støtten og `v4`-API-et ExcelJS bruker.
 
 ## Bygg
 
