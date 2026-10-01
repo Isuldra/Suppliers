@@ -1,3 +1,5 @@
+import './globalErrorHandlers';
+
 console.log('▶️ index.tsx loaded, mounting React…');
 
 import React from 'react';

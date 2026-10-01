@@ -20,9 +20,9 @@ function cspMetaPlugin() {
   const base = [
     "default-src 'self'",
     "script-src 'self'",
-    "style-src 'self' 'unsafe-inline'",
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "img-src 'self' data: blob:",
-    "font-src 'self'",
+    "font-src 'self' https://fonts.gstatic.com",
     "worker-src 'self' blob:",
     "object-src 'none'",
     "base-uri 'none'",
@@ -62,6 +62,7 @@ export default defineConfig({
           // Add native modules to external
           'better-sqlite3',
           'electron-updater',
+          'electron-log/main',
           'exceljs',
           'electron',
           'fs',

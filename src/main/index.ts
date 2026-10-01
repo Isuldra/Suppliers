@@ -30,15 +30,15 @@ import type { ExcelData } from '../renderer/types/ExcelData';
  * The equivalent policy is injected as a <meta> tag at build time (see the
  * csp-meta plugin in electron.vite.config.ts) — keep the two in sync.
  *
- * The renderer makes no cross-origin requests: all network access (updates,
- * email) happens in the main process, where CSP does not apply.
+ * Updates and email use the main process. The renderer also loads styles and
+ * fonts from the two explicitly permitted Google Fonts origins.
  */
 const CSP_POLICY = [
   "default-src 'self'",
   "script-src 'self'",
-  "style-src 'self' 'unsafe-inline'",
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   "img-src 'self' data: blob:",
-  "font-src 'self'",
+  "font-src 'self' https://fonts.gstatic.com",
   "connect-src 'self'",
   "worker-src 'self' blob:",
   "object-src 'none'",
@@ -1052,7 +1052,6 @@ try {
     }
   }
 );
-
 
 // Handle automatic email sending via Outlook COM API (LEGACY - kept for single emails)
 ipcMain.handle(
