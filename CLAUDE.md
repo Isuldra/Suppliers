@@ -15,11 +15,11 @@ The main-process entry point is **`src/main/index.ts`**, not `src/main/main.ts` 
 dead code and has been deleted — if you see it referenced anywhere, the reference is stale).
 `electron.vite.config.ts` builds three separate bundles:
 
-| Process  | Source                  | Output                    |
-| -------- | ------------------------ | -------------------------- |
-| main     | `src/main/index.ts`      | `dist/main/main.cjs`       |
-| preload  | `src/preload/index.ts`   | `dist/preload/index.cjs`   |
-| renderer | `src/renderer/`          | `dist/renderer/`           |
+| Process  | Source                 | Output                   |
+| -------- | ---------------------- | ------------------------ |
+| main     | `src/main/index.ts`    | `dist/main/main.cjs`     |
+| preload  | `src/preload/index.ts` | `dist/preload/index.cjs` |
+| renderer | `src/renderer/`        | `dist/renderer/`         |
 
 `package.json`'s `"main"` field points at `dist/main/main.cjs`. Before touching build config,
 verify `electron.vite.config.ts` and `package.json` `main`/`build.files` agree — the entry point

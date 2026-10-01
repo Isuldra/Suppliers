@@ -37,8 +37,8 @@ jobs:
 
       - name: Run security audit
         run: |
-          echo "🔍 Running npm audit..."
-          npm audit --audit-level=moderate
+          echo "🔍 Auditing bun.lock..."
+          bun audit --audit-level=moderate
 
       - name: Check for outdated packages
         run: |
@@ -49,7 +49,7 @@ jobs:
         if: failure()
         run: |
           echo "⚠️ Security vulnerabilities found!"
-          npm audit --json > security-report.json || true
+          bun audit --json > security-report.json || true
           echo "📊 Security report generated: security-report.json"
 
       - name: Comment on PR (if vulnerabilities found)
@@ -60,13 +60,13 @@ jobs:
             const fs = require('fs');
             if (fs.existsSync('security-report.json')) {
               const report = JSON.parse(fs.readFileSync('security-report.json', 'utf8'));
-              const vulnerabilities = report.vulnerabilities || {};
+              const vulnerabilities = report.vulnerabilities || report;
               const vulnCount = Object.keys(vulnerabilities).length;
               
               github.rest.issues.createComment({
                 issue_number: context.issue.number,
                 owner: context.repo.owner,
                 repo: context.repo.repo,
-                body: `🚨 **Security Alert**: ${vulnCount} vulnerabilities found in dependencies.\n\nRun \`npm audit fix\` to automatically fix compatible issues.`
+                body: `🚨 **Security Alert**: ${vulnCount} packages have dependency advisories.\n\nRun \`bun audit\` to inspect the locked dependencies before updating them.`
               });
             }

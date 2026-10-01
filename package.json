@@ -49,7 +49,7 @@
     "version:info": "node scripts/sync-version.js info",
     "version:help": "node scripts/sync-version.js help",
     "security-check": "node scripts/security-check.js",
-    "security-audit": "npm audit --audit-level=moderate",
+    "security-audit": "bun audit --audit-level=moderate",
     "release:prepare": "node scripts/prepare-cloudflare-release.js",
     "release:github": "node scripts/create-github-release.js",
     "release:full": "npm run validate:version && npm run dist:clean && npm run release:prepare && npm run release:github",

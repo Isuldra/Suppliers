@@ -27,11 +27,11 @@ renderer-prosess (React), koblet sammen via en typet IPC-bro.
 
 `electron-vite` (konfigurert i `electron.vite.config.ts`) bygger tre separate bunter:
 
-| Prosess  | Kildeinngang              | Byggoutput               |
-| -------- | -------------------------- | ------------------------- |
-| main     | `src/main/index.ts`        | `dist/main/main.cjs`      |
-| preload  | `src/preload/index.ts`     | `dist/preload/index.cjs`  |
-| renderer | `src/renderer/` (Vite root)| `dist/renderer/`          |
+| Prosess  | Kildeinngang                | Byggoutput               |
+| -------- | --------------------------- | ------------------------ |
+| main     | `src/main/index.ts`         | `dist/main/main.cjs`     |
+| preload  | `src/preload/index.ts`      | `dist/preload/index.cjs` |
+| renderer | `src/renderer/` (Vite root) | `dist/renderer/`         |
 
 `package.json`'s `"main"` felt peker på `dist/main/main.cjs`, som igjen kommer fra
 `src/main/index.ts` — **ikke** noen fil som heter `main.ts`. Det har tidligere eksistert en

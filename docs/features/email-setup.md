@@ -32,10 +32,10 @@ The "from" identity is not user-configurable. It is derived from the supplier's
 country (see `getSenderEmailForCountry()` in both
 `src/renderer/services/emailService.ts` and `src/main/index.ts`):
 
-| Country | Sender address              |
-| ------- | ---------------------------- |
-| Denmark | `indkoeb.dk@onemed.com`      |
-| Norway  | `supply.planning.no@onemed.com` |
+| Country | Sender address                                                             |
+| ------- | -------------------------------------------------------------------------- |
+| Denmark | `indkoeb.dk@onemed.com`                                                    |
+| Norway  | `supply.planning.no@onemed.com`                                            |
 | Sweden  | `supply.planning.no@onemed.com` (placeholder, no dedicated SE address yet) |
 | Finland | `supply.planning.no@onemed.com` (placeholder, no dedicated FI address yet) |
 
