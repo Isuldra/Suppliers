@@ -167,7 +167,7 @@ export function reminderHtml(reminder: Reminder) {
 <div style="font-size:13px;color:#61615f;margin-top:2px">${escapeHtml(text.lineCount(reminder.lines.length))}</div>
 </td></tr>
 <tr><td style="padding:14px 28px 4px;${INK};font-size:14px;line-height:1.6;${FONT}"><p style="margin:0 0 10px">${text.greeting}</p><p style="margin:0">${text.intro}</p></td></tr>
-<tr><td style="padding:14px 28px 6px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;border:1px solid #e6e0d9"><thead><tr>${heading}</tr></thead><tbody>${rows}</tbody></table></td></tr>
+<tr><td style="padding:14px 28px 6px"><table width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;border:1px solid #e6e0d9"><thead><tr>${heading}</tr></thead><tbody>${rows}</tbody></table></td></tr>
 <tr><td style="padding:16px 28px 26px;${INK};font-size:14px;line-height:1.6;${FONT}"><p style="margin:0 0 14px">${text.outro}</p><p style="margin:0">${text.sign}<br><strong>${text.team}</strong></p></td></tr>
 </table>
 <!--[if mso]></td></tr></table><![endif]-->

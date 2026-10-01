@@ -19,7 +19,7 @@ import * as Database from 'better-sqlite3';
 import { importAlleArk } from './importer';
 import child_process, { spawn } from 'child_process';
 import type { ExcelData } from '../renderer/types/ExcelData';
-import { parseEmailRecipients } from '../utils/emailRecipients';
+import { sendViaOutlook, type MailPayload } from './outlookMail';
 
 /**
  * Content-Security-Policy applied to every response in the default session.
@@ -102,16 +102,6 @@ function applyWindowSecurity(window: BrowserWindow): void {
       log.warn(`Blocked navigation to disallowed URL: ${url}`);
     }
   });
-}
-
-/**
- * Escape a value for embedding in a PowerShell *single-quoted* string literal.
- * Single-quoted PS strings do not perform variable or $(...) subexpression
- * expansion, so this is the only safe way to inline untrusted data. Callers
- * must wrap the result in single quotes themselves.
- */
-function psLiteral(value: string): string {
-  return value.replace(/'/g, "''");
 }
 
 // Helper function to get sender email based on country
@@ -974,139 +964,12 @@ ipcMain.handle('getAllSupplierPlanning', async () => {
   }
 });
 
-// Send through Outlook COM by filling a new MailItem directly. The channel keeps its old
-// name for the preload API. Loading a .eml with Session.OpenSharedItem fails in current
-// Outlook builds with "Ugyldig bane eller URL-adresse" (0x80020009), so no .eml is used.
-ipcMain.handle(
-  'sendEmailViaEmlAndCOM',
-  async (_, payload: { to: string; subject: string; html: string; country?: string }) => {
-    const stamp = `${Date.now()}-${process.pid}`;
-    const tempHtmlFilePath = path.join(app.getPath('temp'), `pulse-mail-${stamp}.html`);
-    const tempSubjectFilePath = path.join(app.getPath('temp'), `pulse-subject-${stamp}.txt`);
-    const cleanup = () => {
-      for (const file of [tempHtmlFilePath, tempSubjectFilePath]) {
-        try {
-          if (fs.existsSync(file)) fs.unlinkSync(file);
-        } catch (cleanupError) {
-          log.warn(`Failed to remove temporary mail file ${file}`, cleanupError);
-        }
-      }
-    };
-    try {
-      log.info(`Attempting automatic email send via Outlook COM to: ${payload.to}`);
-      log.info(`Subject: ${payload.subject}`);
-
-      // Use the provided email address directly if it contains @, otherwise lookup in database
-      const emailTo = payload.to.includes('@')
-        ? payload.to
-        : databaseService.getSupplierEmail(payload.to) || payload.to;
-      log.info(`Resolved email address: ${emailTo}`);
-
-      // Accept the same bare-address lists as the review, rejecting header injection.
-      const recipients = parseEmailRecipients(emailTo);
-      if (!recipients) {
-        log.warn(`No valid email address found for supplier: ${payload.to}`);
-        return {
-          success: false,
-          error: `Ingen gyldig e-postadresse funnet for ${payload.to}. Sjekk leverandør e-post innstillinger.`,
-        };
-      }
-      const senderEmail = getSenderEmailForCountry(payload.country);
-
-      // HTML and subject go through UTF-8 files so Norwegian characters and quotes
-      // never pass through the script text.
-      fs.writeFileSync(tempHtmlFilePath, payload.html, 'utf8');
-      fs.writeFileSync(tempSubjectFilePath, payload.subject, 'utf8');
-
-      const powershellScript = `
-$OutputEncoding = [System.Text.Encoding]::UTF8
-[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
-try {
-  $html = [System.IO.File]::ReadAllText('${psLiteral(tempHtmlFilePath)}', [System.Text.Encoding]::UTF8)
-  $subject = [System.IO.File]::ReadAllText('${psLiteral(tempSubjectFilePath)}', [System.Text.Encoding]::UTF8).Trim()
-  $outlook = New-Object -ComObject Outlook.Application
-  $mail = $outlook.CreateItem(0)
-  $mail.To = '${psLiteral(recipients.join('; '))}'
-  $mail.Subject = $subject
-  $mail.HTMLBody = $html
-  $mail.SentOnBehalfOfName = '${psLiteral(senderEmail)}'
-  $mail.Send()
-  Write-Output "SUCCESS: Email sent"
-} catch {
-  Write-Output "ERROR: $($_.Exception.Message)"
-  Write-Output "ERROR_DETAILS: $($_.Exception.ToString())"
-}
-`;
-
-      return await new Promise((resolve) => {
-        const psProcess = spawn(
-          'powershell',
-          ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command', '-'],
-          {
-            windowsHide: true,
-            stdio: ['pipe', 'pipe', 'pipe'],
-          }
-        );
-        let output = '';
-        let errorOutput = '';
-        if (psProcess.stdin) {
-          psProcess.stdin.setDefaultEncoding('utf-8');
-          psProcess.stdin.write(powershellScript + '\r\n', 'utf-8');
-          psProcess.stdin.end();
-        } else {
-          log.error('PowerShell process stdin is not available.');
-          resolve({ success: false, error: 'PowerShell stdin utilgjengelig.' });
-          return;
-        }
-        psProcess.stdout.on('data', (data: Buffer) => {
-          output += data.toString();
-        });
-        psProcess.stderr.on('data', (data: Buffer) => {
-          errorOutput += data.toString();
-        });
-        psProcess.on('close', (code: number | null) => {
-          log.info(`PowerShell process exited with code: ${code}`);
-          log.info(`PowerShell output:\n${output}`);
-          if (errorOutput) {
-            log.warn(`PowerShell stderr:\n${errorOutput}`);
-          }
-          if (/^SUCCESS:/m.test(output)) {
-            log.info(`Email sent automatically via Outlook COM to: ${emailTo}`);
-            resolve({ success: true });
-          } else {
-            const errorMatch = output.match(/ERROR:\s*(.*)/);
-            const errorMsg =
-              errorMatch && errorMatch[1]
-                ? errorMatch[1].trim()
-                : `PowerShell failed. Code: ${code}. See logs.`;
-            log.error(
-              'PowerShell automation via Outlook COM failed:',
-              errorMsg,
-              'Full output:',
-              output,
-              'Full stderr:',
-              errorOutput
-            );
-            resolve({
-              success: false,
-              error: `Sending via Outlook feilet: ${errorMsg}`,
-            });
-          }
-        });
-        psProcess.on('error', (error: Error) => {
-          log.error('PowerShell process failed to spawn or other error:', error);
-          resolve({
-            success: false,
-            error: `PowerShell prosess feil: ${error.message}`,
-          });
-        });
-      });
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-      log.error('Automatic email sending via Outlook COM error:', errorMessage);
-      return { success: false, error: errorMessage };
-    } finally {
-      cleanup();
-    }
-  }
+// The channel keeps its old name for the preload API; no .eml is involved any more.
+ipcMain.handle('sendEmailViaEmlAndCOM', (_, payload: MailPayload) =>
+  sendViaOutlook(payload, {
+    tempDir: app.getPath('temp'),
+    lookupEmail: (supplier) => databaseService.getSupplierEmail(supplier),
+    senderFor: getSenderEmailForCountry,
+    log,
+  })
 );
