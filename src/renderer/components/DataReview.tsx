@@ -330,7 +330,7 @@ const DataReview: React.FC<DataReviewProps> = ({
   if (!excelData || !selectedSupplier) {
     return (
       <div className="p-6 bg-neutral-light border border-accent rounded-md shadow-sm">
-        <p className="text-neutral">{t('dataReview.noDataAvailable')}</p>
+        <p className="text-neutral break-words">{t('dataReview.noDataAvailable')}</p>
         <button
           onClick={onPrevious}
           className="btn btn-secondary px-4 py-2 mt-4 rounded-sm font-medium ease-in-out bg-neutral-white text-primary border border-primary hover:bg-primary-light hover:text-neutral-white"
@@ -343,12 +343,12 @@ const DataReview: React.FC<DataReviewProps> = ({
 
   return (
     <div className="w-full">
-      <h2 className="text-xl font-bold mb-4 text-neutral" id="data-review-heading">
+      <h2 className="text-xl font-bold mb-4 text-neutral break-words" id="data-review-heading">
         {t('dataReview.reviewForSupplier', { supplier: selectedSupplier })}
       </h2>
 
       <div className="bg-neutral-white p-4 rounded-md shadow-sm mb-6 border border-neutral-light w-full">
-        <div className="flex flex-wrap justify-between items-center mb-4">
+        <div className="flex flex-wrap justify-between items-center gap-4 mb-4">
           <div>
             <p className="text-neutral">
               <span className="font-medium">{t('dataReview.supplier')}</span> {selectedSupplier}
@@ -498,15 +498,15 @@ const DataReview: React.FC<DataReviewProps> = ({
       </div>
 
       {/* Pagination controls */}
-      <div className="flex items-center justify-between p-4 border border-neutral-light rounded-md bg-neutral-light">
-        <div className="flex items-center space-x-2">
+      <div className="flex flex-wrap items-center justify-between gap-4 p-4 border border-neutral-light rounded-md bg-neutral-light">
+        <div className="flex flex-wrap items-center gap-2">
           <span className="text-sm text-neutral">{t('dataReview.rowsPerPage')}</span>
           <select
             value={table.getState().pagination.pageSize}
             onChange={(e) => {
               table.setPageSize(Number(e.target.value));
             }}
-            className="form-control py-1 px-2 text-sm"
+            className="form-control w-auto min-w-[4.5rem] shrink-0 py-1 px-2 text-sm"
             aria-label={t('dataReview.rowsPerPage')}
           >
             {[10, 25, 50, 100].map((pageSize) => (
@@ -515,9 +515,8 @@ const DataReview: React.FC<DataReviewProps> = ({
               </option>
             ))}
           </select>
-          <span className="text-sm text-neutral">{t('dataReview.perPage')}</span>
         </div>
-        <div className="flex items-center space-x-2">
+        <div className="flex flex-wrap items-center gap-2">
           <button
             onClick={() => table.setPageIndex(0)}
             disabled={!table.getCanPreviousPage()}
@@ -537,7 +536,9 @@ const DataReview: React.FC<DataReviewProps> = ({
             {'<'}
           </button>
           <span className="text-sm text-neutral">
-            <span className="font-medium">{table.getState().pagination.pageIndex + 1}</span>{' '}
+            <span className="font-medium">
+              {table.getPageCount() === 0 ? 0 : table.getState().pagination.pageIndex + 1}
+            </span>{' '}
             {t('dataReview.pageOf')} <span className="font-medium">{table.getPageCount()}</span>
           </span>
           <button

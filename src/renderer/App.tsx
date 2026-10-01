@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Toaster } from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
 import FileUpload from './components/FileUpload';
+import { ProgressIndicator } from './components/ProgressIndicator';
 import DataReview from './components/DataReview';
 import EmailButton from './components/EmailButton';
 import SupplierSelect from './components/SupplierSelect';
@@ -42,78 +43,6 @@ interface AppState {
   bulkSupplierEmails: Map<string, string>; // Per supplier custom emails
 }
 
-// Progress indicator component
-const ProgressIndicator: React.FC<{ appState: AppState }> = ({ appState }) => {
-  const { t } = useTranslation();
-
-  const steps = [
-    {
-      id: 'upload',
-      label: t('progress.uploadFile'),
-      completed: !!appState.excelData,
-    },
-    {
-      id: 'weekday',
-      label: t('progress.selectWeekday'),
-      completed: !!appState.selectedWeekday,
-    },
-    {
-      id: 'supplier',
-      label: t('progress.selectSupplier'),
-      completed: !!appState.selectedSupplier,
-    },
-    {
-      id: 'review',
-      label: t('progress.reviewData'),
-      completed: appState.showDataReview,
-    },
-    {
-      id: 'email',
-      label: t('progress.sendEmail'),
-      completed: appState.showEmailButton,
-    },
-  ];
-
-  const currentStepIndex = steps.findIndex((step) => !step.completed);
-  const activeStep = currentStepIndex === -1 ? steps.length - 1 : currentStepIndex;
-
-  return (
-    <div className="mb-6">
-      <div className="flex items-center justify-between">
-        {steps.map((step, index) => (
-          <div key={step.id} className="flex items-center">
-            <div
-              className={`flex items-center justify-center w-8 h-8 rounded-full border-2 text-sm font-medium ${
-                step.completed
-                  ? 'bg-primary border-primary text-neutral-white'
-                  : index === activeStep
-                    ? 'border-primary text-primary'
-                    : 'border-gray-300 text-neutral-secondary'
-              }`}
-            >
-              {step.completed ? '✓' : index + 1}
-            </div>
-            <span
-              className={`ml-2 text-sm font-medium ${
-                step.completed
-                  ? 'text-primary'
-                  : index === activeStep
-                    ? 'text-neutral'
-                    : 'text-neutral-secondary'
-              }`}
-            >
-              {step.label}
-            </span>
-            {index < steps.length - 1 && (
-              <div className={`w-12 h-0.5 mx-4 ${step.completed ? 'bg-primary' : 'bg-gray-300'}`} />
-            )}
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-};
-
 // Keyboard shortcuts help modal
 const KeyboardShortcutsModal: React.FC<{
   isOpen: boolean;
@@ -141,7 +70,7 @@ const KeyboardShortcutsModal: React.FC<{
         </div>
         <div className="space-y-3">
           {shortcuts.map((shortcut, index) => (
-            <div key={index} className="flex justify-between items-center">
+            <div key={index} className="flex flex-wrap justify-between items-center gap-3">
               <kbd className="px-2 py-1 bg-neutral-light rounded text-sm font-mono">
                 {shortcut.key}
               </kbd>
@@ -644,7 +573,7 @@ const MainApp: React.FC<MainAppProps> = ({
       <div className="bg-gradient-to-r from-primary via-primary to-primary-dark text-neutral-white shadow-lg backdrop-blur-lg">
         <div className="container-app py-4 px-4">
           {/* Top row */}
-          <div className="flex items-center justify-between mb-3">
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
             <div className="flex items-center gap-3">
               {appVersion && (
                 <span className="text-xs text-neutral-white/70 bg-white/10 backdrop-blur-sm border border-white/20 px-2 py-1 rounded">
@@ -685,12 +614,12 @@ const MainApp: React.FC<MainAppProps> = ({
         </div>
       </div>
 
-      <div className="flex-1 p-6">
+      <div className="flex-1 min-w-0 p-3 sm:p-6">
         <div
           className={`mx-auto w-full bg-white/20 backdrop-blur-xl rounded-3xl border border-white/30 shadow-2xl ${
             appState.isBulkMode
               ? 'max-w-[95vw] xl:max-w-7xl px-4 sm:px-6 lg:px-8 p-4 sm:p-6 lg:p-8'
-              : 'max-w-6xl xl:max-w-7xl p-6 sm:p-8'
+              : 'max-w-6xl xl:max-w-7xl p-3 sm:p-8'
           }`}
         >
           {/* Progress Indicator - Show when file is uploaded */}
@@ -756,7 +685,7 @@ const MainApp: React.FC<MainAppProps> = ({
               {/* Bulk Mode Toggle - Only show if weekday is selected */}
               {appState.selectedWeekday && (
                 <div className="mb-6 p-4 bg-white/40 backdrop-blur-md rounded-lg border border-white/40">
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-wrap items-center justify-between gap-4">
                     <div>
                       <h3 className="text-lg font-medium text-slate-900 mb-1">
                         {t('configuration.sendingMode')}
@@ -765,7 +694,7 @@ const MainApp: React.FC<MainAppProps> = ({
                         {t('configuration.sendingModeDescription')}
                       </p>
                     </div>
-                    <div className="flex items-center space-x-3">
+                    <div className="flex shrink-0 items-center gap-3">
                       <span
                         className={`text-sm font-medium ${
                           !appState.isBulkMode ? 'text-primary' : 'text-neutral-secondary'
@@ -775,7 +704,7 @@ const MainApp: React.FC<MainAppProps> = ({
                       </span>
                       <button
                         onClick={onToggleBulkMode}
-                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 ${
+                        className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 ${
                           appState.isBulkMode ? 'bg-primary' : 'bg-neutral-light'
                         }`}
                       >
@@ -803,11 +732,11 @@ const MainApp: React.FC<MainAppProps> = ({
               {/* Supplier Selection - Only show if weekday is selected */}
               {appState.selectedWeekday && (
                 <div className="mb-6">
-                  <h3 className="text-lg font-medium mb-3 text-slate-900">
-                    {appState.isBulkMode
-                      ? t('configuration.suppliers')
-                      : t('configuration.supplier')}
-                  </h3>
+                  {appState.isBulkMode && (
+                    <h3 className="text-lg font-medium mb-3 text-slate-900">
+                      {t('configuration.suppliers')}
+                    </h3>
+                  )}
                   {appState.isBulkMode ? (
                     <BulkSupplierSelect
                       onSuppliersSelected={onSuppliersSelected}
@@ -839,7 +768,6 @@ const MainApp: React.FC<MainAppProps> = ({
             appState.selectedSupplier &&
             appState.excelData && (
               <div className="bg-white/50 backdrop-blur-2xl rounded-xl border border-white/40 shadow-xl p-6 mb-6 w-full transition-all duration-300 hover:bg-white/60 hover:shadow-2xl">
-                <h2 className="text-xl font-bold mb-4 text-slate-900">{t('dataReview.title')}</h2>
                 <DataReview
                   excelData={appState.excelData}
                   selectedWeekday={appState.selectedWeekday}
@@ -855,7 +783,6 @@ const MainApp: React.FC<MainAppProps> = ({
             appState.selectedSupplier &&
             appState.excelData && (
               <div className="bg-white/50 backdrop-blur-2xl rounded-xl border border-white/40 shadow-xl p-6 mb-6 w-full transition-all duration-300 hover:bg-white/60 hover:shadow-2xl">
-                <h2 className="text-xl font-bold mb-4 text-slate-900">{t('email.title')}</h2>
                 <EmailButton
                   excelData={appState.excelData}
                   selectedSupplier={appState.selectedSupplier}
@@ -868,9 +795,6 @@ const MainApp: React.FC<MainAppProps> = ({
             appState.selectedSuppliers.length > 0 &&
             !appState.showDataReview && (
               <div className="bg-white/50 backdrop-blur-2xl rounded-xl border border-white/40 shadow-xl p-6 mb-6 w-full transition-all duration-300 hover:bg-white/60 hover:shadow-2xl">
-                <h2 className="text-xl font-bold mb-4 text-slate-900">
-                  {t('dataReview.reviewOrderLines')}
-                </h2>
                 <BulkDataReview
                   selectedSuppliers={appState.selectedSuppliers}
                   selectedWeekday={appState.selectedWeekday}
@@ -887,9 +811,6 @@ const MainApp: React.FC<MainAppProps> = ({
             appState.showDataReview &&
             appState.selectedSuppliers.length > 0 && (
               <div className="bg-white/50 backdrop-blur-2xl rounded-xl border border-white/40 shadow-xl p-6 mb-6 w-full transition-all duration-300 hover:bg-white/60 hover:shadow-2xl">
-                <h2 className="text-xl font-bold mb-4 text-slate-900">
-                  {t('email.previewAndSend')}
-                </h2>
                 <BulkEmailPreview
                   selectedSuppliers={appState.selectedSuppliers}
                   selectedOrders={appState.bulkSelectedOrders}

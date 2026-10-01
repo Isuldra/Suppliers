@@ -104,7 +104,7 @@ const SupplierSelect: React.FC<SupplierSelectProps> = ({
 
   return (
     <div className="w-full">
-      <h2 className="text-xl font-bold mb-4 text-neutral" id="supplier-select-heading">
+      <h2 className="text-xl font-bold mb-4 text-neutral break-words" id="supplier-select-heading">
         {t('supplierSelect.title')}
       </h2>
 
@@ -180,7 +180,7 @@ const SupplierSelect: React.FC<SupplierSelectProps> = ({
               {filteredSuppliers.map((supplier: string) => (
                 <button
                   key={supplier}
-                  className={`w-full text-left p-3 border-b border-neutral-light hover:bg-neutral-light transition-default ${
+                  className={`w-full break-words text-left p-3 border-b border-neutral-light hover:bg-neutral-light transition-default ${
                     selectedSupplier === supplier ? 'bg-primary-light bg-opacity-20' : ''
                   }`}
                   onClick={() => handleSupplierSelect(supplier)}

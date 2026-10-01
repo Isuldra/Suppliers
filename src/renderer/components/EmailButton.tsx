@@ -192,10 +192,12 @@ const EmailButton: React.FC<EmailButtonProps> = ({
 
   return (
     <div className="w-full">
-      <h2 className="text-xl font-bold mb-4 text-neutral">Send e-post</h2>
+      <h2 className="text-xl font-bold mb-4 text-neutral break-words">Send e-post</h2>
 
       <div className="bg-primary-light bg-opacity-10 p-6 mb-6 rounded-md shadow-sm w-full">
-        <h3 className="font-medium text-primary mb-2">Valgt leverandør: {selectedSupplier}</h3>
+        <h3 className="font-medium text-primary mb-2 break-words">
+          Valgt leverandør: {selectedSupplier}
+        </h3>
         <p className="text-sm text-neutral-secondary">
           {orders.length} utestående ordre vil bli inkludert i e-posten.
         </p>

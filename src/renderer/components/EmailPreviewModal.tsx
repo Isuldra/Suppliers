@@ -113,13 +113,15 @@ const EmailPreviewModal: React.FC<EmailPreviewModalProps> = ({
       onClick={onCancel}
     >
       <div
-        className="bg-white/60 backdrop-blur-2xl rounded-3xl border border-white/50 shadow-2xl w-full max-w-7xl max-h-[90vh] flex flex-col"
+        className="bg-white/60 backdrop-blur-2xl rounded-3xl border border-white/50 shadow-2xl w-full max-w-7xl max-h-[90vh] min-w-0 overflow-hidden flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="p-6 border-b flex justify-between items-center flex-shrink-0">
-          <h2 className="text-xl font-bold text-neutral">Forhåndsvisning av e-post</h2>
-          <div className="flex items-center space-x-4">
-            <div className="flex space-x-1">
+        <div className="p-4 sm:p-6 border-b flex flex-wrap justify-between items-start gap-3 flex-shrink-0">
+          <h2 className="text-xl font-bold text-neutral min-w-0 break-words">
+            Forhåndsvisning av e-post
+          </h2>
+          <div className="flex min-w-0 max-w-full items-start gap-3">
+            <div className="flex min-w-0 flex-wrap gap-1">
               {languageButtons.map((lang) => (
                 <button
                   key={lang.code}
@@ -136,7 +138,7 @@ const EmailPreviewModal: React.FC<EmailPreviewModalProps> = ({
             </div>
             <button
               onClick={onCancel}
-              className="text-neutral-secondary hover:text-neutral transition-colors p-2 hover:bg-neutral-light rounded-full"
+              className="text-neutral-secondary hover:text-neutral transition-colors p-2 shrink-0 hover:bg-neutral-light rounded-full"
               aria-label="Lukk vindu"
             >
               <svg
@@ -157,11 +159,13 @@ const EmailPreviewModal: React.FC<EmailPreviewModalProps> = ({
           </div>
         </div>
 
-        <div className="p-6 border-b flex-shrink-0">
+        <div className="p-4 sm:p-6 border-b flex-shrink-0 max-h-[40vh] overflow-y-auto [overflow-wrap:anywhere]">
           <div className="mb-4">
-            <div className="flex items-center justify-between mb-2">
-              <span className="font-medium">Til:</span>
-              <span className="text-sm text-neutral-secondary">{emailData.supplier}</span>
+            <div className="flex items-start justify-between gap-3 mb-2">
+              <span className="shrink-0 font-medium">Til:</span>
+              <span className="min-w-0 text-right text-sm text-neutral-secondary">
+                {emailData.supplier}
+              </span>
             </div>
 
             {isLoadingEmail && (
@@ -169,8 +173,8 @@ const EmailPreviewModal: React.FC<EmailPreviewModalProps> = ({
             )}
 
             {!isLoadingEmail && !isEditingEmail && (
-              <div className="flex items-center space-x-2">
-                <span className="text-neutral-dark font-mono bg-neutral-light px-3 py-2 rounded border flex-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-neutral-dark font-mono bg-neutral-light px-3 py-2 rounded border flex-1 min-w-0 break-all">
                   {recipientEmail || 'Ingen e-postadresse funnet'}
                 </span>
                 <button
@@ -184,12 +188,12 @@ const EmailPreviewModal: React.FC<EmailPreviewModalProps> = ({
             )}
 
             {!isLoadingEmail && isEditingEmail && (
-              <div className="flex items-center space-x-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <input
                   type="email"
                   value={editableEmail}
                   onChange={(e) => setEditableEmail(e.target.value)}
-                  className="flex-1 px-3 py-2 border border-neutral-light rounded focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                  className="w-full min-w-0 sm:flex-1 px-3 py-2 border border-neutral-light rounded focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                   placeholder="skriv@epostadresse.no"
                   autoFocus
                 />
@@ -228,7 +232,7 @@ const EmailPreviewModal: React.FC<EmailPreviewModalProps> = ({
           />
         </div>
 
-        <div className="p-6 border-t flex justify-end space-x-4 flex-shrink-0">
+        <div className="p-4 sm:p-6 border-t flex flex-wrap justify-end gap-3 flex-shrink-0">
           <button
             className="btn btn-secondary px-4 py-2 font-medium ease-in-out bg-neutral-white text-primary border border-primary hover:bg-primary-light hover:text-neutral-white"
             onClick={onCancel}
