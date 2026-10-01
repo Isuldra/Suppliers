@@ -28,7 +28,7 @@ on:
         type: string
 
 env:
-  BUN_VERSION: "latest"
+  BUN_VERSION: "1.3.14"
   TAG_PREFIX: ${{ inputs.tag_prefix || 'v' }}
 
 jobs:
@@ -90,22 +90,19 @@ jobs:
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "Created version: $VERSION"
 
-      - name: Create GitHub Release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ env.TAG_PREFIX }}${{ steps.get-version.outputs.version }}
-          release_name: Release ${{ env.TAG_PREFIX }}${{ steps.get-version.outputs.version }}
-          draft: false
-          prerelease: ${{ contains(inputs.version_type, 'pre') }}
+      # NOTE: This workflow only bumps the version and pushes the tag.
+      # Pushing the v* tag triggers release.yml, which is the single workflow
+      # responsible for building and publishing the GitHub Release. Do NOT create
+      # a release here (previously used the archived actions/create-release@v1),
+      # otherwise the tag would be published twice by two different mechanisms.
 
       - name: Summary
         run: |
           echo "## 🎉 Version Management Complete" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Version Type:** ${{ inputs.version_type }}" >> $GITHUB_STEP_SUMMARY
+          echo "**New Version:** ${{ env.TAG_PREFIX }}${{ steps.get-version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
           echo "**Tag Prefix:** ${{ env.TAG_PREFIX }}" >> $GITHUB_STEP_SUMMARY
           echo "**Auto Push:** ${{ inputs.push_changes }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "The new version has been created and will trigger the build workflow." >> $GITHUB_STEP_SUMMARY
+          echo "The version tag has been pushed. release.yml will now build and publish the GitHub Release." >> $GITHUB_STEP_SUMMARY

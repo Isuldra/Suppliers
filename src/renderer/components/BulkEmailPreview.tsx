@@ -5,7 +5,6 @@ import { EmailService, EmailData } from '../services/emailService';
 import { ExcelRow } from '../types/ExcelData';
 import supplierData from '../data/supplierData.json';
 import EmailPreviewModal from './EmailPreviewModal';
-import { SlackService } from '../services/slackService';
 import { useICTOrder } from '../context/ICTOrderContext';
 
 interface BulkEmailPreviewProps {
@@ -128,8 +127,6 @@ const BulkEmailPreview: React.FC<BulkEmailPreviewProps> = ({
     setIsLoading(true);
     try {
       const allOrders = await window.electron.getAllOrders(includeICTOrders);
-      console.log('🔍 DEBUG: First order from getAllOrders:', allOrders[0]);
-      console.log('🔍 DEBUG: Does first order have specification?', allOrders[0]?.specification);
       const emailData: EmailPreviewData[] = [];
 
       for (const supplierName of selectedSuppliers) {
@@ -140,7 +137,6 @@ const BulkEmailPreview: React.FC<BulkEmailPreviewProps> = ({
           (order) => order.supplier === supplierName && supplierOrderKeys.has(order.key)
         );
         console.log(`🔵 Filtered orders for ${supplierName}:`, orders.length);
-        console.log('🔍 DEBUG: First filtered order specification:', orders[0]?.specification);
 
         if (orders.length > 0) {
           // Get language from database/country - this handles DK suppliers correctly
@@ -196,20 +192,24 @@ const BulkEmailPreview: React.FC<BulkEmailPreviewProps> = ({
 
   // Handle email editing
   const handleEmailChange = (supplier: string, email: string) => {
-    setCustomEmails(new Map(customEmails.set(supplier, email)));
+    setCustomEmails((prev) => {
+      const next = new Map(prev);
+      next.set(supplier, email);
+      return next;
+    });
   };
 
-  // Get email for supplier (custom or default)
+  // Get email for supplier (custom override wins, then bulk selection, then default)
   const getEmailForSupplier = (supplier: string, defaultEmail: string): string => {
-    // First check if supplier has a bulk email from BulkSupplierSelect
-    if (bulkSupplierEmails?.has(supplier)) {
-      return bulkSupplierEmails.get(supplier) || '';
-    }
-    // Then check if supplier has a custom email in this component (including empty string)
+    // First check if the user has overridden the email in this component (including empty string)
     if (customEmails.has(supplier)) {
       return customEmails.get(supplier) || '';
     }
-    // Return default email only if no custom email has been set
+    // Then check if supplier has a bulk email from BulkSupplierSelect
+    if (bulkSupplierEmails?.has(supplier)) {
+      return bulkSupplierEmails.get(supplier) || '';
+    }
+    // Return default email only if no override has been set
     return defaultEmail;
   };
 
@@ -265,7 +265,11 @@ const BulkEmailPreview: React.FC<BulkEmailPreviewProps> = ({
   // Handle language change in preview modal
   const handleLanguageChange = (supplier: string, language: 'no' | 'en' | 'se' | 'da' | 'fi') => {
     // Save custom language for this supplier
-    setCustomLanguages(new Map(customLanguages.set(supplier, language)));
+    setCustomLanguages((prev) => {
+      const next = new Map(prev);
+      next.set(supplier, language);
+      return next;
+    });
 
     // Update preview language state
     setPreviewLanguage(language);
@@ -407,28 +411,6 @@ const BulkEmailPreview: React.FC<BulkEmailPreviewProps> = ({
 
         // Update progress
         setSendingProgress(((i + 1) / totalEmails) * 100);
-      }
-
-      // Send Slack notification (non-blocking)
-      try {
-        const failures = emailPreviewData
-          .filter((s) => s.sendResult && !s.sendResult.success)
-          .map((s) => ({
-            supplier: s.supplier,
-            error: s.sendResult?.error || 'Unknown error',
-          }));
-
-        await SlackService.sendBulkEmailNotification({
-          recipientCount: totalEmails,
-          template: 'Standard Reminder (Norwegian/English)',
-          scheduled: 'Immediate',
-          successCount,
-          failCount,
-          failures: failures.length > 0 ? failures : undefined,
-        });
-      } catch (slackError) {
-        console.error('Failed to send Slack notification:', slackError);
-        // Don't show error to user - Slack is optional
       }
 
       // Show completion message

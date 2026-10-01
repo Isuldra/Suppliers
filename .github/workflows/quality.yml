@@ -3,26 +3,28 @@ name: Quality Checks
 on:
   pull_request:
     branches: [main]
-  push:
-    branches: [main]
+    types: [closed]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 env:
-  BUN_VERSION: "latest"
+  BUN_VERSION: "1.3.14"
 
 jobs:
   quality:
+    if: github.repository == 'Isuldra/Suppliers' && github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'main'
     name: Code Quality Validation
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          ref: ${{ github.event.pull_request.merge_commit_sha }}
+          persist-credentials: false
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2

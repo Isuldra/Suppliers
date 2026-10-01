@@ -2,7 +2,7 @@
 
 ## Overview
 
-Dette designdokumentet beskriver den tekniske løsningen for å utvide det eksisterende dashboardet i OneMed SupplyChain Pulse-applikasjonen. Løsningen transformerer det nåværende enkle dashboardet til et avansert, visuelt dashboard med profesjonelle visualiseringer ved hjelp av Recharts-biblioteket.
+Dette designdokumentet beskriver den tekniske løsningen for å utvide det eksisterende dashboardet i Pulse-applikasjonen. Løsningen transformerer det nåværende enkle dashboardet til et avansert, visuelt dashboard med profesjonelle visualiseringer ved hjelp av Recharts-biblioteket.
 
 Designet bygger på den eksisterende arkitekturen med React frontend, Electron backend og SQLite database. Vi vil utvide den eksisterende `Dashboard.tsx`-komponenten og legge til nye backend-metoder for å hente aggregerte data.
 

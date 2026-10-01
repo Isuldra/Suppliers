@@ -1,5 +1,53 @@
 # Documentation Changelog
 
+## Version 1.5.3 (package.json version, not yet git-tagged)
+
+_Juli 2026 — siste git-tag er fortsatt `v1.5.2`; denne oppføringen er basert utelukkende på
+`git log v1.5.2..HEAD --oneline` og kan ikke bekreftes som en publisert release._
+
+### Endringer (fra commit-meldinger)
+
+- **Danmark**: Fikset dansk språkdeteksjon og forbedret UX i e-post-forhåndsvisning
+  (`feat(dk): Fix Danish language detection and improve email preview UX`)
+- **Bugfikser**: Fjernet gjenværende debug-kode og gjeninnførte filtreringslogikk i
+  `getAllOrders()` (`fix: Remove debugging code and re-enable filtering logic in getAllOrders()`)
+- **Bugfikser**: Rettet kritiske feil før produksjonsmerge (`fix: Fix critical bugs before
+  production merge`)
+- **Kodegjennomgang**: Adresserte funn fra PR-review (`fix(pr-review): address code review
+  issues`)
+
+Detaljert innhold i disse commit-ene er ikke verifisert utover commit-meldingene selv.
+
+## Version 1.5.2
+
+_5. januar 2026_
+
+Basert på `git log v1.5.1..v1.5.2 --oneline`.
+
+### Endringer (fra commit-meldinger)
+
+- **Danmark**: Lagt til lagertoggle for valg mellom L80/L87 (`feat(dk): Add warehouse toggle for
+  L80/L87 selection`)
+- **CI/CD**: Migrerte GitHub Actions workflows fra npm til Bun (`refactor(ci): migrate GitHub
+  Actions workflows from npm to bun`)
+- **UI**: Fikset resize/scroll-håndtering for dropdown-posisjonering (`fix(ui): add
+  resize/scroll handlers for dropdown position`)
+- **Avhengigheter**: Flere commits for å synkronisere/regenerere `package-lock.json` og
+  `bun.lock` rundt bun-migreringen (`fix(deps): ...` × 4)
+
+## Version 1.5.1
+
+_8. desember 2025_
+
+Basert på `git log v1.5.0..v1.5.1 --oneline`.
+
+### Endringer (fra commit-meldinger)
+
+- **UI**: Fikset z-index-problem for språk-dropdown (`fix(ui): language dropdown z-index issue`)
+
+Øvrige commits i dette intervallet er merge-commits uten egne funksjonelle endringer utover det
+som allerede er dokumentert under versjon 1.5.0 nedenfor.
+
 ## Version 1.5.0: Denmark Support & Multi-Language Improvements
 
 _December 2025_

@@ -1,5 +1,21 @@
 # Implementation Plan
 
+> **Status: largely shipped, not an active TODO list.** Every task below is still shown as
+> unchecked `- [ ]` from the original plan, but the dashboard has actually been built:
+> `src/renderer/components/dashboard/` contains `KPICard.tsx`, `TopSuppliersChart.tsx`,
+> `OrderTimelineChart.tsx`, `DashboardFilters.tsx`, and `TopItemsTable.tsx`, and these are wired
+> into `Dashboard.tsx`. `DatabaseService` implements `getDashboardStats()`,
+> `getTopSuppliersByOutstanding()`, and `getOrdersByWeek()`, exposed via the `get-dashboard-stats`,
+> `get-top-suppliers`, and `get-orders-by-week` IPC channels.
+>
+> **Known gap:** `PlannerDistributionChart.tsx` exists in the same directory but, as of this
+> writing, is **not** imported/rendered by `Dashboard.tsx`, and there is no
+> `getOrdersByPlanner()`/`get-orders-by-planner` backend or IPC channel. The per-planner
+> distribution feature (tasks 2.3, 3, and 7 below) was not completed/integrated.
+>
+> The checklist below is left as the original planning record and has not been re-checked
+> item-by-item against the code; treat it as historical, not as open work.
+
 - [ ] 1. Installer avhengigheter og oppsett
   - Installer Recharts og date-fns npm-pakker
   - Installer TypeScript type definitions for Recharts

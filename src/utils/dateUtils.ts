@@ -104,51 +104,56 @@ export function addDays(date: Date, days: number): Date {
 }
 
 /**
- * Get the ISO week number of a date
+ * Get the ISO-8601 week number (1-53) of a date.
+ * ISO 8601: weeks start on Monday and week 1 is the week containing the first
+ * Thursday of the year (equivalently, the week containing January 4th).
+ *
  * @param date The date to get the week number for
  * @returns Week number (1-53)
  */
-export function getWeekNumber(date: Date): number {
-  const target = new Date(date);
-  target.setHours(0, 0, 0, 0);
-  target.setDate(target.getDate() + 3 - ((target.getDay() + 6) % 7));
-  const firstWeek = new Date(target.getFullYear(), 0, 4);
-  return (
-    1 +
-    Math.round(
-      ((target.getTime() - firstWeek.getTime()) / 86400000 - 3 + ((firstWeek.getDay() + 6) % 7)) / 7
-    )
-  );
+export function getISOWeek(date: Date): number {
+  // Work in UTC to avoid DST/timezone drift.
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const dayNum = d.getUTCDay() || 7; // Mon=1 .. Sun=7
+  // Shift to the Thursday of the current ISO week.
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  return Math.ceil(((d.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
 }
 
 /**
- * Get the ISO week number and year for a given date.
- * ISO 8601 week definition: Week starts on Monday, first week of the year is the one containing the first Thursday.
+ * Get the ISO-8601 week-year of a date. This is the calendar year that owns the
+ * date's ISO week, i.e. the year of the Thursday of that week. It can differ
+ * from the calendar year around January 1st (e.g. 2024-12-30 -> 2025,
+ * 2021-01-01 -> 2020).
  *
- * @param date The date to get the week number for
- * @returns An object containing the week number and year
+ * @param date The date to get the ISO week-year for
+ * @returns The ISO week-year
  */
-export function getWeekDateRange(
-  weekNumber: number,
-  _year: number
-): { start: Date; end: Date } | null {
-  if (weekNumber < 1 || weekNumber > 53) {
-    return null;
-  }
+export function getISOWeekYear(date: Date): number {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const dayNum = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+  return d.getUTCFullYear();
+}
 
-  const firstDayOfYear = new Date(_year, 0, 1);
-  const dayOfWeek = firstDayOfYear.getDay();
-  const daysOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
-
-  const firstMonday = new Date(_year, 0, 1 + daysOffset);
-
-  const result = {
-    start: firstMonday,
-    end: new Date(firstMonday),
-  };
-  result.end.setDate(result.start.getDate() + 6);
-
-  return result;
+/**
+ * Get the Monday (local time) that starts a given ISO-8601 week.
+ * Pure: does not mutate its inputs.
+ *
+ * @param week The ISO week number (1-53)
+ * @param weekYear The ISO week-year
+ * @returns Date for the Monday that starts that ISO week
+ */
+export function getISOWeekMonday(week: number, weekYear: number): Date {
+  // ISO week 1 is the week containing January 4th; its Monday is the anchor.
+  const jan4 = new Date(weekYear, 0, 4);
+  const jan4DayNum = jan4.getDay() || 7; // Mon=1 .. Sun=7
+  const week1Monday = new Date(jan4);
+  week1Monday.setDate(jan4.getDate() - (jan4DayNum - 1));
+  const target = new Date(week1Monday);
+  target.setDate(week1Monday.getDate() + (week - 1) * 7);
+  return target;
 }
 
 /**

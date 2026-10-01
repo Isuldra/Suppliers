@@ -1,6 +1,6 @@
 # Email Templates (Current Implementation)
 
-This document describes the current, simplified email templating system used in SupplyChain OneMed for sending supplier reminder emails.
+This document describes the current, simplified email templating system used in Pulse for sending supplier reminder emails.
 
 **Note:** This implementation differs significantly from potentially planned future enhancements. For desired future features like a database-backed template editor, custom helpers, categories, etc., please refer to `docs/planning/planned-features.md`.
 
