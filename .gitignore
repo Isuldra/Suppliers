@@ -16,6 +16,8 @@ backup/
 .env.development.local
 .env.test.local
 .env.production.local
+.env.*
+!.env.example
 
 # IDE files
 .vscode/
@@ -33,6 +35,15 @@ logs/
 *.log
 
 # Runtime data
+*.db
+*.db-*
+*.sqlite
+*.sqlite-*
+*.sqlite3
+*.sqlite3-*
+security-report.json
+electron-builder.temp.json
+*.tsbuildinfo
 pids/
 *.pid
 *.seed
@@ -108,3 +119,8 @@ release/
 
 # Update files directory (now managed in git for Cloudflare Pages deployment)
 # docs/updates/
+
+# Private business data (kept locally; safe examples are tracked)
+/resources/Produktkatalog.xlsx
+/src/renderer/data/supplierData.json
+/src/renderer/data/supplyPlanners.json
