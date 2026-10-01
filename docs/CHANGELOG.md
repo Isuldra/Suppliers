@@ -2,7 +2,7 @@
 
 Dette er en kort oversikt over endringer i repoet. En pakkeversjon eller Git-tag bekrefter ikke alene at filer er publisert og testet. Tagdatoene er datoen på committen som taggen peker til.
 
-## Version 1.5.3: Ny arbeidsflate
+## Version 1.5.4: Ny arbeidsflate
 
 - Ny arbeidsflate med leverandørregister, linjevalg, ukestatus og gjennomgang før sending.
 - Delt mottakervalidering for flere komma- eller semikolonseparerte adresser.
@@ -20,6 +20,8 @@ Andre repoendringer i 2026 etter de eldre versjonene:
 - Oktober: lokale forretningsdata tatt ut av Git.
 - Juli: PowerShell-escaping og prosessgrenser styrket; datoer, ISO-uker og leverandøravgrensning rettet.
 - Juli: Slack- og Supabase-integrasjonene fjernet, sammen med døde avhengigheter og eldre kode.
+
+1.5.3 ble aldri publisert som release. Lokale bygg fra januar kan bære det versjonsnummeret, så denne releasen bruker 1.5.4 for å være nyere enn dem.
 
 ## Version 1.5.2: Danmark og Bun
 
