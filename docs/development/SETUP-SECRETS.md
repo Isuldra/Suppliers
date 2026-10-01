@@ -106,16 +106,6 @@ For GitHub Actions, legg til token som repository secret:
 
 **VIKTIG:** GitHub Actions har allerede et built-in `GITHUB_TOKEN` som fungerer for de fleste operasjoner.
 
-## Slack Webhook (Optional)
-
-For changelog notifications til Slack:
-
-1. Opprett Incoming Webhook i Slack workspace
-2. Legg til i miljøvariabel:
-   ```bash
-   export SLACK_WEBHOOK_URL="https://hooks.slack.com/services/YOUR/WEBHOOK/URL"
-   ```
-
 ## Relatert Dokumentasjon
 
 - [RELEASE-CHECKLIST.md](./RELEASE-CHECKLIST.md) - Release prosess

@@ -8,5 +8,4 @@ package-lock.json
 docs/updates/
 backup/
 *.log
-.cursorignore
 

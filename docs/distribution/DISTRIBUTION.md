@@ -1,4 +1,4 @@
-# Distribution Guide for SupplyChain OneMed
+# Distribution Guide for Pulse
 
 This document provides instructions for building and deploying the application with automatic updates.
 
@@ -84,9 +84,9 @@ This will:
 
 Files are created in the `release/` directory:
 
-- **NSIS Installer**: `OneMed SupplyChain-[version]-setup.exe`
-- **Portable**: `OneMed SupplyChain-Portable.exe`
-- **Blockmap**: `OneMed SupplyChain-[version]-setup.exe.blockmap`
+- **NSIS Installer**: `Pulse-[version]-setup.exe`
+- **Portable**: `Pulse-Portable.exe`
+- **Blockmap**: `Pulse-[version]-setup.exe.blockmap`
 
 ## Deployment Architecture
 
@@ -105,9 +105,9 @@ https://suppliers-anx.pages.dev/latest.yml
 ```
 docs/updates/
 ├── latest.yml                              # Auto-update metadata
-├── OneMed SupplyChain-1.2.2-setup.exe      # NSIS installer
-├── OneMed SupplyChain-1.2.2-setup.exe.blockmap
-├── OneMed SupplyChain-Portable.exe         # Portable version
+├── Pulse-1.2.2-setup.exe      # NSIS installer
+├── Pulse-1.2.2-setup.exe.blockmap
+├── Pulse-Portable.exe         # Portable version
 ├── index.html                               # Manual download page
 └── _redirects                               # Cloudflare routing rules
 ```
@@ -169,8 +169,8 @@ npm run version:bump --push
 
 For manual distribution (without auto-updates):
 
-- **Installer**: Users run `OneMed SupplyChain-[version]-setup.exe` directly
-- **Portable**: Users run `OneMed SupplyChain-Portable.exe` without installation
+- **Installer**: Users run `Pulse-[version]-setup.exe` directly
+- **Portable**: Users run `Pulse-Portable.exe` without installation
 - **Data Location**: Application data stored in `%LOCALAPPDATA%\one-med-supplychain-app`
 
 ## Benefits of Auto-Update System

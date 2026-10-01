@@ -8,6 +8,46 @@ import commonjs from '@rollup/plugin-commonjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
+/**
+ * The production renderer is loaded from file://, which the main process's
+ * onHeadersReceived hook never sees, so a response-header CSP does not protect
+ * a packaged build. Inject the policy as a <meta> tag instead.
+ *
+ * Keep in sync with CSP_POLICY in src/main/index.ts. The dev server needs its
+ * HMR websocket allowed; the production policy must not carry that exception.
+ */
+function cspMetaPlugin() {
+  const base = [
+    "default-src 'self'",
+    "script-src 'self'",
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    "img-src 'self' data: blob:",
+    "font-src 'self' https://fonts.gstatic.com",
+    "worker-src 'self' blob:",
+    "object-src 'none'",
+    "base-uri 'none'",
+    "frame-ancestors 'none'",
+  ];
+
+  return {
+    name: 'csp-meta',
+    transformIndexHtml(_html: string, ctx: { server?: unknown }) {
+      const isDev = ctx.server !== undefined;
+      // The dev server needs its HMR websocket; production needs nothing.
+      const connectSrc = isDev ? "connect-src 'self' ws://localhost:5173" : "connect-src 'self'";
+      const policy = [...base, connectSrc].join('; ');
+
+      return [
+        {
+          tag: 'meta',
+          attrs: { 'http-equiv': 'Content-Security-Policy', content: policy },
+          injectTo: 'head-prepend' as const,
+        },
+      ];
+    },
+  };
+}
+
 export default defineConfig({
   main: {
     build: {
@@ -20,10 +60,9 @@ export default defineConfig({
           // leave test patterns/external libs here if you like
           /\.test\./,
           // Add native modules to external
-          'odbc',
-          'sqlite3',
           'better-sqlite3',
           'electron-updater',
+          'electron-log/main',
           'exceljs',
           'electron',
           'fs',
@@ -50,14 +89,6 @@ export default defineConfig({
                 src: path.resolve(__dirname, 'package.json'),
                 dest: path.resolve(__dirname, 'dist'),
               },
-              {
-                src: path.resolve(__dirname, 'src/services/databaseServiceAdapter.js'),
-                dest: path.resolve(__dirname, 'dist/services'),
-              },
-              {
-                src: path.resolve(__dirname, 'src/main/databaseAdapter.js'),
-                dest: path.resolve(__dirname, 'dist/main'),
-              },
             ],
             // keep folder structure flat
             flatten: true,
@@ -80,8 +111,6 @@ export default defineConfig({
         'codecov',
         'nyc',
         'tape',
-        'odbc',
-        'sqlite3',
         'better-sqlite3',
         'electron-updater',
       ],
@@ -94,12 +123,12 @@ export default defineConfig({
         input: {
           index: path.resolve(__dirname, 'src/preload/index.ts'),
         },
-        external: [/\.test\./, 'odbc', 'sqlite3', 'better-sqlite3', 'electron-updater'],
+        external: [/\.test\./, 'better-sqlite3', 'electron-updater'],
         plugins: [
           externalizeDepsPlugin(),
           // Fix: rollup-plugin-ignore expects string array
           // After looking at the source: https://github.com/jackmellis/rollup-plugin-ignore/blob/master/src/index.js
-          ignore(['mock-aws-s3', 'odbc', 'sqlite3', 'better-sqlite3']),
+          ignore(['mock-aws-s3', 'better-sqlite3']),
         ],
         output: {
           format: 'cjs',
@@ -113,7 +142,7 @@ export default defineConfig({
     build: {
       outDir: path.resolve(__dirname, 'dist/renderer'),
       rollupOptions: {
-        external: [/\.test\./, 'odbc', 'sqlite3', 'better-sqlite3', 'electron-updater'],
+        external: [/\.test\./, 'better-sqlite3', 'electron-updater'],
       },
     },
     server: {
@@ -125,6 +154,6 @@ export default defineConfig({
         '@services': path.resolve(__dirname, 'src/services'),
       },
     },
-    plugins: [react()],
+    plugins: [react(), cspMetaPlugin()],
   },
 });

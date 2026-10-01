@@ -1,3 +1,4 @@
+// TODO: Unfinished feature — not mounted anywhere. See docs/planning/.
 import React from 'react';
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { PlannerStat } from '../../types/Dashboard';

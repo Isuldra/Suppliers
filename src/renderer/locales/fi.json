@@ -13,19 +13,6 @@
     "keyboardShortcuts": "Pikanäppäimet",
     "settings": "Asetukset"
   },
-  "settings": {
-    "displayName": "Näyttönimi",
-    "displayNamePlaceholder": "Nimesi (esim. Andreas Selvethun)",
-    "displayNameHelp": "Tämä nimi näytetään Slack-ilmoituksissa",
-    "slackWebhookUrl": "Slack Webhook URL",
-    "slackWebhookUrlPlaceholder": "https://hooks.slack.com/services/...",
-    "slackWebhookUrlHelp": "Webhook URL Slack-ilmoituksille. Pidä tämä salassa!",
-    "slackNotificationsEnabled": "Ota käyttöön Slack-ilmoitukset",
-    "slackNotificationsHelp": "Lähetä ilmoituksia Slackiin kun sähköposteja lähetetään",
-    "slackSection": "Slack-integraatio",
-    "showWebhookUrl": "Näytä URL",
-    "hideWebhookUrl": "Piilota URL"
-  },
   "progress": {
     "uploadFile": "Lataa tiedosto",
     "selectWeekday": "Valitse viikonpäivä",

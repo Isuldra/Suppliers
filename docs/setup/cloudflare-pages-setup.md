@@ -1,102 +1,40 @@
-# Cloudflare Pages Setup Guide
+# Cloudflare Pages: static update hosting
 
-## Overview
+The existing `suppliers-anx.pages.dev` project serves update metadata for installed
+Pulse clients. Electron installers are built on Windows; Cloudflare only needs
+to publish the committed static files in `docs/updates`.
 
-Cloudflare Pages provides free, fast, and reliable hosting for your update files. It's better than GitHub Pages because:
+## Account settings to apply
 
-- ✅ Faster global CDN
-- ✅ Better reliability
-- ✅ Custom domains
-- ✅ No GitHub dependencies
-- ✅ Better for corporate environments
+In **Workers & Pages > suppliers-anx > Settings > Builds & deployments**, use:
 
-## Step-by-Step Setup
+| Setting                          | Value                       |
+| -------------------------------- | --------------------------- |
+| Production branch                | `main`                      |
+| Automatic production deployments | Enabled                     |
+| Preview branch deployments       | **None**                    |
+| Framework preset                 | None                        |
+| Root directory                   | Repository root             |
+| Build command                    | `exit 0`                    |
+| Build output directory           | `docs/updates`              |
+| Environment variable             | `SKIP_DEPENDENCY_INSTALL=1` |
 
-### 1. Connect GitHub Repository
+Save both production and preview controls. This disables branch/PR preview builds
+and publishes static files without installing npm/Bun dependencies or building
+Electron. These account settings must be changed in the Cloudflare dashboard;
+committing this document does not apply them.
 
-1. **Go to Cloudflare Dashboard**
-   - Navigate to: https://dash.cloudflare.com/
-   - Click "Pages" in the left sidebar
+The existing `npm run deploy:cloudflare` helper generates a placeholder download
+page; it does not actually deploy. Replace that command in Cloudflare with
+`exit 0` before retiring the helper. Metadata must be generated from the release's
+Windows build using `bun run release:prepare`, not during a Cloudflare build.
 
-2. **Create New Project**
-   - Click "Create a project"
-   - Select "Connect to Git"
+Keep the existing update URL available to installed clients. Verify
+`https://suppliers-anx.pages.dev/latest.yml` after a metadata deployment. Publish
+matching GitHub Release assets before merging new metadata into `main`.
 
-3. **Connect GitHub**
-   - Click "Connect to Git"
-   - Choose "GitHub" as your Git provider
-   - Authorize Cloudflare to access your repositories
-   - Select your `Isuldra/Suppliers` repository
+## Official references
 
-### 2. Configure Build Settings
-
-**Framework preset**: None (Static Site)
-
-**Build command**:
-
-```bash
-npm run deploy:cloudflare
-```
-
-**Build output directory**:
-
-```
-docs/updates
-```
-
-**Root directory**:
-
-```
-/
-```
-
-### 3. Environment Variables (Optional)
-
-No environment variables needed for static files.
-
-### 4. Custom Domain (Optional - Not Required!)
-
-**You don't need your own domain!** Cloudflare Pages gives you a free subdomain automatically.
-
-**Default URL**: `https://suppliers.pages.dev/` (or similar)
-
-**If you want a custom domain later:**
-
-- Go to "Custom domains" tab
-- Add your domain (e.g., `updates.onemed.no`)
-- Follow DNS setup instructions
-
-## Update Build Script
-
-Add this to your `package.json`:
-
-```json
-{
-  "scripts": {
-    "deploy:cloudflare": "node scripts/deploy-to-cloudflare.js"
-  }
-}
-```
-
-## Benefits of Cloudflare Pages
-
-1. **Global CDN**: Files served from nearest location
-2. **Better Performance**: Faster than GitHub Pages
-3. **Custom Domain**: Use your own domain
-4. **No Rate Limits**: Unlike GitHub API
-5. **Corporate Friendly**: Works behind firewalls
-6. **Free Tier**: Generous free limits
-
-## Deployment Process
-
-1. **Push to GitHub**: Your changes trigger automatic deployment
-2. **Cloudflare Builds**: Automatically builds and deploys
-3. **Global CDN**: Files available worldwide instantly
-4. **Auto-Updates**: Your app checks the Cloudflare URL
-
-## URLs After Setup
-
-- **Update URL**: `https://suppliers.pages.dev/` (or your custom domain)
-- **Latest JSON**: `https://suppliers.pages.dev/latest.json`
-- **App Update**: `https://suppliers.pages.dev/app-update.json`
-- **Manual Downloads**: `https://suppliers.pages.dev/index.html`
+- [Branch deployment controls](https://developers.cloudflare.com/pages/configuration/branch-build-controls/)
+- [Static HTML](https://developers.cloudflare.com/pages/framework-guides/deploy-anything/)
+- [Skip dependency installation](https://developers.cloudflare.com/pages/configuration/build-image/#skip-dependency-install)
