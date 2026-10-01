@@ -1,15 +1,10 @@
 name: 🏗️ Build Electron App for Windows
 
-# Trigger a new workflow run with this comment update
+# Only allocate a runner after a PR is merged into main.
 on:
-  push:
-    branches: [main]
-    # NOTE: Removed tags trigger - release.yml handles tag builds to avoid duplicate builds
   pull_request:
     branches: [main]
-  workflow_run:
-    workflows: ["🏷️ Version Management"]
-    types: [completed]
+    types: [closed]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -21,10 +16,12 @@ env:
 
 jobs:
   build:
+    if: github.repository == 'Isuldra/Suppliers' && github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'main'
     name: Build for ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
     permissions:
-      contents: write
+      contents: read
     strategy:
       matrix:
         os: [windows-latest]
@@ -32,8 +29,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          fetch-depth: 0
+          ref: ${{ github.event.pull_request.merge_commit_sha }}
+          persist-credentials: false
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
@@ -99,7 +96,7 @@ jobs:
 
       # NOTE: Release publishing (GitHub Release + Cloudflare metadata) is handled
       # exclusively by release.yml on tag push. build.yml only builds and uploads
-      # CI artifacts for main/PR; it has no tag trigger and must not publish.
+      # CI artifacts after a merge to main; it must not publish a release.
 
       - name: List ASAR Contents on Failure
         if: failure()
