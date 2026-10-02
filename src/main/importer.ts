@@ -573,7 +573,7 @@ export async function importAlleArk(
 
       // DK supplier planning: Use detectedCountry which is set by warehouse or filename detection
       // This is more robust than just filename detection
-      if (leverandorSheet && detectedCountry === 'DK') {
+      if (detectedCountry === 'DK') {
         log.info(
           '🇩🇰 Setting up DK suppliers for all weekdays (detected from warehouse or filename)...'
         );

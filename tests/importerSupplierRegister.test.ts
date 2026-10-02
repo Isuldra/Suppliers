@@ -385,6 +385,30 @@ describe('importing the supplier sheets', () => {
     );
   });
 
+  it('gives Danish order suppliers every weekday when only the checklist is present', async () => {
+    const { sqlite, db } = database();
+    const file = await workbook({
+      orders: ['Checklist DK', 'Checklist DK'],
+      checklist: [
+        ['Checklist DK', 'orders@example.dk'],
+        ['No Orders DK', ''],
+      ],
+    });
+
+    expect(await importAlleArk(file, db, 'innkjop_DK.xlsx')).toBe(true);
+    expect(register(sqlite)).toEqual({
+      contacts: [
+        { name: 'Checklist DK', email: 'orders@example.dk', language: null, companyId: null },
+        { name: 'No Orders DK', email: '', language: null, companyId: null },
+      ],
+      days: ['Fredag', 'Mandag', 'Onsdag', 'Tirsdag', 'Torsdag'].map((weekday) => ({
+        name: 'Checklist DK',
+        weekday,
+      })),
+      orders: ['Checklist DK', 'Checklist DK'],
+    });
+  });
+
   it('stores every supplier in the file, also without an address or with a shared name', async () => {
     const { sqlite, db } = database();
     const file = await workbook({
