@@ -10,7 +10,9 @@ Dette er en kort oversikt over endringer i repoet. En pakkeversjon eller Git-tag
 - E-postspråket kan endres rett ved leverandørnavnet på Purring.
 - Leverandører viser bare leverandørene i filen som ble importert sist, med Lev.nr fra arket «Leverandør», også uten åpne ordrer. Leverandører fra tidligere filer blir ikke liggende igjen.
 - Ordrelinjene kobles til leverandøren på leverandørnummeret (ftgnr, Company ID i «Leverandør»), så en leverandør som er stavet ulikt i ordrearket og i «Leverandør», vises som én leverandør med adresse og purredager.
-- Leverandørregisteret kommer bare fra arket «Leverandør». Arket «Sjekkliste Leverandører» leses ikke lenger.
+- Arket «Leverandør» bestemmer leverandørregisteret når det finnes. Manglende e-post hentes fra entydige treff i «Sjekkliste Leverandører». Filer med bare sjekklisten beholder også leverandører uten e-post eller åpne ordrer.
+- Tvetydige leverandørtreff og konflikter mellom registrerte navn og nummer velger ikke mottaker automatisk. Fullførte ordre skaper ikke konflikter for åpne ordre.
+- Danske leverandører med ordre får purredager mandag–fredag også ved import med bare sjekklisten.
 - Arbeidsflaten er oversatt til dansk, svensk, finsk og engelsk, med datoer og tall i språkets format, og språkvelgeren er tilbake øverst.
 
 ## Version 1.5.4: Ny arbeidsflate
