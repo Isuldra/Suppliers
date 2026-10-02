@@ -2,7 +2,7 @@ import type { ExcelRow } from '../types/ExcelData';
 import type { SupplierContact } from '../../types/SupplierContact';
 import { getISOWeek, getISOWeekYear } from '../../utils/dateUtils';
 import { parseEmailRecipients } from '../../utils/emailRecipients';
-import { supplierFinder } from '../../utils/supplierMatch';
+import { companyName, supplierFinder } from '../../utils/supplierMatch';
 
 export const DAYS = ['Mandag', 'Tirsdag', 'Onsdag', 'Torsdag', 'Fredag'];
 export const LANGUAGES = { no: 'Norsk', da: 'Dansk', se: 'Svenska', fi: 'Suomi', en: 'English' };
@@ -155,7 +155,7 @@ export function currentStatus(name: string, history: HistoryEntry[]) {
 export function validRecipients(value: string) {
   return parseEmailRecipients(value) !== null;
 }
-/** Order lines join the stored supplier with their supplier number, else with their name. */
+/** Order lines join the stored supplier with their name, else with their supplier number. */
 export function buildSuppliers(
   rows: ExcelRow[],
   contacts: SupplierContact[],
@@ -198,6 +198,13 @@ export function buildSuppliers(
       ...[supplier.name, ...supplier.aliases].map((name) => edits[name]).find(Boolean),
     }))
     .sort((a, b) => a.name.localeCompare(b.name, 'nb'));
+}
+/**
+ * Order lines that name another company than the supplier: they joined it by supplier number
+ * alone, so the recipient is confirmed before sending.
+ */
+export function numberMatches(supplier: string, lines: ExcelRow[]) {
+  return lines.filter((line) => companyName(line.supplier) !== companyName(supplier));
 }
 /** History saved under a name a supplier's order lines carry, moved to the supplier's name. */
 export function historyOf(history: HistoryEntry[], suppliers: Supplier[]): HistoryEntry[] {

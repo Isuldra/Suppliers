@@ -1,8 +1,8 @@
 import React, { useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { LANGUAGES, validRecipients, type Language } from './model';
+import { LANGUAGES, numberMatches, validRecipients, type Language } from './model';
 import { reminderHtml, reminderSubject, sendReminder, type Reminder } from './reminder';
-import { Modal } from './Primitives';
+import { Check, Modal } from './Primitives';
 
 type Status = {
   state: 'sending' | 'sent' | 'sent-unsaved' | 'error' | 'skipped';
@@ -35,10 +35,13 @@ export default function Review({
   const [statuses, setStatuses] = useState<Record<string, Status>>({});
   const [busy, setBusy] = useState(false);
   const [confirm, setConfirm] = useState(quickConfirm);
+  // Suppliers whose recipient was confirmed for order lines joined by supplier number alone.
+  const [matchConfirmed, setMatchConfirmed] = useState<Set<string>>(new Set());
   const lock = useRef(false);
   const current = items[focus];
   const html = useMemo(() => reminderHtml(current), [current]);
   const status = statuses[current.supplier];
+  const currentMatches = numberMatches(current.supplier, current.lines);
   const pending = items.filter(
     (item) => !['sent', 'sent-unsaved', 'skipped'].includes(statuses[item.supplier]?.state)
   );
@@ -46,7 +49,11 @@ export default function Review({
   const sentCount = Object.values(statuses).filter((item) =>
     ['sent', 'sent-unsaved'].includes(item.state)
   ).length;
-  const valid = pending.every((item) => validRecipients(item.recipient));
+  const unconfirmed = (item: Reminder) =>
+    numberMatches(item.supplier, item.lines).length > 0 && !matchConfirmed.has(item.supplier);
+  const recipientsValid = pending.every((item) => validRecipients(item.recipient));
+  const matchesConfirmed = !pending.some(unconfirmed);
+  const valid = recipientsValid && matchesConfirmed;
   const editable = !busy && !['sent', 'sent-unsaved'].includes(status?.state || '');
   const update = (changes: Partial<Reminder>) =>
     setItems((prev) =>
@@ -137,9 +144,11 @@ export default function Review({
                 <small className={statuses[item.supplier]?.state === 'error' ? 'pulse-danger' : ''}>
                   {statuses[item.supplier]
                     ? t(STATE_KEYS[statuses[item.supplier].state])
-                    : validRecipients(item.recipient)
-                      ? LANGUAGES[item.language]
-                      : t('workspace.review.invalidEmail')}
+                    : !validRecipients(item.recipient)
+                      ? t('workspace.review.invalidEmail')
+                      : unconfirmed(item)
+                        ? t('workspace.review.checkMatch')
+                        : LANGUAGES[item.language]}
                 </small>
               </button>
             ))}
@@ -197,6 +206,32 @@ export default function Review({
               {t('workspace.review.invalidRecipient')}
             </p>
           )}
+          {currentMatches.length > 0 && (
+            <div role="alert" className="pulse-notice">
+              <p>
+                {t('workspace.review.matchNotice', {
+                  names: [...new Set(currentMatches.map((line) => line.supplier))].join(', '),
+                  supplier: current.supplier,
+                  number: currentMatches[0].internalSupplierNumber,
+                })}
+              </p>
+              <label>
+                <Check
+                  disabled={!editable}
+                  checked={matchConfirmed.has(current.supplier)}
+                  onChange={() =>
+                    setMatchConfirmed((prev) => {
+                      const next = new Set(prev);
+                      if (next.has(current.supplier)) next.delete(current.supplier);
+                      else next.add(current.supplier);
+                      return next;
+                    })
+                  }
+                />{' '}
+                {t('workspace.review.matchConfirm')}
+              </label>
+            </div>
+          )}
           <div className="pulse-mail-subject">
             <span>{t('workspace.review.subject')}</span>
             <strong>{reminderSubject(current)}</strong>
@@ -225,9 +260,11 @@ export default function Review({
           <small>
             {busy
               ? t('workspace.review.waitOutlook')
-              : !valid
+              : !recipientsValid
                 ? t('workspace.review.fixRecipients')
-                : t('workspace.review.sentFrom')}
+                : !matchesConfirmed
+                  ? t('workspace.review.confirmMatches')
+                  : t('workspace.review.sentFrom')}
           </small>
         </div>
         <div className="pulse-grow" />
@@ -267,7 +304,13 @@ export default function Review({
               {t('workspace.review.confirm')}
             </button>
           </div>
-          {!valid && <p className="pulse-danger">{t('workspace.review.fixBeforeSend')}</p>}
+          {!recipientsValid ? (
+            <p className="pulse-danger">{t('workspace.review.fixBeforeSend')}</p>
+          ) : (
+            !matchesConfirmed && (
+              <p className="pulse-danger">{t('workspace.review.confirmMatches')}</p>
+            )
+          )}
         </Modal>
       )}
     </>

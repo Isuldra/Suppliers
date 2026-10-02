@@ -115,6 +115,38 @@ describe('Review before Outlook sending', () => {
     await act(async () => saved(true));
     expect(transport).toHaveBeenCalledTimes(2);
   });
+  it('sends order lines naming another company only after the recipient is confirmed', async () => {
+    transport.mockResolvedValue({ success: true });
+    await render([
+      // The same company with and without its country: no confirmation.
+      {
+        ...items[0],
+        supplier: 'Abena Danmark A/S',
+        lines: [{ ...items[0].lines[0], supplier: 'Abena A/S' }],
+      },
+      {
+        ...items[1],
+        lines: [
+          { ...items[1].lines[0], supplier: 'Grimas B.V.', internalSupplierNumber: '4960009' },
+        ],
+      },
+    ]);
+    expect(sendButton()).toBeDisabled();
+    expect(container).toHaveTextContent('Kontroller mottakeren');
+    await act(async () =>
+      container.querySelectorAll<HTMLButtonElement>('.pulse-review-supplier')[1].click()
+    );
+    expect(container).toHaveTextContent(
+      'Ordrelinjer for Grimas B.V. er koblet til Second bare med Lev.nr 4960009.'
+    );
+    const confirm = [...container.querySelectorAll('label')]
+      .find((label) => label.textContent?.includes('Mottakeren er riktig'))!
+      .querySelector('input')!;
+    await act(async () => confirm.click());
+    expect(sendButton()).toBeEnabled();
+    await act(async () => sendButton().click());
+    expect(transport).toHaveBeenCalledTimes(2);
+  });
   it('never sends without an explicit click and disables sending for missing recipients', async () => {
     await render([{ ...items[0], recipient: '' }]);
     expect(transport).not.toHaveBeenCalled();

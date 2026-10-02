@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   buildSuppliers,
   historyOf,
+  numberMatches,
   excludedReason,
   fingerprint,
   lineId,
@@ -58,12 +59,14 @@ describe('Pulse workspace selections', () => {
     expect(suppliers.find((supplier) => supplier.name === line.supplier)?.lines).toHaveLength(1);
     expect(suppliers.find((supplier) => supplier.name === 'No orders')?.language).toBe('en');
   });
-  it('joins order lines to their supplier by supplier number, else by name', () => {
+  it('joins order lines to their supplier by name, else by supplier number', () => {
     const suppliers = buildSuppliers(
       [
         { ...line, supplier: 'Abena A/S', internalSupplierNumber: '4960001' },
         { ...line, key: '2', supplier: 'EXAMPLE  medical' },
         { ...line, key: '3', supplier: 'Other AS', internalSupplierNumber: '4960009' },
+        // Name and number point to different suppliers: the name decides.
+        { ...line, key: '4', supplier: 'Example Medical', internalSupplierNumber: '4960001' },
       ],
       [
         {
@@ -95,12 +98,21 @@ describe('Pulse workspace selections', () => {
       },
       {
         name: 'Example Medical',
-        number: '',
+        number: '4960001',
         email: 'a@example.com',
-        lines: 1,
+        lines: 2,
         aliases: ['EXAMPLE  medical'],
       },
       { name: 'Other AS', number: '4960009', email: '', lines: 1, aliases: [] },
+    ]);
+  });
+  it('asks to confirm only lines whose name is another company than the supplier', () => {
+    const lines = ['Abena A/S', 'ABENA  danmark a/s', 'Grimas B.V.'].map((supplier) => ({
+      ...line,
+      supplier,
+    }));
+    expect(numberMatches('Abena Danmark A/S', lines).map((item) => item.supplier)).toEqual([
+      'Grimas B.V.',
     ]);
   });
   it("keeps edits and history saved under the order lines' own name", () => {
