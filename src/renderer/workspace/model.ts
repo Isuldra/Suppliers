@@ -2,12 +2,19 @@ import type { ExcelRow } from '../types/ExcelData';
 import type { SupplierContact } from '../../types/SupplierContact';
 import { getISOWeek, getISOWeekYear } from '../../utils/dateUtils';
 import { parseEmailRecipients } from '../../utils/emailRecipients';
+import { supplierFinder } from '../../utils/supplierMatch';
 
 export const DAYS = ['Mandag', 'Tirsdag', 'Onsdag', 'Torsdag', 'Fredag'];
 export const LANGUAGES = { no: 'Norsk', da: 'Dansk', se: 'Svenska', fi: 'Suomi', en: 'English' };
 export type Language = keyof typeof LANGUAGES;
 export type ContactEdit = { email: string; language: Language; days: string[] };
-export type Supplier = ContactEdit & { name: string; number: string; lines: ExcelRow[] };
+export type Supplier = ContactEdit & {
+  name: string;
+  number: string;
+  lines: ExcelRow[];
+  /** Other names its order lines carry. */
+  aliases: string[];
+};
 export type Exclusion = { fingerprint: string; reason: string };
 export type HistoryEntry = {
   supplier: string;
@@ -148,36 +155,60 @@ export function currentStatus(name: string, history: HistoryEntry[]) {
 export function validRecipients(value: string) {
   return parseEmailRecipients(value) !== null;
 }
+/** Order lines join the stored supplier with their supplier number, else with their name. */
 export function buildSuppliers(
   rows: ExcelRow[],
   contacts: SupplierContact[],
   edits: WorkspaceMemory['contacts']
 ): Supplier[] {
-  const result = new Map<string, Supplier>();
-  for (const contact of contacts)
-    result.set(contact.name, {
-      ...contact,
-      number: contact.number || '',
-      language: languageOf(contact.language),
-      lines: [],
-    });
+  const suppliers: Supplier[] = contacts.map((contact) => ({
+    ...contact,
+    number: contact.number || '',
+    language: languageOf(contact.language),
+    lines: [],
+    aliases: [],
+  }));
+  const finder = supplierFinder(suppliers);
   for (const row of rows) {
     if (!row.supplier || outstanding(row) <= 0) continue;
-    const supplier = result.get(row.supplier) || {
-      name: row.supplier,
-      number: '',
-      email: '',
-      language: 'no' as const,
-      days: [],
-      lines: [],
-    };
+    const number = row.internalSupplierNumber?.trim() || '';
+    let supplier = finder.find(row.supplier, number);
+    if (!supplier) {
+      supplier = {
+        name: row.supplier,
+        number,
+        email: '',
+        language: 'no',
+        days: [],
+        lines: [],
+        aliases: [],
+      };
+      suppliers.push(supplier);
+    }
+    supplier.number ||= number;
+    finder.add(supplier);
+    if (row.supplier !== supplier.name && !supplier.aliases.includes(row.supplier))
+      supplier.aliases.push(row.supplier);
     supplier.lines.push(row);
-    supplier.number ||= row.internalSupplierNumber || '';
-    result.set(row.supplier, supplier);
   }
-  return [...result.values()]
-    .map((supplier) => ({ ...supplier, ...edits[supplier.name] }))
+  return suppliers
+    .map((supplier) => ({
+      ...supplier,
+      // Edits saved while the lines were a supplier of their own are under the lines' name.
+      ...[supplier.name, ...supplier.aliases].map((name) => edits[name]).find(Boolean),
+    }))
     .sort((a, b) => a.name.localeCompare(b.name, 'nb'));
+}
+/** History saved under a name a supplier's order lines carry, moved to the supplier's name. */
+export function historyOf(history: HistoryEntry[], suppliers: Supplier[]): HistoryEntry[] {
+  const names = new Map(
+    suppliers.flatMap((supplier) =>
+      supplier.aliases.map((alias): [string, string] => [alias, supplier.name])
+    )
+  );
+  return history.map((entry) =>
+    names.has(entry.supplier) ? { ...entry, supplier: names.get(entry.supplier)! } : entry
+  );
 }
 export function onDay(supplier: Supplier, day: string) {
   return (

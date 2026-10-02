@@ -2,12 +2,12 @@
 import { describe, expect, it } from 'vitest';
 import {
   importRegister,
-  supplierKey,
   type Contact,
   type Day,
   type Register,
   type SupplierRow,
 } from '../src/main/supplierRegister';
+import { supplierKey } from '../src/utils/supplierMatch';
 
 const contact = (name: string, values: Partial<Contact> = {}): Contact => ({
   name,

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   buildSuppliers,
+  historyOf,
   excludedReason,
   fingerprint,
   lineId,
@@ -56,6 +57,68 @@ describe('Pulse workspace selections', () => {
     );
     expect(suppliers.find((supplier) => supplier.name === line.supplier)?.lines).toHaveLength(1);
     expect(suppliers.find((supplier) => supplier.name === 'No orders')?.language).toBe('en');
+  });
+  it('joins order lines to their supplier by supplier number, else by name', () => {
+    const suppliers = buildSuppliers(
+      [
+        { ...line, supplier: 'Abena A/S', internalSupplierNumber: '4960001' },
+        { ...line, key: '2', supplier: 'EXAMPLE  medical' },
+        { ...line, key: '3', supplier: 'Other AS', internalSupplierNumber: '4960009' },
+      ],
+      [
+        {
+          name: 'Abena Danmark A/S',
+          email: 'ordre@abena.dk',
+          language: 'Dansk',
+          days: ['Mandag'],
+          number: '4960001',
+        },
+        { name: 'Example Medical', email: 'a@example.com', language: 'Norsk', days: [] },
+      ],
+      {}
+    );
+    expect(
+      suppliers.map(({ name, number, email, lines, aliases }) => ({
+        name,
+        number,
+        email,
+        lines: lines.length,
+        aliases,
+      }))
+    ).toEqual([
+      {
+        name: 'Abena Danmark A/S',
+        number: '4960001',
+        email: 'ordre@abena.dk',
+        lines: 1,
+        aliases: ['Abena A/S'],
+      },
+      {
+        name: 'Example Medical',
+        number: '',
+        email: 'a@example.com',
+        lines: 1,
+        aliases: ['EXAMPLE  medical'],
+      },
+      { name: 'Other AS', number: '4960009', email: '', lines: 1, aliases: [] },
+    ]);
+  });
+  it("keeps edits and history saved under the order lines' own name", () => {
+    const suppliers = buildSuppliers(
+      [{ ...line, supplier: 'Abena A/S', internalSupplierNumber: '4960001' }],
+      [{ name: 'Abena Danmark A/S', email: '', language: 'Dansk', days: [], number: '4960001' }],
+      { 'Abena A/S': { email: 'saved@abena.dk', language: 'da', days: ['Torsdag'] } }
+    );
+    expect(suppliers[0]).toMatchObject({
+      name: 'Abena Danmark A/S',
+      email: 'saved@abena.dk',
+      days: ['Torsdag'],
+    });
+    const history = historyOf(
+      [{ supplier: 'Abena A/S', status: 'sent', at: new Date().toISOString(), count: 1 }],
+      suppliers
+    );
+    expect(currentStatus('Abena Danmark A/S', history)).toBe('sent');
   });
   it('applies saved contacts to reminders and distinguishes missing reminder days', () => {
     const [supplier] = buildSuppliers([line], [], {

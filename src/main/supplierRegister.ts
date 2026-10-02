@@ -1,3 +1,5 @@
+import { supplierKey } from '../utils/supplierMatch';
+
 /** A supplier's contact details, as stored in supplier_emails. */
 export type Contact = {
   name: string;
@@ -20,11 +22,6 @@ export type SupplierRow = {
 export type ChecklistRow = { name: string; email: string };
 
 export const PLANNER = 'Innkjøper';
-
-/** A supplier name compared without regard to case or spacing. */
-export function supplierKey(name: string): string {
-  return name.toLowerCase().replace(/\s+/g, ' ').trim();
-}
 
 /**
  * The supplier register after importing a file with "Leverandør" (suppliers) and/or

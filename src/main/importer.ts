@@ -8,6 +8,7 @@ import {
   type Day,
   type SupplierRow,
 } from './supplierRegister';
+import { supplierFinder } from '../utils/supplierMatch';
 import Database from 'better-sqlite3';
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const log = require('electron-log');
@@ -592,22 +593,27 @@ export async function importAlleArk(
           '🇩🇰 Setting up DK suppliers for all weekdays (detected from warehouse or filename)...'
         );
 
-        // Get unique suppliers from the imported purchase orders
+        // Get unique suppliers from the imported purchase orders, with their supplier number
         const uniqueDkSuppliers = db
           .prepare(
-            `SELECT DISTINCT COALESCE(supplier_name, ftgnavn) as name
+            `SELECT DISTINCT COALESCE(supplier_name, ftgnavn) as name, purchaser as number
              FROM purchase_order
              WHERE COALESCE(supplier_name, ftgnavn) IS NOT NULL
                AND COALESCE(supplier_name, ftgnavn) != ''`
           )
-          .all() as { name: string }[];
+          .all() as { name: string; number: string | null }[];
 
+        // The days go under the register's name, so they join the supplier's contact details.
+        const registered = supplierFinder(
+          register.contacts.map(({ name, companyId }) => ({ name, number: companyId }))
+        );
         const insertDkPlan = db.prepare(`
           INSERT OR REPLACE INTO supplier_planning (supplier_name, weekday, planner_name, updated_at)
           VALUES (?, ?, ?, CURRENT_TIMESTAMP)
         `);
         for (const supplier of uniqueDkSuppliers) {
-          for (const weekday of WEEKDAYS) insertDkPlan.run(supplier.name, weekday, PLANNER);
+          const name = registered.find(supplier.name, supplier.number)?.name ?? supplier.name;
+          for (const weekday of WEEKDAYS) insertDkPlan.run(name, weekday, PLANNER);
         }
         log.info(
           `Inserted ${uniqueDkSuppliers.length} DK suppliers for all ${WEEKDAYS.length} weekdays`

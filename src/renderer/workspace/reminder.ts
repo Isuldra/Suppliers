@@ -181,7 +181,8 @@ export async function sendReminder(reminder: Reminder) {
   if (!validRecipients(reminder.recipient))
     throw new Error('Kontroller e-postadressen før sending.');
   if (!reminder.lines.length) throw new Error('Ingen ordrelinjer er valgt.');
-  const country = await window.electron.getSupplierCountry(reminder.supplier);
+  // The orders carry the lines' own supplier name, which can differ from the register's.
+  const country = await window.electron.getSupplierCountry(reminder.lines[0].supplier);
   // One explicit attempt. An ambiguous Outlook failure must never automatically send twice.
   const result = await window.electron.sendEmailViaEmlAndCOM({
     to: reminder.recipient

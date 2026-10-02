@@ -20,6 +20,7 @@ import {
   readMemory,
   saveMemory,
   buildSuppliers,
+  historyOf,
   onDay,
   currentStatus,
   excludedReason,
@@ -135,18 +136,21 @@ export default function Workspace() {
     () => buildSuppliers(filteredRows, contacts, memory.contacts),
     [filteredRows, contacts, memory.contacts]
   );
+  const history = useMemo(() => historyOf(memory.history, suppliers), [memory.history, suppliers]);
   const daySuppliers = suppliers.filter(
     (supplier) => supplier.lines.length && onDay(supplier, day)
   );
   const visible = daySuppliers.filter((supplier) =>
-    supplier.name.toLowerCase().includes(search.toLowerCase())
+    [supplier.name, ...supplier.aliases].some((name) =>
+      name.toLowerCase().includes(search.toLowerCase())
+    )
   );
   const active = visible.find((supplier) => supplier.name === focus) || visible[0];
   const shown = active ? filterLines(active.lines, filter, memory.excluded) : [];
   const included = (supplier: Supplier) =>
     supplier.lines.filter((line) => !excludedReason(line, memory.excluded));
   const ready = (supplier: Supplier) =>
-    !currentStatus(supplier.name, memory.history) && included(supplier).length > 0;
+    !currentStatus(supplier.name, history) && included(supplier).length > 0;
   const selectedSuppliers = daySuppliers.filter(
     (supplier) => selected.has(supplier.name) && ready(supplier)
   );
@@ -231,28 +235,31 @@ export default function Workspace() {
     setReview(null);
   }
   function defer(supplier: Supplier) {
-    persist((prev) => ({
-      ...prev,
-      history:
-        currentStatus(supplier.name, prev.history) === 'deferred'
-          ? prev.history.filter(
-              (entry) =>
-                !(
-                  entry.supplier === supplier.name &&
-                  entry.status === 'deferred' &&
-                  weekKey(new Date(entry.at)) === weekKey()
-                )
-            )
-          : [
-              {
-                supplier: supplier.name,
-                at: new Date().toISOString(),
-                status: 'deferred',
-                count: 0,
-              },
-              ...prev.history,
-            ],
-    }));
+    persist((prev) => {
+      const history = historyOf(prev.history, suppliers);
+      return {
+        ...prev,
+        history:
+          currentStatus(supplier.name, history) === 'deferred'
+            ? history.filter(
+                (entry) =>
+                  !(
+                    entry.supplier === supplier.name &&
+                    entry.status === 'deferred' &&
+                    weekKey(new Date(entry.at)) === weekKey()
+                  )
+              )
+            : [
+                {
+                  supplier: supplier.name,
+                  at: new Date().toISOString(),
+                  status: 'deferred',
+                  count: 0,
+                },
+                ...history,
+              ],
+      };
+    });
   }
   return (
     <div className="pulse-shell">
@@ -429,7 +436,7 @@ export default function Workspace() {
           <SupplierRegister
             initialFocus={registerFocus}
             suppliers={suppliers}
-            history={memory.history}
+            history={history}
             onSave={saveContact}
             onRemind={remindNow}
           />
@@ -514,7 +521,7 @@ export default function Workspace() {
                   </div>
                   <div className="pulse-supplier-scroll">
                     {visible.map((supplier) => {
-                      const status = currentStatus(supplier.name, memory.history);
+                      const status = currentStatus(supplier.name, history);
                       const late = Math.max(0, ...supplier.lines.map((line) => lateDays(line)));
                       const wait = supplier.lines.filter(waiting).length;
                       return (
@@ -538,7 +545,7 @@ export default function Workspace() {
                           >
                             <div className="pulse-supplier-name">
                               <strong>{supplier.name}</strong>
-                              <History name={supplier.name} entries={memory.history} />
+                              <History name={supplier.name} entries={history} />
                             </div>
                             <span>
                               {t('workspace.list.openLines', { count: supplier.lines.length })}
@@ -607,12 +614,12 @@ export default function Workspace() {
                               </button>
                             </div>
                           </div>
-                          <History name={active.name} entries={memory.history} labels />
+                          <History name={active.name} entries={history} labels />
                           <button
-                            disabled={currentStatus(active.name, memory.history) === 'sent'}
+                            disabled={currentStatus(active.name, history) === 'sent'}
                             onClick={() => defer(active)}
                           >
-                            {currentStatus(active.name, memory.history) === 'deferred'
+                            {currentStatus(active.name, history) === 'deferred'
                               ? t('workspace.detail.undefer')
                               : t('workspace.detail.defer')}
                           </button>

@@ -102,9 +102,9 @@ function register(sqlite: DatabaseSync) {
   };
 }
 
-/** A workbook with a BP order per supplier and the given supplier sheets. */
+/** A workbook with a BP order per supplier (name, or name and ftgnr) and the given sheets. */
 async function workbook(sheets: {
-  orders: string[];
+  orders: (string | [name: string, number: string])[];
   checklist?: [name: string, email: string][];
   suppliers?: [name: string, companyId: string, language: string, day: string, email: string][];
 }) {
@@ -129,9 +129,10 @@ async function workbook(sheets: {
     'ftgnamn',
     'bestradnr',
   ];
-  sheets.orders.forEach((name, index) => {
+  sheets.orders.forEach((order, index) => {
+    const [name, number = ''] = typeof order === 'string' ? [order] : order;
     const values = Array<string | number>(17).fill('');
-    Object.assign(values, { 0: '40', 2: `PO${index}`, 4: '10', 5: 0, 7: `A${index}` });
+    Object.assign(values, { 0: '40', 2: `PO${index}`, 3: number, 4: '10', 5: 0, 7: `A${index}` });
     Object.assign(values, { 12: 5, 13: 0, 14: 5, 15: name, 16: '1' });
     bp.getRow(6 + index).values = values;
   });
@@ -204,6 +205,22 @@ describe('importing the supplier sheets', () => {
       days: [{ name: 'Abena Norge AS', weekday: 'Mandag' }],
       orders: ['Abena Norge AS'],
     });
+  });
+
+  it('gives Danish suppliers every weekday under the "Leverandør" name for their number', async () => {
+    const { sqlite, db } = database();
+    const file = await workbook({
+      orders: [['Abena A/S', '4960001']],
+      suppliers: [['Abena Danmark A/S', '4960001', 'Dansk', '', 'ordre@abena.dk']],
+    });
+
+    expect(await importAlleArk(file, db, 'innkjop_DK.xlsx')).toBe(true);
+    expect(register(sqlite).days).toEqual(
+      ['Fredag', 'Mandag', 'Onsdag', 'Tirsdag', 'Torsdag'].map((weekday) => ({
+        name: 'Abena Danmark A/S',
+        weekday,
+      }))
+    );
   });
 
   it('keeps the register when the file has no supplier sheets', async () => {
