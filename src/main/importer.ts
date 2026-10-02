@@ -105,6 +105,11 @@ export function normalizeWeekday(value: string): string {
   return WEEKDAYS.includes(day) ? day : '';
 }
 
+/** A supplier name compared without regard to case or spacing. */
+export function supplierKey(name: string): string {
+  return name.toLowerCase().replace(/\s+/g, ' ').trim();
+}
+
 /**
  * One row of the "Leverandør" sheet: A supplier, B Company ID, C language, D reminder day,
  * E email.
@@ -489,7 +494,7 @@ export async function importAlleArk(
         const cleared = db.prepare('DELETE FROM supplier_emails').run();
         log.info(`Cleared ${cleared.changes} supplier contacts before importing the file's own`);
       }
-      // Every supplier named in Sjekkliste, also those without an address.
+      // supplierKey of every supplier named in Sjekkliste, also those without an address.
       const checklisted = new Set<string>();
 
       // Import supplier emails from "Sjekkliste Leverandører" sheet if it exists
@@ -518,7 +523,7 @@ export async function importAlleArk(
             const row = sjekkliste.getRow(r);
 
             const supplierName = getCellStringValue(row.getCell(1)).trim(); // Column A
-            if (supplierName) checklisted.add(supplierName);
+            if (supplierName) checklisted.add(supplierKey(supplierName));
 
             // Search for email in multiple columns (J is column 10, but let's check nearby columns too)
             let emailAddress = '';
@@ -719,7 +724,7 @@ export async function importAlleArk(
             )
             .pluck()
             .all() as string[]
-        ).filter((name) => !checklisted.has(name));
+        ).filter((name) => !checklisted.has(supplierKey(name)));
         const removeContact = db.prepare('DELETE FROM supplier_emails WHERE supplier_name = ?');
         const removeDays = db.prepare('DELETE FROM supplier_planning WHERE supplier_name = ?');
         for (const name of stale) {
