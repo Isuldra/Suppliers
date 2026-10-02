@@ -224,13 +224,16 @@ export async function importAlleArk(
     )`
   );
 
-  // Add supplier email insert statement (with language support for email template selection)
+  // Sjekkliste addresses keep the language and Company ID already stored for the supplier.
   const supplierEmailInsert = db.prepare(
-    `INSERT OR REPLACE INTO supplier_emails (
+    `INSERT INTO supplier_emails (
       supplier_name, email_address, language, updated_at
     ) VALUES (
       @supplier_name, @email_address, @language, @updated_at
-    )`
+    )
+    ON CONFLICT(supplier_name) DO UPDATE SET
+      email_address = excluded.email_address,
+      updated_at = excluded.updated_at`
   );
   // Leverandør rows keep an address already read from Sjekkliste when their own cell is empty.
   const supplierContactUpsert = db.prepare(
@@ -474,17 +477,11 @@ export async function importAlleArk(
   });
 
   try {
-    tx();
-    log.info('Excel import successful.');
-    log.info(
-      `Import summary: ${processedCount} total records processed${
-        duplicateCount > 0 ? `, ${duplicateCount} duplicates replaced` : ''
-      }`
-    );
-
     // A file with its supplier register ("Leverandør") replaces both contacts and reminder days,
-    // so suppliers from earlier files (for example another country's list) do not linger. All of
-    // it is one transaction: if a sheet fails, the previous contacts and days are kept.
+    // and a file with only "Sjekkliste Leverandører" keeps just the suppliers on it, so suppliers
+    // from earlier files (for example another country's list) do not linger. They are saved in
+    // the same transaction as the orders: if a sheet fails, the import fails and the previous
+    // orders, contacts and days are kept.
     const sjekkliste = wb.getWorksheet('Sjekkliste Leverandører');
     const leverandorSheet = wb.getWorksheet('Leverandør');
     const importContacts = db.transaction(() => {
@@ -492,6 +489,8 @@ export async function importAlleArk(
         const cleared = db.prepare('DELETE FROM supplier_emails').run();
         log.info(`Cleared ${cleared.changes} supplier contacts before importing the file's own`);
       }
+      // Every supplier named in Sjekkliste, also those without an address.
+      const checklisted = new Set<string>();
 
       // Import supplier emails from "Sjekkliste Leverandører" sheet if it exists
       if (sjekkliste) {
@@ -519,6 +518,7 @@ export async function importAlleArk(
             const row = sjekkliste.getRow(r);
 
             const supplierName = getCellStringValue(row.getCell(1)).trim(); // Column A
+            if (supplierName) checklisted.add(supplierName);
 
             // Search for email in multiple columns (J is column 10, but let's check nearby columns too)
             let emailAddress = '';
@@ -709,15 +709,40 @@ export async function importAlleArk(
         });
 
         planningTx();
+      } else if (sjekkliste) {
+        // Without "Leverandør" the file has no reminder days, languages or Company IDs: suppliers
+        // on the checklist keep theirs, and suppliers that are not on it are removed.
+        const stale = (
+          db
+            .prepare(
+              'SELECT supplier_name FROM supplier_emails UNION SELECT supplier_name FROM supplier_planning'
+            )
+            .pluck()
+            .all() as string[]
+        ).filter((name) => !checklisted.has(name));
+        const removeContact = db.prepare('DELETE FROM supplier_emails WHERE supplier_name = ?');
+        const removeDays = db.prepare('DELETE FROM supplier_planning WHERE supplier_name = ?');
+        for (const name of stale) {
+          removeContact.run(name);
+          removeDays.run(name);
+        }
+        log.info(
+          `Leverandør sheet not found - removed ${stale.length} suppliers not on Sjekkliste`
+        );
       } else {
-        log.info('Leverandør sheet not found - preserving existing supplier planning');
+        log.info('No supplier sheets found - preserving existing supplier contacts and planning');
       }
     });
-    try {
+    db.transaction(() => {
+      tx();
       importContacts();
-    } catch (contactsError) {
-      log.error('Supplier contacts were not imported; the previous ones are kept:', contactsError);
-    }
+    })();
+    log.info('Excel import successful.');
+    log.info(
+      `Import summary: ${processedCount} total records processed${
+        duplicateCount > 0 ? `, ${duplicateCount} duplicates replaced` : ''
+      }`
+    );
 
     // Ensure indexes for faster queries
     try {
