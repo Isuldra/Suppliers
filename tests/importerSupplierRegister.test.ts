@@ -154,56 +154,39 @@ async function workbook(sheets: {
 }
 
 describe('importing the supplier sheets', () => {
-  it('replaces the register with "Leverandør", taking a missing address from the checklist', async () => {
+  it('replaces the register with "Leverandør" and does not read "Sjekkliste Leverandører"', async () => {
     const { sqlite, db } = database();
     seed(sqlite, [['Old DK', 'old@dk.dk', 'Dansk']], [['Old DK', 'Tirsdag']], ['Old DK']);
     const file = await workbook({
       orders: ['Abena Norge AS'],
-      checklist: [['ABENA NORGE  AS', 'ordre@abena.no']],
+      checklist: [
+        ['Abena Norge AS', 'checklist@abena.no'],
+        ['Only Listed AS', 'post@listed.no'],
+      ],
       suppliers: [['Abena Norge AS', '4960001', 'Svenska', 'Mandag', '']],
     });
 
     expect(await importAlleArk(file, db, 'test.xlsx')).toBe(true);
     expect(register(sqlite)).toEqual({
-      contacts: [
-        {
-          name: 'Abena Norge AS',
-          email: 'ordre@abena.no',
-          language: 'Svenska',
-          companyId: '4960001',
-        },
-      ],
+      contacts: [{ name: 'Abena Norge AS', email: '', language: 'Svenska', companyId: '4960001' }],
       days: [{ name: 'Abena Norge AS', weekday: 'Mandag' }],
       orders: ['Abena Norge AS'],
     });
   });
 
-  it('keeps only checklisted suppliers, under its spelling and with their stored address', async () => {
+  it('keeps the register when the file has only "Sjekkliste Leverandører"', async () => {
     const { sqlite, db } = database();
-    seed(
-      sqlite,
-      [
-        ['Abena Norge AS', '', 'Norsk', '4960001'],
-        ['ABENA NORGE AS', 'old@abena.no', 'Svenska'],
-        ['Old DK', 'old@dk.dk', 'Dansk'],
-      ],
-      [
-        ['ABENA NORGE AS', 'Mandag'],
-        ['Old DK', 'Tirsdag'],
-      ]
-    );
+    seed(sqlite, [['Old DK', 'old@dk.dk', 'Dansk']], [['Old DK', 'Tirsdag']]);
     const file = await workbook({
-      orders: ['Abena Norge AS'],
-      checklist: [['Abena Norge AS', '']],
+      orders: ['New AS'],
+      checklist: [['New AS', 'post@new.no']],
     });
 
     expect(await importAlleArk(file, db, 'test.xlsx')).toBe(true);
     expect(register(sqlite)).toEqual({
-      contacts: [
-        { name: 'Abena Norge AS', email: 'old@abena.no', language: 'Norsk', companyId: '4960001' },
-      ],
-      days: [{ name: 'Abena Norge AS', weekday: 'Mandag' }],
-      orders: ['Abena Norge AS'],
+      contacts: [{ name: 'Old DK', email: 'old@dk.dk', language: 'Dansk', companyId: null }],
+      days: [{ name: 'Old DK', weekday: 'Tirsdag' }],
+      orders: ['New AS'],
     });
   });
 
@@ -227,10 +210,10 @@ describe('importing the supplier sheets', () => {
     const { sqlite, db } = database();
     const file = await workbook({
       orders: [['Abena AS', '4960002']],
-      checklist: [['No Address AS', '']],
       suppliers: [
         ['Abena AS', '4960001', 'Norsk', 'Mandag', 'a@abena.no'],
         ['Abena AS', '4960002', 'Norsk', 'Tirsdag', 'b@abena.no'],
+        ['No Address AS', '4960003', '', '', ''],
       ],
     });
 
@@ -244,7 +227,7 @@ describe('importing the supplier sheets', () => {
           language: 'Norsk',
           companyId: '4960002',
         },
-        { name: 'No Address AS', email: '', language: null, companyId: null },
+        { name: 'No Address AS', email: '', language: null, companyId: '4960003' },
       ],
       days: [
         { name: 'Abena AS', weekday: 'Mandag' },

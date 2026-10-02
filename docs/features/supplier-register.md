@@ -12,8 +12,7 @@ Purrestatus viser lokalt registrerte sendinger og utsettelser. En sending fra en
 
 ## Hvor kontaktene kommer fra
 
-- `Leverandør`-arket kan angi navn, språk, purredag og e-post.
-- `Sjekkliste Leverandører` kan bidra med navn og e-postadresse.
-- `BP` bidrar med leverandører som har ordrelinjer.
+- `Leverandør`-arket angir navn, Company ID, språk, purredag og e-post. Når filen har arket, erstatter det registeret.
+- `BP` bidrar med leverandører som har ordrelinjer. Linjene kobles til leverandøren på leverandørnummeret (`ftgnr` = Company ID), ellers på navnet.
 
-Kontaktarkene er valgfrie. Tidligere databasekontakter kan bli stående når de ikke erstattes av importen. Se [Excel-import](excel-import.md) for oppsettet av arkene.
+Har filen ikke `Leverandør`-arket, beholdes registeret fra forrige import. `Sjekkliste Leverandører` brukes ikke. Se [Excel-import](excel-import.md) for oppsettet av arkene.
