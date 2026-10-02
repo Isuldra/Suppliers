@@ -20,6 +20,7 @@ import { importAlleArk } from './importer';
 import child_process, { spawn } from 'child_process';
 import type { ExcelData } from '../renderer/types/ExcelData';
 import { sendViaOutlook, type MailPayload } from './outlookMail';
+import { startSingleInstance } from './singleInstance';
 
 /**
  * Content-Security-Policy applied to every response in the default session.
@@ -228,6 +229,7 @@ ipcMain.handle('get-system-language', () => {
 });
 
 let mainWindow: BrowserWindow | null = null;
+const getMainWindow = () => mainWindow;
 
 function createWindow(): BrowserWindow {
   mainWindow = new BrowserWindow({
@@ -274,7 +276,7 @@ function loadWindowURL(window: BrowserWindow): void {
 }
 
 // Initialize database when the app is ready
-app.whenReady().then(async () => {
+startSingleInstance(getMainWindow, async () => {
   log.info('App is ready. Initializing database and application...');
   applySecurityPolicy();
   try {
