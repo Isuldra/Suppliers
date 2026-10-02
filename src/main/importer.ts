@@ -482,20 +482,18 @@ export async function importAlleArk(
       }`
     );
 
-    // The supplier register reflects the imported file, so suppliers from earlier files
-    // (for example another country's list) do not linger.
-    try {
-      if (wb.getWorksheet('Sjekkliste Leverandører') || wb.getWorksheet('Leverandør')) {
+    // A file with its supplier register ("Leverandør") replaces both contacts and reminder days,
+    // so suppliers from earlier files (for example another country's list) do not linger. All of
+    // it is one transaction: if a sheet fails, the previous contacts and days are kept.
+    const sjekkliste = wb.getWorksheet('Sjekkliste Leverandører');
+    const leverandorSheet = wb.getWorksheet('Leverandør');
+    const importContacts = db.transaction(() => {
+      if (leverandorSheet) {
         const cleared = db.prepare('DELETE FROM supplier_emails').run();
         log.info(`Cleared ${cleared.changes} supplier contacts before importing the file's own`);
       }
-    } catch (clearError) {
-      log.error('Error clearing supplier contacts:', clearError);
-    }
 
-    // Import supplier emails from "Sjekkliste Leverandører" sheet if it exists
-    try {
-      const sjekkliste = wb.getWorksheet('Sjekkliste Leverandører');
+      // Import supplier emails from "Sjekkliste Leverandører" sheet if it exists
       if (sjekkliste) {
         log.info('Processing Sjekkliste Leverandører sheet for email addresses');
         log.info(`Sheet has ${sjekkliste.rowCount} rows and ${sjekkliste.columnCount} columns`);
@@ -575,13 +573,8 @@ export async function importAlleArk(
       } else {
         log.info('Sjekkliste Leverandører sheet not found');
       }
-    } catch (emailError) {
-      log.error('Error processing supplier emails:', emailError);
-    }
 
-    // Import supplier planning from "Leverandør" sheet (ark 6) if it exists
-    try {
-      const leverandorSheet = wb.getWorksheet('Leverandør');
+      // Import supplier planning from "Leverandør" sheet (ark 6) if it exists
       if (leverandorSheet) {
         log.info('Processing Leverandør sheet for supplier planning');
         log.info(
@@ -719,8 +712,11 @@ export async function importAlleArk(
       } else {
         log.info('Leverandør sheet not found - preserving existing supplier planning');
       }
-    } catch (planningError) {
-      log.error('Error processing supplier planning:', planningError);
+    });
+    try {
+      importContacts();
+    } catch (contactsError) {
+      log.error('Supplier contacts were not imported; the previous ones are kept:', contactsError);
     }
 
     // Ensure indexes for faster queries
