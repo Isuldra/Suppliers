@@ -494,8 +494,8 @@ export async function importAlleArk(
         const cleared = db.prepare('DELETE FROM supplier_emails').run();
         log.info(`Cleared ${cleared.changes} supplier contacts before importing the file's own`);
       }
-      // supplierKey of every supplier named in Sjekkliste, also those without an address.
-      const checklisted = new Set<string>();
+      // The Sjekkliste spelling of every supplier on it, also without an address, by supplierKey.
+      const checklisted = new Map<string, string>();
 
       // Import supplier emails from "Sjekkliste Leverandører" sheet if it exists
       if (sjekkliste) {
@@ -523,7 +523,8 @@ export async function importAlleArk(
             const row = sjekkliste.getRow(r);
 
             const supplierName = getCellStringValue(row.getCell(1)).trim(); // Column A
-            if (supplierName) checklisted.add(supplierKey(supplierName));
+            const key = supplierKey(supplierName);
+            if (supplierName && !checklisted.has(key)) checklisted.set(key, supplierName);
 
             // Search for email in multiple columns (J is column 10, but let's check nearby columns too)
             let emailAddress = '';
@@ -715,24 +716,46 @@ export async function importAlleArk(
 
         planningTx();
       } else if (sjekkliste) {
-        // Without "Leverandør" the file has no reminder days, languages or Company IDs: suppliers
-        // on the checklist keep theirs, and suppliers that are not on it are removed.
-        const stale = (
-          db
-            .prepare(
-              'SELECT supplier_name FROM supplier_emails UNION SELECT supplier_name FROM supplier_planning'
-            )
-            .pluck()
-            .all() as string[]
-        ).filter((name) => !checklisted.has(supplierKey(name)));
+        // Without "Leverandør" the file has no reminder days, languages or Company IDs. Suppliers
+        // on the checklist keep theirs, moved to the checklist's spelling when capitals or spacing
+        // differ so they join its address and orders; suppliers not on it are removed.
+        const stored = db
+          .prepare(
+            'SELECT supplier_name FROM supplier_emails UNION SELECT supplier_name FROM supplier_planning'
+          )
+          .pluck()
+          .all() as string[];
+        // A Sjekkliste address replaces the stored one; language and Company ID carry over.
+        const mergeContact = db.prepare(
+          `INSERT INTO supplier_emails (supplier_name, email_address, language, company_id, updated_at)
+           SELECT @listed, email_address, language, company_id, updated_at
+           FROM supplier_emails WHERE supplier_name = @stored
+           ON CONFLICT(supplier_name) DO UPDATE SET
+             language = COALESCE(supplier_emails.language, excluded.language),
+             company_id = COALESCE(supplier_emails.company_id, excluded.company_id)`
+        );
+        const moveDays = db.prepare(
+          'UPDATE supplier_planning SET supplier_name = @listed WHERE supplier_name = @stored'
+        );
         const removeContact = db.prepare('DELETE FROM supplier_emails WHERE supplier_name = ?');
         const removeDays = db.prepare('DELETE FROM supplier_planning WHERE supplier_name = ?');
-        for (const name of stale) {
+        let moved = 0;
+        let removed = 0;
+        for (const name of stored) {
+          const listed = checklisted.get(supplierKey(name));
+          if (listed === name) continue;
+          if (listed) {
+            mergeContact.run({ stored: name, listed });
+            moveDays.run({ stored: name, listed });
+            moved++;
+          } else {
+            removeDays.run(name);
+            removed++;
+          }
           removeContact.run(name);
-          removeDays.run(name);
         }
         log.info(
-          `Leverandør sheet not found - removed ${stale.length} suppliers not on Sjekkliste`
+          `Leverandør sheet not found - moved ${moved} suppliers to their Sjekkliste spelling, removed ${removed} not on it`
         );
       } else {
         log.info('No supplier sheets found - preserving existing supplier contacts and planning');
