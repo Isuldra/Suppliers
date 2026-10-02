@@ -236,6 +236,8 @@ export class DatabaseService {
       `); // End of initial CREATE TABLE/INDEX statements
 
       // --- Migrations for purchase_order table ---
+      // In every migration below, an existing column is a no-op; any other error fails startup,
+      // since the importer and queries need these columns.
       const poColumns = [
         { name: 'status', type: 'TEXT' },
         { name: 'producer_item', type: 'TEXT' },
@@ -268,6 +270,7 @@ export class DatabaseService {
             log.info(`Column '${col.name}' already exists in 'purchase_order' table.`);
           } else {
             log.error(`Failed to add column '${col.name}' to 'purchase_order':`, e);
+            throw e;
           }
         }
       }
@@ -281,6 +284,7 @@ export class DatabaseService {
           log.info("Column 'email_sent_at' already exists in 'orders' table.");
         } else {
           log.error("Failed to add 'email_sent_at' to 'orders':", e);
+          throw e;
         }
       }
 
@@ -294,6 +298,7 @@ export class DatabaseService {
           log.info("Column 'language' already exists in 'supplier_emails' table.");
         } else {
           log.error("Failed to add 'language' to 'supplier_emails':", e);
+          throw e;
         }
       }
 
@@ -307,7 +312,6 @@ export class DatabaseService {
           log.info("Column 'company_id' already exists in 'supplier_emails' table.");
         } else {
           log.error("Failed to add 'company_id' to 'supplier_emails':", e);
-          // The supplier register reads and writes company_id: without it nothing works.
           throw e;
         }
       }
