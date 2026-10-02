@@ -6,7 +6,7 @@ vi.mock('better-sqlite3', () => ({ default: class {} }));
 vi.mock('exceljs', () => ({ default: {}, Worksheet: class {} }));
 vi.mock('date-fns', () => ({ isValid: () => false, parse: () => new Date(NaN) }));
 
-import { normalizeWeekday, readSupplierSheetRow, supplierKey } from '../src/main/importer';
+import { normalizeWeekday, readSupplierSheetRow } from '../src/main/importer';
 
 function row(values: unknown[]) {
   return {
@@ -62,13 +62,5 @@ describe('the Leverandør sheet', () => {
     expect(normalizeWeekday('FREDAG')).toBe('Fredag');
     expect(normalizeWeekday('Mandag/Torsdag')).toBe('');
     expect(normalizeWeekday('Lørdag')).toBe('');
-  });
-});
-
-describe('the Sjekkliste sheet', () => {
-  it('recognises a stored supplier spelled with other capitals or spacing', () => {
-    expect(supplierKey('ABENA  Norge AS ')).toBe(supplierKey('Abena Norge AS'));
-    expect(supplierKey('Ørje Medisinske')).toBe(supplierKey('ørje medisinske'));
-    expect(supplierKey('Abena Norge AS')).not.toBe(supplierKey('Abena Norge'));
   });
 });
