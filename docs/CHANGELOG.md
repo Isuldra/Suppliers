@@ -2,6 +2,12 @@
 
 Dette er en kort oversikt over endringer i repoet. En pakkeversjon eller Git-tag bekrefter ikke alene at filer er publisert og testet. Tagdatoene er datoen på committen som taggen peker til.
 
+## Version 1.5.6: Én Pulse-instans ved oppdatering
+
+- Pulse starter bare én instans om gangen, slik at parallelle nedlastinger ikke kan slette hverandres oppdateringsfil. Åpnes Pulse på nytt, vises det eksisterende vinduet.
+- Alle endringene fra 1.5.5 følger med, inkludert Outlook-sending uten `.eml`.
+- Ved oppgradering fra 1.5.4 eller 1.5.5 må alle gamle Pulse-vinduer lukkes. Hvis automatisk oppdatering allerede har feilet, kan 1.5.6 installeres fra nedlastingssiden.
+
 ## Version 1.5.5: Outlook-sending, ny e-post og språk
 
 - Purringer sendes igjen via Outlook. 1.5.4 lastet e-posten som `.eml`, som Outlook avviste med «Ugyldig bane eller URL-adresse».
