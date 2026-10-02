@@ -19,7 +19,7 @@ import * as Database from 'better-sqlite3';
 import { importAlleArk } from './importer';
 import child_process, { spawn } from 'child_process';
 import type { ExcelData } from '../renderer/types/ExcelData';
-import { parseEmailRecipients } from '../utils/emailRecipients';
+import { sendViaOutlook, type MailPayload } from './outlookMail';
 
 /**
  * Content-Security-Policy applied to every response in the default session.
@@ -104,16 +104,6 @@ function applyWindowSecurity(window: BrowserWindow): void {
   });
 }
 
-/**
- * Escape a value for embedding in a PowerShell *single-quoted* string literal.
- * Single-quoted PS strings do not perform variable or $(...) subexpression
- * expansion, so this is the only safe way to inline untrusted data. Callers
- * must wrap the result in single quotes themselves.
- */
-function psLiteral(value: string): string {
-  return value.replace(/'/g, "''");
-}
-
 // Helper function to get sender email based on country
 function getSenderEmailForCountry(country?: string): string {
   const senderEmails: Record<string, string> = {
@@ -123,17 +113,6 @@ function getSenderEmailForCountry(country?: string): string {
     FI: 'supply.planning.no@onemed.com', // TODO: Update when FI email is known
   };
   return senderEmails[country || ''] || 'supply.planning.no@onemed.com';
-}
-
-// Helper function to get sender display name based on country
-function getSenderDisplayNameForCountry(country?: string): string {
-  const senderNames: Record<string, string> = {
-    DK: 'Supply Chain - OneMed A/S',
-    NO: 'OneMed Norge AS',
-    SE: 'OneMed Sverige AB',
-    FI: 'OneMed Oy',
-  };
-  return senderNames[country || ''] || 'OneMed Norge AS';
 }
 
 // Configure detailed logging for troubleshooting
@@ -985,190 +964,12 @@ ipcMain.handle('getAllSupplierPlanning', async () => {
   }
 });
 
-// Handle automatic email sending via Outlook COM using .eml and OpenSharedItem
-ipcMain.handle(
-  'sendEmailViaEmlAndCOM',
-  async (_, payload: { to: string; subject: string; html: string; country?: string }) => {
-    let tempEmlFilePath: string | null = null;
-    try {
-      log.info(`Attempting automatic email send via .eml/COM to: ${payload.to}`);
-      log.info(`Subject: ${payload.subject}`);
-
-      // Use the provided email address directly if it contains @, otherwise lookup in database
-      const emailTo = payload.to.includes('@')
-        ? payload.to
-        : databaseService.getSupplierEmail(payload.to) || payload.to;
-
-      // For all platforms, use the simple .eml file approach
-      log.info('Using .eml file approach for email sending');
-      log.info(`Resolved email address: ${emailTo}`);
-
-      // Accept the same bare-address lists as the review, rejecting header injection.
-      const recipients = parseEmailRecipients(emailTo);
-      if (!recipients) {
-        log.warn(`No valid email address found for supplier: ${payload.to}`);
-        return {
-          success: false,
-          error: `Ingen gyldig e-postadresse funnet for ${payload.to}. Sjekk leverandør e-post innstillinger.`,
-        };
-      }
-
-      // Create .eml file with proper MIME headers for HTML
-      // Use country-based sender email address
-      const senderEmail = getSenderEmailForCountry(payload.country);
-      const senderDisplayName = getSenderDisplayNameForCountry(payload.country);
-      const EOL = '\r\n';
-
-      // Properly encode the subject for UTF-8
-      const encodedSubject = Buffer.from(payload.subject, 'utf8').toString('base64');
-      const headers = [
-        `From: ${senderDisplayName} <${senderEmail}>`,
-        `To: ${recipients.join(', ')}`,
-        `Subject: =?UTF-8?B?${encodedSubject}?=`,
-        `MIME-Version: 1.0`,
-        `Content-Type: text/html; charset=UTF-8`,
-        `Content-Transfer-Encoding: 8bit`,
-        `X-Mailer: Pulse`,
-        ``,
-      ].join(EOL);
-
-      const cleanHtml = payload.html
-        .replace(/<style>.*?<\/style>/gs, '')
-        .replace(/<head>.*?<\/head>/gs, '')
-        .replace(/<script>.*?<\/script>/gs, '')
-        .trim();
-      const body = cleanHtml.replace(/\r?\n/g, EOL);
-      const emlContent = headers + body;
-
-      // Write to temp .eml file
-      const tempDir = app.getPath('temp');
-      const fileName = `onemed-reminder-${Date.now()}.eml`;
-      tempEmlFilePath = path.join(tempDir, fileName);
-      fs.writeFileSync(tempEmlFilePath, emlContent, 'utf8');
-      log.info(`Created .eml file: ${tempEmlFilePath}`);
-
-      // PowerShell script to load .eml, extract HTML, and send via new MailItem
-      const powershellScript = `
-        $tempEmlPath = '${psLiteral(tempEmlFilePath)}'
-        $sender = '${psLiteral(senderEmail)}'
-        
-        try {
-            Write-Output "STAGE 1: Loading .eml via OpenSharedItem..."
-            $outlook = New-Object -ComObject Outlook.Application
-            $sourceMail = $outlook.Session.OpenSharedItem($tempEmlPath)
-            if ($null -eq $sourceMail) { throw "Failed to load .eml into an Outlook item." }
-
-            # Action 6: Extract all required properties from the source mail item
-            Write-Output "STAGE 1: .eml loaded. Extracting properties..."
-            $recipient = $sourceMail.To
-            $subject = $sourceMail.Subject
-            $cleanHtml = $sourceMail.HTMLBody
-            Write-Output "STAGE 1: Properties extracted. Subject: '$subject'"
-
-            Write-Output "STAGE 1: Closing source mail item..."
-            $sourceMail.Close(2) # 2 = olDiscard
-
-            Write-Output "STAGE 2: Creating new, final MailItem..."
-            $finalMail = $outlook.CreateItem(0)
-
-            # Action 7: Populate the new mail item with the extracted properties
-            $finalMail.To = $recipient
-            $finalMail.Subject = $subject
-            $finalMail.SentOnBehalfOfName = $sender
-            $finalMail.HTMLBody = $cleanHtml
-            
-            Write-Output "STAGE 2: Sending final email..."
-            $finalMail.Send()
-            Write-Output "SUCCESS: Email sent successfully to $recipient"
-        } catch {
-            Write-Output "ERROR: $($_.Exception.Message)"
-            Write-Output "ERROR_DETAILS: $($_.Exception.ToString())"
-        } finally {
-            if ($tempEmlPath -and (Test-Path $tempEmlPath)) {
-                try { Remove-Item -Path $tempEmlPath -Force }
-                catch { Write-Output "WARN: Failed to cleanup temporary file." }
-            }
-        }
-      `;
-
-      return await new Promise((resolve) => {
-        const psProcess = spawn(
-          'powershell',
-          ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command', '-'],
-          {
-            windowsHide: true,
-            stdio: ['pipe', 'pipe', 'pipe'],
-          }
-        );
-        let output = '';
-        let errorOutput = '';
-        if (psProcess.stdin) {
-          psProcess.stdin.setDefaultEncoding('utf-8');
-          psProcess.stdin.write(powershellScript + '\r\n', 'utf-8');
-          psProcess.stdin.end();
-        } else {
-          log.error('PowerShell process stdin is not available.');
-          resolve({ success: false, error: 'PowerShell stdin utilgjengelig.' });
-          return;
-        }
-        psProcess.stdout.on('data', (data: Buffer) => {
-          output += data.toString();
-        });
-        psProcess.stderr.on('data', (data: Buffer) => {
-          errorOutput += data.toString();
-        });
-        psProcess.on('close', (code: number | null) => {
-          log.info(`PowerShell process exited with code: ${code}`);
-          log.info(`PowerShell output:\n${output}`);
-          if (errorOutput) {
-            log.warn(`PowerShell stderr:\n${errorOutput}`);
-          }
-          if (output.includes('SUCCESS')) {
-            log.info(`Email sent automatically via .eml/COM to: ${emailTo}`);
-            resolve({ success: true });
-          } else {
-            const errorMatch = output.match(/ERROR:\s*(.*)/);
-            const errorMsg =
-              errorMatch && errorMatch[1]
-                ? errorMatch[1].trim()
-                : `PowerShell failed. Code: ${code}. See logs.`;
-            log.error(
-              'PowerShell automation via .eml/COM failed:',
-              errorMsg,
-              'Full output:',
-              output,
-              'Full stderr:',
-              errorOutput
-            );
-            resolve({
-              success: false,
-              error: `Automatisk sending via .eml feilet: ${errorMsg}`,
-            });
-          }
-        });
-        psProcess.on('error', (error: Error) => {
-          log.error('PowerShell process failed to spawn or other error:', error);
-          resolve({
-            success: false,
-            error: `PowerShell prosess feil: ${error.message}`,
-          });
-        });
-      });
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-      log.error('Automatic email sending via .eml/COM error:', errorMessage);
-      // Ensure temp file is cleaned up if created before an outer error
-      if (tempEmlFilePath) {
-        try {
-          if (fs.existsSync(tempEmlFilePath)) {
-            fs.unlinkSync(tempEmlFilePath);
-            log.info('Outer catch: Cleaned up temp .eml file');
-          }
-        } catch (cleanupError) {
-          log.warn('Outer catch: Failed to cleanup temp .eml file', cleanupError);
-        }
-      }
-      return { success: false, error: errorMessage };
-    }
-  }
+// The channel keeps its old name for the preload API; no .eml is involved any more.
+ipcMain.handle('sendEmailViaEmlAndCOM', (_, payload: MailPayload) =>
+  sendViaOutlook(payload, {
+    tempDir: app.getPath('temp'),
+    lookupEmail: (supplier) => databaseService.getSupplierEmail(supplier),
+    senderFor: getSenderEmailForCountry,
+    log,
+  })
 );

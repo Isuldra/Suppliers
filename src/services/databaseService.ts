@@ -236,6 +236,8 @@ export class DatabaseService {
       `); // End of initial CREATE TABLE/INDEX statements
 
       // --- Migrations for purchase_order table ---
+      // In every migration below, an existing column is a no-op; any other error fails startup,
+      // since the importer and queries need these columns.
       const poColumns = [
         { name: 'status', type: 'TEXT' },
         { name: 'producer_item', type: 'TEXT' },
@@ -268,6 +270,7 @@ export class DatabaseService {
             log.info(`Column '${col.name}' already exists in 'purchase_order' table.`);
           } else {
             log.error(`Failed to add column '${col.name}' to 'purchase_order':`, e);
+            throw e;
           }
         }
       }
@@ -281,6 +284,7 @@ export class DatabaseService {
           log.info("Column 'email_sent_at' already exists in 'orders' table.");
         } else {
           log.error("Failed to add 'email_sent_at' to 'orders':", e);
+          throw e;
         }
       }
 
@@ -294,6 +298,21 @@ export class DatabaseService {
           log.info("Column 'language' already exists in 'supplier_emails' table.");
         } else {
           log.error("Failed to add 'language' to 'supplier_emails':", e);
+          throw e;
+        }
+      }
+
+      // --- Migration for supplier_emails table (company_id) ---
+      // Company ID from the "Leverandør" sheet, shown as Lev.nr also for suppliers without orders.
+      try {
+        this.db.exec(`ALTER TABLE supplier_emails ADD COLUMN company_id TEXT`);
+        log.info("Added column 'company_id' to 'supplier_emails' table.");
+      } catch (e: unknown) {
+        if (e instanceof Error && e.message.includes('duplicate column name: company_id')) {
+          log.info("Column 'company_id' already exists in 'supplier_emails' table.");
+        } else {
+          log.error("Failed to add 'company_id' to 'supplier_emails':", e);
+          throw e;
         }
       }
 
@@ -1393,8 +1412,13 @@ export class DatabaseService {
   public getSupplierContacts(): SupplierContact[] {
     if (!this.db) throw new Error('Database not connected');
     const emails = this.db
-      .prepare('SELECT supplier_name, email_address, language FROM supplier_emails')
-      .all() as { supplier_name: string; email_address: string; language: string | null }[];
+      .prepare('SELECT supplier_name, email_address, language, company_id FROM supplier_emails')
+      .all() as {
+      supplier_name: string;
+      email_address: string;
+      language: string | null;
+      company_id: string | null;
+    }[];
     const contacts = new Map<string, SupplierContact>();
     for (const row of emails) {
       contacts.set(row.supplier_name, {
@@ -1402,6 +1426,7 @@ export class DatabaseService {
         email: row.email_address,
         language: row.language || '',
         days: [],
+        number: row.company_id || '',
       });
     }
     for (const row of this.getAllSupplierPlanning()) {

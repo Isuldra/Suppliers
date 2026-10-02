@@ -2,6 +2,17 @@
 
 Dette er en kort oversikt over endringer i repoet. En pakkeversjon eller Git-tag bekrefter ikke alene at filer er publisert og testet. Tagdatoene er datoen på committen som taggen peker til.
 
+## Version 1.5.5: Outlook-sending, ny e-post og språk
+
+- Purringer sendes igjen via Outlook. 1.5.4 lastet e-posten som `.eml`, som Outlook avviste med «Ugyldig bane eller URL-adresse».
+- E-posten til leverandøren har fått Pulse-utseende på alle språk, med linjene gruppert per PO og antall dager forsinket under bekreftet ETA.
+- «Velg alle» og «Fjern alle» tar med eller tar ut alle linjene filteret viser. Linjer som alt er tatt ut, beholder grunnen.
+- E-postspråket kan endres rett ved leverandørnavnet på Purring.
+- Leverandører viser bare leverandørene i filen som ble importert sist, med Lev.nr fra arket «Leverandør», også uten åpne ordrer. Leverandører fra tidligere filer blir ikke liggende igjen.
+- Ordrelinjene kobles til leverandøren på leverandørnummeret (ftgnr, Company ID i «Leverandør»), så en leverandør som er stavet ulikt i ordrearket og i «Leverandør», vises som én leverandør med adresse og purredager.
+- Leverandørregisteret kommer bare fra arket «Leverandør». Arket «Sjekkliste Leverandører» leses ikke lenger.
+- Arbeidsflaten er oversatt til dansk, svensk, finsk og engelsk, med datoer og tall i språkets format, og språkvelgeren er tilbake øverst.
+
 ## Version 1.5.4: Ny arbeidsflate
 
 - Ny arbeidsflate med leverandørregister, linjevalg, ukestatus og gjennomgang før sending.

@@ -1,8 +1,10 @@
 import React, { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
-import { afterEach, beforeEach, expect, it, vi } from 'vitest';
+import { afterEach, beforeAll, beforeEach, expect, it, vi } from 'vitest';
 import Workspace from '../src/renderer/workspace/Workspace';
-import { DAYS, readMemory } from '../src/renderer/workspace/model';
+import { initNorwegian } from './i18nTestSetup';
+import { DAYS, fingerprint, lineId, readMemory, saveMemory } from '../src/renderer/workspace/model';
+import type { ExcelRow } from '../src/renderer/types/ExcelData';
 
 vi.mock('../src/renderer/components/FileUpload', () => ({ default: () => null }));
 vi.mock('../src/renderer/components/SettingsModal', () => ({ default: () => null }));
@@ -23,6 +25,7 @@ vi.mock('../src/renderer/context/WarehouseFilterContext', () => ({
 let root: Root;
 let container: HTMLDivElement;
 const transport = vi.fn();
+beforeAll(initNorwegian);
 beforeEach(() => {
   localStorage.clear();
   transport.mockReset().mockResolvedValue({ success: true });
@@ -75,7 +78,7 @@ it('retains the confirmed send time when saving is retried across an ISO week an
   save.mockImplementationOnce(() => {
     throw new Error('Quota exceeded');
   });
-  await act(async () => button('Send 1 purringer').click());
+  await act(async () => button('Send 1 purring').click());
   const attemptedHistory = JSON.parse(save.mock.calls[0][1]).history;
   expect(attemptedHistory[0].at).toBe(sentAt.toISOString());
 
@@ -108,6 +111,45 @@ async function allDays() {
       .click()
   );
 }
+it('takes out every visible line without overwriting chosen reasons, and brings them all back', async () => {
+  const rows = ['1', '2'].map(
+    (key) => ({ key, supplier: 'First', poNumber: '500', orderQty: 20, receivedQty: 5 }) as ExcelRow
+  );
+  window.electron.getAllOrders = async () => rows;
+  saveMemory({
+    ...readMemory(),
+    excluded: {
+      [lineId(rows[0])]: { fingerprint: fingerprint(rows[0]), reason: 'Leverandør har svart' },
+    },
+  });
+  await act(async () => root.render(<Workspace />));
+  await allDays();
+  await act(async () => button('Fjern alle').click());
+  expect(
+    Object.values(readMemory().excluded)
+      .map((entry) => entry.reason)
+      .sort()
+  ).toEqual(['Avklart skriftlig', 'Leverandør har svart']);
+  expect(button('Fjern alle')).toBeDisabled();
+  await act(async () => button('Velg alle').click());
+  expect(readMemory().excluded).toEqual({});
+  expect(button('Velg alle')).toBeDisabled();
+});
+it('switches the workspace language from the header and remembers the choice', async () => {
+  await act(async () => root.render(<Workspace />));
+  const select = container.querySelector<HTMLSelectElement>('[aria-label="Språk i Pulse"]')!;
+  try {
+    await act(async () => {
+      select.value = 'en';
+      select.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    expect(button('Review first')).toBeDefined();
+    expect(container.querySelector('[aria-label="Pulse language"]')).toHaveValue('en');
+    expect(localStorage.getItem('userSelectedLanguage')).toBe('true');
+  } finally {
+    await act(async () => void (await initNorwegian()));
+  }
+});
 it('recovers from local-storage failure without resending or duplicating history, including after remount', async () => {
   await act(async () => root.render(<Workspace />));
   // Include all suppliers regardless of the current reminder day.
@@ -124,7 +166,7 @@ it('recovers from local-storage failure without resending or duplicating history
   });
   await act(async () => button('Send 2 purringer').click());
   expect(transport).toHaveBeenCalledOnce();
-  expect(button('Send 1 purringer')).toBeDisabled();
+  expect(button('Send 1 purring')).toBeDisabled();
   expect(container.querySelector('[aria-label="Innstillinger"]')).toBeDisabled();
   expect(readMemory().history).toEqual([]);
   const attemptedHistory = JSON.parse(save.mock.calls[0][1]).history;
@@ -133,7 +175,7 @@ it('recovers from local-storage failure without resending or duplicating history
   expect(readMemory().history).toEqual(attemptedHistory);
   expect(readMemory().history).toHaveLength(1);
   expect(container.querySelector('[aria-label="Innstillinger"]')).toBeEnabled();
-  await act(async () => button('Send 1 purringer').click());
+  await act(async () => button('Send 1 purring').click());
   expect(transport).toHaveBeenCalledTimes(2);
   expect(transport.mock.calls[1][0].to).toBe('Second@example.com');
   expect(readMemory().history).toHaveLength(2);

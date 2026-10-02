@@ -2,12 +2,19 @@ import type { ExcelRow } from '../types/ExcelData';
 import type { SupplierContact } from '../../types/SupplierContact';
 import { getISOWeek, getISOWeekYear } from '../../utils/dateUtils';
 import { parseEmailRecipients } from '../../utils/emailRecipients';
+import { supplierFinder, supplierKey } from '../../utils/supplierMatch';
 
 export const DAYS = ['Mandag', 'Tirsdag', 'Onsdag', 'Torsdag', 'Fredag'];
 export const LANGUAGES = { no: 'Norsk', da: 'Dansk', se: 'Svenska', fi: 'Suomi', en: 'English' };
 export type Language = keyof typeof LANGUAGES;
 export type ContactEdit = { email: string; language: Language; days: string[] };
-export type Supplier = ContactEdit & { name: string; number: string; lines: ExcelRow[] };
+export type Supplier = ContactEdit & {
+  name: string;
+  number: string;
+  lines: ExcelRow[];
+  /** Other names its order lines carry. */
+  aliases: string[];
+};
 export type Exclusion = { fingerprint: string; reason: string };
 export type HistoryEntry = {
   supplier: string;
@@ -109,14 +116,27 @@ export function outstanding(line: ExcelRow) {
 export function waiting(line: ExcelRow) {
   return line.inventoryBalance != null && Number(line.inventoryBalance) < 0;
 }
+export function filterLines(
+  lines: ExcelRow[],
+  filter: string,
+  excluded: WorkspaceMemory['excluded']
+) {
+  return lines.filter((line) =>
+    filter === 'waiting'
+      ? waiting(line)
+      : filter === 'excluded'
+        ? Boolean(excludedReason(line, excluded))
+        : true
+  );
+}
 export function eta(line: ExcelRow): Date | undefined {
   const value = line.supplierETA || line.dueDate;
   if (!value) return undefined;
   const date = new Date(value as string | Date);
   return Number.isNaN(date.getTime()) ? undefined : date;
 }
-export function formatDate(date?: Date) {
-  return date ? date.toLocaleDateString('nb-NO') : '—';
+export function formatDate(date?: Date, locale = 'nb-NO') {
+  return date ? date.toLocaleDateString(locale) : '—';
 }
 export function lateDays(line: ExcelRow, today = new Date()) {
   const date = eta(line);
@@ -135,36 +155,132 @@ export function currentStatus(name: string, history: HistoryEntry[]) {
 export function validRecipients(value: string) {
   return parseEmailRecipients(value) !== null;
 }
+/** Conflicting supplier identities stay separate and receive no stored recipient automatically. */
 export function buildSuppliers(
   rows: ExcelRow[],
   contacts: SupplierContact[],
   edits: WorkspaceMemory['contacts']
 ): Supplier[] {
-  const result = new Map<string, Supplier>();
-  for (const contact of contacts)
-    result.set(contact.name, {
-      ...contact,
-      number: '',
-      language: languageOf(contact.language),
-      lines: [],
-    });
+  const suppliers: Supplier[] = contacts.map((contact) => ({
+    ...contact,
+    number: contact.number || '',
+    language: languageOf(contact.language),
+    lines: [],
+    aliases: [],
+  }));
+  const finder = supplierFinder(suppliers);
+  // Inspect all open orders before a numberless contact can gain an order's number. Otherwise
+  // two companies with the same name would give the saved address to whichever order came first.
+  const candidateNumbers = new Map<Supplier | string, Set<string>>();
+  const numbersByName = new Map<string, Set<string>>();
+  const unregisteredNames = new Set<string>();
+  for (const row of rows) {
+    const number = row.internalSupplierNumber?.trim();
+    if (!row.supplier || !number || outstanding(row) <= 0) continue;
+    const key = supplierKey(row.supplier);
+    const namedNumbers = numbersByName.get(key) ?? new Set<string>();
+    namedNumbers.add(number);
+    numbersByName.set(key, namedNumbers);
+    const match = finder.match(row.supplier, number);
+    if (match.kind === 'unmatched') unregisteredNames.add(key);
+    if (match.kind === 'conflict' || (match.kind === 'matched' && match.supplier.number.trim()))
+      continue;
+    const candidate = match.kind === 'matched' ? match.supplier : supplierKey(row.supplier);
+    const numbers = candidateNumbers.get(candidate) ?? new Set<string>();
+    numbers.add(number);
+    candidateNumbers.set(candidate, numbers);
+  }
+  const ambiguousCandidates = new Set(
+    [...candidateNumbers].filter(([, numbers]) => numbers.size > 1).map(([candidate]) => candidate)
+  );
+  // An alternate name also used by an unregistered Company ID is not a safe alias. Detect that
+  // before indexing new suppliers, so reversing the order rows cannot change the recipient.
+  const ambiguousNames = new Set(
+    [...unregisteredNames].filter((name) => numbersByName.get(name)!.size > 1)
+  );
+  const unresolved = new Map<string, Supplier>();
+  const reservedNames = new Set([
+    ...contacts.map((contact) => contact.name),
+    ...rows.map((row) => row.supplier),
+  ]);
   for (const row of rows) {
     if (!row.supplier || outstanding(row) <= 0) continue;
-    const supplier = result.get(row.supplier) || {
-      name: row.supplier,
-      number: '',
-      email: '',
-      language: 'no' as const,
-      days: [],
-      lines: [],
-    };
+    const number = row.internalSupplierNumber?.trim() || '';
+    const match = finder.match(row.supplier, number);
+    const candidate = match.kind === 'matched' ? match.supplier : supplierKey(row.supplier);
+    if (
+      match.kind === 'conflict' ||
+      ambiguousCandidates.has(candidate) ||
+      ambiguousNames.has(supplierKey(row.supplier))
+    ) {
+      const key = JSON.stringify([supplierKey(row.supplier), number]);
+      let supplier = unresolved.get(key);
+      if (!supplier) {
+        const label = `${row.supplier} (uavklart leverandør${number ? ` ${number}` : ''})`;
+        let name = label;
+        for (let suffix = 2; reservedNames.has(name); suffix++) name = `${label} (${suffix})`;
+        reservedNames.add(name);
+        supplier = { name, number, email: '', language: 'no', days: [], lines: [], aliases: [] };
+        unresolved.set(key, supplier);
+        suppliers.push(supplier);
+      }
+      supplier.lines.push(row);
+      // Never index unresolved identities or copy aliases: a later valid order must still match
+      // its contact, and saved addresses/history under the original name must not leak here.
+      continue;
+    }
+    let supplier = match.kind === 'matched' ? match.supplier : undefined;
+    if (!supplier) {
+      supplier = {
+        name: row.supplier,
+        number,
+        email: '',
+        language: 'no',
+        days: [],
+        lines: [],
+        aliases: [],
+      };
+      suppliers.push(supplier);
+    }
+    supplier.number ||= number;
+    finder.add(supplier);
+    if (row.supplier !== supplier.name && !supplier.aliases.includes(row.supplier))
+      supplier.aliases.push(row.supplier);
     supplier.lines.push(row);
-    supplier.number ||= row.internalSupplierNumber || '';
-    result.set(row.supplier, supplier);
   }
-  return [...result.values()]
-    .map((supplier) => ({ ...supplier, ...edits[supplier.name] }))
+  // Edits and history under a line's name move to its supplier only when the name is surely
+  // theirs: not another supplier's name (also written differently, unless it is this supplier's
+  // too), and not carried by lines of several suppliers.
+  const names = new Set(suppliers.map((supplier) => supplier.name));
+  const keys = new Set(suppliers.map((supplier) => supplierKey(supplier.name)));
+  const carriers = new Map<string, number>();
+  for (const alias of suppliers.flatMap((supplier) => supplier.aliases))
+    carriers.set(alias, (carriers.get(alias) ?? 0) + 1);
+  for (const supplier of suppliers)
+    supplier.aliases = supplier.aliases.filter(
+      (alias) =>
+        !names.has(alias) &&
+        carriers.get(alias) === 1 &&
+        (supplierKey(alias) === supplierKey(supplier.name) || !keys.has(supplierKey(alias)))
+    );
+  return suppliers
+    .map((supplier) => ({
+      ...supplier,
+      // Edits saved while the lines were a supplier of their own are under the lines' name.
+      ...[supplier.name, ...supplier.aliases].map((name) => edits[name]).find(Boolean),
+    }))
     .sort((a, b) => a.name.localeCompare(b.name, 'nb'));
+}
+/** History saved under a name a supplier's order lines carry, moved to the supplier's name. */
+export function historyOf(history: HistoryEntry[], suppliers: Supplier[]): HistoryEntry[] {
+  const names = new Map(
+    suppliers.flatMap((supplier) =>
+      supplier.aliases.map((alias): [string, string] => [alias, supplier.name])
+    )
+  );
+  return history.map((entry) =>
+    names.has(entry.supplier) ? { ...entry, supplier: names.get(entry.supplier)! } : entry
+  );
 }
 export function onDay(supplier: Supplier, day: string) {
   return (

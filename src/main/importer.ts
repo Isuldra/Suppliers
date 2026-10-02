@@ -1,5 +1,14 @@
 import ExcelJS, { Worksheet } from 'exceljs';
 import { workbookDetails } from './workbookDetails';
+import {
+  importRegister,
+  PLANNER,
+  type Contact,
+  type Day,
+  type SupplierRow,
+} from './supplierRegister';
+import { supplierFinder } from '../utils/supplierMatch';
+import { parseEmailRecipients } from '../utils/emailRecipients';
 import Database from 'better-sqlite3';
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const log = require('electron-log');
@@ -88,6 +97,37 @@ function getCellStringValue(cell: ExcelJS.Cell | undefined | null): string {
   }
   // For primitive types (string, number, boolean), convert cell.value to string.
   return String(cell.value).trim();
+}
+
+const WEEKDAYS = ['Mandag', 'Tirsdag', 'Onsdag', 'Torsdag', 'Fredag'];
+
+/** Norwegian weekday for a Norwegian or English day name, or '' when it is not one. */
+export function normalizeWeekday(value: string): string {
+  const day = value
+    .toLowerCase()
+    .replace(/[^a-zæøå]/g, '')
+    .replace(/mandag|monday/, 'Mandag')
+    .replace(/tirsdag|tuesday/, 'Tirsdag')
+    .replace(/onsdag|wednesday/, 'Onsdag')
+    .replace(/torsdag|thursday/, 'Torsdag')
+    .replace(/fredag|friday/, 'Fredag');
+  return WEEKDAYS.includes(day) ? day : '';
+}
+
+/**
+ * One row of the "Leverandør" sheet: A supplier, B Company ID, C language, D reminder day,
+ * E email.
+ */
+export function readSupplierSheetRow(row: Pick<ExcelJS.Row, 'getCell'>) {
+  const text = (column: number) => getCellStringValue(row.getCell(column)).trim();
+  const email = text(5);
+  return {
+    name: text(1),
+    companyId: text(2),
+    language: text(3),
+    weekday: text(4),
+    email: parseEmailRecipients(email) ? email : '',
+  };
 }
 
 /**
@@ -190,15 +230,6 @@ export async function importAlleArk(
       @status, @producer_item, @specification, @note, @inventory_balance, @order_qty, @received_qty, @purchaser,
       @incoming_date, @eta_supplier, @supplier_name, @warehouse, @outstanding_qty, @order_row_number, @company_code, @besttyp,
       @product_description, @product_specification
-    )`
-  );
-
-  // Add supplier email insert statement (with language support for email template selection)
-  const supplierEmailInsert = db.prepare(
-    `INSERT OR REPLACE INTO supplier_emails (
-      supplier_name, email_address, language, updated_at
-    ) VALUES (
-      @supplier_name, @email_address, @language, @updated_at
     )`
   );
 
@@ -432,254 +463,158 @@ export async function importAlleArk(
   });
 
   try {
-    tx();
+    // Supplier sheets replace the register in the same transaction as the orders. Leverandør
+    // owns the roster and planning when present; the checklist supplies missing addresses.
+    // A checklist-only file keeps matching suppliers' saved settings and includes every name.
+    const leverandorSheet = wb.getWorksheet('Leverandør');
+    const checklistSheet = wb.getWorksheet('Sjekkliste Leverandører');
+    const importContacts = db.transaction(() => {
+      if (!leverandorSheet && !checklistSheet) {
+        log.info('No supplier sheets found - preserving existing supplier contacts and planning');
+        return;
+      }
+
+      const checklist: { name: string; email: string }[] = [];
+      if (checklistSheet) {
+        // Checklist names start in A5; contact addresses are held in columns H-O.
+        for (let r = 5; r <= checklistSheet.rowCount; r++) {
+          const row = checklistSheet.getRow(r);
+          const name = getCellStringValue(row.getCell(1));
+          if (!name) continue;
+          let email = '';
+          for (let col = 8; col <= 15; col++) {
+            const value = getCellStringValue(row.getCell(col));
+            if (parseEmailRecipients(value)) {
+              email = value;
+              break;
+            }
+          }
+          checklist.push({ name, email });
+        }
+        log.info(`Read ${checklist.length} suppliers from Sjekkliste Leverandører`);
+      }
+
+      const suppliers: SupplierRow[] = [];
+      let storedContacts: Contact[] = [];
+      let storedDays: Day[] = [];
+      if (leverandorSheet) {
+        // A name, B Company ID, C language, D reminder day, E email; row 1 is headers.
+        for (let r = 2; r <= leverandorSheet.rowCount; r++) {
+          const row = readSupplierSheetRow(leverandorSheet.getRow(r));
+          if (!row.name) continue;
+          suppliers.push({ ...row, weekday: normalizeWeekday(row.weekday) });
+        }
+        log.info(`Read ${suppliers.length} suppliers from Leverandør`);
+      } else {
+        storedContacts = db
+          .prepare(
+            'SELECT supplier_name AS name, email_address AS email, language, company_id AS companyId FROM supplier_emails'
+          )
+          .all() as Contact[];
+        storedDays = db
+          .prepare(
+            'SELECT supplier_name AS name, weekday, planner_name AS planner FROM supplier_planning'
+          )
+          .all() as Day[];
+        const contactNames = new Set(storedContacts.map((contact) => contact.name));
+        for (const day of storedDays) {
+          if (contactNames.has(day.name)) continue;
+          storedContacts.push({ name: day.name, email: '', language: null, companyId: null });
+          contactNames.add(day.name);
+        }
+        const stored = supplierFinder(
+          storedContacts.map((contact) => ({ ...contact, number: contact.companyId }))
+        );
+        // Restore identity before merging names: differently spelled checklist rows can refer
+        // to separate stored Company IDs, and must never exchange their contact addresses.
+        for (const row of checklist) {
+          const previous = stored.find(row.name);
+          suppliers.push({
+            ...row,
+            companyId: previous?.companyId || '',
+            language: previous?.language || '',
+            weekday: '',
+          });
+        }
+      }
+
+      const register = importRegister(suppliers, leverandorSheet ? checklist : []);
+      if (!leverandorSheet) {
+        const stored = supplierFinder(
+          storedContacts.map((contact) => ({ ...contact, number: contact.companyId }))
+        );
+        for (const contact of register.contacts) {
+          const previous = stored.find(contact.name, contact.companyId);
+          if (!previous) continue;
+          contact.email ||= previous.email;
+          register.days.push(
+            ...storedDays
+              .filter((day) => day.name === previous.name)
+              .map((day) => ({ ...day, name: contact.name }))
+          );
+        }
+      }
+      db.prepare('DELETE FROM supplier_emails').run();
+      db.prepare('DELETE FROM supplier_planning').run();
+      const insertContact = db.prepare(
+        `INSERT INTO supplier_emails (supplier_name, email_address, language, company_id, updated_at)
+         VALUES (@name, @email, @language, @companyId, @updatedAt)`
+      );
+      const insertDay = db.prepare(
+        `INSERT INTO supplier_planning (supplier_name, weekday, planner_name, updated_at)
+         VALUES (@name, @weekday, @planner, CURRENT_TIMESTAMP)`
+      );
+      const updatedAt = new Date().toISOString();
+      for (const contact of register.contacts) insertContact.run({ ...contact, updatedAt });
+      for (const day of register.days) insertDay.run(day);
+      log.info(
+        `Supplier register: ${register.contacts.length} contacts, ${register.days.length} reminder days`
+      );
+
+      // DK supplier planning: Use detectedCountry which is set by warehouse or filename detection
+      // This is more robust than just filename detection
+      if (leverandorSheet && detectedCountry === 'DK') {
+        log.info(
+          '🇩🇰 Setting up DK suppliers for all weekdays (detected from warehouse or filename)...'
+        );
+
+        // Get unique suppliers from the imported purchase orders, with their supplier number
+        const uniqueDkSuppliers = db
+          .prepare(
+            `SELECT DISTINCT COALESCE(supplier_name, ftgnavn) as name, purchaser as number
+             FROM purchase_order
+             WHERE COALESCE(supplier_name, ftgnavn) IS NOT NULL
+               AND COALESCE(supplier_name, ftgnavn) != ''`
+          )
+          .all() as { name: string; number: string | null }[];
+
+        // The days go under the register's name, so they join the supplier's contact details.
+        const registered = supplierFinder(
+          register.contacts.map(({ name, companyId }) => ({ name, number: companyId }))
+        );
+        const insertDkPlan = db.prepare(`
+          INSERT OR REPLACE INTO supplier_planning (supplier_name, weekday, planner_name, updated_at)
+          VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+        `);
+        for (const supplier of uniqueDkSuppliers) {
+          const name = registered.find(supplier.name, supplier.number)?.name ?? supplier.name;
+          for (const weekday of WEEKDAYS) insertDkPlan.run(name, weekday, PLANNER);
+        }
+        log.info(
+          `Inserted ${uniqueDkSuppliers.length} DK suppliers for all ${WEEKDAYS.length} weekdays`
+        );
+      }
+    });
+    db.transaction(() => {
+      tx();
+      importContacts();
+    })();
     log.info('Excel import successful.');
     log.info(
       `Import summary: ${processedCount} total records processed${
         duplicateCount > 0 ? `, ${duplicateCount} duplicates replaced` : ''
       }`
     );
-
-    // Import supplier emails from "Sjekkliste Leverandører" sheet if it exists
-    try {
-      const sjekkliste = wb.getWorksheet('Sjekkliste Leverandører');
-      if (sjekkliste) {
-        log.info('Processing Sjekkliste Leverandører sheet for email addresses');
-        log.info(`Sheet has ${sjekkliste.rowCount} rows and ${sjekkliste.columnCount} columns`);
-
-        const emailTx = db.transaction(() => {
-          let emailCount = 0;
-
-          // Log first few rows to understand structure
-          for (let r = 1; r <= Math.min(10, sjekkliste.rowCount); r++) {
-            const row = sjekkliste.getRow(r);
-            const rowData: string[] = [];
-            for (let c = 1; c <= Math.min(15, sjekkliste.columnCount); c++) {
-              const cell = row.getCell(c);
-              rowData.push(`[${c}]="${getCellStringValue(cell)}"`);
-            }
-            log.info(`Row ${r}: ${rowData.join(', ')}`);
-          }
-
-          // Based on logs: Row 5: [Abena Norge AS, Purret, Avvent, Avvent, Purret, , , , , ordre@abena.no]
-          // Supplier is in column A (index 1), Email is in column J (index 10)
-          for (let r = 5; r <= sjekkliste.rowCount; r++) {
-            // Start from row 5 based on logs
-            const row = sjekkliste.getRow(r);
-
-            const supplierName = getCellStringValue(row.getCell(1)).trim(); // Column A
-
-            // Search for email in multiple columns (J is column 10, but let's check nearby columns too)
-            let emailAddress = '';
-            const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-            // Check columns 8-15 for email addresses
-            for (let col = 8; col <= 15; col++) {
-              const cellValue = getCellStringValue(row.getCell(col)).trim();
-              if (emailPattern.test(cellValue)) {
-                emailAddress = cellValue;
-                if (r <= 10) {
-                  log.info(`Found email in column ${col}: ${emailAddress}`);
-                }
-                break;
-              }
-            }
-
-            // Log each row we're processing
-            if (r <= 10) {
-              // Log first few rows for debugging
-              log.info(`Processing row ${r}: Supplier="${supplierName}", Email="${emailAddress}"`);
-            }
-
-            if (supplierName && emailAddress) {
-              try {
-                supplierEmailInsert.run({
-                  supplier_name: supplierName,
-                  email_address: emailAddress,
-                  language: null, // Language not available in Sjekkliste sheet
-                  updated_at: new Date().toISOString(),
-                });
-                emailCount++;
-
-                log.info(`✅ Imported email: ${supplierName} -> ${emailAddress}`);
-              } catch (insertError) {
-                log.error(`❌ Error inserting email for ${supplierName}:`, insertError);
-              }
-            } else {
-              if (r <= 10) {
-                // Log why we're skipping first few rows
-                log.info(
-                  `⏭️ Skipping row ${r}: Supplier="${supplierName}" (valid: ${!!supplierName}), Email="${emailAddress}" (valid: ${!!emailAddress})`
-                );
-              }
-            }
-          }
-
-          log.info(`Imported ${emailCount} supplier email addresses`);
-        });
-
-        emailTx();
-      } else {
-        log.info('Sjekkliste Leverandører sheet not found');
-      }
-    } catch (emailError) {
-      log.error('Error processing supplier emails:', emailError);
-    }
-
-    // Import supplier planning from "Leverandør" sheet (ark 6) if it exists
-    try {
-      const leverandorSheet = wb.getWorksheet('Leverandør');
-      if (leverandorSheet) {
-        log.info('Processing Leverandør sheet for supplier planning');
-        log.info(
-          `Sheet has ${leverandorSheet.rowCount} rows and ${leverandorSheet.columnCount} columns`
-        );
-
-        const planningTx = db.transaction(() => {
-          let planningCount = 0;
-
-          // Log first few rows to understand structure
-          for (let r = 1; r <= Math.min(10, leverandorSheet.rowCount); r++) {
-            const row = leverandorSheet.getRow(r);
-            const rowData: string[] = [];
-            for (let c = 1; c <= Math.min(10, leverandorSheet.columnCount); c++) {
-              const cell = row.getCell(c);
-              rowData.push(`[${c}]="${getCellStringValue(cell)}"`);
-            }
-            log.info(`Leverandør Row ${r}: ${rowData.join(', ')}`);
-          }
-
-          // Clear existing supplier planning data
-          const clearStmt = db.prepare('DELETE FROM supplier_planning');
-          const clearResult = clearStmt.run();
-          log.info(`Cleared ${clearResult.changes} existing supplier planning records`);
-
-          // DK supplier planning: Use detectedCountry which is set by warehouse or filename detection
-          // This is more robust than just filename detection
-          const isDkImportForPlanning = detectedCountry === 'DK';
-
-          if (isDkImportForPlanning) {
-            log.info(
-              '🇩🇰 Setting up DK suppliers for all weekdays (detected from warehouse or filename)...'
-            );
-
-            // Get unique suppliers from the imported purchase orders
-            const uniqueDkSuppliers = db
-              .prepare(
-                `SELECT DISTINCT COALESCE(supplier_name, ftgnavn) as name 
-               FROM purchase_order 
-               WHERE COALESCE(supplier_name, ftgnavn) IS NOT NULL 
-                 AND COALESCE(supplier_name, ftgnavn) != ''`
-              )
-              .all() as { name: string }[];
-
-            const weekdays = ['Mandag', 'Tirsdag', 'Onsdag', 'Torsdag', 'Fredag'];
-
-            const insertDkPlan = db.prepare(`
-               INSERT OR REPLACE INTO supplier_planning (supplier_name, weekday, planner_name, updated_at)
-               VALUES (?, ?, 'Innkjøper', CURRENT_TIMESTAMP)
-             `);
-
-            let insertCount = 0;
-            for (const supplier of uniqueDkSuppliers) {
-              for (const weekday of weekdays) {
-                try {
-                  insertDkPlan.run(supplier.name, weekday);
-                  insertCount++;
-                } catch (e) {
-                  log.warn(`Failed to insert DK supplier ${supplier.name} for ${weekday}`, e);
-                }
-              }
-            }
-            log.info(
-              `Inserted ${uniqueDkSuppliers.length} DK suppliers for all ${weekdays.length} weekdays (${insertCount} total records)`
-            );
-          } else {
-            log.info(
-              `🇳🇴 Standard Import (${detectedCountry || 'NO'}): Skipping DK-specific supplier injection`
-            );
-          }
-
-          // Insert statement for supplier planning
-          const planningInsert = db.prepare(`
-            INSERT OR REPLACE INTO supplier_planning 
-            (supplier_name, weekday, planner_name, updated_at)
-            VALUES (?, ?, ?, CURRENT_TIMESTAMP)
-          `);
-
-          // Process rows starting from row 2 (row 1 is headers)
-          // Structure: Column A = Supplier name, Column B = Company ID, Column C = Language, Column D = Weekday, Column E = Email
-          for (let r = 2; r <= leverandorSheet.rowCount; r++) {
-            const row = leverandorSheet.getRow(r);
-
-            const supplierName = getCellStringValue(row.getCell(1)).trim(); // Column A
-            const language = getCellStringValue(row.getCell(3)).trim(); // Column C
-            const weekday = getCellStringValue(row.getCell(4)).trim(); // Column D
-            const email = getCellStringValue(row.getCell(5)).trim(); // Column E (was incorrectly reading from F/6)
-
-            // Skip rows with no meaningful data
-            if (!supplierName || !weekday || supplierName === '' || weekday === '') {
-              continue;
-            }
-
-            // Normalize weekday names to match the expected format
-            const normalizedWeekday = weekday
-              .toLowerCase()
-              .replace(/[^a-zæøå]/g, '')
-              .replace(/mandag|monday/, 'Mandag')
-              .replace(/tirsdag|tuesday/, 'Tirsdag')
-              .replace(/onsdag|wednesday/, 'Onsdag')
-              .replace(/torsdag|thursday/, 'Torsdag')
-              .replace(/fredag|friday/, 'Fredag');
-
-            // Only process if we have a valid weekday
-            if (['Mandag', 'Tirsdag', 'Onsdag', 'Torsdag', 'Fredag'].includes(normalizedWeekday)) {
-              try {
-                // Insert supplier planning
-                planningInsert.run(supplierName, normalizedWeekday, 'Innkjøper');
-                planningCount++;
-
-                // Also insert/update supplier email with language if available
-                if (email && email.includes('@')) {
-                  try {
-                    supplierEmailInsert.run({
-                      supplier_name: supplierName,
-                      email_address: email,
-                      language: language || null, // Store language for email template selection
-                      updated_at: new Date().toISOString(),
-                    });
-                  } catch (emailError) {
-                    log.warn(`Failed to insert email for ${supplierName}:`, emailError);
-                  }
-                }
-
-                if (planningCount <= 10) {
-                  log.info(
-                    `✅ Imported planning: ${supplierName} -> ${normalizedWeekday} (${language}, ${email})`
-                  );
-                }
-              } catch (insertError) {
-                log.error(`❌ Error inserting planning for ${supplierName}:`, insertError);
-              }
-            } else {
-              if (r <= 10) {
-                log.info(
-                  `⏭️ Skipping row ${r}: Invalid weekday "${weekday}" for supplier "${supplierName}"`
-                );
-              }
-            }
-          }
-
-          log.info(`Imported ${planningCount} supplier planning records`);
-        });
-
-        planningTx();
-      } else {
-        log.info('Leverandør sheet not found - preserving existing supplier planning');
-      }
-    } catch (planningError) {
-      log.error('Error processing supplier planning:', planningError);
-    }
 
     // Ensure indexes for faster queries
     try {

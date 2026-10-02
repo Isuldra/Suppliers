@@ -1,7 +1,9 @@
 import React, { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import Review from '../src/renderer/workspace/Review';
+import { buildSuppliers } from '../src/renderer/workspace/model';
+import { initNorwegian } from './i18nTestSetup';
 import type { Reminder } from '../src/renderer/workspace/reminder';
 
 let root: Root;
@@ -15,6 +17,7 @@ const items: Reminder[] = ['First', 'Second'].map((supplier) => ({
   language: 'no',
   lines: [{ key: '1', supplier, poNumber: '500', orderQty: 20, receivedQty: 5 }],
 }));
+beforeAll(initNorwegian);
 beforeEach(() => {
   vi.clearAllMocks();
   onSent.mockReset().mockReturnValue(true);
@@ -48,11 +51,58 @@ async function render(initial = items) {
 }
 function sendButton() {
   return [...container.querySelectorAll('button')].find((button) =>
-    /^Send \d+ purringer$/.test(button.textContent || '')
+    /^Send \d+ purring(er)?$/.test(button.textContent || '')
   )!;
 }
 
 describe('Review before Outlook sending', () => {
+  it('requires a reviewed recipient for conflicting supplier identity despite saved contact edits', async () => {
+    const order = {
+      ...items[0].lines[0],
+      supplier: 'Supplier B',
+      internalSupplierNumber: '100',
+    };
+    const suppliers = buildSuppliers(
+      [order],
+      [
+        { name: 'Supplier A', number: '100', email: 'a@example.com', language: 'no', days: [] },
+        { name: 'Supplier B', number: '200', email: 'b@example.com', language: 'no', days: [] },
+      ],
+      { 'Supplier B': { email: 'saved-b@example.com', language: 'no', days: [] } }
+    );
+    await render(
+      suppliers
+        .filter((supplier) => supplier.lines.length)
+        .map((supplier) => ({
+          supplier: supplier.name,
+          recipient: supplier.email,
+          language: supplier.language,
+          lines: supplier.lines,
+        }))
+    );
+    const recipient = container.querySelector<HTMLInputElement>('[aria-label="Mottaker"]')!;
+    expect(recipient).toHaveValue('');
+    expect(sendButton()).toBeDisabled();
+    await act(async () => sendButton().click());
+    expect(transport).not.toHaveBeenCalled();
+
+    transport.mockResolvedValue({ success: true });
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(
+        recipient,
+        'reviewed-b@example.com'
+      );
+      recipient.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    expect(sendButton()).toBeEnabled();
+    await act(async () => sendButton().click());
+    expect(transport).toHaveBeenCalledOnce();
+    expect(transport.mock.calls[0][0].to).toBe('reviewed-b@example.com');
+    expect(onSent).toHaveBeenCalledWith(
+      expect.objectContaining({ recipient: 'reviewed-b@example.com', lines: [order] }),
+      expect.any(String)
+    );
+  });
   it.each(['first@example.com; second@example.com', 'first@example.com, second@example.com'])(
     'sends a recipient list in one transport attempt: %s',
     async (recipient) => {

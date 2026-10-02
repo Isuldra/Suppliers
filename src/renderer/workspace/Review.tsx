@@ -1,4 +1,5 @@
 import React, { useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { LANGUAGES, validRecipients, type Language } from './model';
 import { reminderHtml, reminderSubject, sendReminder, type Reminder } from './reminder';
 import { Modal } from './Primitives';
@@ -7,6 +8,13 @@ type Status = {
   state: 'sending' | 'sent' | 'sent-unsaved' | 'error' | 'skipped';
   message?: string;
   sentAt?: string;
+};
+const STATE_KEYS: Record<Status['state'], string> = {
+  sending: 'workspace.review.stateSending',
+  sent: 'workspace.review.stateSent',
+  'sent-unsaved': 'workspace.review.stateSentUnsaved',
+  error: 'workspace.review.stateError',
+  skipped: 'workspace.review.stateSkipped',
 };
 export default function Review({
   initial,
@@ -21,6 +29,7 @@ export default function Review({
   onSent: (reminder: Reminder, sentAt: string) => boolean | Promise<boolean>;
   onBusy: (busy: boolean) => void;
 }) {
+  const { t } = useTranslation();
   const [items, setItems] = useState(initial);
   const [focus, setFocus] = useState(0);
   const [statuses, setStatuses] = useState<Record<string, Status>>({});
@@ -103,18 +112,18 @@ export default function Review({
     <>
       <div className="pulse-review-heading">
         <button disabled={busy || Boolean(unsaved)} onClick={onBack}>
-          ← Tilbake til utvalget
+          {t('workspace.review.back')}
         </button>
         <div>
-          <h2>Se gjennom purringene</h2>
-          <p>Én e-post per leverandør. Bare de valgte ordrelinjene tas med.</p>
+          <h2>{t('workspace.review.title')}</h2>
+          <p>{t('workspace.review.subtitle')}</p>
         </div>
       </div>
       <div className="pulse-review">
         <aside className="pulse-suppliers">
           <div className="pulse-list-header">
-            <strong>{items.length} leverandører</strong>
-            <small>{sentCount} sendt</small>
+            <strong>{t('workspace.review.suppliers', { count: items.length })}</strong>
+            <small>{t('workspace.review.sent', { count: sentCount })}</small>
           </div>
           <div className="pulse-supplier-scroll">
             {items.map((item, index) => (
@@ -124,18 +133,13 @@ export default function Review({
                 onClick={() => setFocus(index)}
               >
                 <strong>{item.supplier}</strong>
-                <span>{item.lines.length} ordrelinjer</span>
+                <span>{t('workspace.review.lines', { count: item.lines.length })}</span>
                 <small className={statuses[item.supplier]?.state === 'error' ? 'pulse-danger' : ''}>
-                  {{
-                    sending: 'Sender …',
-                    sent: '✓ Sendt',
-                    'sent-unsaved': 'Sendt · historikk ikke lagret',
-                    error: 'Sending feilet',
-                    skipped: 'Hoppet over',
-                  }[statuses[item.supplier]?.state] ||
-                    (validRecipients(item.recipient)
+                  {statuses[item.supplier]
+                    ? t(STATE_KEYS[statuses[item.supplier].state])
+                    : validRecipients(item.recipient)
                       ? LANGUAGES[item.language]
-                      : 'Mangler gyldig e-post')}
+                      : t('workspace.review.invalidEmail')}
                 </small>
               </button>
             ))}
@@ -144,18 +148,18 @@ export default function Review({
         <section className="pulse-mail-pane">
           <div className="pulse-mail-settings">
             <label className="pulse-field">
-              Til
+              {t('workspace.review.to')}
               <input
-                aria-label="Mottaker"
+                aria-label={t('workspace.review.recipient')}
                 disabled={!editable}
                 value={current.recipient}
                 onChange={(event) => update({ recipient: event.target.value })}
               />
             </label>
             <label className="pulse-field">
-              Språk
+              {t('workspace.review.language')}
               <select
-                aria-label="E-postspråk"
+                aria-label={t('workspace.review.emailLanguage')}
                 disabled={!editable}
                 value={current.language}
                 onChange={(event) => update({ language: event.target.value as Language })}
@@ -178,26 +182,28 @@ export default function Review({
                 })
               }
             >
-              {status?.state === 'skipped' ? 'Ta med igjen' : 'Hopp over'}
+              {status?.state === 'skipped'
+                ? t('workspace.review.include')
+                : t('workspace.review.skip')}
             </button>
           </div>
           {status?.state === 'error' && (
             <div role="alert" className="pulse-notice pulse-error">
-              {status.message} Kontroller Sendt-mappen i Outlook før du prøver igjen.
+              {status.message} {t('workspace.review.checkSent')}
             </div>
           )}
           {!validRecipients(current.recipient) && (
             <p role="alert" className="pulse-notice">
-              Legg til en gyldig mottakeradresse. Flere adresser skilles med semikolon.
+              {t('workspace.review.invalidRecipient')}
             </p>
           )}
           <div className="pulse-mail-subject">
-            <span>Emne</span>
+            <span>{t('workspace.review.subject')}</span>
             <strong>{reminderSubject(current)}</strong>
           </div>
           <iframe
             className="pulse-mail-preview"
-            title={`E-post til ${current.supplier}`}
+            title={t('workspace.review.previewTitle', { supplier: current.supplier })}
             sandbox=""
             srcDoc={html}
           />
@@ -205,24 +211,23 @@ export default function Review({
       </div>
       {unsaved && (
         <div role="alert" className="pulse-notice pulse-error">
-          E-posten til {unsaved.supplier} er sendt, men historikken kunne ikke lagres. Køen er
-          stoppet. Behold Pulse åpen og prøv å lagre igjen før du avslutter.
+          {t('workspace.review.unsaved', { supplier: unsaved.supplier })}
           <button disabled={busy} onClick={() => void retrySave()}>
-            Prøv å lagre historikken igjen
+            {t('workspace.review.retrySave')}
           </button>
         </div>
       )}
       <footer className="pulse-footer">
         <div>
           <strong aria-live="polite">
-            {sentCount} av {items.length} purringer sendt
+            {t('workspace.review.progress', { sent: sentCount, count: items.length })}
           </strong>
           <small>
             {busy
-              ? 'Vent mens Outlook sender …'
+              ? t('workspace.review.waitOutlook')
               : !valid
-                ? 'En eller flere mottakere må rettes før sending.'
-                : 'Sendes fra Outlook-kontoen som er satt opp i Pulse.'}
+                ? t('workspace.review.fixRecipients')
+                : t('workspace.review.sentFrom')}
           </small>
         </div>
         <div className="pulse-grow" />
@@ -232,30 +237,37 @@ export default function Review({
             disabled={busy || Boolean(unsaved) || !valid}
             onClick={() => void send()}
           >
-            {busy ? 'Sender …' : `Send ${pending.length} purringer`}
+            {busy
+              ? t('workspace.review.sending')
+              : t('workspace.review.send', { count: pending.length })}
           </button>
         ) : (
           <button className="pulse-primary" disabled={busy || Boolean(unsaved)} onClick={onBack}>
-            Tilbake til purring
+            {t('workspace.review.backToRemind')}
           </button>
         )}
       </footer>
       {confirm && (
-        <Modal title={`Send ${items.length} purringer?`} onClose={() => setConfirm(false)}>
+        <Modal
+          title={t('workspace.review.confirmTitle', { count: items.length })}
+          onClose={() => setConfirm(false)}
+        >
           <p>
-            Dette sender {items.reduce((count, item) => count + item.lines.length, 0)} ordrelinjer
-            til {items.length} leverandører via Outlook.
+            {t('workspace.review.confirmText', {
+              lines: t('workspace.review.lines', {
+                count: items.reduce((count, item) => count + item.lines.length, 0),
+              }),
+              suppliers: t('workspace.review.suppliers', { count: items.length }),
+            })}
           </p>
-          <p>Leverandører du har satt på avvent, og linjer du har tatt ut, er ikke med.</p>
+          <p>{t('workspace.review.confirmNote')}</p>
           <div className="pulse-flex">
-            <button onClick={() => setConfirm(false)}>Se gjennom først</button>
+            <button onClick={() => setConfirm(false)}>{t('workspace.review.reviewFirst')}</button>
             <button className="pulse-primary" disabled={!valid} onClick={() => void send()}>
-              Bekreft sending
+              {t('workspace.review.confirm')}
             </button>
           </div>
-          {!valid && (
-            <p className="pulse-danger">Rett mottakeradressene i forhåndsvisningen før sending.</p>
-          )}
+          {!valid && <p className="pulse-danger">{t('workspace.review.fixBeforeSend')}</p>}
         </Modal>
       )}
     </>

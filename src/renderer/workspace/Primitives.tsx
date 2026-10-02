@@ -1,4 +1,5 @@
 import React, { useEffect, useId, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { getISOWeek } from '../../utils/dateUtils';
 import { type HistoryEntry, weekKey } from './model';
 
@@ -22,15 +23,25 @@ export function History({
   entries: HistoryEntry[];
   labels?: boolean;
 }) {
+  const { t } = useTranslation();
   return (
-    <div className="pulse-history" aria-label="Purrestatus siste fem uker">
+    <div className="pulse-history" aria-label={t('workspace.history.label')}>
       {[4, 3, 2, 1, 0].map((offset) => {
         const date = new Date();
         date.setDate(date.getDate() - offset * 7);
         const entry = entries.find(
           (item) => item.supplier === name && weekKey(new Date(item.at)) === weekKey(date)
         );
-        const title = `Uke ${getISOWeek(date)}: ${entry?.status === 'sent' ? 'Purret' : entry?.status === 'deferred' ? 'Avvent' : 'Ingen registrering i Pulse'}`;
+        const title = t('workspace.history.week', {
+          week: getISOWeek(date),
+          status: t(
+            entry?.status === 'sent'
+              ? 'workspace.history.sent'
+              : entry?.status === 'deferred'
+                ? 'workspace.history.deferred'
+                : 'workspace.history.none'
+          ),
+        });
         return (
           <span key={offset} title={title} aria-label={title}>
             <i className={entry?.status || ''} />
@@ -52,6 +63,7 @@ export function Modal({
   onClose: () => void;
   busy?: boolean;
 }) {
+  const { t } = useTranslation();
   const ref = useRef<HTMLDialogElement>(null);
   const id = useId();
   useEffect(() => {
@@ -71,7 +83,12 @@ export function Modal({
     >
       <header>
         <h2 id={id}>{title}</h2>
-        <button className="pulse-icon-button" aria-label="Lukk" disabled={busy} onClick={onClose}>
+        <button
+          className="pulse-icon-button"
+          aria-label={t('workspace.modal.close')}
+          disabled={busy}
+          onClick={onClose}
+        >
           ×
         </button>
       </header>

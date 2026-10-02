@@ -265,6 +265,13 @@
   background: #eaf2f2;
   color: #497886;
 }
+.pulse-shell .pulse-header .pulse-ui-language {
+  min-height: 32px;
+  padding: 5px 8px;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
 .pulse-logo {
   width: auto;
   height: 22px;
@@ -455,6 +462,19 @@
   color: #61615f;
   margin-top: 6px;
   overflow-wrap: anywhere;
+}
+.pulse-shell .pulse-supplier-meta .pulse-inline-select {
+  min-height: 0;
+  padding: 1px 4px;
+  border-color: transparent;
+  background: transparent;
+  color: #61615f;
+  font-size: 13px;
+  cursor: pointer;
+}
+.pulse-shell .pulse-supplier-meta .pulse-inline-select:hover {
+  border-color: #d9d3cc;
+  background: #fff;
 }
 .pulse-order-area {
   padding: 0 24px 24px;

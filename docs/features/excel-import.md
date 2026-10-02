@@ -59,27 +59,25 @@ Tilgjengelig beholdning beregnes som `lagsaldo - lagresant` for samme firma, lag
 
 Overskrifter på rad 1, data fra rad 2:
 
-| Kolonne | Innhold                 |
-| ------- | ----------------------- |
-| A       | Leverandørnavn          |
-| B       | Firmafelt fra eksporten |
-| C       | Språk                   |
-| D       | Purredag                |
-| E       | E-postadresse           |
+| Kolonne | Innhold                |
+| ------- | ---------------------- |
+| A       | Leverandørnavn         |
+| B       | Company ID (= `ftgnr`) |
+| C       | Språk                  |
+| D       | Purredag               |
+| E       | E-postadresse          |
 
-Importen normaliserer norske og engelske ukedager. Rader må ha leverandørnavn og en gjenkjent purredag for å bli brukt til planlegging. Språk og e-post importeres fra gyldige kontaktrader.
+Hver rad med leverandørnavn blir en leverandør i registeret, også uten purredag eller e-post. Company ID er Jeeves-nummeret, det samme som `ftgnr` i BP: rader med samme Company ID er én leverandør uansett hvordan navnet er skrevet. Importen normaliserer norske og engelske ukedager.
 
-Når arket finnes, erstattes leverandørplanleggingen. Når det mangler, beholdes tidligere planlegging. Danske leverandører får i tillegg oppføring for arbeidsdagene gjennom importens Danmark-oppsett.
+Når arket finnes, erstatter det hele leverandørregisteret: kontakter og purredager. Når det mangler, beholdes registeret fra forrige import. Danske leverandører får i tillegg oppføring for arbeidsdagene gjennom importens Danmark-oppsett.
 
-### Sjekkliste Leverandører: e-postkontakt
-
-Dette arket er valgfritt. Importen leser fra rad 5, finner leverandørnavn i A og søker etter e-post i H–O. Gyldige kontaktopplysninger fra `Leverandør`-arket kan deretter overstyre disse.
+Arket `Sjekkliste Leverandører` leses ikke.
 
 ## Hva en ny import endrer
 
 Innkjøpslinjene i `purchase_order` erstattes i én transaksjon. Linjer som ikke finnes i den nye filen, forsvinner fra ordresnapshotet. Radnøkkelen skiller firma, lager, leverandør, ordre, artikkel og ordrelinje.
 
-Kontaktark behandles separat. Kontaktfeil kan derfor forekomme selv om BP-importen lykkes. Tidligere e-postkontakter slettes ikke samlet ved hver import.
+Leverandørregisteret lagres i samme transaksjon som innkjøpslinjene. Feiler noe, feiler hele importen, og forrige ordrer, kontakter og purredager beholdes.
 
 Arbeidsflaten nullstiller lokale kontaktendringer etter vellykket import. Utelatte linjer beholdes bare når identitet og innhold stemmer. Lokal sendingshistorikk beholdes.
 
