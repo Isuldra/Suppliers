@@ -307,6 +307,8 @@ export class DatabaseService {
           log.info("Column 'company_id' already exists in 'supplier_emails' table.");
         } else {
           log.error("Failed to add 'company_id' to 'supplier_emails':", e);
+          // The supplier register reads and writes company_id: without it nothing works.
+          throw e;
         }
       }
 
