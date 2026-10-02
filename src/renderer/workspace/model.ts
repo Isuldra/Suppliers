@@ -191,11 +191,20 @@ export function buildSuppliers(
       supplier.aliases.push(row.supplier);
     supplier.lines.push(row);
   }
-  // A line's name that is another supplier's own keeps its edits and history with that supplier.
-  const owners = new Map(suppliers.map((supplier) => [supplierKey(supplier.name), supplier]));
+  // Edits and history under a line's name move to its supplier only when the name is surely
+  // theirs: not another supplier's name (also written differently, unless it is this supplier's
+  // too), and not carried by lines of several suppliers.
+  const names = new Set(suppliers.map((supplier) => supplier.name));
+  const keys = new Set(suppliers.map((supplier) => supplierKey(supplier.name)));
+  const carriers = new Map<string, number>();
+  for (const alias of suppliers.flatMap((supplier) => supplier.aliases))
+    carriers.set(alias, (carriers.get(alias) ?? 0) + 1);
   for (const supplier of suppliers)
     supplier.aliases = supplier.aliases.filter(
-      (alias) => (owners.get(supplierKey(alias)) ?? supplier) === supplier
+      (alias) =>
+        !names.has(alias) &&
+        carriers.get(alias) === 1 &&
+        (supplierKey(alias) === supplierKey(supplier.name) || !keys.has(supplierKey(alias)))
     );
   return suppliers
     .map((supplier) => ({

@@ -73,7 +73,7 @@ describe('a file with "Leverandør"', () => {
     });
   });
 
-  it("prefers the supplier's own address and keeps addressed checklist-only suppliers", () => {
+  it("prefers the supplier's own address and keeps every checklist-only supplier", () => {
     const result = importRegister(stored, {
       checklist: [
         { name: 'Abena Norge AS', email: 'checklist@abena.no' },
@@ -84,7 +84,81 @@ describe('a file with "Leverandør"', () => {
     });
     expect(sorted(result).contacts).toEqual([
       contact('Abena Norge AS', { email: 'own@abena.no' }),
+      contact('No Address AS'),
       contact('Only Listed AS', { email: 'post@listed.no' }),
+    ]);
+  });
+
+  it('keeps suppliers with different Company IDs apart, also when only capitals differ', () => {
+    const result = importRegister(stored, {
+      checklist: [],
+      suppliers: [
+        supplier('Abena AS', { companyId: '4960001', email: 'a@abena.no' }),
+        supplier('ABENA AS', { companyId: '4960002', email: 'b@abena.no', weekday: 'Mandag' }),
+      ],
+    });
+    expect(result).toEqual({
+      contacts: [
+        contact('Abena AS', { companyId: '4960001', email: 'a@abena.no' }),
+        contact('ABENA AS', { companyId: '4960002', email: 'b@abena.no' }),
+      ],
+      days: [day('ABENA AS', 'Mandag')],
+    });
+  });
+
+  it('tells suppliers written exactly alike apart by their Company ID', () => {
+    const result = importRegister(stored, {
+      checklist: [],
+      suppliers: [
+        supplier('Abena AS', { companyId: '4960001' }),
+        supplier('Abena AS', { companyId: '4960002' }),
+      ],
+    });
+    expect(result.contacts.map((item) => item.name)).toEqual(['Abena AS', 'Abena AS (4960002)']);
+  });
+
+  it('keeps one Company ID as one supplier however its rows write the name', () => {
+    const result = importRegister(stored, {
+      checklist: [{ name: 'Abena A/S', email: 'ordre@abena.dk' }],
+      suppliers: [
+        supplier('Abena Danmark A/S', { companyId: '4960001', weekday: 'Mandag' }),
+        supplier('Abena A/S', { companyId: '4960001', weekday: 'Torsdag' }),
+      ],
+    });
+    expect(result).toEqual({
+      contacts: [contact('Abena Danmark A/S', { companyId: '4960001', email: 'ordre@abena.dk' })],
+      days: [day('Abena Danmark A/S', 'Mandag'), day('Abena Danmark A/S', 'Torsdag')],
+    });
+  });
+
+  it('joins a row without Company ID to the supplier with its name', () => {
+    const result = importRegister(stored, {
+      checklist: [],
+      suppliers: [
+        supplier('Abena AS', { companyId: '4960001' }),
+        supplier('abena  as', { email: 'ordre@abena.no', weekday: 'Fredag' }),
+      ],
+    });
+    expect(result).toEqual({
+      contacts: [contact('Abena AS', { companyId: '4960001', email: 'ordre@abena.no' })],
+      days: [day('Abena AS', 'Fredag')],
+    });
+  });
+
+  it('guesses no checklist address when several suppliers have its name', () => {
+    const result = importRegister(stored, {
+      checklist: [
+        { name: 'abena  as', email: 'unclear@abena.no' },
+        { name: 'ABENA AS', email: 'exact@abena.no' },
+      ],
+      suppliers: [
+        supplier('Abena AS', { companyId: '4960001' }),
+        supplier('ABENA AS', { companyId: '4960002' }),
+      ],
+    });
+    expect(result.contacts).toEqual([
+      contact('Abena AS', { companyId: '4960001' }),
+      contact('ABENA AS', { companyId: '4960002', email: 'exact@abena.no' }),
     ]);
   });
 
@@ -159,6 +233,37 @@ describe('a file with only "Sjekkliste Leverandører"', () => {
       { contacts: [], days: [day('DAYS ONLY', 'Fredag')] },
       { checklist: [{ name: 'Days only', email: '' }] }
     );
-    expect(result).toEqual({ contacts: [], days: [day('Days only', 'Fredag')] });
+    expect(result).toEqual({
+      contacts: [contact('Days only')],
+      days: [day('Days only', 'Fredag')],
+    });
+  });
+
+  it('keeps a new supplier without an address, so its address can be added', () => {
+    const result = importRegister(
+      { contacts: [], days: [] },
+      { checklist: [{ name: 'New AS', email: '' }] }
+    );
+    expect(result).toEqual({ contacts: [contact('New AS')], days: [] });
+  });
+
+  it('keeps stored suppliers with different Company IDs apart under one name', () => {
+    const result = importRegister(
+      {
+        contacts: [
+          contact('Abena AS', { email: 'a@abena.no', language: 'Norsk', companyId: '4960001' }),
+          contact('ABENA AS', { email: 'b@abena.no', companyId: '4960002' }),
+        ],
+        days: [day('Abena AS', 'Mandag'), day('ABENA AS', 'Tirsdag')],
+      },
+      { checklist: [{ name: 'Abena AS', email: 'new@abena.no' }] }
+    );
+    expect(result).toEqual({
+      contacts: [
+        contact('Abena AS', { email: 'new@abena.no', language: 'Norsk', companyId: '4960001' }),
+        contact('ABENA AS', { email: 'b@abena.no', companyId: '4960002' }),
+      ],
+      days: [day('Abena AS', 'Mandag'), day('ABENA AS', 'Tirsdag')],
+    });
   });
 });

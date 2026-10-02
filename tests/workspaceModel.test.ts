@@ -106,6 +106,46 @@ describe('Pulse workspace selections', () => {
       { name: 'Other AS', number: '4960009', email: '', lines: 1, aliases: [] },
     ]);
   });
+  it('tells suppliers whose names differ only in capitals apart by number, then exact name', () => {
+    const contact = { email: '', language: 'Norsk', days: [] };
+    const suppliers = buildSuppliers(
+      [
+        { ...line, supplier: 'abena as', internalSupplierNumber: '4960001' },
+        { ...line, key: '2', supplier: 'ABENA AS' },
+        // Neither number nor exact name: which supplier is meant is not guessed.
+        { ...line, key: '3', supplier: 'abena  as' },
+      ],
+      [
+        { ...contact, name: 'Abena AS', number: '4960001' },
+        { ...contact, name: 'ABENA AS', number: '4960002' },
+      ],
+      {}
+    );
+    expect(
+      suppliers.map(({ name, lines, aliases }) => ({ name, lines: lines.length, aliases }))
+    ).toEqual([
+      { name: 'abena  as', lines: 1, aliases: [] },
+      { name: 'Abena AS', lines: 1, aliases: ['abena as'] },
+      { name: 'ABENA AS', lines: 1, aliases: [] },
+    ]);
+  });
+  it('moves no edits or history under a line name that several suppliers carry', () => {
+    const suppliers = buildSuppliers(
+      [
+        { ...line, supplier: 'Abena', internalSupplierNumber: '4960001' },
+        { ...line, key: '2', supplier: 'Abena', internalSupplierNumber: '4960002' },
+      ],
+      [
+        { name: 'Abena Norge AS', email: '', language: 'Norsk', days: [], number: '4960001' },
+        { name: 'Abena Danmark A/S', email: '', language: 'Dansk', days: [], number: '4960002' },
+      ],
+      { Abena: { email: 'shared@abena.no', language: 'no', days: [] } }
+    );
+    expect(suppliers.map(({ email, aliases }) => ({ email, aliases }))).toEqual([
+      { email: '', aliases: [] },
+      { email: '', aliases: [] },
+    ]);
+  });
   it("keeps edits and history saved under the order lines' own name", () => {
     const suppliers = buildSuppliers(
       [{ ...line, supplier: 'Abena A/S', internalSupplierNumber: '4960001' }],

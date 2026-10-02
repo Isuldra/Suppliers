@@ -10,6 +10,7 @@ import {
   type HistoryEntry,
 } from './model';
 import { History } from './Primitives';
+import { dateLocale } from '../i18n/resources';
 
 function ContactForm({
   supplier,
@@ -24,7 +25,7 @@ function ContactForm({
   onClose: () => void;
   history: HistoryEntry[];
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [draft, setDraft] = useState<ContactEdit>({
     email: supplier.email,
     language: supplier.language,
@@ -134,7 +135,7 @@ function ContactForm({
           .slice(0, 10)
           .map((entry, index) => (
             <p key={index}>
-              {formatDate(new Date(entry.at))} ·{' '}
+              {formatDate(new Date(entry.at), dateLocale(i18n.resolvedLanguage || i18n.language))} ·{' '}
               {entry.status === 'sent'
                 ? t('workspace.register.historySent', { count: entry.count })
                 : t('workspace.register.historyDeferred')}

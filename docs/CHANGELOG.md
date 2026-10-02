@@ -10,7 +10,7 @@ Dette er en kort oversikt over endringer i repoet. En pakkeversjon eller Git-tag
 - E-postspråket kan endres rett ved leverandørnavnet på Purring.
 - Leverandører viser bare leverandørene i filen som ble importert sist, med Lev.nr fra arket «Leverandør», også uten åpne ordrer. Leverandører fra tidligere filer blir ikke liggende igjen.
 - Ordrelinjene kobles til leverandøren på leverandørnummeret (ftgnr, Company ID i «Leverandør»), så en leverandør som er stavet ulikt i ordrearket og i leverandørlistene, vises som én leverandør med adresse og purredager.
-- Arbeidsflaten er oversatt til dansk, svensk, finsk og engelsk, og språkvelgeren er tilbake øverst.
+- Arbeidsflaten er oversatt til dansk, svensk, finsk og engelsk, med datoer og tall i språkets format, og språkvelgeren er tilbake øverst.
 
 ## Version 1.5.4: Ny arbeidsflate
 

@@ -2,6 +2,7 @@ import React, { Fragment } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ExcelRow } from '../types/ExcelData';
 import { Check } from './Primitives';
+import { dateLocale } from '../i18n/resources';
 import {
   eta,
   formatDate,
@@ -35,7 +36,8 @@ export default function OrderTable({
   onToggle: (lines: ExcelRow[]) => void;
   onReason: (line: ExcelRow, reason: string) => void;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const locale = dateLocale(i18n.resolvedLanguage || i18n.language);
   const visible = filterLines(lines, filter, excluded);
   const groups = new Map<string, ExcelRow[]>();
   visible.forEach((line) =>
@@ -118,7 +120,7 @@ export default function OrderTable({
                     </td>
                     <td>{line.orderRowNumber || '—'}</td>
                     <td className="nowrap">
-                      {formatDate(eta(line))}
+                      {formatDate(eta(line), locale)}
                       {late > 0 && (
                         <small className="pulse-danger">
                           {t('workspace.table.daysLate', { count: late })}
@@ -146,12 +148,12 @@ export default function OrderTable({
                       )}
                     </td>
                     <td className="number">
-                      <strong>{outstanding(line).toLocaleString('nb-NO')}</strong>
+                      <strong>{outstanding(line).toLocaleString(locale)}</strong>
                     </td>
                     <td className={`number ${waiting(line) ? 'pulse-danger' : ''}`}>
                       {line.inventoryBalance == null
                         ? '—'
-                        : Number(line.inventoryBalance).toLocaleString('nb-NO')}
+                        : Number(line.inventoryBalance).toLocaleString(locale)}
                     </td>
                   </tr>
                 );

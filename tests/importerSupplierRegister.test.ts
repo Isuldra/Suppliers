@@ -223,6 +223,37 @@ describe('importing the supplier sheets', () => {
     );
   });
 
+  it('stores every supplier in the file, also without an address or with a shared name', async () => {
+    const { sqlite, db } = database();
+    const file = await workbook({
+      orders: [['Abena AS', '4960002']],
+      checklist: [['No Address AS', '']],
+      suppliers: [
+        ['Abena AS', '4960001', 'Norsk', 'Mandag', 'a@abena.no'],
+        ['Abena AS', '4960002', 'Norsk', 'Tirsdag', 'b@abena.no'],
+      ],
+    });
+
+    expect(await importAlleArk(file, db, 'test.xlsx')).toBe(true);
+    expect(register(sqlite)).toEqual({
+      contacts: [
+        { name: 'Abena AS', email: 'a@abena.no', language: 'Norsk', companyId: '4960001' },
+        {
+          name: 'Abena AS (4960002)',
+          email: 'b@abena.no',
+          language: 'Norsk',
+          companyId: '4960002',
+        },
+        { name: 'No Address AS', email: '', language: null, companyId: null },
+      ],
+      days: [
+        { name: 'Abena AS', weekday: 'Mandag' },
+        { name: 'Abena AS (4960002)', weekday: 'Tirsdag' },
+      ],
+      orders: ['Abena AS'],
+    });
+  });
+
   it('keeps the register when the file has no supplier sheets', async () => {
     const { sqlite, db } = database();
     seed(sqlite, [['Old DK', 'old@dk.dk', 'Dansk']], [['Old DK', 'Tirsdag']]);
