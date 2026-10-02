@@ -36,7 +36,7 @@ describe('Pulse workspace selections', () => {
   it('does not collide when two suppliers reuse order keys', () => {
     expect(lineId(line)).not.toBe(lineId({ ...line, supplier: 'Another Medical' }));
   });
-  it('shows the Company ID for a supplier without orders and prefers it over the order number', () => {
+  it('retains Company IDs and separates a conflicting order number from its contact', () => {
     const contact = { email: 'a@example.com', language: 'Norsk', days: ['Mandag'] };
     const suppliers = buildSuppliers(
       [{ ...line, internalSupplierNumber: '111' }],
@@ -48,6 +48,8 @@ describe('Pulse workspace selections', () => {
     );
     expect(suppliers.find((item) => item.name === 'No Orders AS')?.number).toBe('4960178');
     expect(suppliers.find((item) => item.name === 'Example Medical')?.number).toBe('4960080');
+    expect(suppliers.find((item) => item.name === 'Example Medical')?.lines).toEqual([]);
+    expect(suppliers.find((item) => item.lines.length)?.email).toBe('');
   });
   it('retains contacts without orders and removes completed order lines', () => {
     const suppliers = buildSuppliers(
@@ -58,13 +60,13 @@ describe('Pulse workspace selections', () => {
     expect(suppliers.find((supplier) => supplier.name === line.supplier)?.lines).toHaveLength(1);
     expect(suppliers.find((supplier) => supplier.name === 'No orders')?.language).toBe('en');
   });
-  it('joins order lines to their supplier by supplier number, else by name', () => {
+  it('joins compatible identities and separates a conflicting supplier name and number', () => {
     const suppliers = buildSuppliers(
       [
-        { ...line, supplier: 'Abena A/S', internalSupplierNumber: '4960001' },
+        { ...line, supplier: 'ABENA  Danmark A/S', internalSupplierNumber: '4960001' },
         { ...line, key: '2', supplier: 'EXAMPLE  medical' },
         { ...line, key: '3', supplier: 'Other AS', internalSupplierNumber: '4960009' },
-        // Name and number point to different suppliers: the Jeeves number decides.
+        // Neither supplier receives an order whose name and number disagree.
         { ...line, key: '4', supplier: 'Example Medical', internalSupplierNumber: '4960001' },
       ],
       [
@@ -92,9 +94,8 @@ describe('Pulse workspace selections', () => {
         name: 'Abena Danmark A/S',
         number: '4960001',
         email: 'ordre@abena.dk',
-        lines: 2,
-        // "Example Medical" is another supplier's own name, so its edits and history stay there.
-        aliases: ['Abena A/S'],
+        lines: 1,
+        aliases: ['ABENA  Danmark A/S'],
       },
       {
         name: 'Example Medical',
@@ -102,6 +103,13 @@ describe('Pulse workspace selections', () => {
         email: 'a@example.com',
         lines: 1,
         aliases: ['EXAMPLE  medical'],
+      },
+      {
+        name: 'Example Medical (uavklart leverandør 4960001)',
+        number: '4960001',
+        email: '',
+        lines: 1,
+        aliases: [],
       },
       { name: 'Other AS', number: '4960009', email: '', lines: 1, aliases: [] },
     ]);
@@ -124,7 +132,7 @@ describe('Pulse workspace selections', () => {
     expect(
       suppliers.map(({ name, lines, aliases }) => ({ name, lines: lines.length, aliases }))
     ).toEqual([
-      { name: 'abena  as', lines: 1, aliases: [] },
+      { name: 'abena  as (uavklart leverandør)', lines: 1, aliases: [] },
       { name: 'Abena AS', lines: 1, aliases: ['abena as'] },
       { name: 'ABENA AS', lines: 1, aliases: [] },
     ]);
@@ -141,16 +149,20 @@ describe('Pulse workspace selections', () => {
       ],
       { Abena: { email: 'shared@abena.no', language: 'no', days: [] } }
     );
-    expect(suppliers.map(({ email, aliases }) => ({ email, aliases }))).toEqual([
+    expect(
+      suppliers
+        .filter((supplier) => supplier.lines.length)
+        .map(({ email, aliases }) => ({ email, aliases }))
+    ).toEqual([
       { email: '', aliases: [] },
       { email: '', aliases: [] },
     ]);
   });
-  it("keeps edits and history saved under the order lines' own name", () => {
+  it("keeps edits and history saved under a compatible spelling of the supplier's name", () => {
     const suppliers = buildSuppliers(
-      [{ ...line, supplier: 'Abena A/S', internalSupplierNumber: '4960001' }],
+      [{ ...line, supplier: 'ABENA  Danmark A/S', internalSupplierNumber: '4960001' }],
       [{ name: 'Abena Danmark A/S', email: '', language: 'Dansk', days: [], number: '4960001' }],
-      { 'Abena A/S': { email: 'saved@abena.dk', language: 'da', days: ['Torsdag'] } }
+      { 'ABENA  Danmark A/S': { email: 'saved@abena.dk', language: 'da', days: ['Torsdag'] } }
     );
     expect(suppliers[0]).toMatchObject({
       name: 'Abena Danmark A/S',
@@ -158,10 +170,131 @@ describe('Pulse workspace selections', () => {
       days: ['Torsdag'],
     });
     const history = historyOf(
-      [{ supplier: 'Abena A/S', status: 'sent', at: new Date().toISOString(), count: 1 }],
+      [{ supplier: 'ABENA  Danmark A/S', status: 'sent', at: new Date().toISOString(), count: 1 }],
       suppliers
     );
     expect(currentStatus('Abena Danmark A/S', history)).toBe('sent');
+  });
+  it('isolates repeated conflicts without inheriting saved contacts or affecting later valid orders', () => {
+    const suppliers = buildSuppliers(
+      [
+        { ...line, supplier: 'Supplier B', internalSupplierNumber: '1' },
+        { ...line, key: '2', supplier: 'Supplier B', internalSupplierNumber: '1' },
+        { ...line, key: '3', supplier: 'Supplier A', internalSupplierNumber: '1' },
+        { ...line, key: '4', supplier: 'Supplier B', internalSupplierNumber: '2' },
+      ],
+      [
+        { name: 'Supplier A', number: '1', email: 'a@example.com', language: 'Norsk', days: [] },
+        { name: 'Supplier B', number: '2', email: 'b@example.com', language: 'Norsk', days: [] },
+      ],
+      { 'Supplier B': { email: 'saved@example.com', language: 'en', days: ['Mandag'] } }
+    );
+    const conflict = suppliers.find((supplier) => supplier.lines.length === 2)!;
+    expect(conflict).toMatchObject({ email: '', days: [], aliases: [] });
+    expect(conflict.name).not.toBe('Supplier B');
+    expect(suppliers.find((supplier) => supplier.name === 'Supplier A')).toMatchObject({
+      email: 'a@example.com',
+      lines: [expect.objectContaining({ key: '3' })],
+    });
+    expect(suppliers.find((supplier) => supplier.name === 'Supplier B')).toMatchObject({
+      email: 'saved@example.com',
+      lines: [expect.objectContaining({ key: '4' })],
+    });
+    const history = historyOf(
+      [{ supplier: 'Supplier B', status: 'sent', at: new Date().toISOString(), count: 1 }],
+      suppliers
+    );
+    expect(currentStatus(conflict.name, history)).toBeUndefined();
+  });
+  it('requires a separately reviewed recipient even when the conflicting name has no registered contact', () => {
+    const rows = [{ ...line, supplier: 'Supplier B', internalSupplierNumber: '1' }];
+    const contacts = [
+      { name: 'Supplier A', number: '1', email: 'a@example.com', language: 'Norsk', days: [] },
+    ];
+    const saved = { email: 'saved@example.com', language: 'no' as const, days: ['Mandag'] };
+    const suppliers = buildSuppliers(rows, contacts, { 'Supplier B': saved });
+    const conflict = suppliers.find((supplier) => supplier.lines.length)!;
+    expect(conflict.email).toBe('');
+    expect(conflict.aliases).toEqual([]);
+    const resolved = buildSuppliers(rows, contacts, { [conflict.name]: saved });
+    expect(resolved.find((supplier) => supplier.lines.length)?.email).toBe(saved.email);
+  });
+  it('never gives a numberless order the first address when register names share a base name', () => {
+    const suppliers = buildSuppliers(
+      [
+        { ...line, supplier: 'Supplier A' },
+        { ...line, key: '2', supplier: 'Supplier A', internalSupplierNumber: '2' },
+      ],
+      [
+        { name: 'Supplier A', number: '1', email: 'a@example.com', language: 'Norsk', days: [] },
+        {
+          name: 'Supplier A (2)',
+          number: '2',
+          email: 'b@example.com',
+          language: 'Norsk',
+          days: [],
+        },
+      ],
+      {}
+    );
+    expect(suppliers.find((supplier) => supplier.lines.some((row) => row.key === '1'))?.email).toBe(
+      ''
+    );
+    expect(suppliers.find((supplier) => supplier.lines.some((row) => row.key === '2'))?.email).toBe(
+      'b@example.com'
+    );
+  });
+  it.each([
+    ['1', '2', ''],
+    ['2', '1', ''],
+    ['', '1', '2'],
+    ['', '2', '1'],
+  ])(
+    'never assigns a numberless contact to competing companies in order %s, %s, %s',
+    (...numbers) => {
+      const rows = numbers.map((number, index) => ({
+        ...line,
+        key: `${index}`,
+        supplier: index === 1 ? 'SHARED  AS' : 'Shared AS',
+        internalSupplierNumber: number,
+      }));
+      const contact = {
+        name: 'Shared AS',
+        email: 'unknown-owner@example.com',
+        language: 'Norsk',
+        days: [],
+      };
+      const edit = { email: 'saved-owner@example.com', language: 'no' as const, days: ['Mandag'] };
+      for (const contacts of [[contact], []]) {
+        const suppliers = buildSuppliers(rows, contacts, { 'Shared AS': edit });
+        const withOrders = suppliers.filter((supplier) => supplier.lines.length);
+        expect(withOrders).toHaveLength(3);
+        expect(withOrders.every((supplier) => !supplier.email && !supplier.aliases.length)).toBe(
+          true
+        );
+        expect(withOrders.flatMap((supplier) => supplier.lines)).toHaveLength(3);
+        if (contacts.length) {
+          expect(suppliers.find((supplier) => supplier.name === 'Shared AS')).toMatchObject({
+            number: '',
+            email: edit.email,
+            lines: [],
+          });
+        }
+      }
+    }
+  );
+  it('lets a numberless contact gain the only compatible number in the import', () => {
+    const suppliers = buildSuppliers(
+      [
+        { ...line, supplier: 'Shared AS' },
+        { ...line, key: '2', supplier: 'SHARED  AS', internalSupplierNumber: '1' },
+      ],
+      [{ name: 'Shared AS', email: 'owner@example.com', language: 'Norsk', days: [] }],
+      {}
+    );
+    expect(suppliers).toHaveLength(1);
+    expect(suppliers[0]).toMatchObject({ number: '1', email: 'owner@example.com' });
+    expect(suppliers[0].lines).toHaveLength(2);
   });
   it('applies saved contacts to reminders and distinguishes missing reminder days', () => {
     const [supplier] = buildSuppliers([line], [], {

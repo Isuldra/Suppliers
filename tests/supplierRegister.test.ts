@@ -136,4 +136,124 @@ describe('the supplier register from "Leverandør"', () => {
       contact('abena  as', { email: 'unclear@abena.no' }),
     ]);
   });
+
+  it.each([
+    [0, 1, 2],
+    [0, 2, 1],
+    [1, 0, 2],
+    [1, 2, 0],
+    [2, 0, 1],
+    [2, 1, 0],
+  ])('keeps an ambiguous no-ID address separate in row order %i, %i, %i', (...order) => {
+    const rows = [
+      supplier('Abena AS', { companyId: '4960001', email: 'first@abena.no' }),
+      supplier('Abena AS', { companyId: '4960002', email: 'second@abena.no' }),
+      supplier('Abena AS', { email: 'unknown@abena.no', weekday: 'Fredag' }),
+    ];
+    const result = importRegister(order.map((index) => rows[index]));
+
+    expect(result.contacts).toHaveLength(3);
+    expect(result.contacts.find((item) => item.companyId === '4960001')?.email).toBe(
+      'first@abena.no'
+    );
+    expect(result.contacts.find((item) => item.companyId === '4960002')?.email).toBe(
+      'second@abena.no'
+    );
+    expect(result.contacts.find((item) => !item.companyId)).toEqual(
+      contact('Abena AS (uten Company ID)', { email: 'unknown@abena.no' })
+    );
+    expect(new Set(result.contacts.map((item) => item.name)).size).toBe(3);
+    expect(result.days).toEqual([day('Abena AS (uten Company ID)', 'Fredag')]);
+  });
+
+  it('keeps repeated ambiguous no-ID rows together without merging their days into either ID', () => {
+    const result = importRegister([
+      supplier('Abena AS', { companyId: '4960001' }),
+      supplier('Abena AS', { email: 'old@abena.no', weekday: 'Mandag' }),
+      supplier('Abena AS', { companyId: '4960002' }),
+      supplier('Abena AS', { email: 'new@abena.no', weekday: 'Fredag' }),
+    ]);
+
+    expect(result.contacts).toEqual([
+      contact('Abena AS', { companyId: '4960001' }),
+      contact('Abena AS (4960002)', { companyId: '4960002' }),
+      contact('Abena AS (uten Company ID)', { email: 'new@abena.no' }),
+    ]);
+    expect(result.days).toEqual([
+      day('Abena AS (uten Company ID)', 'Mandag'),
+      day('Abena AS (uten Company ID)', 'Fredag'),
+    ]);
+  });
+
+  it('does not reuse a real supplier name when generating labels for ambiguous contacts', () => {
+    const result = importRegister([
+      supplier('Abena AS', { companyId: '4960001' }),
+      supplier('Abena AS', { companyId: '4960002' }),
+      supplier('Abena AS (4960002)', { companyId: '4960003' }),
+      supplier('Abena AS (uten Company ID)', { companyId: '4960004' }),
+      supplier('Abena AS', { email: 'unknown@abena.no', weekday: 'Mandag' }),
+    ]);
+
+    expect(result.contacts.map((item) => item.name)).toEqual([
+      'Abena AS',
+      'Abena AS (4960002) (2)',
+      'Abena AS (4960002)',
+      'Abena AS (uten Company ID)',
+      'Abena AS (uten Company ID) (2)',
+    ]);
+    expect(result.days).toEqual([day('Abena AS (uten Company ID) (2)', 'Mandag')]);
+  });
+
+  it('uses checklist email only when the supplier sheet has no address', () => {
+    const result = importRegister(
+      [
+        supplier('Abena AS', { companyId: '4960001' }),
+        supplier('Primary AS', { companyId: '4960002', email: 'primary@example.no' }),
+        supplier('Primary AS', { companyId: '4960002' }),
+      ],
+      [
+        { name: 'abena  as', email: 'checklist@abena.no' },
+        { name: 'Primary AS', email: 'outdated@example.no' },
+        { name: 'Checklist Only AS', email: 'unknown@example.no' },
+      ]
+    );
+
+    expect(result.contacts).toEqual([
+      contact('Abena AS', { companyId: '4960001', email: 'checklist@abena.no' }),
+      contact('Primary AS', { companyId: '4960002', email: 'primary@example.no' }),
+    ]);
+  });
+
+  it('does not assign an ambiguous checklist address to the first same-name Company ID', () => {
+    const result = importRegister(
+      [
+        supplier('Abena AS', { companyId: '4960001' }),
+        supplier('Abena AS', { companyId: '4960002' }),
+        supplier('Abena AS'),
+      ],
+      [{ name: 'Abena AS', email: 'unknown@abena.no' }]
+    );
+
+    expect(result.contacts).toHaveLength(3);
+    expect(result.contacts.every((item) => !item.email)).toBe(true);
+  });
+
+  it('matches checklist aliases on the original rows before display names are chosen', () => {
+    const result = importRegister(
+      [
+        supplier('Abena Danmark A/S', { companyId: '4960001' }),
+        supplier('Abena A/S', { companyId: '4960001' }),
+        supplier('ABENA A/S', { companyId: '4960002' }),
+      ],
+      [
+        { name: 'Abena A/S', email: 'first@abena.dk' },
+        { name: 'ABENA A/S', email: 'second@abena.dk' },
+      ]
+    );
+
+    expect(result.contacts).toEqual([
+      contact('Abena Danmark A/S', { companyId: '4960001', email: 'first@abena.dk' }),
+      contact('ABENA A/S', { companyId: '4960002', email: 'second@abena.dk' }),
+    ]);
+  });
 });

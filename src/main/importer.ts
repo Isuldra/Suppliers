@@ -1,7 +1,14 @@
 import ExcelJS, { Worksheet } from 'exceljs';
 import { workbookDetails } from './workbookDetails';
-import { importRegister, PLANNER, type SupplierRow } from './supplierRegister';
+import {
+  importRegister,
+  PLANNER,
+  type Contact,
+  type Day,
+  type SupplierRow,
+} from './supplierRegister';
 import { supplierFinder } from '../utils/supplierMatch';
+import { parseEmailRecipients } from '../utils/emailRecipients';
 import Database from 'better-sqlite3';
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const log = require('electron-log');
@@ -119,7 +126,7 @@ export function readSupplierSheetRow(row: Pick<ExcelJS.Row, 'getCell'>) {
     companyId: text(2),
     language: text(3),
     weekday: text(4),
-    email: email.includes('@') ? email : '',
+    email: parseEmailRecipients(email) ? email : '',
   };
 }
 
@@ -456,47 +463,97 @@ export async function importAlleArk(
   });
 
   try {
-    // A file with "Leverandør" replaces the supplier register (see importRegister), so suppliers
-    // from earlier files (for example another country's list) do not linger. It is saved in the
-    // same transaction as the orders: if the sheet fails, the import fails and the previous
-    // orders, contacts and days are kept. "Sjekkliste Leverandører" is not maintained and not read.
+    // Supplier sheets replace the register in the same transaction as the orders. Leverandør
+    // owns the roster and planning when present; the checklist supplies missing addresses.
+    // A checklist-only file keeps matching suppliers' saved settings and includes every name.
     const leverandorSheet = wb.getWorksheet('Leverandør');
+    const checklistSheet = wb.getWorksheet('Sjekkliste Leverandører');
     const importContacts = db.transaction(() => {
-      if (!leverandorSheet) {
-        log.info('Leverandør sheet not found - preserving existing supplier contacts and planning');
+      if (!leverandorSheet && !checklistSheet) {
+        log.info('No supplier sheets found - preserving existing supplier contacts and planning');
         return;
       }
-      log.info('Processing Leverandør sheet for supplier planning');
-      log.info(
-        `Sheet has ${leverandorSheet.rowCount} rows and ${leverandorSheet.columnCount} columns`
-      );
 
-      // Log first few rows to understand structure
-      for (let r = 1; r <= Math.min(10, leverandorSheet.rowCount); r++) {
-        const row = leverandorSheet.getRow(r);
-        const rowData: string[] = [];
-        for (let c = 1; c <= Math.min(10, leverandorSheet.columnCount); c++) {
-          const cell = row.getCell(c);
-          rowData.push(`[${c}]="${getCellStringValue(cell)}"`);
+      const checklist: { name: string; email: string }[] = [];
+      if (checklistSheet) {
+        // Checklist names start in A5; contact addresses are held in columns H-O.
+        for (let r = 5; r <= checklistSheet.rowCount; r++) {
+          const row = checklistSheet.getRow(r);
+          const name = getCellStringValue(row.getCell(1));
+          if (!name) continue;
+          let email = '';
+          for (let col = 8; col <= 15; col++) {
+            const value = getCellStringValue(row.getCell(col));
+            if (parseEmailRecipients(value)) {
+              email = value;
+              break;
+            }
+          }
+          checklist.push({ name, email });
         }
-        log.info(`Leverandør Row ${r}: ${rowData.join(', ')}`);
+        log.info(`Read ${checklist.length} suppliers from Sjekkliste Leverandører`);
       }
 
-      // Process rows starting from row 2 (row 1 is headers)
-      // Structure: Column A = Supplier name, Column B = Company ID, Column C = Language, Column D = Weekday, Column E = Email
       const suppliers: SupplierRow[] = [];
-      for (let r = 2; r <= leverandorSheet.rowCount; r++) {
-        const row = readSupplierSheetRow(leverandorSheet.getRow(r));
-        if (!row.name) continue;
-        const weekday = normalizeWeekday(row.weekday);
-        if (row.weekday && !weekday && r <= 10) {
-          log.info(`⏭️ Row ${r}: Invalid weekday "${row.weekday}" for supplier "${row.name}"`);
+      let storedContacts: Contact[] = [];
+      let storedDays: Day[] = [];
+      if (leverandorSheet) {
+        // A name, B Company ID, C language, D reminder day, E email; row 1 is headers.
+        for (let r = 2; r <= leverandorSheet.rowCount; r++) {
+          const row = readSupplierSheetRow(leverandorSheet.getRow(r));
+          if (!row.name) continue;
+          suppliers.push({ ...row, weekday: normalizeWeekday(row.weekday) });
         }
-        suppliers.push({ ...row, weekday });
+        log.info(`Read ${suppliers.length} suppliers from Leverandør`);
+      } else {
+        storedContacts = db
+          .prepare(
+            'SELECT supplier_name AS name, email_address AS email, language, company_id AS companyId FROM supplier_emails'
+          )
+          .all() as Contact[];
+        storedDays = db
+          .prepare(
+            'SELECT supplier_name AS name, weekday, planner_name AS planner FROM supplier_planning'
+          )
+          .all() as Day[];
+        const contactNames = new Set(storedContacts.map((contact) => contact.name));
+        for (const day of storedDays) {
+          if (contactNames.has(day.name)) continue;
+          storedContacts.push({ name: day.name, email: '', language: null, companyId: null });
+          contactNames.add(day.name);
+        }
+        const stored = supplierFinder(
+          storedContacts.map((contact) => ({ ...contact, number: contact.companyId }))
+        );
+        // Restore identity before merging names: differently spelled checklist rows can refer
+        // to separate stored Company IDs, and must never exchange their contact addresses.
+        for (const row of checklist) {
+          const previous = stored.find(row.name);
+          suppliers.push({
+            ...row,
+            companyId: previous?.companyId || '',
+            language: previous?.language || '',
+            weekday: '',
+          });
+        }
       }
-      log.info(`Read ${suppliers.length} suppliers from Leverandør`);
 
-      const register = importRegister(suppliers);
+      const register = importRegister(suppliers, leverandorSheet ? checklist : []);
+      if (!leverandorSheet) {
+        const stored = supplierFinder(
+          storedContacts.map((contact) => ({ ...contact, number: contact.companyId }))
+        );
+        for (const contact of register.contacts) {
+          const previous = stored.find(contact.name, contact.companyId);
+          if (!previous) continue;
+          contact.email ||= previous.email;
+          register.days.push(
+            ...storedDays
+              .filter((day) => day.name === previous.name)
+              .map((day) => ({ ...day, name: contact.name }))
+          );
+        }
+      }
       db.prepare('DELETE FROM supplier_emails').run();
       db.prepare('DELETE FROM supplier_planning').run();
       const insertContact = db.prepare(
@@ -516,7 +573,7 @@ export async function importAlleArk(
 
       // DK supplier planning: Use detectedCountry which is set by warehouse or filename detection
       // This is more robust than just filename detection
-      if (detectedCountry === 'DK') {
+      if (leverandorSheet && detectedCountry === 'DK') {
         log.info(
           '🇩🇰 Setting up DK suppliers for all weekdays (detected from warehouse or filename)...'
         );

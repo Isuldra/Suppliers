@@ -155,7 +155,7 @@ export function currentStatus(name: string, history: HistoryEntry[]) {
 export function validRecipients(value: string) {
   return parseEmailRecipients(value) !== null;
 }
-/** Order lines join the stored supplier with their supplier number, else with their name. */
+/** Conflicting supplier identities stay separate and receive no stored recipient automatically. */
 export function buildSuppliers(
   rows: ExcelRow[],
   contacts: SupplierContact[],
@@ -169,10 +169,51 @@ export function buildSuppliers(
     aliases: [],
   }));
   const finder = supplierFinder(suppliers);
+  // Inspect the whole import before a numberless contact can gain an order's number. Otherwise
+  // two companies with the same name would give the saved address to whichever order came first.
+  const candidateNumbers = new Map<Supplier | string, Set<string>>();
+  for (const row of rows) {
+    const number = row.internalSupplierNumber?.trim();
+    if (!row.supplier || !number) continue;
+    const match = finder.match(row.supplier, number);
+    if (match.kind === 'conflict' || (match.kind === 'matched' && match.supplier.number.trim()))
+      continue;
+    const candidate = match.kind === 'matched' ? match.supplier : supplierKey(row.supplier);
+    const numbers = candidateNumbers.get(candidate) ?? new Set<string>();
+    numbers.add(number);
+    candidateNumbers.set(candidate, numbers);
+  }
+  const ambiguousCandidates = new Set(
+    [...candidateNumbers].filter(([, numbers]) => numbers.size > 1).map(([candidate]) => candidate)
+  );
+  const unresolved = new Map<string, Supplier>();
+  const reservedNames = new Set([
+    ...contacts.map((contact) => contact.name),
+    ...rows.map((row) => row.supplier),
+  ]);
   for (const row of rows) {
     if (!row.supplier || outstanding(row) <= 0) continue;
     const number = row.internalSupplierNumber?.trim() || '';
-    let supplier = finder.find(row.supplier, number);
+    const match = finder.match(row.supplier, number);
+    const candidate = match.kind === 'matched' ? match.supplier : supplierKey(row.supplier);
+    if (match.kind === 'conflict' || ambiguousCandidates.has(candidate)) {
+      const key = JSON.stringify([supplierKey(row.supplier), number]);
+      let supplier = unresolved.get(key);
+      if (!supplier) {
+        const label = `${row.supplier} (uavklart leverandør${number ? ` ${number}` : ''})`;
+        let name = label;
+        for (let suffix = 2; reservedNames.has(name); suffix++) name = `${label} (${suffix})`;
+        reservedNames.add(name);
+        supplier = { name, number, email: '', language: 'no', days: [], lines: [], aliases: [] };
+        unresolved.set(key, supplier);
+        suppliers.push(supplier);
+      }
+      supplier.lines.push(row);
+      // Never index unresolved identities or copy aliases: a later valid order must still match
+      // its contact, and saved addresses/history under the original name must not leak here.
+      continue;
+    }
+    let supplier = match.kind === 'matched' ? match.supplier : undefined;
     if (!supplier) {
       supplier = {
         name: row.supplier,

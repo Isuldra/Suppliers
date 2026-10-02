@@ -154,7 +154,7 @@ async function workbook(sheets: {
 }
 
 describe('importing the supplier sheets', () => {
-  it('replaces the register with "Leverandør" and does not read "Sjekkliste Leverandører"', async () => {
+  it('replaces the register with "Leverandør" and fills its missing addresses from the checklist', async () => {
     const { sqlite, db } = database();
     seed(sqlite, [['Old DK', 'old@dk.dk', 'Dansk']], [['Old DK', 'Tirsdag']], ['Old DK']);
     const file = await workbook({
@@ -168,29 +168,208 @@ describe('importing the supplier sheets', () => {
 
     expect(await importAlleArk(file, db, 'test.xlsx')).toBe(true);
     expect(register(sqlite)).toEqual({
-      contacts: [{ name: 'Abena Norge AS', email: '', language: 'Svenska', companyId: '4960001' }],
+      contacts: [
+        {
+          name: 'Abena Norge AS',
+          email: 'checklist@abena.no',
+          language: 'Svenska',
+          companyId: '4960001',
+        },
+      ],
       days: [{ name: 'Abena Norge AS', weekday: 'Mandag' }],
       orders: ['Abena Norge AS'],
     });
   });
 
-  it('keeps the register when the file has only "Sjekkliste Leverandører"', async () => {
+  it('imports every checklist supplier, including one without an email, day or open order', async () => {
     const { sqlite, db } = database();
     seed(sqlite, [['Old DK', 'old@dk.dk', 'Dansk']], [['Old DK', 'Tirsdag']]);
     const file = await workbook({
       orders: ['New AS'],
-      checklist: [['New AS', 'post@new.no']],
+      checklist: [
+        ['New AS', 'post@new.no'],
+        ['No Address AS', ''],
+      ],
     });
 
     expect(await importAlleArk(file, db, 'test.xlsx')).toBe(true);
     expect(register(sqlite)).toEqual({
-      contacts: [{ name: 'Old DK', email: 'old@dk.dk', language: 'Dansk', companyId: null }],
-      days: [{ name: 'Old DK', weekday: 'Tirsdag' }],
+      contacts: [
+        { name: 'New AS', email: 'post@new.no', language: null, companyId: null },
+        { name: 'No Address AS', email: '', language: null, companyId: null },
+      ],
+      days: [],
       orders: ['New AS'],
     });
   });
 
-  it('gives Danish suppliers every weekday under the "Leverandør" name for their number', async () => {
+  it('keeps settings for unambiguous suppliers in a checklist-only import', async () => {
+    const { sqlite, db } = database();
+    seed(
+      sqlite,
+      [
+        ['Existing AS', 'saved@existing.no', 'Engelsk', '123'],
+        ['Updated AS', 'old@updated.no', 'Norsk', '456'],
+      ],
+      [
+        ['Existing AS', 'Torsdag'],
+        ['Updated AS', 'Fredag'],
+      ]
+    );
+    const file = await workbook({
+      orders: [],
+      checklist: [
+        ['existing  as', ''],
+        ['Updated AS', 'new@updated.no'],
+      ],
+    });
+
+    expect(await importAlleArk(file, db, 'test.xlsx')).toBe(true);
+    expect(register(sqlite)).toEqual({
+      contacts: [
+        { name: 'Updated AS', email: 'new@updated.no', language: 'Norsk', companyId: '456' },
+        { name: 'existing  as', email: 'saved@existing.no', language: 'Engelsk', companyId: '123' },
+      ],
+      days: [
+        { name: 'Updated AS', weekday: 'Fredag' },
+        { name: 'existing  as', weekday: 'Torsdag' },
+      ],
+      orders: [],
+    });
+  });
+
+  it('keeps a Leverandør address ahead of the checklist and replaces an unusable address', async () => {
+    const { sqlite, db } = database();
+    const file = await workbook({
+      orders: [],
+      checklist: [
+        ['Existing AS', 'checklist@existing.no'],
+        ['no address as', 'first@example.no; second@example.no'],
+      ],
+      suppliers: [
+        ['Existing AS', '123', '', '', 'preferred@existing.no'],
+        ['No Address AS', '456', '', '', 'invalid@'],
+      ],
+    });
+
+    expect(await importAlleArk(file, db, 'test.xlsx')).toBe(true);
+    expect(register(sqlite).contacts).toEqual([
+      { name: 'Existing AS', email: 'preferred@existing.no', language: null, companyId: '123' },
+      {
+        name: 'No Address AS',
+        email: 'first@example.no; second@example.no',
+        language: null,
+        companyId: '456',
+      },
+    ]);
+  });
+
+  it('restores checklist identities before merging differently spelled names', async () => {
+    const { sqlite, db } = database();
+    seed(
+      sqlite,
+      [
+        ['Acme AS', 'first@example.no', 'Norsk', '123'],
+        ['ACME AS', 'second@example.no', 'Engelsk', '456'],
+      ],
+      [
+        ['Acme AS', 'Mandag'],
+        ['ACME AS', 'Torsdag'],
+      ]
+    );
+    const file = await workbook({
+      orders: [],
+      checklist: [
+        ['Acme AS', 'updated-first@example.no'],
+        ['ACME AS', 'updated-second@example.no'],
+      ],
+    });
+
+    expect(await importAlleArk(file, db, 'test.xlsx')).toBe(true);
+    expect(register(sqlite)).toEqual({
+      contacts: [
+        {
+          name: 'ACME AS',
+          email: 'updated-second@example.no',
+          language: 'Engelsk',
+          companyId: '456',
+        },
+        { name: 'Acme AS', email: 'updated-first@example.no', language: 'Norsk', companyId: '123' },
+      ],
+      days: [
+        { name: 'ACME AS', weekday: 'Torsdag' },
+        { name: 'Acme AS', weekday: 'Mandag' },
+      ],
+      orders: [],
+    });
+  });
+
+  it('keeps planning-only suppliers and does not overwrite a new email with a stored fallback', async () => {
+    const { sqlite, db } = database();
+    seed(
+      sqlite,
+      [['Updated AS', 'old@example.no', 'Engelsk', '123']],
+      [['Planning Only AS', 'Torsdag']]
+    );
+    const file = await workbook({
+      orders: [],
+      checklist: [
+        ['Planning Only AS', ''],
+        ['Updated AS', 'new@example.no'],
+        ['Updated AS', ''],
+      ],
+    });
+
+    expect(await importAlleArk(file, db, 'test.xlsx')).toBe(true);
+    expect(register(sqlite)).toEqual({
+      contacts: [
+        { name: 'Planning Only AS', email: '', language: null, companyId: null },
+        { name: 'Updated AS', email: 'new@example.no', language: 'Engelsk', companyId: '123' },
+      ],
+      days: [{ name: 'Planning Only AS', weekday: 'Torsdag' }],
+      orders: [],
+    });
+  });
+
+  it('does not assign an ambiguous checklist address to either Company ID', async () => {
+    const { sqlite, db } = database();
+    const file = await workbook({
+      orders: [],
+      checklist: [['Same AS', 'ambiguous@example.no']],
+      suppliers: [
+        ['Same AS', '123', '', '', ''],
+        ['Same AS', '456', '', '', ''],
+      ],
+    });
+
+    expect(await importAlleArk(file, db, 'test.xlsx')).toBe(true);
+    expect(register(sqlite).contacts).toEqual([
+      { name: 'Same AS', email: '', language: null, companyId: '123' },
+      { name: 'Same AS (456)', email: '', language: null, companyId: '456' },
+    ]);
+  });
+
+  it('does not inherit a previous Company ID or email for an ambiguous checklist-only name', async () => {
+    const { sqlite, db } = database();
+    seed(
+      sqlite,
+      [
+        ['Same AS', 'first@example.no', 'Norsk', '123'],
+        ['Same AS (456)', 'second@example.no', 'Norsk', '456'],
+      ],
+      [['Same AS', 'Mandag']]
+    );
+    const file = await workbook({ orders: [], checklist: [['Same AS', '']] });
+
+    expect(await importAlleArk(file, db, 'test.xlsx')).toBe(true);
+    expect(register(sqlite)).toEqual({
+      contacts: [{ name: 'Same AS', email: '', language: null, companyId: null }],
+      days: [],
+      orders: [],
+    });
+  });
+
+  it('does not attach Danish planning to a different supplier name through its number', async () => {
     const { sqlite, db } = database();
     const file = await workbook({
       orders: [['Abena A/S', '4960001']],
@@ -200,7 +379,7 @@ describe('importing the supplier sheets', () => {
     expect(await importAlleArk(file, db, 'innkjop_DK.xlsx')).toBe(true);
     expect(register(sqlite).days).toEqual(
       ['Fredag', 'Mandag', 'Onsdag', 'Tirsdag', 'Torsdag'].map((weekday) => ({
-        name: 'Abena Danmark A/S',
+        name: 'Abena A/S',
         weekday,
       }))
     );
@@ -247,6 +426,48 @@ describe('importing the supplier sheets', () => {
       days: [{ name: 'Old DK', weekday: 'Tirsdag' }],
       orders: ['New AS'],
     });
+  });
+
+  it('persists an ambiguous no-ID row separately without replacing either supplier contact', async () => {
+    const { sqlite, db } = database();
+    const file = await workbook({
+      orders: [['Same AS', '123']],
+      suppliers: [
+        ['Same AS', '123', 'Norsk', 'Mandag', 'first@example.no'],
+        ['Same AS', '456', 'Engelsk', 'Tirsdag', 'second@example.no'],
+        ['Same AS', '', '', 'Fredag', 'unknown@example.no'],
+      ],
+    });
+
+    expect(await importAlleArk(file, db, 'test.xlsx')).toBe(true);
+    const saved = register(sqlite);
+    expect(saved.contacts).toEqual([
+      { name: 'Same AS', email: 'first@example.no', language: 'Norsk', companyId: '123' },
+      { name: 'Same AS (456)', email: 'second@example.no', language: 'Engelsk', companyId: '456' },
+      {
+        name: 'Same AS (uten Company ID)',
+        email: 'unknown@example.no',
+        language: null,
+        companyId: null,
+      },
+    ]);
+    expect(saved.days).toEqual([
+      { name: 'Same AS', weekday: 'Mandag' },
+      { name: 'Same AS (456)', weekday: 'Tirsdag' },
+      { name: 'Same AS (uten Company ID)', weekday: 'Fredag' },
+    ]);
+  });
+
+  it('rolls back orders and the register when a checklist-only contact cannot be saved', async () => {
+    const { sqlite, db } = database();
+    seed(sqlite, [['Old DK', 'old@dk.dk', 'Dansk']], [['Old DK', 'Tirsdag']], ['Old DK']);
+    const before = register(sqlite);
+    sqlite.exec(`CREATE TRIGGER fail BEFORE INSERT ON supplier_emails
+      BEGIN SELECT RAISE(ABORT, 'disk full'); END`);
+    const file = await workbook({ orders: ['New AS'], checklist: [['No Address AS', '']] });
+
+    expect(await importAlleArk(file, db, 'test.xlsx')).toBe(false);
+    expect(register(sqlite)).toEqual(before);
   });
 
   it('fails and keeps the previous orders, contacts and days when a supplier sheet fails', async () => {
