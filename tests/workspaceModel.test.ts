@@ -94,4 +94,16 @@ describe('Pulse workspace selections', () => {
     expect(html).toContain('New ETA');
     expect(html.match(/<tbody>[\s\S]*?<\/tbody>/)?.[0].match(/<tr>/g)).toHaveLength(1);
   });
+  it('tags and formats the email for the recipient language', () => {
+    const reminder = {
+      supplier: line.supplier,
+      recipient: 'buyer@example.com',
+      lines: [{ ...line, outstandingQty: 1500, dueDate: new Date(2026, 8, 1) }],
+    };
+    const english = reminderHtml({ ...reminder, language: 'en' });
+    expect(english).toContain('<html lang="en-GB">');
+    expect(english).toContain('>1,500</td>');
+    expect(english).toContain('>01/09/2026');
+    expect(reminderHtml({ ...reminder, language: 'se' })).toContain('<html lang="sv-SE">');
+  });
 });

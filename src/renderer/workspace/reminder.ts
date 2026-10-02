@@ -1,4 +1,5 @@
 import type { ExcelRow } from '../types/ExcelData';
+import { dateLocale } from '../i18n/resources';
 import { eta, formatDate, lateDays, outstanding, validRecipients, type Language } from './model';
 
 export const MAIL_TEXT = {
@@ -122,6 +123,8 @@ function cell(extra: string, last: boolean) {
 }
 export function reminderHtml(reminder: Reminder) {
   const text = MAIL_TEXT[reminder.language];
+  // Pulse's "se" is Swedish, but in a language tag it is Northern Sami: use the locale instead.
+  const locale = dateLocale(reminder.language);
   const groups = new Map<string, ExcelRow[]>();
   for (const line of reminder.lines)
     groups.set(line.poNumber, [...(groups.get(line.poNumber) || []), line]);
@@ -142,8 +145,8 @@ export function reminderHtml(reminder: Reminder) {
             `<td style="${cell('white-space:nowrap', last)}">${escapeHtml(line.orderRowNumber)}</td>`,
             `<td style="${cell('white-space:nowrap', last)}">${escapeHtml(line.supplierArticleNo || line.producerItemNo)}</td>`,
             `<td style="${cell('', last)}"><strong style="font-weight:600">${escapeHtml(title)}</strong>${details.map((detail) => `<br><span style="color:#61615f;font-size:12px">${escapeHtml(detail)}</span>`).join('')}</td>`,
-            `<td align="right" style="${cell('text-align:right;font-weight:700;white-space:nowrap', last)}">${escapeHtml(outstanding(line).toLocaleString('nb-NO'))}</td>`,
-            `<td style="${cell('white-space:nowrap', last)}">${escapeHtml(formatDate(eta(line)))}${late > 0 ? `<br><span style="color:#9a3324;font-size:12px;font-weight:600">${escapeHtml(text.late(late))}</span>` : ''}</td>`,
+            `<td align="right" style="${cell('text-align:right;font-weight:700;white-space:nowrap', last)}">${escapeHtml(outstanding(line).toLocaleString(locale))}</td>`,
+            `<td style="${cell('white-space:nowrap', last)}">${escapeHtml(formatDate(eta(line), locale))}${late > 0 ? `<br><span style="color:#9a3324;font-size:12px;font-weight:600">${escapeHtml(text.late(late))}</span>` : ''}</td>`,
             `<td style="${cell('background:#fbf9f7;min-width:64px', last)}">&nbsp;</td>`,
           ].join('')}</tr>`;
         })
@@ -156,7 +159,7 @@ export function reminderHtml(reminder: Reminder) {
         `<th align="${index === 4 ? 'right' : 'left'}" style="padding:10px 12px;background:#fbf9f7;border-bottom:1px solid #e6e0d9;color:#61615f;font-size:12px;font-weight:600;white-space:nowrap;text-align:${index === 4 ? 'right' : 'left'};${FONT}">${header}</th>`
     )
     .join('');
-  return `<!doctype html><html lang="${reminder.language}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+  return `<!doctype html><html lang="${locale}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
 <body style="margin:0;padding:0;background:#f7f4f1">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f7f4f1"><tr><td align="center" style="padding:28px 12px">
 <!--[if mso]><table role="presentation" width="760" cellpadding="0" cellspacing="0" border="0"><tr><td><![endif]-->

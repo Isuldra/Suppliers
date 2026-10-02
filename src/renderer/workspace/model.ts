@@ -128,8 +128,8 @@ export function eta(line: ExcelRow): Date | undefined {
   const date = new Date(value as string | Date);
   return Number.isNaN(date.getTime()) ? undefined : date;
 }
-export function formatDate(date?: Date) {
-  return date ? date.toLocaleDateString('nb-NO') : '—';
+export function formatDate(date?: Date, locale = 'nb-NO') {
+  return date ? date.toLocaleDateString(locale) : '—';
 }
 export function lateDays(line: ExcelRow, today = new Date()) {
   const date = eta(line);
