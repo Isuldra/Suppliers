@@ -369,7 +369,7 @@ describe('importing the supplier sheets', () => {
     });
   });
 
-  it('does not attach Danish planning to a different supplier name through its number', async () => {
+  it('attaches Danish planning to the registered supplier when its order name differs but its ID agrees', async () => {
     const { sqlite, db } = database();
     const file = await workbook({
       orders: [['Abena A/S', '4960001']],
@@ -379,7 +379,7 @@ describe('importing the supplier sheets', () => {
     expect(await importAlleArk(file, db, 'innkjop_DK.xlsx')).toBe(true);
     expect(register(sqlite).days).toEqual(
       ['Fredag', 'Mandag', 'Onsdag', 'Tirsdag', 'Torsdag'].map((weekday) => ({
-        name: 'Abena A/S',
+        name: 'Abena Danmark A/S',
         weekday,
       }))
     );

@@ -63,7 +63,7 @@ describe('Pulse workspace selections', () => {
   it('joins compatible identities and separates a conflicting supplier name and number', () => {
     const suppliers = buildSuppliers(
       [
-        { ...line, supplier: 'ABENA  Danmark A/S', internalSupplierNumber: '4960001' },
+        { ...line, supplier: 'Abena A/S', internalSupplierNumber: '4960001' },
         { ...line, key: '2', supplier: 'EXAMPLE  medical' },
         { ...line, key: '3', supplier: 'Other AS', internalSupplierNumber: '4960009' },
         // Neither supplier receives an order whose name and number disagree.
@@ -95,7 +95,7 @@ describe('Pulse workspace selections', () => {
         number: '4960001',
         email: 'ordre@abena.dk',
         lines: 1,
-        aliases: ['ABENA  Danmark A/S'],
+        aliases: ['Abena A/S'],
       },
       {
         name: 'Example Medical',
@@ -144,37 +144,52 @@ describe('Pulse workspace selections', () => {
         { ...line, key: '2', supplier: 'Abena', internalSupplierNumber: '4960002' },
       ],
       [
-        { name: 'Abena Norge AS', email: '', language: 'Norsk', days: [], number: '4960001' },
-        { name: 'Abena Danmark A/S', email: '', language: 'Dansk', days: [], number: '4960002' },
+        {
+          name: 'Abena Norge AS',
+          email: 'ordre@abena.no',
+          language: 'Norsk',
+          days: [],
+          number: '4960001',
+        },
+        {
+          name: 'Abena Danmark A/S',
+          email: 'ordre@abena.dk',
+          language: 'Dansk',
+          days: [],
+          number: '4960002',
+        },
       ],
       { Abena: { email: 'shared@abena.no', language: 'no', days: [] } }
     );
     expect(
       suppliers
         .filter((supplier) => supplier.lines.length)
-        .map(({ email, aliases }) => ({ email, aliases }))
+        .map(({ name, email, aliases }) => ({ name, email, aliases }))
     ).toEqual([
-      { email: '', aliases: [] },
-      { email: '', aliases: [] },
+      { name: 'Abena Danmark A/S', email: 'ordre@abena.dk', aliases: [] },
+      { name: 'Abena Norge AS', email: 'ordre@abena.no', aliases: [] },
     ]);
   });
-  it("keeps edits and history saved under a compatible spelling of the supplier's name", () => {
-    const suppliers = buildSuppliers(
-      [{ ...line, supplier: 'ABENA  Danmark A/S', internalSupplierNumber: '4960001' }],
-      [{ name: 'Abena Danmark A/S', email: '', language: 'Dansk', days: [], number: '4960001' }],
-      { 'ABENA  Danmark A/S': { email: 'saved@abena.dk', language: 'da', days: ['Torsdag'] } }
-    );
-    expect(suppliers[0]).toMatchObject({
-      name: 'Abena Danmark A/S',
-      email: 'saved@abena.dk',
-      days: ['Torsdag'],
-    });
-    const history = historyOf(
-      [{ supplier: 'ABENA  Danmark A/S', status: 'sent', at: new Date().toISOString(), count: 1 }],
-      suppliers
-    );
-    expect(currentStatus('Abena Danmark A/S', history)).toBe('sent');
-  });
+  it.each(['ABENA  Danmark A/S', 'Abena A/S'])(
+    'keeps edits and history saved under the unambiguous supplier alias %s',
+    (alias) => {
+      const suppliers = buildSuppliers(
+        [{ ...line, supplier: alias, internalSupplierNumber: '4960001' }],
+        [{ name: 'Abena Danmark A/S', email: '', language: 'Dansk', days: [], number: '4960001' }],
+        { [alias]: { email: 'saved@abena.dk', language: 'da', days: ['Torsdag'] } }
+      );
+      expect(suppliers[0]).toMatchObject({
+        name: 'Abena Danmark A/S',
+        email: 'saved@abena.dk',
+        days: ['Torsdag'],
+      });
+      const history = historyOf(
+        [{ supplier: alias, status: 'sent', at: new Date().toISOString(), count: 1 }],
+        suppliers
+      );
+      expect(currentStatus('Abena Danmark A/S', history)).toBe('sent');
+    }
+  );
   it('isolates repeated conflicts without inheriting saved contacts or affecting later valid orders', () => {
     const suppliers = buildSuppliers(
       [
@@ -206,19 +221,58 @@ describe('Pulse workspace selections', () => {
     );
     expect(currentStatus(conflict.name, history)).toBeUndefined();
   });
-  it('requires a separately reviewed recipient even when the conflicting name has no registered contact', () => {
-    const rows = [{ ...line, supplier: 'Supplier B', internalSupplierNumber: '1' }];
+  it('keeps the registered email and reminder day when an alternate order name has the same Company ID', () => {
+    const rows = [{ ...line, supplier: 'Abena A/S', internalSupplierNumber: '4960001' }];
     const contacts = [
-      { name: 'Supplier A', number: '1', email: 'a@example.com', language: 'Norsk', days: [] },
+      {
+        name: 'Abena Danmark A/S',
+        number: '4960001',
+        email: 'ordre@abena.dk',
+        language: 'Dansk',
+        days: ['Mandag'],
+      },
     ];
-    const saved = { email: 'saved@example.com', language: 'no' as const, days: ['Mandag'] };
-    const suppliers = buildSuppliers(rows, contacts, { 'Supplier B': saved });
-    const conflict = suppliers.find((supplier) => supplier.lines.length)!;
-    expect(conflict.email).toBe('');
-    expect(conflict.aliases).toEqual([]);
-    const resolved = buildSuppliers(rows, contacts, { [conflict.name]: saved });
-    expect(resolved.find((supplier) => supplier.lines.length)?.email).toBe(saved.email);
+    const suppliers = buildSuppliers(rows, contacts, {});
+    expect(suppliers).toHaveLength(1);
+    expect(suppliers[0]).toMatchObject({
+      name: 'Abena Danmark A/S',
+      number: '4960001',
+      email: 'ordre@abena.dk',
+      language: 'da',
+      days: ['Mandag'],
+      lines: rows,
+      aliases: ['Abena A/S'],
+    });
+    expect(onDay(suppliers[0], 'Mandag')).toBe(true);
+    expect(onDay(suppliers[0], 'Ingen')).toBe(false);
   });
+  it.each([false, true])(
+    'does not let an alternate name hide an unregistered competing Company ID (reversed: %s)',
+    (reverse) => {
+      const rows = [
+        { ...line, supplier: 'Alias AS', internalSupplierNumber: '1' },
+        { ...line, key: '2', supplier: 'Alias AS', internalSupplierNumber: '2' },
+      ];
+      if (reverse) rows.reverse();
+      const suppliers = buildSuppliers(
+        rows,
+        [
+          {
+            name: 'Registered AS',
+            number: '1',
+            email: 'registered@example.com',
+            language: 'Norsk',
+            days: ['Mandag'],
+          },
+        ],
+        { 'Alias AS': { email: 'saved@example.com', language: 'no', days: ['Torsdag'] } }
+      );
+      const withOrders = suppliers.filter((supplier) => supplier.lines.length);
+      expect(withOrders).toHaveLength(2);
+      expect(withOrders.every((supplier) => !supplier.email && !supplier.days.length)).toBe(true);
+      expect(suppliers.find((supplier) => supplier.name === 'Registered AS')?.lines).toEqual([]);
+    }
+  );
   it('never gives a numberless order the first address when register names share a base name', () => {
     const suppliers = buildSuppliers(
       [

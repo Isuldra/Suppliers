@@ -5,7 +5,7 @@ export function supplierKey(name: string): string {
 
 type Match<T> = { kind: 'matched'; supplier: T } | { kind: 'unmatched' | 'conflict' };
 
-/** Only compatible, unambiguous names and supplier numbers may identify a recipient. */
+/** A unique supplier number permits alternate names, but not another supplier's registered name. */
 export function supplierFinder<T extends { name: string; number?: string | null }>(suppliers: T[]) {
   const byNumber = new Map<string, T[]>();
   const byExactName = new Map<string, T[]>();
@@ -37,16 +37,16 @@ export function supplierFinder<T extends { name: string; number?: string | null 
   const match = (name: string, number?: string | null): Match<T> => {
     const key = supplierKey(name);
     const id = number?.trim();
+    const named = byName.get(key) ?? [];
     const numbered = id ? (byNumber.get(id) ?? []) : [];
     if (numbered.length > 1) return { kind: 'conflict' };
     if (numbered.length === 1) {
       const supplier = numbered[0];
-      return namesOf(supplier).some((candidate) => supplierKey(candidate) === key)
+      return !named.length || named.includes(supplier)
         ? { kind: 'matched', supplier }
         : { kind: 'conflict' };
     }
     const exact = byExactName.get(name) ?? [];
-    const named = byName.get(key) ?? [];
     const candidates = exact.length ? exact : named;
     if (!candidates.length) return { kind: 'unmatched' };
     if (candidates.length !== 1) return { kind: 'conflict' };

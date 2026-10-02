@@ -12,11 +12,23 @@ describe('supplier identity matching', () => {
     expect(finder.find('supplier b')).toBe(b);
   });
 
-  it('rejects a number whose name belongs to another supplier or is unregistered', () => {
+  it('rejects a number whose name belongs to another registered supplier', () => {
     const finder = supplierFinder([a, b]);
     expect(finder.match('Supplier B', '1')).toEqual({ kind: 'conflict' });
     expect(finder.find('Supplier B', '1')).toBeUndefined();
-    expect(finder.match('Unknown supplier', '1')).toEqual({ kind: 'conflict' });
+    expect(finder.find(' SUPPLIER  b ', '1')).toBeUndefined();
+  });
+
+  it('matches an alternate name by its unique Company ID when the name identifies no other supplier', () => {
+    const supplier = { name: 'Abena Danmark A/S', number: '4960001' };
+    const finder = supplierFinder([supplier, b]);
+    expect(finder.find('Abena A/S', ' 4960001 ')).toBe(supplier);
+    expect(finder.find('Abena A/S')).toBeUndefined();
+  });
+
+  it('does not let an alternate name bypass an ambiguous Company ID', () => {
+    const finder = supplierFinder([a, { ...b, number: '1' }]);
+    expect(finder.match('Alternate name', '1')).toEqual({ kind: 'conflict' });
   });
 
   it('rejects a known name with a different unregistered number', () => {

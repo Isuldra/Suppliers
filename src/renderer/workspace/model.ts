@@ -169,13 +169,20 @@ export function buildSuppliers(
     aliases: [],
   }));
   const finder = supplierFinder(suppliers);
-  // Inspect the whole import before a numberless contact can gain an order's number. Otherwise
+  // Inspect all open orders before a numberless contact can gain an order's number. Otherwise
   // two companies with the same name would give the saved address to whichever order came first.
   const candidateNumbers = new Map<Supplier | string, Set<string>>();
+  const numbersByName = new Map<string, Set<string>>();
+  const unregisteredNames = new Set<string>();
   for (const row of rows) {
     const number = row.internalSupplierNumber?.trim();
-    if (!row.supplier || !number) continue;
+    if (!row.supplier || !number || outstanding(row) <= 0) continue;
+    const key = supplierKey(row.supplier);
+    const namedNumbers = numbersByName.get(key) ?? new Set<string>();
+    namedNumbers.add(number);
+    numbersByName.set(key, namedNumbers);
     const match = finder.match(row.supplier, number);
+    if (match.kind === 'unmatched') unregisteredNames.add(key);
     if (match.kind === 'conflict' || (match.kind === 'matched' && match.supplier.number.trim()))
       continue;
     const candidate = match.kind === 'matched' ? match.supplier : supplierKey(row.supplier);
@@ -185,6 +192,11 @@ export function buildSuppliers(
   }
   const ambiguousCandidates = new Set(
     [...candidateNumbers].filter(([, numbers]) => numbers.size > 1).map(([candidate]) => candidate)
+  );
+  // An alternate name also used by an unregistered Company ID is not a safe alias. Detect that
+  // before indexing new suppliers, so reversing the order rows cannot change the recipient.
+  const ambiguousNames = new Set(
+    [...unregisteredNames].filter((name) => numbersByName.get(name)!.size > 1)
   );
   const unresolved = new Map<string, Supplier>();
   const reservedNames = new Set([
@@ -196,7 +208,11 @@ export function buildSuppliers(
     const number = row.internalSupplierNumber?.trim() || '';
     const match = finder.match(row.supplier, number);
     const candidate = match.kind === 'matched' ? match.supplier : supplierKey(row.supplier);
-    if (match.kind === 'conflict' || ambiguousCandidates.has(candidate)) {
+    if (
+      match.kind === 'conflict' ||
+      ambiguousCandidates.has(candidate) ||
+      ambiguousNames.has(supplierKey(row.supplier))
+    ) {
       const key = JSON.stringify([supplierKey(row.supplier), number]);
       let supplier = unresolved.get(key);
       if (!supplier) {
